@@ -1,0 +1,13 @@
+[build]
+entrypoints = ["./src/index.ts"]
+outdir = "./dist"
+minify = true
+sourcemap = true
+
+[build.browser]
+target = "browser"
+outfile = "index.browser.js"
+
+[build.node]
+target = "node"
+outfile = "index.js"
