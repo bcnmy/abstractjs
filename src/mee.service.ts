@@ -223,6 +223,7 @@ export function formatMeeSignature(parameters: {
   signedHash: Hex;
   executionMode: ExecutionMode;
 }): FormattedMeeSignature {
+  
   const executionModeToSignaturePrefix = () => {
     switch (parameters.executionMode) {
       case "direct-to-mee":

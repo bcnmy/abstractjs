@@ -1,4 +1,16 @@
-import type { Abi, Address, Hex, EncodeFunctionDataParameters, Prettify } from "viem";
+import type {
+  Abi,
+  Address,
+  Hex,
+  EncodeFunctionDataParameters,
+  Prettify,
+  Chain,
+  PublicClient,
+  Transport,
+  ContractFunctionName,
+  ContractFunctionArgs,
+  ContractFunctionReturnType,
+} from "viem";
 import { encodeFunctionData } from "viem";
 import type {
   ExtractAbiFunctionNames,
@@ -7,6 +19,11 @@ import type {
 } from "abitype";
 import { AbstractCall, MeeUserOp } from "../../workflow";
 import { AddressMapping } from "../../primitives";
+import { NonEmptyArray } from "../types/util.type";
+import {
+  MinimalMEESmartAccount,
+  MultichainSmartAccount,
+} from "../../account-vendors";
 
 /**
  * Contract instance capable of encoding transactions across multiple chains
@@ -17,6 +34,19 @@ export type MultichainContract<TAbi extends Abi> = {
   deployments: Map<number, Address>;
   on: (chainId: number) => ChainSpecificContract<TAbi>;
   addressOn: (chainId: number) => Address;
+  read: <
+    TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">
+  >(params: {
+    onChains: Chain[];
+    functionName: TFunctionName;
+    args: ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
+    account: MultichainSmartAccount;
+  }) => Promise<
+    Array<{
+      chainId: number;
+      result: ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName>;
+    }>
+  >;
 };
 
 export type ChainSpecificContract<TAbi extends Abi> = {
@@ -72,7 +102,6 @@ function createChainSpecificContract<TAbi extends Abi>(
   });
 }
 
-
 /**
  * Creates a contract instance that can encode function calls across multiple chains
  * @template TAbi The contract ABI type
@@ -118,6 +147,71 @@ export function getMultichainContract<TAbi extends Abi>(config: {
         throw new Error(`No deployment found for chain ${chainId}`);
       }
       return address;
+    },
+    read: async <
+      TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">
+    >(params: {
+      onChains: Chain[];
+      functionName: TFunctionName;
+      args: ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>;
+      account: MultichainSmartAccount;
+    }): Promise<
+      Array<{
+        chainId: number;
+        result: ContractFunctionReturnType<
+          TAbi,
+          "pure" | "view",
+          TFunctionName
+        >;
+      }>
+    > => {
+      const abiFunction = config.abi.find(
+        (
+          item
+        ): item is Extract<
+          TAbi[number],
+          { type: "function"; stateMutability: "view" | "pure" }
+        > =>
+          item.type === "function" &&
+          item.name === params.functionName &&
+          (item.stateMutability === "view" || item.stateMutability === "pure")
+      );
+
+      if (!abiFunction) {
+        throw new Error(
+          `Function ${params.functionName} not found in ABI or is not a read function`
+        );
+      }
+
+      const results = await Promise.all(
+        params.onChains.map(async (chain) => {
+          const address = deployments.get(chain.id);
+          if (!address) {
+            throw new Error(`No deployment found for chain ${chain.id}`);
+          }
+
+          const deployment = params.account.deploymentOn(chain.id);
+          const client = deployment.client as PublicClient<Transport, Chain>;
+
+          const result = await client.readContract({
+            address,
+            abi: config.abi,
+            functionName: params.functionName,
+            args: params.args,
+          });
+
+          return {
+            chainId: chain.id,
+            result: result as ContractFunctionReturnType<
+              TAbi,
+              "pure" | "view",
+              TFunctionName
+            >,
+          };
+        })
+      );
+
+      return results;
     },
   };
 }

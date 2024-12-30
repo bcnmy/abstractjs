@@ -23,7 +23,7 @@ export type FusionTransactionParameters = {
 
 export const FUSION_EXEC_PREFIX = "0x01";
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02";
-export async function executeFusionTransaction(
+export async function executeFusionSupertransaction(
   params: FusionTransactionParameters
 ) {
   const { client, companionSupertransaction: supertransactionQuote, eoaTriggerTransaction: triggerTransaction, meeService } =
