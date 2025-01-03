@@ -1,6 +1,6 @@
 {
-  "name": "@biconomy/experimental-mee",
-  "version": "0.1.4",
+  "name": "@biconomy/abstractjs",
+  "version": "0.1.9",
   "description": "Experimental Developer Access to Biconomy MEE",
   "author": "Biconomy",
   "license": "MIT",
@@ -11,12 +11,10 @@
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
-  "browser": "./dist/index.browser.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "browser": "./dist/index.browser.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
@@ -25,23 +23,29 @@
     "dist"
   ],
   "scripts": {
+    "changeset": "changeset",
+    "changeset:release": "bun run build && changeset publish",
+    "changeset:version": "changeset version && bun install --lockfile-only",
+    "changeset:release:canary": "original_name=$(bun run scripts/publish:canary.ts | grep ORIGINAL_NAME | cut -d'=' -f2) && npm publish && git checkout package.json && git tag -l '*-canary.*' | xargs git tag -d && git fetch --tags && git reset --hard && git clean -fd && echo \"Published canary version of $original_name as latest\"",
     "build": "bun run build:types && bun run build:js",
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "tsup src/index.ts --format esm,cjs --dts --outDir dist",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.11",
     "@types/bun": "latest",
+    "semver": "^7.6.3",
     "tsup": "^8.3.5"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@biconomy/sdk": "0.0.19",
+    "viem": "2.21.55"
   },
   "dependencies": {
-    "@biconomy/sdk": "0.0.19",
     "@rhinestone/module-sdk": "0.1.31",
     "abitype": "1.0.7",
-    "axios": "1.7.7",
-    "viem": "2.21.55"
+    "axios": "1.7.7"
   }
 }
