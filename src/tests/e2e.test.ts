@@ -23,7 +23,7 @@ import { buildCall, buildMeeUserOp } from "../workflow"
 const PRIV_KEY = Bun.env.TEST_PRIVATE_KEY as Hash
 
 describe("Private key", () => {
-  test("Should have private key", () => {
+  test("should have private key", () => {
     expect(PRIV_KEY).toBeTruthy()
     expect(PRIV_KEY).toStartWith("0x")
   })
@@ -46,11 +46,11 @@ describe("Nexus Account", async () => {
     expect(mcNexusMainnet.deployments.length).toEqual(7)
   })
 
-  test("Should initialize Nexus account", async () => {
+  test("should initialize Nexus account", async () => {
     expect(mcNexusTestnet.deployments.length).toEqual(2)
   })
 
-  test("Should be same address on base and optimism", async () => {
+  test("should be same address on base and optimism", async () => {
     expect(mcNexusTestnet.deploymentOn(baseSepolia.id).address).toEqual(
       mcNexusTestnet.deploymentOn(optimismSepolia.id).address
     )
@@ -62,7 +62,7 @@ describe("Nexus Account", async () => {
     transport: http()
   })
 
-  test("Should initialize single chain MEE Compliant Nexus Account", async () => {
+  test("should initialize single chain MEE Compliant Nexus Account", async () => {
     expect(nexus.address).toStartWith("0x")
   })
 
@@ -111,11 +111,9 @@ describe("MEE Service", async () => {
     signer: eoa
   })
 
-  const meeService = createMeeService({
-    meeNodeUrl: "https://mee-node.biconomy.io"
-  })
+  const meeService = createMeeService()
 
-  test("Should init meeService", async () => {
+  test("should init meeService", async () => {
     expect(meeService.execute).toBeTruthy()
   })
 
@@ -123,16 +121,16 @@ describe("MEE Service", async () => {
     calls: [{ to: zeroAddress, value: 0n, gasLimit: 50_000n }]
   })
 
-  test("Should encode an MEEUserOp", async () => {
+  test("should encode an MEEUserOp", async () => {
     expect(uOp.calls.length).toEqual(1)
   })
 
-  test("Should cast PartialMeeUserOp to MeeUserOp", async () => {
+  test("should cast PartialMeeUserOp to MeeUserOp", async () => {
     const casted = uOp.on(optimism.id)
     expect(casted.chainId).toEqual(optimism.id)
   })
 
-  test("Should build call", () => {
+  test("should build call", () => {
     const data = "0xabc"
     const value = 10n
     const gasLimit = 50_000n
@@ -153,7 +151,7 @@ describe("MEE Service", async () => {
   // on optimism and base and depend on public testnets. A local testing environment
   // needs to be set up. These tests are sufficient while we're in the experimental
   // phase of development.
-  describe("E2E Flow: Executes a TX on Base, Pays for gas on OP", async () => {
+  test.skip("should get quote", async () => {
     const quote = await supertransaction()
       .injectAccount(mcNexus)
       .payGasWith("USDC", { on: optimism.id })
@@ -169,15 +167,9 @@ describe("MEE Service", async () => {
       )
       .getQuote(meeService)
 
-    test(
-      "Should get quote",
-      async () => {
-        expect(quote.hash).toStartWith("0x")
-      },
-      { timeout: 10000 }
-    )
+    expect(quote.hash).toStartWith("0x")
 
-    const reciept = await meeService.execute(
+    const receipt = await meeService.execute(
       await signMeeQuote({
         executionMode: "direct-to-mee",
         quote: quote,
@@ -185,12 +177,6 @@ describe("MEE Service", async () => {
       })
     )
 
-    test(
-      "Should get reciept",
-      async () => {
-        expect(reciept.hash).toStartWith("0x")
-      },
-      { timeout: 10000 }
-    )
+    expect(receipt.hash).toStartWith("0x")
   })
 })

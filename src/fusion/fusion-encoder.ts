@@ -46,7 +46,7 @@ export async function executeFusionSupertransaction(
   const txHash = await client.sendTransaction({
     ...fusionCall
   })
-  const reciept = await client.waitForTransactionReceipt({
+  const receipt = await client.waitForTransactionReceipt({
     hash: txHash,
     confirmations: 1
   })
@@ -61,7 +61,7 @@ export async function executeFusionSupertransaction(
     ])
   })
   return {
-    onchainReciept: reciept,
+    onchainReceipt: receipt,
     supertransactionHash: meeResult.hash
   }
 }

@@ -174,8 +174,5 @@ dist
 # Finder (MacOS) folder config
 .DS_Store
 
-esbuild-why-core (cjs).html
-esbuild-why-core (esm).html
-
 # Docs
 docs
