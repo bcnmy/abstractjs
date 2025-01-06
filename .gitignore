@@ -176,3 +176,6 @@ dist
 
 esbuild-why-core (cjs).html
 esbuild-why-core (esm).html
+
+# Docs
+docs

@@ -34,7 +34,9 @@
     "format": "biome format . --write",
     "lint": "biome check .",
     "lint:fix": "bun run lint --apply",
-    "size": "size-limit"
+    "size": "size-limit",
+    "docs": "typedoc --tsconfig ./tsconfig.json",
+    "docs:deploy": "bun run docs && gh-pages -d docs"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
@@ -42,6 +44,7 @@
     "@size-limit/esbuild-why": "^11.1.6",
     "@size-limit/preset-small-lib": "^11.1.6",
     "@types/bun": "latest",
+    "gh-pages": "^6.3.0",
     "semver": "^7.6.3",
     "size-limit": "^11.1.6",
     "tsup": "^8.3.5"

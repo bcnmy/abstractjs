@@ -24,6 +24,16 @@ Then in your linked project, update your package.json dependencies to point to t
 
 This will run the package in watch mode, and will automatically update the package in your linked project.
 
+## Documentation
+
+For detailed documentation and API reference, visit our [official documentation](https://bcnmy.github.io/abstractjs/).
+
+The documentation includes:
+- API Reference
+- Integration guides
+- Examples and usage patterns
+- Configuration options
+
 ## Tests
 
 Currently the only tests which this project has interact with testnets, due to several limitations:
