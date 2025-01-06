@@ -1,1 +1,1 @@
-export * from './across.plugin'
+export * from "./across.plugin"

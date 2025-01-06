@@ -1,9 +1,16 @@
-import { Address } from "viem"
-import { Instruction, Supertransaction } from "../../workflow"
-import { FeeToken, resolveFeeToken, SupportedFeeChainId } from "../mee-node/fee-resolver.util"
-import { NonEmptyArray } from "../types/util.type"
-import { MeeCommitedSupertransactionQuote, MeeService } from "../../mee.service"
-import { MultichainSmartAccount } from "../../account-vendors"
+import type { Address } from "viem"
+import type { MultichainSmartAccount } from "../../account-vendors"
+import type {
+  MeeCommitedSupertransactionQuote,
+  MeeService
+} from "../../mee.service"
+import type { Instruction, Supertransaction } from "../../workflow"
+import {
+  type FeeToken,
+  type SupportedFeeChainId,
+  resolveFeeToken
+} from "../mee-node/fee-resolver.util"
+import type { NonEmptyArray } from "../types/util.type"
 
 /**
  * Internal state of the supertransaction builder.
@@ -28,11 +35,18 @@ export type SupertransactionState = {
 export type SupertransactionClient = {
   state: SupertransactionState
   injectAccount: (account: MultichainSmartAccount) => SupertransactionClient
-  payGasWith: (token: FeeToken, { on }: { on: SupportedFeeChainId }) => SupertransactionClient
-  addInstructions: (...instructions: InstructionInput[]) => SupertransactionClient
+  payGasWith: (
+    token: FeeToken,
+    { on }: { on: SupportedFeeChainId }
+  ) => SupertransactionClient
+  addInstructions: (
+    ...instructions: InstructionInput[]
+  ) => SupertransactionClient
   finalize: () => Promise<Supertransaction>
-  getQuote: (meeService: MeeService) => Promise<MeeCommitedSupertransactionQuote>
-  /** 
+  getQuote: (
+    meeService: MeeService
+  ) => Promise<MeeCommitedSupertransactionQuote>
+  /**
    * Allows third-party extensions to add new functionality to the client.
    * Extensions receive the current client and can return additional methods.
    */
@@ -42,7 +56,7 @@ export type SupertransactionClient = {
 /**
  * Extension type for adding new functionality to the client.
  * Extensions can access the client's state and add new methods.
- * 
+ *
  * @example
  * const myExtension = (client: SupertransactionClient) => ({
  *   newMethod: () => {
@@ -51,16 +65,16 @@ export type SupertransactionClient = {
  *   }
  * })
  */
-type Extension<T> = {
-  (client: SupertransactionClient): T
-}
+type Extension<T> = (client: SupertransactionClient) => T
 
 /**
  * Function type that receives the current transaction state and returns
  * instructions asynchronously. Used for instructions that need access to
  * the transaction context (like balance checks).
  */
-export type ContextualInstruction = (context: SupertransactionState) => Promise<Instruction[]>
+export type ContextualInstruction = (
+  context: SupertransactionState
+) => Promise<Instruction[]>
 
 /**
  * Valid input types for addInstructions.
@@ -82,14 +96,14 @@ function createClient(
   const client: SupertransactionClient = {
     state,
     injectAccount: (account) => injectAccount(client, account),
-    payGasWith: (token, { on: chain }) => payGasWith(client, token, { on: chain }),
-    addInstructions: (...instructions) => addInstructions(client, ...instructions),
+    payGasWith: (token, { on: chain }) =>
+      payGasWith(client, token, { on: chain }),
+    addInstructions: (...instructions) =>
+      addInstructions(client, ...instructions),
     finalize: () => finalize(client),
     getQuote: (meeService) => getQuote(client, meeService),
-    extend: (extension) => Object.assign(
-      createClient(client.state),
-      extension(client)
-    )
+    extend: (extension) =>
+      Object.assign(createClient(client.state), extension(client))
   }
   return client
 }
@@ -124,7 +138,7 @@ function payGasWith(
 /**
  * Adds instructions to the transaction. Can handle both immediate instructions
  * and contextual instructions (functions that need access to transaction state).
- * 
+ *
  * Important: This method doesn't immediately resolve promises from contextual
  * instructions. Instead, it collects them to be resolved during finalization.
  * This allows for continuous chaining without awaiting between calls.
@@ -135,26 +149,32 @@ function addInstructions(
 ): SupertransactionClient {
   // Convert all inputs to promises - either by wrapping direct instructions
   // or by calling contextual instruction functions
-  const pendingInstructions = instructions.map(inst => 
-    typeof inst === 'function'
-      ? inst(client.state)  // Contextual instruction - call with state
-      : Promise.resolve(Array.isArray(inst) ? inst : [inst])  // Direct instruction(s)
+  const pendingInstructions = instructions.map(
+    (inst) =>
+      typeof inst === "function"
+        ? inst(client.state) // Contextual instruction - call with state
+        : Promise.resolve(Array.isArray(inst) ? inst : [inst]) // Direct instruction(s)
   )
 
   return createClient({
     ...client.state,
-    pendingInstructions: [...client.state.pendingInstructions, ...pendingInstructions]
+    pendingInstructions: [
+      ...client.state.pendingInstructions,
+      ...pendingInstructions
+    ]
   })
 }
 
 /**
  * Finalizes the transaction by resolving all pending instructions
  * and creating the final transaction object.
- * 
+ *
  * This is where all promises collected during the build process are
  * finally resolved. Any errors in contextual instructions will surface here.
  */
-async function finalize(client: SupertransactionClient): Promise<Supertransaction> {
+async function finalize(
+  client: SupertransactionClient
+): Promise<Supertransaction> {
   const { state } = client
   validateBaseState(state)
 
@@ -169,11 +189,15 @@ async function finalize(client: SupertransactionClient): Promise<Supertransactio
     throw new Error("No instructions provided")
   }
 
+  if (!state.gasToken || !state.gasChain) {
+    throw new Error("Gas token configuration missing")
+  }
+
   return {
     instructions: allInstructions as NonEmptyArray<Instruction>,
     feeToken: {
-      address: state.gasToken!,
-      chainId: state.gasChain!,
+      address: state.gasToken,
+      chainId: state.gasChain
     }
   }
 }
@@ -188,9 +212,13 @@ async function getQuote(
 ): Promise<MeeCommitedSupertransactionQuote> {
   const tx = await finalize(client)
 
+  if (!client.state.account) {
+    throw new Error("Account not injected")
+  }
+
   return meeService.getQuote({
     supertransaction: tx,
-    account: client.state.account!,
+    account: client.state.account
   })
 }
 
@@ -200,18 +228,20 @@ async function getQuote(
  * - Must have gas token configuration
  */
 function validateBaseState(state: SupertransactionState) {
-  if (!state.account) throw new Error(`
+  if (!state.account)
+    throw new Error(`
     Supertransaction builder: Account not injected!
     When using a Supertransaction builder, you must inject an Account by using the
     withAccount method.  
   `)
-  if (!state.gasToken || !state.gasChain) throw new Error("Gas token configuration missing")
+  if (!state.gasToken || !state.gasChain)
+    throw new Error("Gas token configuration missing")
 }
 
 // Public API
 /**
  * Creates a new supertransaction builder with a fluent API.
- * 
+ *
  * @example
  * const tx = await supertransaction()
  *   .injectAccount(mcNexus)

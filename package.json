@@ -19,32 +19,40 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
+    "dev": "bun link && bun run build:types && bun run build:watch",
     "changeset": "changeset",
     "changeset:release": "bun run build && changeset publish",
     "changeset:version": "changeset version && bun install --lockfile-only",
     "changeset:release:canary": "original_name=$(bun run scripts/publish:canary.ts | grep ORIGINAL_NAME | cut -d'=' -f2) && npm publish && git checkout package.json && git tag -l '*-canary.*' | xargs git tag -d && git fetch --tags && git reset --hard && git clean -fd && echo \"Published canary version of $original_name as latest\"",
     "build": "bun run build:types && bun run build:js",
     "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "tsup src/index.ts --format esm,cjs --dts --outDir dist",
-    "prepublishOnly": "bun run build"
+    "build:js": "tsup src/index.ts --format esm,cjs --dts --outDir dist --clean",
+    "build:watch": "tsup src/index.ts --format esm,cjs --dts --outDir dist --watch",
+    "prepublishOnly": "bun run build",
+    "format": "biome format . --write",
+    "lint": "biome check .",
+    "lint:fix": "bun run lint --apply",
+    "size": "size-limit"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.27.11",
+    "@size-limit/esbuild-why": "^11.1.6",
+    "@size-limit/preset-small-lib": "^11.1.6",
     "@types/bun": "latest",
     "semver": "^7.6.3",
+    "size-limit": "^11.1.6",
     "tsup": "^8.3.5"
   },
   "peerDependencies": {
     "typescript": "^5.0.0",
     "@biconomy/sdk": "0.0.19",
-    "viem": "2.21.55"
+    "viem": "2.21.55",
+    "@rhinestone/module-sdk": "0.1.31"
   },
   "dependencies": {
-    "@rhinestone/module-sdk": "0.1.31",
     "abitype": "1.0.7",
     "axios": "1.7.7"
   }

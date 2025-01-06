@@ -1,0 +1,15 @@
+[
+  {
+    "name": "core (esm)",
+    "path": "./dist/index.js",
+    "limit": "50 kB",
+    "import": "*",
+    "ignore": ["node:fs", "fs", "path", "os", "crypto"]
+  },
+  {
+    "name": "core (cjs)",
+    "path": "./dist/index.cjs",
+    "limit": "80 kB",
+    "ignore": ["node:fs", "fs", "path", "os", "crypto"]
+  }
+]
