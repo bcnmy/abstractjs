@@ -2,7 +2,7 @@ import { type Address, type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "./account-vendors/account"
 import type { Supertransaction } from "./workflow"
 
-const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v1"
+const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io"
 
 type QuoteRequestUserOp = {
   sender: string
@@ -95,6 +95,8 @@ export class MeeService {
     supertransaction: Supertransaction
     account: MultichainSmartAccount
   }) {
+    const quoteUrl = `${this.nodeUrl}/v1/quote`
+
     const userOps = supertransaction.instructions
 
     const userOpData = await Promise.all(
@@ -168,7 +170,7 @@ export class MeeService {
       paymentInfo: paymentInfoData
     }
 
-    const response = await fetch(`${this.nodeUrl}/v1/quote`, {
+    const response = await fetch(quoteUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -178,6 +180,7 @@ export class MeeService {
 
     if (!response.ok) {
       const error = await response.text()
+      console.log({ response })
       throw new Error(`Failed to get quote from MEE Node: ${error}`)
     }
 

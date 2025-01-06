@@ -15,12 +15,17 @@ import {
 import { toMeeCompliantNexusAccount } from "../account-vendors"
 import { toMultichainNexusAccount } from "../account-vendors/nexus/multichain-nexus.account"
 import { createMeeService } from "../mee.service"
-import { signMeeQuote } from "../utils"
-import { getMultichainContract } from "../utils/contract/getMultichainContract"
+import { type FeeToken, signMeeQuote, type SupportedFeeChainId } from "../utils"
 import { supertransaction } from "../utils/syntax/supertransaction-builder.util"
 import { buildCall, buildMeeUserOp } from "../workflow"
+import { mcUSDC } from "../commons/tokens/stablecoins"
 
 const PRIV_KEY = Bun.env.TEST_PRIVATE_KEY as Hash
+
+const payGasWithParams: [FeeToken, { on: SupportedFeeChainId }] = [
+  "USDC",
+  { on: optimism.id }
+]
 
 describe("Private key", () => {
   test("should have private key", () => {
@@ -56,17 +61,14 @@ describe("Nexus Account", async () => {
     )
   })
 
-  const nexus = await toMeeCompliantNexusAccount({
-    chain: optimism,
-    signer: eoa,
-    transport: http()
-  })
+  test("should sign message using initialized single chain MEE Compliant Nexus Account", async () => {
+    const nexus = await toMeeCompliantNexusAccount({
+      chain: optimism,
+      signer: eoa,
+      transport: http()
+    })
 
-  test("should initialize single chain MEE Compliant Nexus Account", async () => {
     expect(nexus.address).toStartWith("0x")
-  })
-
-  test("Nexus should sign message", async () => {
     const signed = await nexus.signMessage({
       message: {
         raw: "0xABC"
@@ -76,20 +78,13 @@ describe("Nexus Account", async () => {
   })
 })
 
+let funded = false
 describe("Reading through MultichainAccount", async () => {
   const eoa = privateKeyToAccount(PRIV_KEY)
 
   const mcNexus = await toMultichainNexusAccount({
     chains: [optimism, base],
     signer: eoa
-  })
-
-  const mcUSDC = getMultichainContract({
-    abi: erc20Abi,
-    deployments: [
-      ["0x0b2c639c533813f4aa9d7837caf62653d097ff85", optimism.id],
-      ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", base.id]
-    ]
   })
 
   const readAddress = mcNexus.deploymentOn(optimism.id).address
@@ -100,6 +95,14 @@ describe("Reading through MultichainAccount", async () => {
     onChains: [optimism, base]
   })
 
+  const paymentBalance = usdcBalanceOnChains.find(
+    (balance) => balance.chainId === payGasWithParams[1].on
+  )
+  if (paymentBalance?.result && paymentBalance.result !== 0n) {
+    funded = true
+  }
+
+  console.log({ funded })
   expect(usdcBalanceOnChains.length).toEqual(2)
 })
 
@@ -151,10 +154,10 @@ describe("MEE Service", async () => {
   // on optimism and base and depend on public testnets. A local testing environment
   // needs to be set up. These tests are sufficient while we're in the experimental
   // phase of development.
-  test.skip("should get quote", async () => {
+  test.if(funded)("should get quote", async () => {
     const quote = await supertransaction()
       .injectAccount(mcNexus)
-      .payGasWith("USDC", { on: optimism.id })
+      .payGasWith(...payGasWithParams)
       .addInstructions(
         buildMeeUserOp({
           calls: {

@@ -569,10 +569,7 @@ export const toMeeCompliantNexusAccount = async (
         parameters
       const address = await getCounterFactualAddress()
 
-      const userOperation = {
-        ...userOpWithoutSender,
-        sender: address
-      }
+      const userOperation = { ...userOpWithoutSender, sender: address }
 
       const hash = getUserOperationHash({
         chainId,
