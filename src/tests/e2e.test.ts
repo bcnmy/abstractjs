@@ -15,15 +15,20 @@ import {
 import { toMeeCompliantNexusAccount } from "../account-vendors"
 import { toMultichainNexusAccount } from "../account-vendors/nexus/multichain-nexus.account"
 import { createMeeService } from "../mee.service"
-import { signMeeQuote } from "../utils"
-import { getMultichainContract } from "../utils/contract/getMultichainContract"
+import { type FeeToken, signMeeQuote, type SupportedFeeChainId } from "../utils"
 import { supertransaction } from "../utils/syntax/supertransaction-builder.util"
 import { buildCall, buildMeeUserOp } from "../workflow"
+import { mcUSDC } from "../commons/tokens/stablecoins"
 
 const PRIV_KEY = Bun.env.TEST_PRIVATE_KEY as Hash
 
+const payGasWithParams: [FeeToken, { on: SupportedFeeChainId }] = [
+  "USDC",
+  { on: optimism.id }
+]
+
 describe("Private key", () => {
-  test("Should have private key", () => {
+  test("should have private key", () => {
     expect(PRIV_KEY).toBeTruthy()
     expect(PRIV_KEY).toStartWith("0x")
   })
@@ -46,27 +51,24 @@ describe("Nexus Account", async () => {
     expect(mcNexusMainnet.deployments.length).toEqual(7)
   })
 
-  test("Should initialize Nexus account", async () => {
+  test("should initialize Nexus account", async () => {
     expect(mcNexusTestnet.deployments.length).toEqual(2)
   })
 
-  test("Should be same address on base and optimism", async () => {
+  test("should be same address on base and optimism", async () => {
     expect(mcNexusTestnet.deploymentOn(baseSepolia.id).address).toEqual(
       mcNexusTestnet.deploymentOn(optimismSepolia.id).address
     )
   })
 
-  const nexus = await toMeeCompliantNexusAccount({
-    chain: optimism,
-    signer: eoa,
-    transport: http()
-  })
+  test("should sign message using initialized single chain MEE Compliant Nexus Account", async () => {
+    const nexus = await toMeeCompliantNexusAccount({
+      chain: optimism,
+      signer: eoa,
+      transport: http()
+    })
 
-  test("Should initialize single chain MEE Compliant Nexus Account", async () => {
     expect(nexus.address).toStartWith("0x")
-  })
-
-  test("Nexus should sign message", async () => {
     const signed = await nexus.signMessage({
       message: {
         raw: "0xABC"
@@ -76,20 +78,13 @@ describe("Nexus Account", async () => {
   })
 })
 
+let funded = false
 describe("Reading through MultichainAccount", async () => {
   const eoa = privateKeyToAccount(PRIV_KEY)
 
   const mcNexus = await toMultichainNexusAccount({
     chains: [optimism, base],
     signer: eoa
-  })
-
-  const mcUSDC = getMultichainContract({
-    abi: erc20Abi,
-    deployments: [
-      ["0x0b2c639c533813f4aa9d7837caf62653d097ff85", optimism.id],
-      ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", base.id]
-    ]
   })
 
   const readAddress = mcNexus.deploymentOn(optimism.id).address
@@ -100,6 +95,14 @@ describe("Reading through MultichainAccount", async () => {
     onChains: [optimism, base]
   })
 
+  const paymentBalance = usdcBalanceOnChains.find(
+    (balance) => balance.chainId === payGasWithParams[1].on
+  )
+  if (paymentBalance?.result && paymentBalance.result !== 0n) {
+    funded = true
+  }
+
+  console.log({ funded })
   expect(usdcBalanceOnChains.length).toEqual(2)
 })
 
@@ -111,11 +114,9 @@ describe("MEE Service", async () => {
     signer: eoa
   })
 
-  const meeService = createMeeService({
-    meeNodeUrl: "https://mee-node.biconomy.io"
-  })
+  const meeService = createMeeService()
 
-  test("Should init meeService", async () => {
+  test("should init meeService", async () => {
     expect(meeService.execute).toBeTruthy()
   })
 
@@ -123,16 +124,16 @@ describe("MEE Service", async () => {
     calls: [{ to: zeroAddress, value: 0n, gasLimit: 50_000n }]
   })
 
-  test("Should encode an MEEUserOp", async () => {
+  test("should encode an MEEUserOp", async () => {
     expect(uOp.calls.length).toEqual(1)
   })
 
-  test("Should cast PartialMeeUserOp to MeeUserOp", async () => {
+  test("should cast PartialMeeUserOp to MeeUserOp", async () => {
     const casted = uOp.on(optimism.id)
     expect(casted.chainId).toEqual(optimism.id)
   })
 
-  test("Should build call", () => {
+  test("should build call", () => {
     const data = "0xabc"
     const value = 10n
     const gasLimit = 50_000n
@@ -153,10 +154,10 @@ describe("MEE Service", async () => {
   // on optimism and base and depend on public testnets. A local testing environment
   // needs to be set up. These tests are sufficient while we're in the experimental
   // phase of development.
-  describe("E2E Flow: Executes a TX on Base, Pays for gas on OP", async () => {
+  test.if(funded)("should get quote", async () => {
     const quote = await supertransaction()
       .injectAccount(mcNexus)
-      .payGasWith("USDC", { on: optimism.id })
+      .payGasWith(...payGasWithParams)
       .addInstructions(
         buildMeeUserOp({
           calls: {
@@ -169,15 +170,9 @@ describe("MEE Service", async () => {
       )
       .getQuote(meeService)
 
-    test(
-      "Should get quote",
-      async () => {
-        expect(quote.hash).toStartWith("0x")
-      },
-      { timeout: 10000 }
-    )
+    expect(quote.hash).toStartWith("0x")
 
-    const reciept = await meeService.execute(
+    const receipt = await meeService.execute(
       await signMeeQuote({
         executionMode: "direct-to-mee",
         quote: quote,
@@ -185,12 +180,6 @@ describe("MEE Service", async () => {
       })
     )
 
-    test(
-      "Should get reciept",
-      async () => {
-        expect(reciept.hash).toStartWith("0x")
-      },
-      { timeout: 10000 }
-    )
+    expect(receipt.hash).toStartWith("0x")
   })
 })

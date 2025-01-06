@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "exclude": [
+    "src/tests/**/*.ts"
+  ],
+  "basePath": "src",
+  "out": "docs",
+  "gitRevision": "main"
+}

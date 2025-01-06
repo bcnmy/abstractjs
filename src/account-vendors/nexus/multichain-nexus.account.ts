@@ -15,13 +15,8 @@ export async function toMultichainNexusAccount(
   const { signer, chains } = parameters
 
   const accounts = await Promise.all(
-    chains.map(
-      async (chain) =>
-        await toMeeCompliantNexusAccount({
-          chain: chain,
-          signer: signer,
-          transport: http()
-        })
+    chains.map((chain) =>
+      toMeeCompliantNexusAccount({ chain, signer, transport: http() })
     )
   )
 
