@@ -1,17 +1,10 @@
 # AbstractJS
 
-Currently named: `abstractjs`
-
-In order to run the repository:
+## Quickstart:
 
 ```sh
-bun i
+bun add @biconomy/abstractjs @biconomy/sdk @rhinestone/module-sdk viem
 ```
-
-```sh
-bun test
-```
-
 ## Linking & Developing
 
 To link the package to your project, run:
@@ -35,13 +28,16 @@ This will run the package in watch mode, and will automatically update the packa
 
 Currently the only tests which this project has interact with testnets, due to several limitations:
 
-- AbrstactJS depends on triggering bridges and intent solvers, all of which can't be properly
+- AbstractJS depends on triggering bridges and intent solvers, all of which can't be properly
   simulated in a local environment.
 - AbstractJS depends on the MEE Node, which hasn't
   yet been set-up in a local environment.
 - For tests to work, an `.env` file needs to contain the `TEST_PRIVATE_KEY` variable!
 
-Run tests with `bun test`
+```sh
+bun i --frozen-lockfile && bun test
+```
+
 
 ## Building 
 
