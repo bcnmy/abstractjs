@@ -1,15 +1,15 @@
-name: unit-tests
+name: paid-tests
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
 jobs:
-  unit-tests:
-    name: unit-tests
+  paid-tests:
+    name: paid-tests
     permissions: write-all
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-unit-tests
+      group: ${{ github.workflow }}-${{ github.ref }}-paid-tests
       cancel-in-progress: true
     steps:
       - uses: actions/setup-node@v4
@@ -26,4 +26,6 @@ jobs:
         env:
           TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
           CHAIN_ID: ${{ secrets.CHAIN_ID }}
-          RUN_PAID_TESTS: false
+          CI: true 
+          RUN_PAID_TESTS: true
+

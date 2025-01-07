@@ -96,8 +96,8 @@ function createClient(
   const client: SupertransactionClient = {
     state,
     injectAccount: (account) => injectAccount(client, account),
-    payGasWith: (token, { on: chain }) =>
-      payGasWith(client, token, { on: chain }),
+    payGasWith: (token, { on: chainId }) =>
+      payGasWith(client, token, { on: chainId }),
     addInstructions: (...instructions) =>
       addInstructions(client, ...instructions),
     finalize: () => finalize(client),
@@ -124,13 +124,13 @@ function injectAccount(
 function payGasWith(
   client: SupertransactionClient,
   token: FeeToken,
-  { on: chain }: { on: SupportedFeeChainId }
+  { on: chainId }: { on: SupportedFeeChainId }
 ): SupertransactionClient {
-  const resolvedToken = resolveFeeToken(chain, token)
+  const resolvedToken = resolveFeeToken(chainId, token)
   return createClient({
     ...client.state,
     gasToken: resolvedToken.address,
-    gasChain: chain,
+    gasChain: chainId,
     pendingInstructions: client.state.pendingInstructions
   })
 }
