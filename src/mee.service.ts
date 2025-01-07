@@ -243,13 +243,8 @@ export function formatMeeSignature(parameters: {
 export function createMeeService(params?: MeeServiceInitParams) {
   console.warn(`
     --------------------------- READ ----------------------------------------------
-    You are using the Developer Preview of the Biconomy MEE! The SDK has not been
-    thoroughly tested and the underlying contracts are still in the auditing process.
-    The interface, package name and developer flow might change significantly from now
-    until the release data.
-    
-    This Developer preview is meant only as a demonstrator of the capabilities 
-    for the MEE stack. Do not use in commercial projects!
+    You are using the Developer Preview of the Biconomy MEE. The underlying 
+    contracts are still being audited.
     -------------------------------------------------------------------------------
   `)
   return new MeeService(params)

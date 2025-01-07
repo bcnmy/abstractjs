@@ -1,12 +1,11 @@
 import type { Signer } from "@biconomy/sdk"
-import { http, type Chain, type Transport } from "viem"
-import type { NonEmptyArray } from "../../utils/types/util.type"
+import { http, type Chain } from "viem"
 import { MultichainSmartAccount } from "../account"
 import { toMeeCompliantNexusAccount } from "./nexus-mee-compliant"
 
 export type MeeNexusParams = {
   signer: Signer
-  chains: NonEmptyArray<Chain>
+  chains: Chain[]
 }
 
 export async function toMultichainNexusAccount(

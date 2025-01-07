@@ -21,6 +21,7 @@ Then in your linked project, update your package.json dependencies to point to t
     "@biconomy/abstractjs": "file:../../abstractjs"
   }
 }
+```
 
 This will run the package in watch mode, and will automatically update the package in your linked project.
 
@@ -38,8 +39,23 @@ Currently the only tests which this project has interact with testnets, due to s
   yet been set-up in a local environment.
 - For tests to work, an `.env` file needs to contain the `TEST_PRIVATE_KEY` variable!
 
-```sh
-bun i --frozen-lockfile && bun test
+**Prerequisites:**
+- [Node.js](https://nodejs.org/en/download/package-manager) *(v22 or higher)*
+- [Bun](https://bun.sh/) package manager
+- [Foundry](https://book.getfoundry.sh/getting-started/installation)
+
+**Setup:**
+```bash
+bun install --frozen-lockfile
+```
+
+**Running Tests:**
+```bash
+# Run all tests
+bun run test
+
+# Run tests for a specific module
+bun run test -t=explorer
 ```
 
 
