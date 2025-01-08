@@ -1,0 +1,762 @@
+[
+  {
+    "id": "tether",
+    "symbol": "usdt",
+    "name": "Tether",
+    "networks": {
+      "1": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "2222": "0x919C1c267BC06a7039e03fcc2eF738525769109c",
+      "42220": "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e",
+      "43114": "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7"
+    }
+  },
+  {
+    "id": "usd-coin",
+    "symbol": "usdc",
+    "name": "USDC",
+    "networks": {
+      "1": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "10": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      "137": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+      "324": "0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4",
+      "8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "42161": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "42220": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+      "43114": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E"
+    }
+  },
+  {
+    "id": "the-open-network",
+    "symbol": "ton",
+    "name": "Toncoin",
+    "networks": {
+      "1": "0x582d872A1B094FC48F5DE31D3B73F2D9bE47def1",
+      "56": "0x76A797A59Ba2C17726896976B7B3747BfD1d220f"
+    }
+  },
+  {
+    "id": "chainlink",
+    "symbol": "link",
+    "name": "Chainlink",
+    "networks": {
+      "1": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+      "10": "0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6",
+      "56": "0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD",
+      "100": "0xE2e73A1c69ecF83F464EFCE6A5be353a37cA09b2",
+      "128": "0x9e004545c59D359F6B7BFB06a26390b087717b42",
+      "137": "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39",
+      "250": "0xb3654dc3D10Ea7645f8319668E8F54d2574FBdC8",
+      "2001": "0xf390830DF829cf22c53c8840554B98eafC5dCBc2",
+      "39797": "0x68Ca48cA2626c415A89756471D4ADe2CC9034008",
+      "42161": "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
+      "43114": "0x5947BB275c521040051D82396192181b413227A3",
+      "1666600000": "0x218532a12a389a4a92fC0C5Fb22901D1c19198aA"
+    }
+  },
+  {
+    "id": "uniswap",
+    "symbol": "uni",
+    "name": "Uniswap",
+    "networks": {
+      "1": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      "10": "0x6fd9d7AD17242c41f7131d257212c54A0e816691",
+      "56": "0xBf5140A22578168FD562DCcF235E5D43A02ce9B1",
+      "100": "0x4537e328Bf7e4eFA29D05CAeA260D7fE26af9D74",
+      "128": "0x22C54cE8321A4015740eE1109D9cBc25815C46E6",
+      "137": "0xb33EaAd8d922B1083446DC23f610c2567fB5180f",
+      "39797": "0x665B3A802979eC24e076c80025bFF33c18eB6007",
+      "42161": "0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0",
+      "43114": "0x8eBAf22B6F053dFFeaf46f4Dd9eFA95D89ba8580",
+      "1666600000": "0x90D81749da8867962c760414C1C25ec926E889b6"
+    }
+  },
+  {
+    "id": "bitget-token",
+    "symbol": "bgb",
+    "name": "Bitget Token",
+    "networks": {
+      "1": "0x54D2252757e1672EEaD234D27B1270728fF90581",
+      "2818": "0x55d1f1879969bdbB9960d269974564C58DBc3238"
+    }
+  },
+  {
+    "id": "pepe",
+    "symbol": "pepe",
+    "name": "Pepe",
+    "networks": {
+      "1": "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+      "56": "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00",
+      "42161": "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00"
+    }
+  },
+  {
+    "id": "wrapped-eeth",
+    "symbol": "weeth",
+    "name": "Wrapped eETH",
+    "networks": {
+      "1": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+      "42161": "0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe"
+    }
+  },
+  {
+    "id": "usds",
+    "symbol": "usds",
+    "name": "USDS",
+    "networks": {
+      "1": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+      "8453": "0x820C137fa70C8691f0e44Dc420a5e53c168921Dc"
+    }
+  },
+  {
+    "id": "aave",
+    "symbol": "aave",
+    "name": "Aave",
+    "networks": {
+      "1": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+      "10": "0x76FB31fb4af56892A25e32cFC43De717950c9278",
+      "56": "0xfb6115445Bff7b52FeB98650C87f44907E58f802",
+      "128": "0x202b4936fE1a82A4965220860aE46d7d3939Bb25",
+      "137": "0xD6DF932A45C0f255f85145f286eA0b292B21C90B",
+      "250": "0x6a07A792ab2965C72a5B8088d3a069A7aC3a993B",
+      "39797": "0xA7F2f790355E0C32CAb03f92F6EB7f488E6F049a",
+      "42161": "0xba5DdD1f9d7F570dc94a51479a000E3BCE967196",
+      "43114": "0x63a72806098Bd3D9520cC43356dD78afe5D386D9",
+      "1666600000": "0xcF323Aad9E522B93F11c352CaA519Ad0E14eB40F"
+    }
+  },
+  {
+    "id": "mantle",
+    "symbol": "mnt",
+    "name": "Mantle",
+    "networks": {
+      "1": "0x3c3a81e81dc49A522A592e7622A7E711c06bf354",
+      "5000": "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
+    }
+  },
+  {
+    "id": "render-token",
+    "symbol": "render",
+    "name": "Render",
+    "networks": {
+      "1": "0x6De037ef9aD2725EB40118Bb1702EBb27e4Aeb24",
+      "137": "0x61299774020dA444Af134c82fa83E3810b309991"
+    }
+  },
+  {
+    "id": "polygon-ecosystem-token",
+    "symbol": "pol",
+    "name": "POL (ex-MATIC)",
+    "networks": {
+      "1": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
+      "137": "0x0000000000000000000000000000000000001010"
+    }
+  },
+  {
+    "id": "mantra-dao",
+    "symbol": "om",
+    "name": "MANTRA",
+    "networks": {
+      "1": "0x3593D125a4f7849a1B059E64F4517A86Dd60c95d",
+      "56": "0xF78D2e7936F5Fe18308A3B2951A93b6c4a41F5e2",
+      "137": "0xC3Ec80343D2bae2F8E680FDADDe7C17E71E114ea",
+      "8453": "0x3992B27dA26848C2b19CeA6Fd25ad5568B68AB98"
+    }
+  },
+  {
+    "id": "fetch-ai",
+    "symbol": "fet",
+    "name": "Artificial Superintelligence Alliance",
+    "networks": {
+      "1": "0xaea46A60368A7bD060eec7DF8CBa43b7EF41Ad85",
+      "56": "0x031b41e504677879370e9DBcF937283A8691Fa7f"
+    }
+  },
+  {
+    "id": "virtual-protocol",
+    "symbol": "virtual",
+    "name": "Virtuals Protocol",
+    "networks": {
+      "1": "0x44ff8620b8cA30902395A7bD3F2407e1A091BF73",
+      "8453": "0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b"
+    }
+  },
+  {
+    "id": "arbitrum",
+    "symbol": "arb",
+    "name": "Arbitrum",
+    "networks": {
+      "1": "0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1",
+      "42161": "0x912CE59144191C1204E64559FE8253a0e49E6548",
+      "42170": "0xf823C3cD3CeBE0a1fA952ba88Dc9EEf8e0Bf46AD"
+    }
+  },
+  {
+    "id": "okb",
+    "symbol": "okb",
+    "name": "OKB",
+    "networks": {
+      "1": "0x75231F58b43240C9718Dd58B4967c5114342a86c",
+      "66": "0xdF54B6c6195EA4d948D03bfD818D365cf175cFC2"
+    }
+  },
+  {
+    "id": "bonk",
+    "symbol": "bonk",
+    "name": "Bonk",
+    "networks": {
+      "1": "0x1151CB3d861920e07a38e03eEAd12C32178567F6",
+      "56": "0xA697e272a73744b343528C3Bc4702F2565b2F422",
+      "137": "0xe5B49820e5A1063F6F4DdF851327b5E8B2301048",
+      "42161": "0x09199d9A5F4448D0848e4395D065e1ad9c4a1F74",
+      "245022934": "0xD4B6520f7Fb78E1EE75639F3376c581a71bcdb0E"
+    }
+  },
+  {
+    "id": "injective-protocol",
+    "symbol": "inj",
+    "name": "Injective",
+    "networks": {
+      "1": "0xe28b3B32B6c345A34Ff64674606124Dd5Aceca30",
+      "56": "0xa2B726B1145A4773F68593CF171187d8EBe4d495"
+    }
+  },
+  {
+    "id": "coinbase-wrapped-btc",
+    "symbol": "cbbtc",
+    "name": "Coinbase Wrapped BTC",
+    "networks": {
+      "1": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "8453": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+      "42161": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf"
+    }
+  },
+  {
+    "id": "the-graph",
+    "symbol": "grt",
+    "name": "The Graph",
+    "networks": {
+      "1": "0xc944E90C64B2c07662A292be6244BDf05Cda44a7",
+      "137": "0x5fe2B58c013d7601147DcdD68C143A77499f5531",
+      "39797": "0x771513bA693D457Df3678c951c448701f2eAAad5",
+      "42161": "0x9623063377AD1B27544C965cCd7342f7EA7e88C7",
+      "43114": "0x8a0cAc13c7da965a312f08ea4229c37869e85cB9",
+      "1666600000": "0x002FA662F2E09de7C306d2BaB0085EE9509488Ff"
+    }
+  },
+  {
+    "id": "worldcoin-wld",
+    "symbol": "wld",
+    "name": "Worldcoin",
+    "networks": {
+      "1": "0x163f8C2467924be0ae7B5347228CABF260318753",
+      "10": "0xdC6fF44d5d932Cbd77B52E5612Ba0529DC6226F1",
+      "480": "0x2cFc85d8E48F8EAB294be644d9E25C3030863003"
+    }
+  },
+  {
+    "id": "usual-usd",
+    "symbol": "usd0",
+    "name": "Usual USD",
+    "networks": {
+      "1": "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5",
+      "42161": "0x35f1C5cB7Fb977E669fD244C567Da99d8a3a6850"
+    }
+  },
+  {
+    "id": "first-digital-usd",
+    "symbol": "fdusd",
+    "name": "First Digital USD",
+    "networks": {
+      "1": "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409",
+      "56": "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409"
+    }
+  },
+  {
+    "id": "rocket-pool-eth",
+    "symbol": "reth",
+    "name": "Rocket Pool ETH",
+    "networks": {
+      "1": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+      "10": "0x9Bcef72be871e61ED4fBbc7630889beE758eb81D",
+      "137": "0x0266F4F08D82372CF0FcbCCc0Ff74309089c74d1",
+      "8453": "0xB6fe221Fe9EeF5aBa221c348bA20A1Bf5e73624c",
+      "42161": "0xEC70Dcb4A1EFa46b8F2D97C310C9c4790ba5ffA8"
+    }
+  },
+  {
+    "id": "floki",
+    "symbol": "floki",
+    "name": "FLOKI",
+    "networks": {
+      "1": "0xcf0C122c6b73ff809C693DB761e7BaeBe62b6a2E",
+      "56": "0xfb5B838b6cfEEdC2873aB27866079AC55363D37E"
+    }
+  },
+  {
+    "id": "lombard-staked-btc",
+    "symbol": "lbtc",
+    "name": "Lombard Staked BTC",
+    "networks": {
+      "1": "0x8236a87084f8B84306f72007F36F2618A5634494",
+      "56": "0xecAc9C5F704e954931349Da37F60E39f515c11c1",
+      "8453": "0xecAc9C5F704e954931349Da37F60E39f515c11c1"
+    }
+  },
+  {
+    "id": "lido-dao",
+    "symbol": "ldo",
+    "name": "Lido DAO",
+    "networks": {
+      "1": "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32",
+      "10": "0xFdb794692724153d1488CcdBE0C56c252596735F",
+      "137": "0xC3C7d422809852031b44ab29EEC9F1EfF2A58756",
+      "42161": "0x13Ad51ed4F1B7e9Dc168d8a00cB3f4dDD85EfA60"
+    }
+  },
+  {
+    "id": "mantle-staked-ether",
+    "symbol": "meth",
+    "name": "Mantle Staked Ether",
+    "networks": {
+      "1": "0xd5F7838F5C461fefF7FE49ea5ebaF7728bB0ADfa",
+      "5000": "0xcDA86A272531e8640cD7F1a92c01839911B90bb0"
+    }
+  },
+  {
+    "id": "quant-network",
+    "symbol": "qnt",
+    "name": "Quant",
+    "networks": {
+      "1": "0x4a220E6096B25EADb88358cb44068A3248254675",
+      "39797": "0x462B35452E552A66B519EcF70aEdb1835d434965"
+    }
+  },
+  {
+    "id": "the-sandbox",
+    "symbol": "sand",
+    "name": "The Sandbox",
+    "networks": {
+      "1": "0x3845badAde8e6dFF049820680d1F14bD3903a5d0",
+      "137": "0xBbba073C31bF03b8ACf7c28EF0738DeCF3695683",
+      "39797": "0x73a4AC88c12D66AD08c1cfC891bF47883919ba74",
+      "1666600000": "0x35de8649e1e4Fd1A7Bd3B14F7e24e5e7887174Ed"
+    }
+  },
+  {
+    "id": "spx6900",
+    "symbol": "spx",
+    "name": "SPX6900",
+    "networks": {
+      "1": "0xE0f63A424a4439cBE457D80E4f4b51aD25b2c56C",
+      "8453": "0x50dA645f148798F68EF2d7dB7C1CB22A6819bb2C"
+    }
+  },
+  {
+    "id": "nexo",
+    "symbol": "nexo",
+    "name": "NEXO",
+    "networks": {
+      "1": "0xB62132e35a6c13ee1EE0f84dC5d40bad8d815206",
+      "137": "0x41b3966B4FF7b427969ddf5da3627d6AEAE9a48E",
+      "250": "0x7C598c96D02398d89FbCb9d41Eab3DF0C16F227D",
+      "39797": "0x04640Dc771eDd73cbeB934FB5461674830BAea11"
+    }
+  },
+  {
+    "id": "solv-btc",
+    "symbol": "solvbtc",
+    "name": "Solv Protocol SolvBTC",
+    "networks": {
+      "1": "0x7A56E1C57C7475CCf742a1832B028F0456652F97",
+      "56": "0x4aae823a6a0b376De6A78e74eCC5b079d38cBCf7",
+      "4200": "0x41D9036454BE47d3745A823C4aaCD0e29cFB0f71",
+      "5000": "0xa68d25fC2AF7278db4BcdcAabce31814252642a9",
+      "8453": "0x3B86Ad95859b6AB773f55f8d94B4b9d443EE931f",
+      "42161": "0x3647c54c4c2C65bC7a2D63c0Da2809B399DBBDC0",
+      "43114": "0xbc78D84Ba0c46dFe32cf2895a19939c86b81a777",
+      "810180": "0xbEAf16cFD8eFe0FC97C2a07E349B9411F5dC272C"
+    }
+  },
+  {
+    "id": "maker",
+    "symbol": "mkr",
+    "name": "Maker",
+    "networks": {
+      "1": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+      "137": "0x6f7C932e7684666C9fd1d44527765433e01fF61d",
+      "39797": "0x050317d93f29D1bA5FF3EaC3b8157fD4E345588D",
+      "43114": "0x88128fd4b259552A9A1D457f435a6527AAb72d42"
+    }
+  },
+  {
+    "id": "beam-2",
+    "symbol": "beam",
+    "name": "Beam",
+    "networks": {
+      "1": "0x62D0A8458eD7719FDAF978fe5929C6D342B0bFcE",
+      "56": "0x62D0A8458eD7719FDAF978fe5929C6D342B0bFcE",
+      "43114": "0x62D0A8458eD7719FDAF978fe5929C6D342B0bFcE"
+    }
+  },
+  {
+    "id": "aioz-network",
+    "symbol": "aioz",
+    "name": "AIOZ Network",
+    "networks": {
+      "1": "0x626E8036dEB333b408Be468F951bdB42433cBF18",
+      "56": "0x33d08D8C7a168333a85285a68C0042b39fC3741D"
+    }
+  },
+  {
+    "id": "bittorrent",
+    "symbol": "btt",
+    "name": "BitTorrent",
+    "networks": {
+      "1": "0xC669928185DbCE49d2230CC9B0979BE6DC797957",
+      "56": "0x352Cb5E19b12FC216548a2677bD0fce83BaE434B",
+      "199": "0x0000000000000000000000000000000000001010",
+      "39797": "0xF1BdCF2D4163adF9554111439dAbdD6f18fF9BA7"
+    }
+  },
+  {
+    "id": "curve-dao-token",
+    "symbol": "crv",
+    "name": "Curve DAO",
+    "networks": {
+      "1": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      "10": "0x0994206dfE8De6Ec6920FF4D779B0d950605Fb53",
+      "137": "0x172370d5Cd63279eFa6d502DAB29171933a610AF",
+      "250": "0x1E4F97b9f9F913c46F1632781732927B9019C68b",
+      "39797": "0xd3319EAF3c4743ac75AaCE77befCFA445Ed6E69E",
+      "42161": "0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978"
+    }
+  },
+  {
+    "id": "susds",
+    "symbol": "susds",
+    "name": "sUSDS",
+    "networks": {
+      "1": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+      "8453": "0x5875eEE11Cf8398102FdAd704C9E96607675467a"
+    }
+  },
+  {
+    "id": "axie-infinity",
+    "symbol": "axs",
+    "name": "Axie Infinity",
+    "networks": {
+      "1": "0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b",
+      "56": "0x715D400F88C167884bbCc41C5FeA407ed4D2f8A0",
+      "2020": "0x97a9107C1793BC407d6F527b77e7fff4D812bece",
+      "39797": "0x7CD3D51beE45434Dd80822c5D58b999333b69FfB",
+      "1666600000": "0x14A7B318fED66FfDcc80C1517C172c13852865De"
+    }
+  },
+  {
+    "id": "solv-protocol-solvbtc-bbn",
+    "symbol": "solvbtc.bbn",
+    "name": "Solv Protocol SolvBTC.BBN",
+    "networks": {
+      "1": "0xd9D920AA40f578ab794426F5C90F6C731D159DEf",
+      "56": "0x1346b618dC92810EC74163e4c27004c921D446a5",
+      "4200": "0x1760900aCA15B90Fa2ECa70CE4b4EC441c2CF6c5",
+      "5000": "0x1d40baFC49c37CdA49F2a5427E2FB95E1e3FCf20",
+      "8453": "0xC26C9099BD3789107888c35bb41178079B282561",
+      "42161": "0x346c574C56e1A4aAa8dc88Cda8F7EB12b39947aB",
+      "43114": "0xCC0966D8418d412c599A6421b760a847eB169A8c"
+    }
+  },
+  {
+    "id": "decentraland",
+    "symbol": "mana",
+    "name": "Decentraland",
+    "networks": {
+      "1": "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942",
+      "137": "0xA1c57f48F0Deb89f569dFbE6E2B7f46D33606fD4"
+    }
+  },
+  {
+    "id": "dexe",
+    "symbol": "dexe",
+    "name": "DeXe",
+    "networks": {
+      "1": "0xde4EE8057785A7e8e800Db58F9784845A5C2Cbd6",
+      "56": "0x6E88056E8376Ae7709496Ba64d37fa2f8015ce3e"
+    }
+  },
+  {
+    "id": "matic-network",
+    "symbol": "matic",
+    "name": "Polygon",
+    "networks": {
+      "1": "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0",
+      "56": "0xCC42724C6683B7E57334c4E856f4c9965ED682bD",
+      "1284": "0x3405A1bd46B85c5C029483FbECf2F3E611026e45",
+      "1285": "0x682F81e57EAa716504090C3ECBa8595fB54561D8",
+      "39797": "0x98997E1651919fAeacEe7B96aFbB3DfD96cb6036",
+      "1666600000": "0x301259f392B551CA8c592C9f676FCD2f9A0A84C5"
+    }
+  },
+  {
+    "id": "mog-coin",
+    "symbol": "mog",
+    "name": "Mog Coin",
+    "networks": {
+      "1": "0xaaeE1A9723aaDB7afA2810263653A34bA2C21C7a",
+      "8453": "0x2Da56AcB9Ea78330f947bD57C54119Debda7AF71"
+    }
+  },
+  {
+    "id": "apecoin",
+    "symbol": "ape",
+    "name": "ApeCoin",
+    "networks": {
+      "1": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
+      "137": "0xB7b31a6BC18e48888545CE79e83E06003bE70930"
+    }
+  },
+  {
+    "id": "reserve-rights-token",
+    "symbol": "rsr",
+    "name": "Reserve Rights",
+    "networks": {
+      "1": "0x320623b8E4fF03373931769A31Fc52A4E78B5d70",
+      "8453": "0xaB36452DbAC151bE02b16Ca17d8919826072f64a",
+      "39797": "0xfcE13BB63B60f6e20ed846ae73ed242D29129800",
+      "42161": "0xCa5Ca9083702c56b481D1eec86F1776FDbd2e594"
+    }
+  },
+  {
+    "id": "usdd",
+    "symbol": "usdd",
+    "name": "USDD",
+    "networks": {
+      "1": "0x0C10bF8FcB7Bf5412187A595ab97a3609160b5c6",
+      "56": "0xd17479997F34dd9156Deef8F95A52D81D265be9c",
+      "199": "0x17F235FD5974318E4E2a5e37919a209f7c37A6d1",
+      "42161": "0x680447595e8b7b3Aa1B43beB9f6098C79ac2Ab3f",
+      "43114": "0xB514CABD09eF5B169eD3fe0FA8DBd590741E81C2"
+    }
+  },
+  {
+    "id": "echelon-prime",
+    "symbol": "prime",
+    "name": "Echelon Prime",
+    "networks": {
+      "1": "0xb23d80f5FefcDDaa212212F028021B41DEd428CF",
+      "8453": "0xfA980cEd6895AC314E7dE34Ef1bFAE90a5AdD21b"
+    }
+  },
+  {
+    "id": "wormhole",
+    "symbol": "w",
+    "name": "Wormhole",
+    "networks": {
+      "1": "0xB0fFa8000886e57F86dd5264b9582b2Ad87b2b91",
+      "8453": "0xB0fFa8000886e57F86dd5264b9582b2Ad87b2b91",
+      "42161": "0xB0fFa8000886e57F86dd5264b9582b2Ad87b2b91"
+    }
+  },
+  {
+    "id": "pendle",
+    "symbol": "pendle",
+    "name": "Pendle",
+    "networks": {
+      "1": "0x808507121B80c02388fAd14726482e061B8da827",
+      "10": "0xBC7B1Ff1c6989f006a1185318eD4E7b5796e66E1",
+      "56": "0xb3Ed0A426155B79B898849803E3B36552f7ED507",
+      "8453": "0xA99F6e6785Da0F5d6fB42495Fe424BCE029Eeb3E",
+      "42161": "0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8"
+    }
+  },
+  {
+    "id": "pancakeswap-token",
+    "symbol": "cake",
+    "name": "PancakeSwap",
+    "networks": {
+      "1": "0x152649eA73beAb28c5b49B26eb48f7EAD6d4c898",
+      "56": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+      "204": "0x2779106e4F4A8A28d77A24c18283651a2AE22D1C",
+      "324": "0x3A287a06c66f9E95a56327185cA2BDF5f031cEcD",
+      "1101": "0x0D1E753a25eBda689453309112904807625bEFBe",
+      "8453": "0x3055913c90Fcc1A6CE9a358911721eEb942013A1",
+      "42161": "0x1b896893dfc86bb67Cf57767298b9073D2c1bA2c",
+      "59144": "0x0D1E753a25eBda689453309112904807625bEFBe"
+    }
+  },
+  {
+    "id": "gnosis",
+    "symbol": "gno",
+    "name": "Gnosis",
+    "networks": {
+      "1": "0x6810e776880C02933D47DB1b9fc05908e5386b96",
+      "100": "0x9C58BAcC331c9aa871AFD802DB6379a98e80CEdb",
+      "39797": "0xF452bff8e958C6F335F06fC3aAc427Ee195366fE",
+      "42161": "0xa0b862F60edEf4452F25B4160F177db44DeB6Cf1"
+    }
+  },
+  {
+    "id": "mantle-restaked-eth",
+    "symbol": "cmeth",
+    "name": "Mantle Restaked ETH",
+    "networks": {
+      "1": "0xE6829d9a7eE3040e1276Fa75293Bde931859e8fA",
+      "5000": "0xE6829d9a7eE3040e1276Fa75293Bde931859e8fA"
+    }
+  },
+  {
+    "id": "frax",
+    "symbol": "frax",
+    "name": "Frax",
+    "networks": {
+      "1": "0x853d955aCEf822Db058eb8505911ED77F175b99e",
+      "10": "0x2E3D870790dC77A83DD1d18184Acc7439A53f475",
+      "56": "0x90C97F71E18723b0Cf0dfa30ee176Ab653E89F40",
+      "137": "0x45c32fA6DF82ead1e2EF74d17b76547EDdFaFF89",
+      "250": "0xdc301622e621166BD8E82f2cA0A26c13Ad0BE355",
+      "288": "0x7562F525106F5d54E891e005867Bf489B5988CD9",
+      "1101": "0xFf8544feD5379D9ffa8D47a74cE6b91e632AC44D",
+      "1284": "0x322E86852e492a7Ee17f28a78c663da38FB33bfb",
+      "1285": "0x1A93B23281CC1CDE4C4741353F3064709A16197d",
+      "1329": "0x80Eede496655FB9047dd39d9f418d5483ED600df",
+      "9001": "0xE03494D0033687543a80c9B1ca7D6237F2EA8BD8",
+      "42161": "0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F",
+      "43114": "0xD24C2Ad096400B6FBcd2ad8B24E7acBc21A1da64",
+      "1313161554": "0xE4B9e004389d91e4134a28F19BD833cBA1d994B6",
+      "1666600000": "0xFa7191D292d5633f702B0bd7E3E3BcCC0e633200"
+    }
+  },
+  {
+    "id": "compound-governance-token",
+    "symbol": "comp",
+    "name": "Compound",
+    "networks": {
+      "1": "0xc00e94Cb662C3520282E6f5717214004A7f26888",
+      "56": "0x52CE071Bd9b1C4B00A0b92D298c512478CaD67e8",
+      "137": "0x8505b9d2254A7Ae468c0E9dd10Ccea3A837aef5c",
+      "8453": "0x9e1028F5F1D5eDE59748FFceE5532509976840E0",
+      "39797": "0x66bC411714e16B6F0C68be12bD9c666cc4576063",
+      "42161": "0x354A6dA3fcde098F8389cad84b0182725c6C91dE",
+      "43114": "0xc3048E19E76CB9a3Aa9d77D8C03c29Fc906e2437",
+      "1666600000": "0x32137b9275EA35162812883582623cd6f6950958"
+    }
+  },
+  {
+    "id": "havven",
+    "symbol": "snx",
+    "name": "Synthetix Network",
+    "networks": {
+      "1": "0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F",
+      "10": "0x8700dAec35aF8Ff88c16BdF0418774CB3D7599B4",
+      "128": "0x777850281719d5a96C29812ab72f822E0e09F3Da",
+      "137": "0x50B728D8D964fd00C2d0AAD81718b71311feF68a",
+      "250": "0x56ee926bD8c72B2d5fa1aF4d9E4Cbb515a1E3Adc",
+      "8453": "0x22e6966B799c4D5B13BE962E1D117b56327FDa66",
+      "39797": "0xa255461fF545d6ecE153283f421D67D2DE5D0E29",
+      "43114": "0xBeC243C995409E6520D7C41E404da5dEba4b209B",
+      "1666600000": "0x7b9c523d59AeFd362247Bd5601A89722e3774dD2"
+    }
+  },
+  {
+    "id": "amp-token",
+    "symbol": "amp",
+    "name": "Amp",
+    "networks": {
+      "1": "0xfF20817765cB7f73d4bde2e66e067E58D11095C2",
+      "39797": "0xAD7ABE6f12F1059bDf48aE67bfF92B00438ceD95"
+    }
+  },
+  {
+    "id": "usdx-money-usdx",
+    "symbol": "usdx",
+    "name": "usdx.money USDX",
+    "networks": {
+      "1": "0xf3527ef8dE265eAa3716FB312c12847bFBA66Cef",
+      "56": "0xf3527ef8dE265eAa3716FB312c12847bFBA66Cef",
+      "42161": "0xf3527ef8dE265eAa3716FB312c12847bFBA66Cef"
+    }
+  },
+  {
+    "id": "superfarm",
+    "symbol": "super",
+    "name": "SuperVerse",
+    "networks": {
+      "1": "0xe53EC727dbDEB9E2d5456c3be40cFF031AB40A55",
+      "137": "0xa1428174F516F527fafdD146b883bB4428682737"
+    }
+  },
+  {
+    "id": "axelar",
+    "symbol": "axl",
+    "name": "Axelar",
+    "networks": {
+      "1": "0x467719aD09025FcC6cF6F8311755809d45a5E5f3",
+      "10": "0x23ee2343B892b1BB63503a4FAbc840E0e2C6810f",
+      "56": "0x8b1f4432F943c465A973FeDC6d7aa50Fc96f1f65",
+      "137": "0x6e4E624106Cb12E168E6533F8ec7c82263358940",
+      "250": "0x8b1f4432F943c465A973FeDC6d7aa50Fc96f1f65",
+      "1284": "0x467719aD09025FcC6cF6F8311755809d45a5E5f3",
+      "8453": "0x23ee2343B892b1BB63503a4FAbc840E0e2C6810f",
+      "42161": "0x23ee2343B892b1BB63503a4FAbc840E0e2C6810f",
+      "43114": "0x44c784266cf024a60e8acF2427b9857Ace194C5d"
+    }
+  },
+  {
+    "id": "coinbase-wrapped-staked-eth",
+    "symbol": "cbeth",
+    "name": "Coinbase Wrapped Staked ETH",
+    "networks": {
+      "1": "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704",
+      "10": "0xadDb6A0412DE1BA0F936DCaeb8Aaa24578dcF3B2",
+      "137": "0x4b4327dB1600B8B1440163F667e199CEf35385f5",
+      "8453": "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22",
+      "42161": "0x1DEBd73E752bEaF79865Fd6446b0c970EaE7732f"
+    }
+  },
+  {
+    "id": "layerzero",
+    "symbol": "zro",
+    "name": "LayerZero",
+    "networks": {
+      "1": "0x6985884C4392D348587B19cb9eAAf157F13271cd",
+      "10": "0x6985884C4392D348587B19cb9eAAf157F13271cd",
+      "56": "0x6985884C4392D348587B19cb9eAAf157F13271cd",
+      "137": "0x6985884C4392D348587B19cb9eAAf157F13271cd",
+      "8453": "0x6985884C4392D348587B19cb9eAAf157F13271cd",
+      "42161": "0x6985884C4392D348587B19cb9eAAf157F13271cd",
+      "43114": "0x6985884C4392D348587B19cb9eAAf157F13271cd"
+    }
+  },
+  {
+    "id": "1inch",
+    "symbol": "1inch",
+    "name": "1inch",
+    "networks": {
+      "1": "0x111111111117dC0aa78b770fA6A738034120C302",
+      "56": "0x111111111117dC0aa78b770fA6A738034120C302",
+      "137": "0x9c2C5fd7b07E95EE044DDeba0E97a665F142394f",
+      "39797": "0xDDa6205Dc3f47e5280Eb726613B27374Eee9D130",
+      "43114": "0xd501281565bf7789224523144Fe5D98e8B28f267",
+      "1666600000": "0x58f1b044d8308812881a1433d9Bbeff99975e70C"
+    }
+  },
+  {
+    "id": "morpho",
+    "symbol": "morpho",
+    "name": "Morpho",
+    "networks": {
+      "1": "0x58D97B57BB95320F9a05dC918Aef65434969c2B2",
+      "8453": "0xBAa5CC21fd487B8Fcc2F632f3F4E8D37262a0842"
+    }
+  },
+  {
+    "id": "livepeer",
+    "symbol": "lpt",
+    "name": "Livepeer",
+    "networks": {
+      "1": "0x58b6A8A3302369DAEc383334672404Ee733aB239",
+      "42161": "0x289ba1701C2F088cf0faf8B3705246331cB8A839",
+      "1666600000": "0xBD3E698b51D340Cc53B0CC549b598c13e0172B7c"
+    }
+  }
+]

@@ -1,6 +1,6 @@
-import { type LocalAccount, type Chain, zeroAddress, isHex } from "viem"
+import { type Chain, type LocalAccount, isHex, zeroAddress } from "viem"
 import { base } from "viem/chains"
-import { inject, describe, beforeAll, test, expect } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { initNetwork } from "../tests/config"
 import {
   type MultichainSmartAccount,
@@ -8,9 +8,9 @@ import {
 } from "./account-vendors"
 import { createMeeService } from "./mee.service"
 import {
-  supertransaction,
   type SupportedFeeChainId,
-  signMeeQuote
+  signMeeQuote,
+  supertransaction
 } from "./utils"
 import { getExplorerTxLink } from "./utils/explorer/explorer"
 import { buildMeeUserOp } from "./workflow"

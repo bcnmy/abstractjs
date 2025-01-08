@@ -1,35 +1,35 @@
 import {
+  type AnyData,
+  type NexusAccount,
+  getChain,
+  getCustomChain
+} from "@biconomy/sdk"
+import { config } from "dotenv"
+import getPort from "get-port"
+import { anvil } from "prool/instances"
+import {
+  http,
   type Account,
   type Chain,
-  createPublicClient,
-  createTestClient,
   type Hash,
   type Hex,
-  http,
-  isHex,
   type LocalAccount,
+  type PublicClient,
+  createPublicClient,
+  createTestClient,
+  isHex,
   parseAbi,
   parseEther,
   parseUnits,
   publicActions,
-  type PublicClient,
   walletActions
 } from "viem"
-import {
-  getChain,
-  getCustomChain,
-  type NexusAccount,
-  type AnyData
-} from "@biconomy/sdk"
-import { config } from "dotenv"
+import { dealActions } from "viem-deal"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { anvil as anvilChain } from "viem/chains"
-import { mcUSDC } from "../src/commons/tokens/stablecoins"
-import { toMeeCompliantNexusAccount } from "../src/account-vendors/nexus/nexus-mee-compliant"
-import { anvil } from "prool/instances"
-import getPort from "get-port"
 import { expect } from "vitest"
-import { dealActions } from "viem-deal"
+import { toMeeCompliantNexusAccount } from "../src/account-vendors/nexus/nexus-mee-compliant"
+import { mcUSDC } from "../src/commons/tokens"
 config()
 
 export const getBalance = (

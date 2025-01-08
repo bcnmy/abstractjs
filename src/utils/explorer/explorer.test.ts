@@ -1,9 +1,9 @@
-import { anvil } from "viem/chains"
-import { describe, test, expect, beforeAll } from "vitest"
-import { getExplorerTxLink } from "./explorer"
 import type { LocalAccount, PublicClient } from "viem"
+import { anvil, baseSepolia } from "viem/chains"
+import { beforeAll, describe, expect, test } from "vitest"
 import { getBalance, initNetwork } from "../../../tests/config"
-import { mcUSDC } from "../../commons/tokens/stablecoins"
+import { mcUSDC } from "../../commons/tokens"
+import { getExplorerTxLink } from "./explorer"
 
 describe("explorer", () => {
   let eoa: LocalAccount
@@ -19,7 +19,7 @@ describe("explorer", () => {
     const balance = await getBalance(
       publicClient,
       eoa.address,
-      mcUSDC.addressOn(anvil.id)
+      mcUSDC.addressOn(baseSepolia.id) // because anvil was forked from baseSepolia
     )
     expect(balance > 0n).toBeTruthy()
   })

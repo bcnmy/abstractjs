@@ -21,6 +21,7 @@
   },
   "files": ["dist"],
   "scripts": {
+    "fetch:tokenMap": "bun run scripts/fetch:tokenMap.ts && bun run lint:fix",
     "test": "vitest -c ./tests/vitest.config.ts",
     "dev": "bun link && bun run build:types && bun run build:watch",
     "changeset": "changeset",
@@ -42,6 +43,8 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.27.11",
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
     "@size-limit/esbuild-why": "^11.1.6",
     "@size-limit/preset-small-lib": "^11.1.6",
     "@types/bun": "latest",
@@ -51,6 +54,7 @@
     "gh-pages": "^6.3.0",
     "prool": "^0.0.16",
     "semver": "^7.6.3",
+    "simple-git-hooks": "^2.11.1",
     "size-limit": "^11.1.6",
     "tsup": "^8.3.5",
     "viem-deal": "^2.0.4",
@@ -64,5 +68,9 @@
   },
   "dependencies": {
     "abitype": "1.0.7"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "bun run format && bun run lint:fix",
+    "commit-msg": "npx --no -- commitlint --edit ${1}"
   }
 }
