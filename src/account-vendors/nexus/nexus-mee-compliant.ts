@@ -1,6 +1,4 @@
-// viem
 import {
-  http,
   type AbiParameter,
   type Account,
   type Address,
@@ -57,9 +55,7 @@ import {
   type EthersWallet,
   MAGIC_BYTES,
   type Module,
-  NEXUS_BOOTSTRAP_ADDRESS,
   PARENT_TYPEHASH,
-  RHINESTONE_ATTESTER_ADDRESS,
   type Signer,
   type TypedDataWith712,
   addressEquals,
@@ -67,8 +63,6 @@ import {
   getAccountDomainStructFields,
   getTypesForEIP712Domain,
   isNullOrUndefined,
-  k1ValidatorAddress as k1ValidatorAddress_,
-  k1ValidatorFactoryAddress,
   toK1Validator,
   toSigner,
   typeToString

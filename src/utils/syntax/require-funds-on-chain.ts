@@ -1,12 +1,37 @@
-import type { Chain, erc20Abi } from "viem"
-import { MultichainSmartAccount } from "../../account-vendors"
+import type { Address, Chain, erc20Abi } from "viem"
+import type { MultichainSmartAccount } from "../../account-vendors"
 import { AcrossPlugin } from "../../plugins/across.plugin"
-import { Instruction } from "../../workflow"
 import type { MultichainContract } from "../contract/getMultichainContract"
 import { getUnifiedERC20Balance } from "../contract/getUnifiedERC20Balance"
 import { buildMultichainBridgingInstructions } from "./bridging-builder"
-import type { ContextualInstruction } from "./supertransaction-builder.util"
+import type { Instruction } from "../../decorators/getQuote"
 
+/**
+ * Internal state of the supertransaction builder.
+ * Collects both immediate instructions and promises of future instructions
+ * which will be resolved at finalization time.
+ */
+export type SupertransactionState = {
+  account?: MultichainSmartAccount
+  gasToken?: Address
+  gasChain?: number
+  instructions: Instruction[]
+  /** Holds promises of instructions that will be resolved when finalizing */
+  pendingInstructions: Promise<Instruction[]>[]
+}
+
+/**
+ * A function that can be used to add instructions to the supertransaction.
+ * @param context - The current state of the supertransaction builder
+ * @returns The instructions to add to the supertransaction
+ */
+export type ContextualInstruction = (
+  context: SupertransactionState
+) => Promise<Instruction[]>
+
+/**
+ * Parameters for the requireErc20Balance function
+ */
 export type RequireFundsParams = {
   amount: bigint
   token: MultichainContract<typeof erc20Abi>

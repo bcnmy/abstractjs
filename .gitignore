@@ -176,3 +176,6 @@ dist
 
 # Docs
 docs
+
+# Data from scraping scripts
+.data

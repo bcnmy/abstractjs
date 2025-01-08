@@ -6,7 +6,7 @@ import type {
   BridgingPluginResult,
   BridgingUserOpParams
 } from "../utils/syntax/bridging-builder"
-import { type AbstractCall, buildMeeUserOp } from "../workflow"
+import type { AbstractCall, Instruction } from "../decorators/getQuote"
 
 export interface AcrossRelayFeeResponse {
   totalRelayFee: {
@@ -152,10 +152,10 @@ export const acrossEncodeBridgingUserOp = async (
     })
   }
 
-  const userOp = buildMeeUserOp({
+  const userOp: Instruction = {
     calls: [approveCall, depositCall],
     chainId: fromChain.id
-  })
+  }
 
   return {
     userOp: userOp,
