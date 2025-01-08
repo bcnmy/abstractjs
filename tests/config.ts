@@ -26,7 +26,7 @@ import {
 } from "viem"
 import { dealActions } from "viem-deal"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { anvil as anvilChain } from "viem/chains"
+import { anvil as anvilChain, baseSepolia } from "viem/chains"
 import { expect } from "vitest"
 import { toMeeCompliantNexusAccount } from "../src/account-vendors/nexus/nexus-mee-compliant"
 import { mcUSDC } from "../src/commons/tokens"
@@ -118,7 +118,7 @@ export const initNetwork = async (
       await instance.start()
 
       paymentChain = anvilChain
-      paymentToken = mcUSDC.addressOn(paymentChain.id)
+      paymentToken = mcUSDC.addressOn(baseSepolia.id) // because anvil was forked from baseSepolia
       eoa = getTestAccount()
 
       nexusAccount = await toMeeCompliantNexusAccount({
