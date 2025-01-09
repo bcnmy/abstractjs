@@ -146,7 +146,7 @@ describe("createMeeClient", async () => {
     })
 
   test.runIf(runPaidTests)(
-    "should execute a quote with a single call",
+    "should execute a quote with a single call, and wait for the receipt",
     async () => {
       const extendedMeeClient = meeClient.extend(meeActions)
 
