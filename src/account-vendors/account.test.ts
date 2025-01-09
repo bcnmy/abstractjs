@@ -9,10 +9,10 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { base, baseSepolia, optimism, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { mcUSDC } from "../commons/tokens"
 import type { MultichainSmartAccount } from "./account"
 import { toMultichainNexusAccount } from "./nexus/multichain-nexus.account"
 import { toMeeCompliantNexusAccount } from "./nexus/nexus-mee-compliant"
+import { mcUSDC } from "../utils/tokens"
 
 describe("accounts", async () => {
   let eoa: LocalAccount

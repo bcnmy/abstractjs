@@ -2,8 +2,8 @@ import type { LocalAccount, PublicClient } from "viem"
 import { anvil, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getBalance, initNetwork } from "../../../tests/config"
-import { mcUSDC } from "../../commons/tokens"
 import { getExplorerTxLink } from "./explorer"
+import { mcUSDC } from "../tokens"
 
 describe("explorer", () => {
   let eoa: LocalAccount

@@ -187,7 +187,7 @@ async function generateTokenConstants(coins: FinalisedCoin[]) {
 
   writeTsToFile(
     `${warning}\n\n${startOfFile}\n\n${tokenConstants}`,
-    path.join(__dirname, "../src/commons/tokens/__AUTO_GENERATED__.ts")
+    path.join(__dirname, "../src/utils/tokens/__AUTO_GENERATED__.ts")
   )
 }
 

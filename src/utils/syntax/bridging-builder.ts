@@ -1,8 +1,8 @@
-import { Address, type Chain } from "viem"
+import type { Chain } from "viem"
 import type { MultichainSmartAccount } from "../../account-vendors"
 import type { MultichainAddressMapping } from "../../primitives"
-import type { MeeUserOp } from "../../workflow"
 import type { UnifiedERC20Balance } from "../contract/getUnifiedERC20Balance"
+import type { Instruction } from "../../decorators/getQuote"
 
 export type BridgingUserOpParams = {
   fromChain: Chain
@@ -20,7 +20,7 @@ export type MultichainBridgingParams = {
 }
 
 export type BridgingPluginResult = {
-  userOp: MeeUserOp
+  userOp: Instruction
   receivedAtDestination?: bigint
   bridgingDurationExpectedMs?: number
 }
@@ -33,7 +33,7 @@ export type BridgingPlugin = {
 
 // Single bridge operation result
 export type BridgingInstruction = {
-  userOp: MeeUserOp
+  userOp: Instruction
   receivedAtDestination?: bigint
   bridgingDurationExpectedMs?: number
 }
@@ -78,7 +78,7 @@ type BridgeQueryResult = {
   amount: bigint
   receivedAtDestination: bigint
   plugin: BridgingPlugin
-  userOp: MeeUserOp
+  userOp: Instruction
   bridgingDurationExpectedMs?: number
 }
 

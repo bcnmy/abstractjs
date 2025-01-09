@@ -11,19 +11,12 @@ import type {
   ContractFunctionName,
   ContractFunctionReturnType,
   EncodeFunctionDataParameters,
-  Hex,
-  Prettify,
   PublicClient,
   Transport
 } from "viem"
 import { encodeFunctionData } from "viem"
-import {
-  MinimalMEESmartAccount,
-  type MultichainSmartAccount
-} from "../../account-vendors"
-import { AddressMapping } from "../../primitives"
-import type { AbstractCall, MeeUserOp } from "../../workflow"
-import { NonEmptyArray } from "../types/util.type"
+import type { MultichainSmartAccount } from "../../account-vendors"
+import type { AbstractCall, Instruction } from "../../decorators/getQuote"
 
 /**
  * Contract instance capable of encoding transactions across multiple chains
@@ -56,7 +49,7 @@ export type ChainSpecificContract<TAbi extends Abi> = {
     >
     gasLimit: bigint
     value?: bigint
-  }) => MeeUserOp
+  }) => Instruction
 }
 
 function createChainSpecificContract<TAbi extends Abi>(

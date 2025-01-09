@@ -29,7 +29,7 @@ import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { anvil as anvilChain, baseSepolia } from "viem/chains"
 import { expect } from "vitest"
 import { toMeeCompliantNexusAccount } from "../src/account-vendors/nexus/nexus-mee-compliant"
-import { mcUSDC } from "../src/commons/tokens"
+import { mcUSDC } from "../src/utils/tokens"
 config()
 
 export const getBalance = (
