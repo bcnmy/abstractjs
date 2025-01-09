@@ -1,12 +1,12 @@
 import { type LocalAccount, zeroAddress } from "viem"
-import { privateKeyToAccount, generatePrivateKey } from "viem/accounts"
-import { baseSepolia, optimismSepolia, base, optimism } from "viem/chains"
-import { describe, beforeAll, test, expect } from "vitest"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { base, baseSepolia, optimism, optimismSepolia } from "viem/chains"
+import { beforeAll, describe, expect, test } from "vitest"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "./account-vendors"
-import { buildMeeUserOp, buildCall } from "./workflow"
+import { buildCall, buildMeeUserOp } from "./workflow"
 
 describe("userOps", async () => {
   let eoa: LocalAccount

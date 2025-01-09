@@ -1,15 +1,15 @@
-import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
+  http,
   type Chain,
-  zeroAddress,
   type LocalAccount,
-  isHex,
   isAddress,
-  http
+  isHex,
+  zeroAddress
 } from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { base, baseSepolia, optimism, optimismSepolia } from "viem/chains"
-import { privateKeyToAccount, generatePrivateKey } from "viem/accounts"
-import { mcUSDC } from "../commons/tokens/stablecoins"
+import { beforeAll, describe, expect, inject, test } from "vitest"
+import { mcUSDC } from "../commons/tokens"
 import type { MultichainSmartAccount } from "./account"
 import { toMultichainNexusAccount } from "./nexus/multichain-nexus.account"
 import { toMeeCompliantNexusAccount } from "./nexus/nexus-mee-compliant"
