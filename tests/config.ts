@@ -30,6 +30,7 @@ import { anvil as anvilChain, baseSepolia } from "viem/chains"
 import { expect } from "vitest"
 import { toMeeCompliantNexusAccount } from "../src/account-vendors/nexus/nexus-mee-compliant"
 import { mcUSDC } from "../src/utils/tokens"
+
 config()
 
 export const getBalance = (
@@ -67,9 +68,12 @@ export type NetworkConfig = {
   paymentToken: Hex
   publicClient: PublicClient
   nexusAccount: NexusAccount
+  anvilInstance?: ReturnType<typeof anvil>
 }
 
 type NetworkType = "NETWORK_FROM_ENV" | "ANVIL"
+
+const portOptions = { exclude: [] as number[] }
 
 export const initNetwork = async (
   networkType: NetworkType
@@ -79,6 +83,7 @@ export const initNetwork = async (
   let paymentToken: Hex
   let publicClient: AnyData
   let nexusAccount: NexusAccount
+  let anvilInstance: NetworkConfig["anvilInstance"]
 
   switch (networkType) {
     case "NETWORK_FROM_ENV": {
@@ -109,15 +114,21 @@ export const initNetwork = async (
       break
     }
     case "ANVIL": {
+      const rpcPort = await getPort(portOptions)
+      portOptions.exclude.push(rpcPort)
+      const rpcUrl = `http://localhost:${rpcPort}`
+
+      paymentChain = getCustomChain(`Anvil-${rpcPort}`, anvilChain.id, rpcUrl)
+
       const instance = anvil({
         hardfork: "Cancun",
         codeSizeLimit: 1000000000000,
+        port: rpcPort,
         forkUrl:
           "https://virtual.base-sepolia.rpc.tenderly.co/6ccdd33d-d8f4-4476-8d37-63ba0ed0ea8f"
       })
       await instance.start()
 
-      paymentChain = anvilChain
       paymentToken = mcUSDC.addressOn(baseSepolia.id) // because anvil was forked from baseSepolia
       eoa = getTestAccount()
 
@@ -192,6 +203,7 @@ export const initNetwork = async (
     paymentChain,
     paymentToken,
     publicClient,
-    nexusAccount
+    nexusAccount,
+    anvilInstance
   }
 }

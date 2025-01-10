@@ -1,5 +1,10 @@
 import type { Prettify } from "viem"
 import type { MultichainSmartAccount } from "./account-vendors/account"
+import createHttpClient, {
+  type HttpClient,
+  type HttpClientParams
+} from "./utils/clients/createHttpClient"
+import { meeActions } from "./decorators"
 
 /**
  * Default URL for the MEE node service
@@ -7,98 +12,39 @@ import type { MultichainSmartAccount } from "./account-vendors/account"
 const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io"
 
 /**
- * Parameters for initializing a MEE client
+ * Parameters for creating a Mee client
  */
-type ClientParams = {
-  /** Smart account instance to be used by the client */
-  account: MultichainSmartAccount
-  /** MEE node URL. Defaults to DEFAULT_MEE_NODE_URL */
-  url?: `https://${string}` | `http://${string}`
-  /** Interval in milliseconds for polling operations. Defaults to 1000 */
+export type CreateMeeClientParams = {
+  /** URL for the MEE node service */
+  url?: HttpClientParams
+  /** Polling interval for the Mee client */
   pollingInterval?: number
-}
-
-/**
- * Parameters for making requests to the MEE node
- */
-type RequestParams = {
-  /** API endpoint path */
-  path: string
-  /** HTTP method to use. Defaults to "POST" */
-  method?: "GET" | "POST"
-  /** Optional request body */
-  body?: object
-}
-
-/**
- * Base interface for the MEE client
- */
-export type BaseMeeClient = {
-  /** Makes HTTP requests to the MEE node */
-  request: <T>(params: RequestParams) => Promise<T>
-  /** Associated smart account instance */
+  /** Account to use for the Mee client */
   account: MultichainSmartAccount
-  /** Polling interval in milliseconds */
-  pollingInterval: number
-  /**
-   * Extends the client with additional functionality
-   * @param fn - Function that adds new properties/methods to the base client
-   * @returns Extended client with both base and new functionality
-   */
-  extend: <const client extends Extended>(
-    fn: (base: BaseMeeClient) => client
-  ) => client & BaseMeeClient
 }
 
-type Extended = Prettify<
-  // disallow redefining base properties
-  { [_ in keyof BaseMeeClient]?: undefined } & {
-    [key: string]: unknown
+export type BaseMeeClient = Prettify<
+  HttpClient & {
+    pollingInterval: number
+    account: MultichainSmartAccount
   }
 >
 
-/**
- * Creates a new MEE client instance
- * @param params - Configuration parameters for the client
- * @returns A base MEE client instance that can be extended with additional functionality
- */
-export const createMeeClient = (params: ClientParams): BaseMeeClient => {
-  const { account, url = DEFAULT_MEE_NODE_URL, pollingInterval = 1000 } = params
+export type MeeClient = ReturnType<typeof createMeeClient>
 
-  const request = async <T>(params: RequestParams) => {
-    const { path, method = "POST", body } = params
-    const result = await fetch(`${url}/${path}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json"
-      },
-      ...(body ? { body: JSON.stringify(body) } : {})
-    })
+export const createMeeClient = (params: CreateMeeClientParams) => {
+  console.warn(`
+--------------------------- READ ----------------------------------------------
+  You are using the Developer Preview of the Biconomy MEE. The underlying 
+  contracts are still being audited, and the multichain tokens exported from 
+  this package are yet to be verified.
+-------------------------------------------------------------------------------`)
+  const { url = DEFAULT_MEE_NODE_URL, pollingInterval, account } = params
+  const httpClient = createHttpClient(url)
+  const baseMeeClient = Object.assign(httpClient, {
+    pollingInterval,
+    account
+  })
 
-    if (!result.ok) {
-      throw new Error(result.statusText)
-    }
-
-    return (await result.json()) as T
-  }
-
-  const client = {
-    request,
-    account,
-    pollingInterval
-  }
-
-  function extend(base: typeof client) {
-    type ExtendFn = (base: typeof client) => unknown
-    return (extendFn: ExtendFn) => {
-      const extended = extendFn(base) as Extended
-      for (const key in client) delete extended[key]
-      const combined = { ...base, ...extended }
-      return Object.assign(combined, { extend: extend(combined as any) })
-    }
-  }
-
-  return Object.assign(client, { extend: extend(client) as any })
+  return baseMeeClient.extend(meeActions)
 }
-
-export default createMeeClient

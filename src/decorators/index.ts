@@ -32,7 +32,7 @@ export type MeeActions = {
    * @example
    * ```typescript
    * const quote = await meeClient.getQuote({
-   *   instructions: [...],
+   *   superTransaction: [...],
    *   feeToken: {
    *     address: '0x...',
    *     chainId: 1
@@ -79,7 +79,7 @@ export type MeeActions = {
    * @example
    * ```typescript
    * const hash = await meeClient.execute({
-   *   instructions: [...],
+   *   superTransaction: [...],
    *   feeToken: {
    *     address: '0x...',
    *     chainId: 1
@@ -96,7 +96,7 @@ export type MeeActions = {
    * @example
    * ```typescript
    * const hash = await meeClient.executeQuote({
-   *   instructions: [...],
+   *   superTransaction: [...],
    *   feeToken: {
    *     address: '0x...',
    *     chainId: 1

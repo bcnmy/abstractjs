@@ -1,6 +1,7 @@
 import type { Hex, Address, OneOf } from "viem"
 import type { MultichainSmartAccount } from "../account-vendors"
 import type { BaseMeeClient } from "../createMeeClient"
+import type { AnyData } from "@biconomy/sdk"
 
 /**
  * Represents an abstract call to be executed in the transaction
@@ -28,8 +29,9 @@ export type FeeTokenInfo = {
 
 /**
  * Information about the instructions to be executed in the transaction
+ * @internal
  */
-export type Instruction = {
+export type InstructionResolved = {
   /** Array of abstract calls to be executed in the transaction */
   calls: AbstractCall[]
   /** Chain ID where the transaction will be executed */
@@ -37,12 +39,33 @@ export type Instruction = {
 }
 
 /**
+ * Represents an instruction to be executed in the transaction
+ * @type Instruction
+ */
+export type Instruction =
+  | InstructionResolved
+  | ((x?: AnyData) => Promise<InstructionResolved> | InstructionResolved)
+
+/**
+ * Represents a supertransaction, which is a collection of instructions to be executed in a single transaction
+ * @type SuperTransaction
+ */
+export type SuperTransaction = Instruction[]
+
+/**
+ * Represents a resolved supertransaction, which is a collection of instructions to be executed in a single transaction
+ * @type SuperTransactionResolved
+ * @internal
+ */
+export type SuperTransactionResolved = InstructionResolved[]
+
+/**
  * Parameters required for requesting a quote from the MEE service
  * @type GetQuoteParams
  */
 export type GetQuoteParams = {
   /** Array of instructions to be executed in the transaction */
-  instructions: Instruction[]
+  superTransaction: SuperTransaction
   /** Token to be used for paying transaction fees */
   feeToken: FeeTokenInfo
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
@@ -179,7 +202,7 @@ export type GetQuotePayload = {
  * @example
  * ```typescript
  * const quote = await getQuote(meeClient, {
- *   instructions: [...],
+ *   superTransaction: [...],
  *   feeToken: { address: '0x...', chainId: 1 },
  *   account: smartAccount
  * });
@@ -189,9 +212,19 @@ export const getQuote = async (
   client: BaseMeeClient,
   params: GetQuoteParams
 ): Promise<GetQuotePayload> => {
-  const { account: account_ = client.account, instructions, feeToken } = params
+  const {
+    account: account_ = client.account,
+    superTransaction,
+    feeToken
+  } = params
 
-  const validUserOps = instructions.every((userOp) =>
+  const resolvedSuperTransaction: SuperTransactionResolved = await Promise.all(
+    superTransaction.map((userOp) =>
+      typeof userOp === "function" ? userOp(client) : userOp
+    )
+  )
+
+  const validUserOps = resolvedSuperTransaction.every((userOp) =>
     account_.deploymentOn(userOp.chainId)
   )
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
@@ -200,7 +233,7 @@ export const getQuote = async (
   }
 
   const userOpResults = await Promise.all(
-    instructions.map((userOp) => {
+    resolvedSuperTransaction.map((userOp) => {
       const deployment = account_.deploymentOn(userOp.chainId)
       return Promise.all([
         deployment.encodeExecuteBatch(userOp.calls),

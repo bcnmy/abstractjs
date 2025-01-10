@@ -6,9 +6,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "./account-vendors"
-import { type BaseMeeClient, createMeeClient } from "./createMeeClient"
-import { meeActions } from "./decorators"
-import { getExplorerTxLink } from "./utils/explorer/explorer"
+import { createMeeClient, type MeeClient } from "./createMeeClient"
 
 const runPaidTests = inject("runPaidTests")
 
@@ -17,7 +15,7 @@ describe("createMeeClient", async () => {
   let paymentChain: Chain
   let paymentToken: Address
   let mcNexusMainnet: MultichainSmartAccount
-  let meeClient: BaseMeeClient
+  let meeClient: MeeClient
 
   beforeAll(async () => {
     const network = await initNetwork("NETWORK_FROM_ENV")
@@ -29,45 +27,34 @@ describe("createMeeClient", async () => {
       chains: [base, paymentChain],
       signer: eoa
     })
+
+    meeClient = createMeeClient({ account: mcNexusMainnet })
   })
 
   test("should instantiate a client", async () => {
-    meeClient = createMeeClient({ account: mcNexusMainnet })
-
+    const meeClient = createMeeClient({ account: mcNexusMainnet })
     expect(meeClient).toBeDefined()
     expect(meeClient.request).toBeDefined()
     expect(Object.keys(meeClient)).toContain("request")
     expect(Object.keys(meeClient)).toContain("account")
-    expect(Object.keys(meeClient)).not.toContain("getQuote")
+    expect(Object.keys(meeClient)).toContain("getQuote")
   })
 
   test("should extend meeClient with decorators", () => {
-    const extendedMeeClient = meeClient.extend(meeActions)
-    expect(extendedMeeClient).toBeDefined()
-    expect(extendedMeeClient.getQuote).toBeDefined()
-    expect(extendedMeeClient.request).toBeDefined()
-    expect(extendedMeeClient.account).toBeDefined()
-    expect(extendedMeeClient.getQuote).toBeDefined()
-    expect(extendedMeeClient.signQuote).toBeDefined()
-    expect(extendedMeeClient.executeSignedQuote).toBeDefined()
+    expect(meeClient).toBeDefined()
+    expect(meeClient.getQuote).toBeDefined()
+    expect(meeClient.request).toBeDefined()
+    expect(meeClient.account).toBeDefined()
+    expect(meeClient.getQuote).toBeDefined()
+    expect(meeClient.signQuote).toBeDefined()
+    expect(meeClient.executeSignedQuote).toBeDefined()
   })
 
   test("should get a quote", async () => {
-    const extendedMeeClient = meeClient.extend(meeActions)
+    const meeClient = createMeeClient({ account: mcNexusMainnet })
 
-    const quote = await extendedMeeClient.getQuote({
-      instructions: [
-        {
-          calls: [
-            {
-              to: "0x0000000000000000000000000000000000000000",
-              gasLimit: 50000n,
-              value: 0n
-            }
-          ],
-          chainId: 8453
-        }
-      ],
+    const quote = await meeClient.getQuote({
+      superTransaction: [],
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id
@@ -83,10 +70,8 @@ describe("createMeeClient", async () => {
   })
 
   test("should sign a quote", async () => {
-    const extendedMeeClient = meeClient.extend(meeActions)
-
-    const quote = await extendedMeeClient.getQuote({
-      instructions: [
+    const quote = await meeClient.getQuote({
+      superTransaction: [
         {
           calls: [
             {
@@ -104,7 +89,7 @@ describe("createMeeClient", async () => {
       }
     })
 
-    const signedQuote = await extendedMeeClient.signQuote({ quote })
+    const signedQuote = await meeClient.signQuote({ quote })
 
     expect(signedQuote).toBeDefined()
     expect(isHex(signedQuote.signature)).toEqual(true)
@@ -113,10 +98,8 @@ describe("createMeeClient", async () => {
   test
     .runIf(runPaidTests)
     .skip("should execute a quote by getting it, signing it, and then executing the signed quote", async () => {
-      const extendedMeeClient = meeClient.extend(meeActions)
-
-      const quote = await extendedMeeClient.getQuote({
-        instructions: [
+      const quote = await meeClient.getQuote({
+        superTransaction: [
           {
             calls: [
               {
@@ -134,9 +117,9 @@ describe("createMeeClient", async () => {
         }
       })
 
-      const signedQuote = await extendedMeeClient.signQuote({ quote })
+      const signedQuote = await meeClient.signQuote({ quote })
 
-      const executeeQuote = await extendedMeeClient.executeSignedQuote({
+      const executeeQuote = await meeClient.executeSignedQuote({
         signedQuote
       })
 
@@ -148,12 +131,10 @@ describe("createMeeClient", async () => {
   test.runIf(runPaidTests)(
     "should execute a quote with a single call, and wait for the receipt",
     async () => {
-      const extendedMeeClient = meeClient.extend(meeActions)
-
       console.time("execute:hashTimer")
       console.time("execute:receiptTimer")
-      const { hash } = await extendedMeeClient.execute({
-        instructions: [
+      const { hash } = await meeClient.execute({
+        superTransaction: [
           {
             calls: [
               {
@@ -173,7 +154,7 @@ describe("createMeeClient", async () => {
 
       expect(hash).toBeDefined()
       console.timeEnd("execute:hashTimer")
-      const receipt = await extendedMeeClient.waitForSuperTransactionReceipt({
+      const receipt = await meeClient.waitForSuperTransactionReceipt({
         hash
       })
       console.timeEnd("execute:receiptTimer")

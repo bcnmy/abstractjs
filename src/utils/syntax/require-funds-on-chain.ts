@@ -15,7 +15,7 @@ export type SupertransactionState = {
   account?: MultichainSmartAccount
   gasToken?: Address
   gasChain?: number
-  instructions: Instruction[]
+  superTransaction: Instruction[]
   /** Holds promises of instructions that will be resolved when finalizing */
   pendingInstructions: Promise<Instruction[]>[]
 }
@@ -70,6 +70,6 @@ export const requireErc20Balance = async (
       unifiedBalance: unifiedBalance
     })
 
-    return result.instructions.map((instruction) => instruction.userOp)
+    return result.superTransaction.map((instruction) => instruction.userOp)
   }
 }

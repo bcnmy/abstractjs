@@ -1,6 +1,5 @@
 export * from "./mee-node/fee-resolver.util"
 export * from "./contract/getUnifiedERC20Balance"
-export * from "./types/util.type"
 export * from "./contract/getMultichainContract"
 export * from "./syntax/bridging-builder"
 export * from "./syntax/require-funds-on-chain"

@@ -1,32 +1,40 @@
 import type { LocalAccount, PublicClient } from "viem"
 import { anvil, baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
-import { getBalance, initNetwork } from "../../../tests/config"
+import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { initNetwork, type NetworkConfig } from "../../../tests/config"
 import { getExplorerTxLink } from "./explorer"
-import { mcUSDC } from "../tokens"
 
 describe("explorer", () => {
+  let network: NetworkConfig
   let eoa: LocalAccount
   let publicClient: PublicClient
 
   beforeAll(async () => {
-    const network = await initNetwork("ANVIL")
+    network = await initNetwork("ANVIL")
     eoa = network.eoa
     publicClient = network.publicClient
   })
+  afterAll(async () => await network.anvilInstance?.stop())
 
-  test("should check balances", async () => {
-    const balance = await getBalance(
-      publicClient,
-      eoa.address,
-      mcUSDC.addressOn(baseSepolia.id) // because anvil was forked from baseSepolia
-    )
-    expect(balance > 0n).toBeTruthy()
+  test("should get a meescan url", () => {
+    const hash = "0x123"
+    const url = getExplorerTxLink(hash)
+    expect(url).toEqual(`https://meescan.biconomy.io/details/${hash}`)
   })
 
-  test("should get explorer tx url", () => {
+  test("should get a url for a baseSepolia tx", () => {
     const hash = "0x123"
-    const url = getExplorerTxLink(hash, anvil)
-    expect(url).toEqual(`${anvil.blockExplorers?.default.url}/tx/${hash}`)
+    const url = getExplorerTxLink(hash, baseSepolia)
+    expect(url).toEqual(`${baseSepolia.blockExplorers?.default.url}/tx/${hash}`)
+  })
+  test("should get a url for a baseSepolia tx by chainId (number)", () => {
+    const hash = "0x123"
+    const url = getExplorerTxLink(hash, baseSepolia.id)
+    expect(url).toEqual(`${baseSepolia.blockExplorers?.default.url}/tx/${hash}`)
+  })
+  test("should get a url for a baseSepolia tx by chainId (string)", () => {
+    const hash = "0x123"
+    const url = getExplorerTxLink(hash, String(baseSepolia.id))
+    expect(url).toEqual(`${baseSepolia.blockExplorers?.default.url}/tx/${hash}`)
   })
 })

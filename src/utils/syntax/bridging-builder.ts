@@ -40,7 +40,7 @@ export type BridgingInstruction = {
 
 // Complete set of bridging instructions and final outcome
 export type BridgingInstructions = {
-  instructions: BridgingInstruction[]
+  superTransaction: BridgingInstruction[]
   totalAvailableOnDestination: bigint
 }
 
@@ -154,7 +154,7 @@ export const buildMultichainBridgingInstructions = async (
   // If we have enough on destination, no bridging needed
   if (destinationBalance >= targetAmount) {
     return {
-      instructions: [],
+      superTransaction: [],
       totalAvailableOnDestination: destinationBalance
     }
   }
@@ -225,7 +225,7 @@ export const buildMultichainBridgingInstructions = async (
     )
 
   // Build instructions by taking from best routes until we have enough
-  const instructions: BridgingInstruction[] = []
+  const superTransaction: BridgingInstruction[] = []
   let totalBridged = 0n
   let remainingNeeded = amountToBridge
 
@@ -239,7 +239,7 @@ export const buildMultichainBridgingInstructions = async (
     const receivedFromRoute =
       (result.receivedAtDestination * amountToTake) / result.amount
 
-    instructions.push({
+    superTransaction.push({
       userOp: result.userOp,
       receivedAtDestination: receivedFromRoute,
       bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
@@ -260,7 +260,7 @@ export const buildMultichainBridgingInstructions = async (
   }
 
   return {
-    instructions,
+    superTransaction,
     totalAvailableOnDestination: destinationBalance + totalBridged
   }
 }
