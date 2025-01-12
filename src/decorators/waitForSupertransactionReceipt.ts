@@ -10,9 +10,9 @@ import type { Url } from "../utils/clients/createHttpClient"
 
 /**
  * Parameters required for requesting a quote from the MEE service
- * @type WaitForReceiptParams
+ * @type WaitForSupertransactionReceiptParams
  */
-export type WaitForReceiptParams = {
+export type WaitForSupertransactionReceiptParams = {
   /** The hash of the super transaction */
   hash: Hex
 }
@@ -38,10 +38,13 @@ type UserOpStatus = {
   executionError: string
 }
 /**
- * The payload returned by the waitForReceipt function
- * @type WaitForReceiptPayload
+ * The payload returned by the waitForSupertransactionReceipt function
+ * @type WaitForSupertransactionReceiptPayload
  */
-export type WaitForReceiptPayload = Omit<GetQuotePayload, "userOps"> & {
+export type WaitForSupertransactionReceiptPayload = Omit<
+  GetQuotePayload,
+  "userOps"
+> & {
   userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
   explorerLinks: ExplorerLinks
 }
@@ -52,21 +55,21 @@ export type WaitForReceiptPayload = Omit<GetQuotePayload, "userOps"> & {
  * @param params - The parameters for the super transaction
  * @returns The receipt of the super transaction
  * @example
- * const receipt = await waitForReceipt(client, {
+ * const receipt = await waitForSupertransactionReceipt(client, {
  *   hash: "0x..."
  * })
  */
-export const waitForReceipt = async (
+export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,
-  params: WaitForReceiptParams
-): Promise<WaitForReceiptPayload> => {
+  params: WaitForSupertransactionReceiptParams
+): Promise<WaitForSupertransactionReceiptPayload> => {
   const fireRequest = async () =>
-    await client.request<WaitForReceiptPayload>({
+    await client.request<WaitForSupertransactionReceiptPayload>({
       path: `v1/explorer/${params.hash}`,
       method: "GET"
     })
 
-  const waitForReceipt = async () => {
+  const waitForSupertransactionReceipt = async () => {
     const explorerResponse = await fireRequest()
 
     const userOpError = explorerResponse.userOps.find(
@@ -85,7 +88,7 @@ export const waitForReceipt = async (
       await new Promise((resolve) =>
         setTimeout(resolve, client.pollingInterval)
       )
-      return await waitForReceipt()
+      return await waitForSupertransactionReceipt()
     }
 
     const explorerLinks = explorerResponse.userOps.reduce(
@@ -104,7 +107,7 @@ export const waitForReceipt = async (
     return { ...explorerResponse, explorerLinks }
   }
 
-  return await waitForReceipt()
+  return await waitForSupertransactionReceipt()
 }
 
-export default waitForReceipt
+export default waitForSupertransactionReceipt

@@ -18,10 +18,10 @@ import executeSignedFusionQuote, {
   type ExecuteSignedFusionQuoteParams,
   type ExecuteSignedFusionQuotePayload
 } from "./executeSignedFusionQuote"
-import waitForReceipt, {
-  type WaitForReceiptParams,
-  type WaitForReceiptPayload
-} from "./waitForReceipt"
+import waitForSupertransactionReceipt, {
+  type WaitForSupertransactionReceiptParams,
+  type WaitForSupertransactionReceiptPayload
+} from "./waitForSupertransactionReceipt"
 
 export type MeeActions = {
   /**
@@ -108,18 +108,18 @@ export type MeeActions = {
 
   /**
    * Wait for a super transaction receipt to be available
-   * @param: {@link WaitForReceiptParams}
-   * @returns: {@link WaitForReceiptPayload}
+   * @param: {@link WaitForSupertransactionReceiptParams}
+   * @returns: {@link WaitForSupertransactionReceiptPayload}
    * @example
    * ```typescript
-   * const receipt = await meeClient.waitForReceipt({
+   * const receipt = await meeClient.waitForSupertransactionReceipt({
    *   hash: "0x..."
    * })
    * ```
    */
-  waitForReceipt: (
-    params: WaitForReceiptParams
-  ) => Promise<WaitForReceiptPayload>
+  waitForSupertransactionReceipt: (
+    params: WaitForSupertransactionReceiptParams
+  ) => Promise<WaitForSupertransactionReceiptPayload>
   /**
    * Sign a fusion quote
    * @param: {@link SignFusionQuoteParams}
@@ -162,8 +162,9 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
       executeSignedQuote(meeClient, params),
     execute: (params: GetQuoteParams) => execute(meeClient, params),
     executeQuote: (params: SignQuoteParams) => executeQuote(meeClient, params),
-    waitForReceipt: (params: WaitForReceiptParams) =>
-      waitForReceipt(meeClient, params),
+    waitForSupertransactionReceipt: (
+      params: WaitForSupertransactionReceiptParams
+    ) => waitForSupertransactionReceipt(meeClient, params),
     signFusionQuote: (params: SignFusionQuoteParams) =>
       signFusionQuote(meeClient, params),
     executeSignedFusionQuote: (params: ExecuteSignedFusionQuoteParams) =>
@@ -177,4 +178,4 @@ export * from "./signQuote"
 export * from "./executeSignedQuote"
 export * from "./execute"
 export * from "./executeQuote"
-export * from "./waitForReceipt"
+export * from "./waitForSupertransactionReceipt"

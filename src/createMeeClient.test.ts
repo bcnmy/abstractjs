@@ -235,7 +235,7 @@ describe("createMeeClient", async () => {
 
       expect(hash).toBeDefined()
       console.timeEnd("execute:hashTimer")
-      const receipt = await meeClient.waitForReceipt({ hash })
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       console.timeEnd("execute:receiptTimer")
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
