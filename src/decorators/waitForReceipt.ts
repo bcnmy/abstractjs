@@ -1,18 +1,18 @@
 import type { Hex } from "viem"
-import type { MultichainSmartAccount } from "../account-vendors"
 import type { BaseMeeClient } from "../createMeeClient"
-import type {
-  GetQuotePayload,
-  MeeFilledUserOp,
-  MeeFilledUserOpDetails
-} from "./getQuote"
-import { getExplorerTxLink } from "../utils/explorer/explorer"
+import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
+import {
+  getExplorerTxLink,
+  getJiffyScanLink,
+  getMeeScanLink
+} from "../utils/explorer/explorer"
+import type { Url } from "../utils/clients/createHttpClient"
 
 /**
  * Parameters required for requesting a quote from the MEE service
- * @type WaitForSuperTransactionReceiptParams
+ * @type WaitForReceiptParams
  */
-export type WaitForSuperTransactionReceiptParams = {
+export type WaitForReceiptParams = {
   /** The hash of the super transaction */
   hash: Hex
 }
@@ -21,10 +21,10 @@ export type WaitForSuperTransactionReceiptParams = {
  * Explorer links for each chain
  * @type ExplorerLinks
  */
-type ExplorerLinks = {
-  explorerLinks: {
-    meeScan: string
-    [chainId: string]: string
+type ExplorerLinks = { meeScan: Url } & {
+  [chainId: string]: {
+    txHash: Url
+    jiffyScan: Url
   }
 }
 
@@ -34,20 +34,17 @@ type ExplorerLinks = {
  */
 type UserOpStatus = {
   executionStatus: "SUCCESS" | "PENDING"
-  executionData: string
+  executionData: Hex
   executionError: string
 }
 /**
- * The payload returned by the waitForSuperTransactionReceipt function
- * @type WaitForSuperTransactionReceiptPayload
+ * The payload returned by the waitForReceipt function
+ * @type WaitForReceiptPayload
  */
-export type WaitForSuperTransactionReceiptPayload = Omit<
-  GetQuotePayload,
-  "userOps"
-> &
-  ExplorerLinks & {
-    userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
-  }
+export type WaitForReceiptPayload = Omit<GetQuotePayload, "userOps"> & {
+  userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
+  explorerLinks: ExplorerLinks
+}
 
 /**
  * Waits for a super transaction receipt to be available
@@ -55,16 +52,16 @@ export type WaitForSuperTransactionReceiptPayload = Omit<
  * @param params - The parameters for the super transaction
  * @returns The receipt of the super transaction
  * @example
- * const receipt = await waitForSuperTransactionReceipt(client, {
+ * const receipt = await waitForReceipt(client, {
  *   hash: "0x..."
  * })
  */
-export const waitForSuperTransactionReceipt = async (
+export const waitForReceipt = async (
   client: BaseMeeClient,
-  params: WaitForSuperTransactionReceiptParams
-): Promise<WaitForSuperTransactionReceiptPayload> => {
+  params: WaitForReceiptParams
+): Promise<WaitForReceiptPayload> => {
   const fireRequest = async () =>
-    await client.request<WaitForSuperTransactionReceiptPayload>({
+    await client.request<WaitForReceiptPayload>({
       path: `v1/explorer/${params.hash}`,
       method: "GET"
     })
@@ -93,12 +90,15 @@ export const waitForSuperTransactionReceipt = async (
 
     const explorerLinks = explorerResponse.userOps.reduce(
       (acc, userOp) => {
-        acc[userOp.chainId] = getExplorerTxLink(params.hash, userOp.chainId)
+        acc[userOp.chainId] = {
+          txHash: getExplorerTxLink(userOp.executionData, userOp.chainId),
+          jiffyScan: getJiffyScanLink(userOp.userOpHash)
+        }
         return acc
       },
       {
-        meeScan: getExplorerTxLink(params.hash)
-      } as ExplorerLinks["explorerLinks"]
+        meeScan: getMeeScanLink(params.hash)
+      } as ExplorerLinks
     )
 
     return { ...explorerResponse, explorerLinks }
@@ -107,4 +107,4 @@ export const waitForSuperTransactionReceipt = async (
   return await waitForReceipt()
 }
 
-export default waitForSuperTransactionReceipt
+export default waitForReceipt

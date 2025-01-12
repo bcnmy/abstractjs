@@ -2,7 +2,7 @@ import type { Chain } from "viem"
 import type { MultichainSmartAccount } from "../../account-vendors"
 import type { MultichainAddressMapping } from "../../primitives"
 import type { UnifiedERC20Balance } from "../contract/getUnifiedERC20Balance"
-import type { Instruction } from "../../decorators/getQuote"
+import type { InstructionResolved } from "../../decorators/getQuote"
 
 export type BridgingUserOpParams = {
   fromChain: Chain
@@ -20,7 +20,7 @@ export type MultichainBridgingParams = {
 }
 
 export type BridgingPluginResult = {
-  userOp: Instruction
+  userOp: InstructionResolved
   receivedAtDestination?: bigint
   bridgingDurationExpectedMs?: number
 }
@@ -33,14 +33,14 @@ export type BridgingPlugin = {
 
 // Single bridge operation result
 export type BridgingInstruction = {
-  userOp: Instruction
+  userOp: InstructionResolved
   receivedAtDestination?: bigint
   bridgingDurationExpectedMs?: number
 }
 
 // Complete set of bridging instructions and final outcome
 export type BridgingInstructions = {
-  superTransaction: BridgingInstruction[]
+  instructions: BridgingInstruction[]
   totalAvailableOnDestination: bigint
 }
 
@@ -78,7 +78,7 @@ type BridgeQueryResult = {
   amount: bigint
   receivedAtDestination: bigint
   plugin: BridgingPlugin
-  userOp: Instruction
+  userOp: InstructionResolved
   bridgingDurationExpectedMs?: number
 }
 
@@ -154,7 +154,7 @@ export const buildMultichainBridgingInstructions = async (
   // If we have enough on destination, no bridging needed
   if (destinationBalance >= targetAmount) {
     return {
-      superTransaction: [],
+      instructions: [],
       totalAvailableOnDestination: destinationBalance
     }
   }
@@ -225,7 +225,7 @@ export const buildMultichainBridgingInstructions = async (
     )
 
   // Build instructions by taking from best routes until we have enough
-  const superTransaction: BridgingInstruction[] = []
+  const instructions: BridgingInstruction[] = []
   let totalBridged = 0n
   let remainingNeeded = amountToBridge
 
@@ -239,7 +239,7 @@ export const buildMultichainBridgingInstructions = async (
     const receivedFromRoute =
       (result.receivedAtDestination * amountToTake) / result.amount
 
-    superTransaction.push({
+    instructions.push({
       userOp: result.userOp,
       receivedAtDestination: receivedFromRoute,
       bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
@@ -260,7 +260,7 @@ export const buildMultichainBridgingInstructions = async (
   }
 
   return {
-    superTransaction,
+    instructions,
     totalAvailableOnDestination: destinationBalance + totalBridged
   }
 }

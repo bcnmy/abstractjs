@@ -3,7 +3,7 @@ import type { Prettify } from "viem"
 /**
  * Parameters for initializing a Http client
  */
-export type HttpClientParams = `https://${string}` | `http://${string}`
+export type Url = `https://${string}` | `http://${string}`
 
 /**
  * Parameters for making requests to the Http node
@@ -48,7 +48,7 @@ type Extended = Prettify<
  * @param params - Configuration parameters for the client
  * @returns A base Http client instance that can be extended with additional functionality
  */
-export const createHttpClient = (url: HttpClientParams): HttpClient => {
+export const createHttpClient = (url: Url): HttpClient => {
   const request = async <T>(params: RequestParams) => {
     const { path, method = "POST", body } = params
     const result = await fetch(`${url}/${path}`, {

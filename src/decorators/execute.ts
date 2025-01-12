@@ -13,7 +13,7 @@ import getQuote, { type GetQuoteParams } from "./getQuote"
  * @returns The hash of the executed transaction
  * @example
  * const hash = await execute(client, {
- *   superTransaction: [
+ *   instructions: [
  *     ...
  *   ]
  * })

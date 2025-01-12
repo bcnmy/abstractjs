@@ -2,7 +2,7 @@ import type { LocalAccount, PublicClient } from "viem"
 import { anvil, baseSepolia } from "viem/chains"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { initNetwork, type NetworkConfig } from "../../../tests/config"
-import { getExplorerTxLink } from "./explorer"
+import { getExplorerTxLink, getJiffyScanLink, getMeeScanLink } from "./explorer"
 
 describe("explorer", () => {
   let network: NetworkConfig
@@ -18,8 +18,14 @@ describe("explorer", () => {
 
   test("should get a meescan url", () => {
     const hash = "0x123"
-    const url = getExplorerTxLink(hash)
+    const url = getMeeScanLink(hash)
     expect(url).toEqual(`https://meescan.biconomy.io/details/${hash}`)
+  })
+
+  test("should get a jiffyscan url", () => {
+    const hash = "0x123"
+    const url = getJiffyScanLink(hash)
+    expect(url).toEqual(`https://v2.jiffyscan.xyz/tx/${hash}`)
   })
 
   test("should get a url for a baseSepolia tx", () => {

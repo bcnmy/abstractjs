@@ -59,7 +59,7 @@ describe("execute", () => {
     vi.mocked(execute).mockResolvedValue(mockExecuteResponse)
 
     const { hash } = await execute(meeClient, {
-      superTransaction: instructions,
+      instructions: instructions,
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id
@@ -69,7 +69,7 @@ describe("execute", () => {
     expect(hash).toEqual(mockExecuteResponse.hash)
 
     expect(execute).toHaveBeenCalledWith(meeClient, {
-      superTransaction: instructions,
+      instructions: instructions,
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id

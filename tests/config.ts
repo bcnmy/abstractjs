@@ -26,10 +26,11 @@ import {
 } from "viem"
 import { dealActions } from "viem-deal"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { anvil as anvilChain, baseSepolia } from "viem/chains"
+import { anvil as anvilChain, base, baseSepolia } from "viem/chains"
 import { expect } from "vitest"
 import { toMeeCompliantNexusAccount } from "../src/account-vendors/nexus/nexus-mee-compliant"
 import { mcUSDC } from "../src/utils/tokens"
+import { getMultichainContract } from "../src/utils/contract/getMultichainContract"
 
 config()
 

@@ -60,7 +60,7 @@ describe("executeSignedQuote", () => {
     vi.mocked(executeSignedQuote).mockResolvedValue(mockExecuteResponse)
 
     const quote = await meeClient.getQuote({
-      superTransaction: instructions,
+      instructions: instructions,
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id

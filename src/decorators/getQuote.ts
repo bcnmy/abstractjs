@@ -44,30 +44,28 @@ export type InstructionResolved = {
  */
 export type Instruction =
   | InstructionResolved
-  | ((x?: AnyData) => Promise<InstructionResolved> | InstructionResolved)
+  | InstructionResolved[]
+  | ((x?: AnyData) => InstructionResolved)
+  | ((x?: AnyData) => InstructionResolved[])
+  | Promise<InstructionResolved>
+  | Promise<InstructionResolved[]>
 
 /**
  * Represents a supertransaction, which is a collection of instructions to be executed in a single transaction
  * @type SuperTransaction
  */
-export type SuperTransaction = Instruction[]
-
-/**
- * Represents a resolved supertransaction, which is a collection of instructions to be executed in a single transaction
- * @type SuperTransactionResolved
- * @internal
- */
-export type SuperTransactionResolved = InstructionResolved[]
+export type SuperTransaction = {
+  /** Array of instructions to be executed in the transaction */
+  instructions: Instruction[]
+  /** Token to be used for paying transaction fees */
+  feeToken: FeeTokenInfo
+}
 
 /**
  * Parameters required for requesting a quote from the MEE service
  * @type GetQuoteParams
  */
-export type GetQuoteParams = {
-  /** Array of instructions to be executed in the transaction */
-  superTransaction: SuperTransaction
-  /** Token to be used for paying transaction fees */
-  feeToken: FeeTokenInfo
+export type GetQuoteParams = SuperTransaction & {
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
   account?: MultichainSmartAccount
 }
@@ -202,7 +200,7 @@ export type GetQuotePayload = {
  * @example
  * ```typescript
  * const quote = await getQuote(meeClient, {
- *   superTransaction: [...],
+ *   instructions: [...],
  *   feeToken: { address: '0x...', chainId: 1 },
  *   account: smartAccount
  * });
@@ -212,19 +210,15 @@ export const getQuote = async (
   client: BaseMeeClient,
   params: GetQuoteParams
 ): Promise<GetQuotePayload> => {
-  const {
-    account: account_ = client.account,
-    superTransaction,
-    feeToken
-  } = params
+  const { account: account_ = client.account, instructions, feeToken } = params
 
-  const resolvedSuperTransaction: SuperTransactionResolved = await Promise.all(
-    superTransaction.map((userOp) =>
+  const resolvedInstructions = (await Promise.all(
+    instructions.flatMap((userOp) =>
       typeof userOp === "function" ? userOp(client) : userOp
     )
-  )
+  )) as InstructionResolved[]
 
-  const validUserOps = resolvedSuperTransaction.every((userOp) =>
+  const validUserOps = resolvedInstructions.every((userOp) =>
     account_.deploymentOn(userOp.chainId)
   )
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
@@ -233,7 +227,7 @@ export const getQuote = async (
   }
 
   const userOpResults = await Promise.all(
-    resolvedSuperTransaction.map((userOp) => {
+    resolvedInstructions.map((userOp) => {
       const deployment = account_.deploymentOn(userOp.chainId)
       return Promise.all([
         deployment.encodeExecuteBatch(userOp.calls),

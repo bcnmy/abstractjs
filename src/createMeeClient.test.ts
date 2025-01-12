@@ -1,4 +1,10 @@
-import { isHex, type Address, type Chain, type LocalAccount } from "viem"
+import {
+  erc20Abi,
+  isHex,
+  type Address,
+  type Chain,
+  type LocalAccount
+} from "viem"
 import { base } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { initNetwork } from "../tests/config"
@@ -7,6 +13,7 @@ import {
   toMultichainNexusAccount
 } from "./account-vendors"
 import { createMeeClient, type MeeClient } from "./createMeeClient"
+import type { Instruction } from "./decorators/getQuote"
 
 const runPaidTests = inject("runPaidTests")
 
@@ -54,7 +61,7 @@ describe("createMeeClient", async () => {
     const meeClient = createMeeClient({ account: mcNexusMainnet })
 
     const quote = await meeClient.getQuote({
-      superTransaction: [],
+      instructions: [],
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id
@@ -71,7 +78,7 @@ describe("createMeeClient", async () => {
 
   test("should sign a quote", async () => {
     const quote = await meeClient.getQuote({
-      superTransaction: [
+      instructions: [
         {
           calls: [
             {
@@ -99,7 +106,7 @@ describe("createMeeClient", async () => {
     .runIf(runPaidTests)
     .skip("should execute a quote by getting it, signing it, and then executing the signed quote", async () => {
       const quote = await meeClient.getQuote({
-        superTransaction: [
+        instructions: [
           {
             calls: [
               {
@@ -118,15 +125,89 @@ describe("createMeeClient", async () => {
       })
 
       const signedQuote = await meeClient.signQuote({ quote })
-
-      const executeeQuote = await meeClient.executeSignedQuote({
-        signedQuote
-      })
+      const executeeQuote = await meeClient.executeSignedQuote({ signedQuote })
 
       expect(executeeQuote).toBeDefined()
       expect(executeeQuote.hash).toBeDefined()
       expect(isHex(executeeQuote.hash)).toEqual(true)
     })
+
+  test("should demo the devEx of preparing instructions", async () => {
+    // These can be any 'Instruction', or any helper method that resolves to a 'ResolvedInstruction',
+    // including 'requireErc20Balance'. They all are resolved in the 'getQuote' method under the hood.
+    const preparedInstructions: Instruction[] = [
+      {
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: 8453
+      },
+      () => ({
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: 8453
+      }),
+      Promise.resolve({
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: 8453
+      }),
+      () => [
+        {
+          calls: [
+            {
+              to: "0x0000000000000000000000000000000000000000",
+              gasLimit: 50000n,
+              value: 0n
+            }
+          ],
+          chainId: 8453
+        },
+        {
+          calls: [
+            {
+              to: "0x0000000000000000000000000000000000000000",
+              gasLimit: 50000n,
+              value: 0n
+            }
+          ],
+          chainId: 8453
+        }
+      ]
+    ]
+
+    expect(preparedInstructions).toBeDefined()
+
+    const quote = await meeClient.getQuote({
+      instructions: preparedInstructions,
+      feeToken: {
+        address: paymentToken,
+        chainId: paymentChain.id
+      }
+    })
+
+    expect(quote.userOps.length).toEqual(6)
+    expect(quote).toBeDefined()
+    expect(quote.paymentInfo.sender).toEqual(
+      mcNexusMainnet.deploymentOn(paymentChain.id).address
+    )
+    expect(quote.paymentInfo.token).toEqual(paymentToken)
+    expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
+  })
 
   test.runIf(runPaidTests)(
     "should execute a quote with a single call, and wait for the receipt",
@@ -134,7 +215,7 @@ describe("createMeeClient", async () => {
       console.time("execute:hashTimer")
       console.time("execute:receiptTimer")
       const { hash } = await meeClient.execute({
-        superTransaction: [
+        instructions: [
           {
             calls: [
               {
@@ -154,12 +235,10 @@ describe("createMeeClient", async () => {
 
       expect(hash).toBeDefined()
       console.timeEnd("execute:hashTimer")
-      const receipt = await meeClient.waitForSuperTransactionReceipt({
-        hash
-      })
+      const receipt = await meeClient.waitForReceipt({ hash })
       console.timeEnd("execute:receiptTimer")
       expect(receipt).toBeDefined()
-      console.log(Object.values(receipt.explorerLinks))
+      console.log(receipt.explorerLinks)
     }
   )
 })

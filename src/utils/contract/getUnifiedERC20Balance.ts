@@ -34,7 +34,7 @@ export async function getUnifiedERC20Balance(parameters: {
       }
       const tokenContract = getContract({
         abi: erc20Abi,
-        address: address,
+        address,
         client: account.client
       })
 

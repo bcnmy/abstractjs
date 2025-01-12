@@ -1,5 +1,6 @@
 import { getChain } from "@biconomy/sdk"
 import type { Chain, Hex } from "viem"
+import type { Url } from "../clients/createHttpClient"
 
 const MEE_EXPLORER_URL = "https://meescan.biconomy.io/details/"
 
@@ -19,18 +20,44 @@ const MEE_EXPLORER_URL = "https://meescan.biconomy.io/details/"
  */
 export const getExplorerTxLink = (
   hash: Hex,
-  chain_?: Chain | number | string
-) => {
-  let chain: Chain | undefined
-  if (chain_) {
-    chain =
-      typeof chain_ === "number" || typeof chain_ === "string"
-        ? getChain(Number(chain_))
-        : chain_
-  }
+  chain_: Chain | number | string
+): Url => {
+  const chain: Chain =
+    typeof chain_ === "number" || typeof chain_ === "string"
+      ? getChain(Number(chain_))
+      : chain_
 
-  const explorer = chain
-    ? `${chain.blockExplorers?.default.url}/tx/`
-    : MEE_EXPLORER_URL
-  return `${explorer}${hash}`
+  return `${chain.blockExplorers?.default.url}/tx/${hash}` as Url
+}
+
+/**
+ * Get the jiffyscan tx link
+ * @param hash - The transaction hash
+ * @returns The jiffyscan tx link
+ *
+ * @example
+ * ```ts
+ * const hash = "0x123"
+ * const url = getJiffyScanLink(hash)
+ * console.log(url) // https://jiffyscan.com/tx/0x123
+ * ```
+ */
+export const getJiffyScanLink = (userOpHash: Hex): Url => {
+  return `https://v2.jiffyscan.xyz/tx/${userOpHash}` as Url
+}
+
+/**
+ * Get the meescan tx link
+ * @param hash - The transaction hash
+ * @returns The meescan tx link
+ *
+ * @example
+ * ```ts
+ * const hash = "0x123"
+ * const url = getMeeScanLink(hash)
+ * console.log(url) // https://meescan.biconomy.io/details/0x123
+ * ```
+ */
+export const getMeeScanLink = (hash: Hex): Url => {
+  return `https://meescan.biconomy.io/details/${hash}` as Url
 }

@@ -10,10 +10,6 @@ import executeSignedQuote, {
 } from "./executeSignedQuote"
 import execute from "./execute"
 import executeQuote from "./executeQuote"
-import waitForSuperTransactionReceipt, {
-  type WaitForSuperTransactionReceiptParams,
-  type WaitForSuperTransactionReceiptPayload
-} from "./waitForSuperTransactionReceipt"
 import signFusionQuote, {
   type SignFusionQuoteParams,
   type SignFusionQuotePayload
@@ -22,6 +18,10 @@ import executeSignedFusionQuote, {
   type ExecuteSignedFusionQuoteParams,
   type ExecuteSignedFusionQuotePayload
 } from "./executeSignedFusionQuote"
+import waitForReceipt, {
+  type WaitForReceiptParams,
+  type WaitForReceiptPayload
+} from "./waitForReceipt"
 
 export type MeeActions = {
   /**
@@ -32,7 +32,7 @@ export type MeeActions = {
    * @example
    * ```typescript
    * const quote = await meeClient.getQuote({
-   *   superTransaction: [...],
+   *   instructions: [...],
    *   feeToken: {
    *     address: '0x...',
    *     chainId: 1
@@ -79,7 +79,7 @@ export type MeeActions = {
    * @example
    * ```typescript
    * const hash = await meeClient.execute({
-   *   superTransaction: [...],
+   *   instructions: [...],
    *   feeToken: {
    *     address: '0x...',
    *     chainId: 1
@@ -96,7 +96,7 @@ export type MeeActions = {
    * @example
    * ```typescript
    * const hash = await meeClient.executeQuote({
-   *   superTransaction: [...],
+   *   instructions: [...],
    *   feeToken: {
    *     address: '0x...',
    *     chainId: 1
@@ -108,18 +108,18 @@ export type MeeActions = {
 
   /**
    * Wait for a super transaction receipt to be available
-   * @param: {@link WaitForSuperTransactionReceiptParams}
-   * @returns: {@link WaitForSuperTransactionReceiptPayload}
+   * @param: {@link WaitForReceiptParams}
+   * @returns: {@link WaitForReceiptPayload}
    * @example
    * ```typescript
-   * const receipt = await meeClient.waitForSuperTransactionReceipt({
+   * const receipt = await meeClient.waitForReceipt({
    *   hash: "0x..."
    * })
    * ```
    */
-  waitForSuperTransactionReceipt: (
-    params: WaitForSuperTransactionReceiptParams
-  ) => Promise<WaitForSuperTransactionReceiptPayload>
+  waitForReceipt: (
+    params: WaitForReceiptParams
+  ) => Promise<WaitForReceiptPayload>
   /**
    * Sign a fusion quote
    * @param: {@link SignFusionQuoteParams}
@@ -162,21 +162,19 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
       executeSignedQuote(meeClient, params),
     execute: (params: GetQuoteParams) => execute(meeClient, params),
     executeQuote: (params: SignQuoteParams) => executeQuote(meeClient, params),
-    waitForSuperTransactionReceipt: (
-      params: WaitForSuperTransactionReceiptParams
-    ) => waitForSuperTransactionReceipt(meeClient, params),
+    waitForReceipt: (params: WaitForReceiptParams) =>
+      waitForReceipt(meeClient, params),
     signFusionQuote: (params: SignFusionQuoteParams) =>
       signFusionQuote(meeClient, params),
     executeSignedFusionQuote: (params: ExecuteSignedFusionQuoteParams) =>
       executeSignedFusionQuote(meeClient, params)
   }
 }
-
 export * from "./getQuote"
 export * from "./signFusionQuote"
 export * from "./executeSignedFusionQuote"
-export * from "./waitForSuperTransactionReceipt"
 export * from "./signQuote"
 export * from "./executeSignedQuote"
 export * from "./execute"
 export * from "./executeQuote"
+export * from "./waitForReceipt"

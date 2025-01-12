@@ -1,4 +1,4 @@
-import type { Address, Chain, LocalAccount } from "viem"
+import type { Address, Chain, erc20Abi, LocalAccount } from "viem"
 import { base } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { initNetwork, type NetworkConfig } from "../../tests/config"
@@ -8,6 +8,9 @@ import {
 } from "../account-vendors"
 import { type MeeClient, createMeeClient } from "../createMeeClient"
 import { getQuote, type Instruction } from "./getQuote"
+import { mcUSDC } from "../utils/tokens"
+import { requireErc20Balance } from "../utils/syntax/require-funds-on-chain"
+import { getMultichainContract } from "../utils/contract/getMultichainContract"
 
 describe("getQuote", () => {
   let network: NetworkConfig
@@ -54,24 +57,23 @@ describe("getQuote", () => {
         ],
         chainId: 8453
       }),
-      async () =>
-        await Promise.resolve({
-          calls: [
-            {
-              to: "0x0000000000000000000000000000000000000000",
-              gasLimit: 50000n,
-              value: 0n
-            }
-          ],
-          chainId: 8453
-        })
+      Promise.resolve({
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: 8453
+      })
     ]
 
     expect(instructions).toBeDefined()
     expect(instructions.length).toEqual(3)
 
     const quote = await getQuote(meeClient, {
-      superTransaction: instructions,
+      instructions: instructions,
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id

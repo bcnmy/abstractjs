@@ -2,7 +2,7 @@ import type { Prettify } from "viem"
 import type { MultichainSmartAccount } from "./account-vendors/account"
 import createHttpClient, {
   type HttpClient,
-  type HttpClientParams
+  type Url
 } from "./utils/clients/createHttpClient"
 import { meeActions } from "./decorators"
 
@@ -16,7 +16,7 @@ const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io"
  */
 export type CreateMeeClientParams = {
   /** URL for the MEE node service */
-  url?: HttpClientParams
+  url?: Url
   /** Polling interval for the Mee client */
   pollingInterval?: number
   /** Account to use for the Mee client */
@@ -39,7 +39,7 @@ export const createMeeClient = (params: CreateMeeClientParams) => {
   contracts are still being audited, and the multichain tokens exported from 
   this package are yet to be verified.
 -------------------------------------------------------------------------------`)
-  const { url = DEFAULT_MEE_NODE_URL, pollingInterval, account } = params
+  const { url = DEFAULT_MEE_NODE_URL, pollingInterval = 1000, account } = params
   const httpClient = createHttpClient(url)
   const baseMeeClient = Object.assign(httpClient, {
     pollingInterval,

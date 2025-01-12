@@ -51,7 +51,7 @@ describe("signQuote", () => {
     expect(instructions).toBeDefined()
 
     const quote = await meeClient.getQuote({
-      superTransaction: instructions,
+      instructions: instructions,
       feeToken: {
         address: paymentToken,
         chainId: paymentChain.id
