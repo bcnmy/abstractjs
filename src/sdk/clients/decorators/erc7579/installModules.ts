@@ -39,7 +39,7 @@ export type InstallModulesParameters<
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { installModules } from '@biconomy/sdk'
+ * import { installModules } from '@biconomy/abstractjs'
  *
  * const userOpHash = await installModules(nexusClient, {
  *   modules: [

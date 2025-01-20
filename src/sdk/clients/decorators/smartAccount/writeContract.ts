@@ -24,7 +24,7 @@ import { sendTransaction } from "./sendTransaction"
  * @throws {Error} If the 'to' address is missing in the request.
  *
  * @example
- * import { writeContract } from '@biconomy/sdk'
+ * import { writeContract } from '@biconomy/abstractjs'
  * import { encodeFunctionData } from 'viem'
  *
  * const encodedCall = encodeFunctionData({

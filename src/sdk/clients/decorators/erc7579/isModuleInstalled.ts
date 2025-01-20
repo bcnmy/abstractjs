@@ -33,7 +33,7 @@ export type IsModuleInstalledParameters<
  * @throws {Error} If the accountId result is empty.
  *
  * @example
- * import { isModuleInstalled } from '@biconomy/sdk'
+ * import { isModuleInstalled } from '@biconomy/abstractjs'
  *
  * const isInstalled = await isModuleInstalled(nexusClient, {
  *   module: {

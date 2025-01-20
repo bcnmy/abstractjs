@@ -24,7 +24,7 @@ export type GetInstalledValidatorsParameters<
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { getInstalledValidators } from '@biconomy/sdk'
+ * import { getInstalledValidators } from '@biconomy/abstractjs'
  *
  * const [validators, nextCursor] = await getInstalledValidators(nexusClient, {
  *   pageSize: 10n

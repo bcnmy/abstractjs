@@ -77,7 +77,7 @@ export function encodeExecutionMode<callType extends CallType>({
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { supportsExecutionMode } from '@biconomy/sdk'
+ * import { supportsExecutionMode } from '@biconomy/abstractjs'
  *
  * const isSupported = await supportsExecutionMode(nexusClient, {
  *   type: 'call',

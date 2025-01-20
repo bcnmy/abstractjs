@@ -35,7 +35,7 @@ export type UninstallFallbackParameters<
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { uninstallFallback } from '@biconomy/sdk'
+ * import { uninstallFallback } from '@biconomy/abstractjs'
  *
  * const userOpHash = await uninstallFallback(nexusClient, {
  *   module: {

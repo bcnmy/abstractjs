@@ -1,4 +1,4 @@
-# @biconomy/sdk Testing Framework
+# @biconomy/abstractjs Testing Framework
 
 ## Testing Setup
 

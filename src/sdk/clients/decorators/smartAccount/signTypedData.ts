@@ -26,7 +26,7 @@ import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { signTypedData } from '@biconomy/sdk'
+ * import { signTypedData } from '@biconomy/abstractjs'
  * import { keccak256, encodeAbiParameters, parseAbiParameters } from 'viem'
  *
  * const domain = {

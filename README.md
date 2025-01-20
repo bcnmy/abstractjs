@@ -1,8 +1,8 @@
-[![Biconomy](https://img.shields.io/badge/Made_with_%F0%9F%8D%8A_by-Biconomy-ff4e17?style=flat)](https://biconomy.io) [![License MIT](https://img.shields.io/badge/License-MIT-blue?&style=flat)](./LICENSE) [![codecov](https://codecov.io/github/bcnmy/sdk/graph/badge.svg?token=DTdIR5aBDA)](https://codecov.io/github/bcnmy/sdk)
+[![Biconomy](https://img.shields.io/badge/Made_with_%F0%9F%8D%8A_by-Biconomy-ff4e17?style=flat)](https://biconomy.io) [![License MIT](https://img.shields.io/badge/License-MIT-blue?&style=flat)](./LICENSE) [![codecov](https://codecov.io/github/bcnmy/abstractjs/graph/badge.svg?token=DTdIR5aBDA)](https://codecov.io/github/bcnmy/abstractjs)
 
-# abstractJS 🚀
+# abstractjs 🚀
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/bcnmy/sdk)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/bcnmy/abstractjs)
 
 The Biconomy SDK is your all-in-one toolkit for building decentralized applications (dApps) with **ERC4337 Account Abstraction** and **Smart Accounts**. It is designed for seamless user experiences and offers non-custodial solutions for user onboarding, sending transactions (userOps), gas sponsorship and much more.
 
@@ -27,12 +27,12 @@ The Biconomy SDK is your all-in-one toolkit for building decentralized applicati
 
 1. **Add the package:**
 ```bash
-bun add @biconomy/sdk viem @rhinestone/module-sdk
+bun add @biconomy/abstractjs viem @rhinestone/module-sdk
 ```
 
 2. **Basic Usage:**
 ```typescript
-import { toMultichainNexusAccount, mcUSDC } from "@biconomy/sdk";
+import { toMultichainNexusAccount, mcUSDC } from "@biconomy/abstractjs";
 import { base, optimism } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 

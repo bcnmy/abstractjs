@@ -115,7 +115,7 @@ export type SmartAccountActions<
    * @throws {AccountNotFoundError} If the account is not found.
    *
    * @example
-   * import { sendTransaction } from '@biconomy/sdk'
+   * import { sendTransaction } from '@biconomy/abstractjs'
    *
    * const hash = await nexusClient.sendTransaction({calls: [{to: '0x...', value: parseEther('0.1'), data: '0x...'}]})
    * console.log(hash) // '0x...'

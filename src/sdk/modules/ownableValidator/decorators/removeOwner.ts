@@ -41,7 +41,7 @@ export type RemoveOwnerParameters<
  *
  * @example
  * ```typescript
- * import { removeOwner } from '@biconomy/sdk'
+ * import { removeOwner } from '@biconomy/abstractjs'
  *
  * const userOpHash = await removeOwner(nexusClient, {
  *   owner: '0x...'

@@ -1,10 +1,11 @@
 {
-  "name": "@biconomy/sdk",
-  "version": "0.0.29",
+  "name": "@biconomy/abstractjs",
+  "version": "0.0.31",
   "author": "Biconomy",
-  "repository": "github:bcnmy/sdk",
+  "repository": "github:bcnmy/abstractjs",
   "main": "./dist/_cjs/index.js",
   "module": "./dist/_esm/index.js",
+  "access": "public",
   "devDependencies": {
     "@biomejs/biome": "1.6.0",
     "@changesets/cli": "^2.27.1",

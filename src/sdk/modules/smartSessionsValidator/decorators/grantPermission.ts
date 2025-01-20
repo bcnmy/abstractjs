@@ -50,7 +50,7 @@ export type GrantPermissionParameters<
  *
  * @example
  * ```typescript
- * import { grantPermission } from '@biconomy/sdk'
+ * import { grantPermission } from '@biconomy/abstractjs'
  *
  * const result = await grantPermission(nexusClient, {
  *   sessionRequestedInfo: [

@@ -24,7 +24,7 @@ export type GetInstalledExecutorsParameters<
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { getInstalledExecutors } from '@biconomy/sdk'
+ * import { getInstalledExecutors } from '@biconomy/abstractjs'
  *
  * const [executors, nextCursor] = await getInstalledExecutors(nexusClient, {
  *   pageSize: 10n

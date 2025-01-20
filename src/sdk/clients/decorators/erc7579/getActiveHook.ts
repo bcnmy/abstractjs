@@ -20,7 +20,7 @@ export type GetActiveHookParameters<
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { getActiveHook } from '@biconomy/sdk'
+ * import { getActiveHook } from '@biconomy/abstractjs'
  *
  * const activeHook = await getActiveHook(nexusClient)
  * console.log(activeHook) // '0x...'

@@ -24,7 +24,7 @@ import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { sendTransaction } from '@biconomy/sdk'
+ * import { sendTransaction } from '@biconomy/abstractjs'
  *
  * const hash = await sendTransaction(nexusClient, {
  *   to: '0x...',

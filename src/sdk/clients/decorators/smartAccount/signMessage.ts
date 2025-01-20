@@ -21,7 +21,7 @@ import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { signMessage } from '@biconomy/sdk'
+ * import { signMessage } from '@biconomy/abstractjs'
  *
  * const signature = await signMessage(nexusClient, {
  *   message: 'Hello, Biconomy!'

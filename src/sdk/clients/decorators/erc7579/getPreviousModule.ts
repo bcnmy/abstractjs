@@ -26,7 +26,7 @@ export type GetPreviousModuleParameters<
  * @throws {Error} If the module type is unknown or the module is not found.
  *
  * @example
- * import { getPreviousModule } from '@biconomy/sdk'
+ * import { getPreviousModule } from '@biconomy/abstractjs'
  *
  * const previousModuleAddress = await getPreviousModule(nexusClient, {
  *   module: {

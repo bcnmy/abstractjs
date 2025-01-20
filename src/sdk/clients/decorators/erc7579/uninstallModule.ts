@@ -37,7 +37,7 @@ export type UninstallModuleParameters<
  * @throws {AccountNotFoundError} If the account is not found.
  *
  * @example
- * import { uninstallModule } from '@biconomy/sdk'
+ * import { uninstallModule } from '@biconomy/abstractjs'
  *
  * const userOpHash = await uninstallModule(nexusClient, {
  *   module: {

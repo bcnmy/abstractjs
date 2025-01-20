@@ -45,7 +45,7 @@ export type GrantDeferredPermissionResponse = SessionData["moduleData"]
  *
  * @example
  * ```typescript
- * import { grantDeferredPermission } from '@biconomy/sdk'
+ * import { grantDeferredPermission } from '@biconomy/abstractjs'
  *
  * const result = await grantDeferredPermission(nexusClient, {
  *   sessionRequestedInfo: [

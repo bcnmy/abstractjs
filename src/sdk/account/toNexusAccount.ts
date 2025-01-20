@@ -173,7 +173,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
  * @returns Nexus Smart Account. {@link NexusAccount}
  *
  * @example
- * import { toNexusAccount } from '@biconomy/sdk'
+ * import { toNexusAccount } from '@biconomy/abstractjs'
  * import { createWalletClient, http } from 'viem'
  * import { mainnet } from 'viem/chains'
  *

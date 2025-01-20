@@ -188,7 +188,7 @@ export type SmartAccountClientConfig<
  * @returns Nexus Client. {@link NexusClient}
  *
  * @example
- * import { createSmartAccountClient } from '@biconomy/sdk'
+ * import { createSmartAccountClient } from '@biconomy/abstractjs'
  * import { http } from 'viem'
  * import { mainnet } from 'viem/chains'
  *

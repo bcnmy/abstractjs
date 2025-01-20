@@ -222,7 +222,7 @@ export const getPermissionAction = async ({
  *
  * @example
  * ```typescript
- * import { preparePermission } from '@biconomy/sdk'
+ * import { preparePermission } from '@biconomy/abstractjs'
  *
  * const result = await preparePermission(nexusClient, {
  *   sessionRequestedInfo: [
