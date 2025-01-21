@@ -1,7 +1,7 @@
-import type { Address, Chain, Hex, LocalAccount } from "viem"
-import { base } from "viem/chains"
+import type { Chain, Hex, LocalAccount } from "viem"
+import { optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
+import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -11,28 +11,34 @@ import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeSignedFusionQuote, {
   type ExecuteSignedFusionQuotePayload
 } from "./executeSignedFusionQuote"
-import { type Instruction, getQuote } from "./getQuote"
+import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 import { signFusionQuote } from "./signFusionQuote"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants/tokens"
 
+// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
+
   let mcNexus: MultichainSmartAccount
+  let feeToken: FeeTokenInfo
   let meeClient: MeeClient
+
+  let targetChain: Chain
+  let paymentChain: Chain
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
     eoaAccount = network.account!
+    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount
     })
 
@@ -49,7 +55,7 @@ describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
             value: 0n
           }
         ],
-        chainId: 8453
+        chainId: targetChain.id
       }
     ]
 
@@ -85,10 +91,7 @@ describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
 
     const quote = await getQuote(meeClient, {
       instructions: instructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     const signedFusionQuote = await signFusionQuote(meeClient, {
@@ -98,7 +101,7 @@ describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
           to: "0x0000000000000000000000000000000000000000",
           value: 0n
         },
-        chain: paymentChain
+        chain: network.chain
       }
     })
 

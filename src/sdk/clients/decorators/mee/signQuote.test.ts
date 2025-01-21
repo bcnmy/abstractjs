@@ -1,33 +1,36 @@
-import { type Address, type Chain, type LocalAccount, isHex } from "viem"
-import { base } from "viem/chains"
+import { type Chain, type LocalAccount, isHex } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
+import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import type { Instruction } from "./getQuote"
+import type { FeeTokenInfo, Instruction } from "./getQuote"
 import { signQuote } from "./signQuote"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
   let mcNexus: MultichainSmartAccount
+  let feeToken: FeeTokenInfo
   let meeClient: MeeClient
+
+  let targetChain: Chain
+  let paymentChain: Chain
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
     eoaAccount = network.account!
+    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount
     })
 
@@ -44,7 +47,7 @@ describe("mee.signQuote", () => {
             value: 0n
           }
         ],
-        chainId: 8453
+        chainId: targetChain.id
       }
     ]
 
@@ -52,10 +55,7 @@ describe("mee.signQuote", () => {
 
     const quote = await meeClient.getQuote({
       instructions: instructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     const signedQuote = await signQuote(meeClient, { quote })

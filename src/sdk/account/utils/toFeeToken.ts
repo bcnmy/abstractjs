@@ -2,17 +2,17 @@ import type { FeeTokenInfo } from "../../clients/decorators/mee/getQuote"
 import type { MultichainToken } from "./Types"
 
 /**
- * Converts a multichain token to fee token information for a specific chain
+ * Converts a multichain mcToken to fee token information for a specific chain
  *
  * @param params - Configuration for the fee token conversion
- * @param params.token - {@link MultichainToken} The multichain token to convert
+ * @param params.mcToken - {@link MultichainToken} The multichain token to convert
  * @param params.chainId - The numeric ID of the chain to get the token address for
  *
  * @returns {@link FeeTokenInfo} The fee token information for the specified chain
  *
  * @example
  * const feeToken = toFeeToken({
- *   token: mcUSDC,
+ *   mcToken: mcUSDC,
  *   chainId: 10 // Optimism
  * });
  *
@@ -23,11 +23,11 @@ import type { MultichainToken } from "./Types"
  * // }
  */
 export function toFeeToken(params: {
-  token: MultichainToken
+  mcToken: MultichainToken
   chainId: number
 }): FeeTokenInfo {
   return {
-    address: params.token.addressOn(params.chainId),
+    address: params.mcToken.addressOn(params.chainId),
     chainId: params.chainId
   }
 }

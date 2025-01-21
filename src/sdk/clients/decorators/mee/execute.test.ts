@@ -1,7 +1,6 @@
-import type { Address, Chain, Hex, LocalAccount } from "viem"
-import { base } from "viem/chains"
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
+import type { Chain, Hex, LocalAccount } from "viem"
+import { beforeAll, describe, expect, test, vi } from "vitest"
+import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -9,27 +8,32 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { execute } from "./execute"
-import type { Instruction } from "./getQuote"
+import type { FeeTokenInfo, Instruction } from "./getQuote"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants/tokens"
 
 vi.mock("./execute")
 
 describe("mee.execute", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
+
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
+  let feeToken: FeeTokenInfo
+
+  let targetChain: Chain
+  let paymentChain: Chain
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
     eoaAccount = network.account!
+    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount
     })
 
@@ -46,7 +50,7 @@ describe("mee.execute", () => {
             value: 0n
           }
         ],
-        chainId: 8453
+        chainId: targetChain.id
       }
     ]
 
@@ -59,20 +63,14 @@ describe("mee.execute", () => {
 
     const { hash } = await execute(meeClient, {
       instructions: instructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     expect(hash).toEqual(mockExecuteResponse.hash)
 
     expect(execute).toHaveBeenCalledWith(meeClient, {
       instructions: instructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
   })
 })

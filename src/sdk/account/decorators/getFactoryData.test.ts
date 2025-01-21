@@ -1,14 +1,6 @@
-import {
-  http,
-  type Address,
-  type Chain,
-  type LocalAccount,
-  type PublicClient,
-  type WalletClient,
-  createWalletClient
-} from "viem"
+import type { Chain, LocalAccount, PublicClient, WalletClient } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../../test/testSetup"
+import { getTestChains, toNetwork } from "../../../test/testSetup"
 import {
   getTestAccount,
   killNetwork,
@@ -16,14 +8,8 @@ import {
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
 import {
-  type NexusClient,
-  createSmartAccountClient
-} from "../../clients/createSmartAccountClient"
-import {
   MEE_VALIDATOR_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+  RHINESTONE_ATTESTER_ADDRESS
 } from "../../constants"
 import type { NexusAccount } from "../toNexusAccount"
 import { getK1FactoryData, getMeeFactoryData } from "./getFactoryData"
@@ -38,9 +24,12 @@ describe("nexus.account.getFactoryData", async () => {
   let eoaAccount: LocalAccount
   let nexusAccount: NexusAccount
   let walletClient: WalletClient
+  let targetChain: Chain
+  let paymentChain: Chain
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl

@@ -54,6 +54,7 @@ type Extended = Prettify<
 export const createHttpClient = (url: Url): HttpClient => {
   const request = async <T>(requesParams: RequestParams) => {
     const { path, method = "POST", body, params } = requesParams
+
     const urlParams = params ? `?${new URLSearchParams(params)}` : ""
     const result = await fetch(`${url}/${path}${urlParams}`, {
       method,
@@ -63,17 +64,16 @@ export const createHttpClient = (url: Url): HttpClient => {
       ...(body ? { body: JSON.stringify(body) } : {})
     })
 
+    const json = (await result.json()) as any
+
     if (!result.ok) {
-      console.log({ result })
-      throw new Error(result.statusText)
+      throw new Error(json?.errors?.[0] ?? result.statusText)
     }
 
-    return (await result.json()) as T
+    return json as T
   }
 
-  const client = {
-    request
-  }
+  const client = { request }
 
   function extend(base: typeof client) {
     type ExtendFn = (base: typeof client) => unknown

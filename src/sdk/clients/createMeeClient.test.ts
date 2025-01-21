@@ -1,7 +1,12 @@
-import { type Address, type Chain, type LocalAccount, isHex } from "viem"
-import { base } from "viem/chains"
+import {
+  type Address,
+  type Chain,
+  type LocalAccount,
+  isHex,
+  zeroAddress
+} from "viem"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { toNetwork } from "../../test/testSetup"
+import { getTestChains, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -9,7 +14,8 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
-import type { Instruction } from "./decorators/mee"
+import { toFeeToken } from "../account/utils"
+import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -17,20 +23,24 @@ const { runPaidTests } = inject("settings")
 describe("mee.createMeeClient", async () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
+  let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
+  let targetChain: Chain
+  let paymentChain: Chain
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
+    console.log({ targetChain, paymentChain })
+
     eoaAccount = network.account!
 
+    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [targetChain, paymentChain],
       signer: eoaAccount
     })
 
@@ -40,19 +50,13 @@ describe("mee.createMeeClient", async () => {
   test("should get a quote", async () => {
     const meeClient = createMeeClient({ account: mcNexus })
 
-    const quote = await meeClient.getQuote({
-      instructions: [],
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
-    })
+    const quote = await meeClient.getQuote({ instructions: [], feeToken })
 
     expect(quote).toBeDefined()
     expect(quote.paymentInfo.sender).toEqual(
       mcNexus.deploymentOn(paymentChain.id)?.address
     )
-    expect(quote.paymentInfo.token).toEqual(paymentToken)
+    expect(quote.paymentInfo.token).toEqual(feeToken.address)
     expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 
@@ -62,18 +66,15 @@ describe("mee.createMeeClient", async () => {
         {
           calls: [
             {
-              to: "0x0000000000000000000000000000000000000000",
+              to: zeroAddress,
               gasLimit: 50000n,
               value: 0n
             }
           ],
-          chainId: 8453
+          chainId: targetChain.id
         }
       ],
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     const signedQuote = await meeClient.signQuote({ quote })
@@ -90,18 +91,15 @@ describe("mee.createMeeClient", async () => {
           {
             calls: [
               {
-                to: "0x0000000000000000000000000000000000000000",
+                to: zeroAddress,
                 gasLimit: 50000n,
                 value: 0n
               }
             ],
-            chainId: 8453
+            chainId: targetChain.id
           }
         ],
-        feeToken: {
-          address: paymentToken,
-          chainId: paymentChain.id
-        }
+        feeToken
       })
 
       const signedQuote = await meeClient.signQuote({ quote })
@@ -115,31 +113,32 @@ describe("mee.createMeeClient", async () => {
   test("should demo the devEx of preparing instructions", async () => {
     // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
     // including 'build'. They all are resolved in the 'getQuote' method under the hood.
+
     const currentInstructions = await meeClient.account.build({
-      type: "default",
+      type: "intent",
       data: {
-        instructions: [
-          {
-            calls: [
-              {
-                to: "0x0000000000000000000000000000000000000000",
-                gasLimit: 50000n,
-                value: 0n
-              }
-            ],
-            chainId: 8453
-          }
-        ]
+        amount: 50000n,
+        mcToken: mcUSDC,
+        chain: targetChain
       }
     })
 
     const preparedInstructions = await meeClient.account.build(
       {
-        type: "intent",
+        type: "default",
         data: {
-          amount: BigInt(1000),
-          mcToken: mcUSDC,
-          chain: base
+          instructions: [
+            {
+              calls: [
+                {
+                  to: zeroAddress,
+                  gasLimit: 50000n,
+                  value: 0n
+                }
+              ],
+              chainId: targetChain.id
+            }
+          ]
         }
       },
       currentInstructions
@@ -147,12 +146,12 @@ describe("mee.createMeeClient", async () => {
 
     expect(preparedInstructions).toBeDefined()
 
+    preparedInstructions[0].calls.map(console.log)
+    currentInstructions[0].calls.map(console.log)
+
     const quote = await meeClient.getQuote({
       instructions: preparedInstructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     expect(quote.userOps.length).toEqual(3)
@@ -160,7 +159,7 @@ describe("mee.createMeeClient", async () => {
     expect(quote.paymentInfo.sender).toEqual(
       mcNexus.deploymentOn(paymentChain.id)?.address
     )
-    expect(quote.paymentInfo.token).toEqual(paymentToken)
+    expect(quote.paymentInfo.token).toEqual(feeToken.address)
     expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 
@@ -169,7 +168,6 @@ describe("mee.createMeeClient", async () => {
     async () => {
       console.time("execute:hashTimer")
       // Start performance timing for tracking how long the transaction hash and receipt take
-      console.time("execute:hashTimer")
       console.time("execute:receiptTimer")
 
       // Create an array of instructions that will be executed as a single transaction
@@ -178,9 +176,9 @@ describe("mee.createMeeClient", async () => {
         mcNexus.build({
           type: "intent",
           data: {
-            amount: BigInt(1000), // Amount of tokens to bridge (in smallest unit, e.g., wei)
-            mcToken: mcUSDC, // The multichain USDC token being bridged
-            chain: base // Destination chain (Base network)
+            amount: 50000n,
+            mcToken: mcUSDC,
+            chain: targetChain
           }
         }),
         // Second instruction: Execute a simple call on the Base network
@@ -189,14 +187,8 @@ describe("mee.createMeeClient", async () => {
           data: {
             instructions: [
               {
-                calls: [
-                  {
-                    to: "0x0000000000000000000000000000000000000000", // Target contract (zero address in this test)
-                    gasLimit: 50000n, // Maximum gas allowed for this call
-                    value: 0n // No ETH being sent with the call
-                  }
-                ],
-                chainId: base.id // Execute this call on the Base network
+                calls: [{ to: zeroAddress, gasLimit: 50000n, value: 0n }],
+                chainId: targetChain.id
               }
             ]
           }
@@ -205,13 +197,7 @@ describe("mee.createMeeClient", async () => {
 
       // Get a quote for executing all instructions
       // This will calculate the total cost in the specified payment token
-      const quote = await meeClient.getQuote({
-        instructions,
-        feeToken: {
-          address: paymentToken, // Token used to pay for the transaction
-          chainId: paymentChain.id // Chain where the payment will be processed
-        }
-      })
+      const quote = await meeClient.getQuote({ instructions, feeToken })
 
       // Execute the quote and get back a transaction hash
       // This sends the transaction to the network

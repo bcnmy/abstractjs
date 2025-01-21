@@ -1,20 +1,11 @@
-import {
-  http,
-  type Address,
-  type Chain,
-  type LocalAccount,
-  isAddress,
-  isHex
-} from "viem"
-import { base, optimism } from "viem/chains"
+import { http, type Chain, type LocalAccount, isAddress, isHex } from "viem"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../test/testSetup"
+import { getTestChains, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import { MEE_VALIDATOR_ADDRESS, TEMP_MEE_ATTESTER_ADDR } from "../constants"
 import { NEXUS_ACCOUNT_FACTORY } from "../constants"
 import { mcUSDC } from "../constants/tokens"
-import { MeeSmartAccount } from "../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -24,19 +15,19 @@ import { toNexusAccount } from "./toNexusAccount"
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
+
   let mcNexus: MultichainSmartAccount
+
+  let targetChain: Chain
+  let paymentChain: Chain
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
+    ;[paymentChain, targetChain] = getTestChains(network)
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount
     })
   })
@@ -44,7 +35,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
   test("should create multichain account with correct parameters", async () => {
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
-      chains: [base, optimism]
+      chains: [paymentChain, targetChain]
     })
 
     // Verify the structure of the returned object
@@ -56,9 +47,9 @@ describe("mee.toMultiChainNexusAccount", async () => {
   })
 
   test("should return correct deployment for specific chain", async () => {
-    const deployment = mcNexus.deploymentOn(base.id)
+    const deployment = mcNexus.deploymentOn(targetChain.id)
     expect(deployment).toBeDefined()
-    expect(deployment?.client?.chain?.id).toBe(base.id)
+    expect(deployment?.client?.chain?.id).toBe(targetChain.id)
   })
 
   test("should handle empty chains array", async () => {
@@ -90,7 +81,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
   })
 
   test("should read usdc balance on mainnet", async () => {
-    const readAddress = mcNexus.deploymentOn(optimism.id)?.address
+    const readAddress = mcNexus.deploymentOn(paymentChain.id)?.address
     if (!readAddress) {
       throw new Error("No address found for optimism")
     }
@@ -98,7 +89,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       account: mcNexus,
       functionName: "balanceOf",
       args: [readAddress],
-      onChains: [base, optimism]
+      onChains: [targetChain, paymentChain]
     })
 
     expect(usdcBalanceOnChains.length).toEqual(2)
@@ -132,7 +123,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
 
     const payload = await mcNexus.queryBridge({
       amount: 18600927n,
-      toChain: base,
+      toChain: targetChain,
       fromChain: paymentChain,
       tokenMapping,
       account: mcNexus

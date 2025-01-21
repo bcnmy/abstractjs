@@ -65,7 +65,6 @@ export type NetworkConfig = Omit<
   "instance" | "bundlerInstance"
 > & {
   account?: PrivateKeyAccount
-  paymentToken?: Address
   paymasterUrl?: string
   meeNodeUrl?: string
 }
@@ -109,7 +108,6 @@ export const initNetwork = async (
   const _bundlerUrl = process.env.BUNDLER_URL // Optional, taken from chain (using chainId) if not provided
   const paymasterUrl = process.env.PAYMASTER_URL // Optional
   const chainId = type === "MAINNET_FROM_ENV_VARS" ? mainnetChainId : chainId_
-  const paymentToken = mcUSDC.addressOn(Number(chainId))
 
   let chain: Chain
 
@@ -136,8 +134,7 @@ export const initNetwork = async (
     bundlerUrl,
     paymasterUrl,
     bundlerPort: 0,
-    account: holder,
-    paymentToken
+    account: holder
   }
 }
 

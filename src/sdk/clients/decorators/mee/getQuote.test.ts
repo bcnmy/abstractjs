@@ -1,31 +1,34 @@
-import type { Address, Chain, LocalAccount, erc20Abi } from "viem"
-import { base } from "viem/chains"
+import type { Chain, LocalAccount } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
+import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import { type Instruction, getQuote } from "./getQuote"
+import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
 
 describe("mee.getQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
+
+  let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
+  let targetChain: Chain
+  let paymentChain: Chain
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
     eoaAccount = network.account!
+    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount
     })
 
@@ -42,7 +45,7 @@ describe("mee.getQuote", () => {
             value: 0n
           }
         ],
-        chainId: 8453
+        chainId: targetChain.id
       },
       {
         calls: [
@@ -52,7 +55,7 @@ describe("mee.getQuote", () => {
             value: 0n
           }
         ],
-        chainId: 8453
+        chainId: targetChain.id
       }
     ]
 
@@ -61,10 +64,7 @@ describe("mee.getQuote", () => {
 
     const quote = await getQuote(meeClient, {
       instructions: instructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     expect(quote).toBeDefined()
@@ -78,7 +78,7 @@ describe("mee.getQuote", () => {
           data: {
             amount: BigInt(1000),
             mcToken: mcUSDC,
-            chain: base
+            chain: targetChain
           }
         }),
         mcNexus.build({
@@ -93,16 +93,13 @@ describe("mee.getQuote", () => {
                     value: 0n
                   }
                 ],
-                chainId: base.id
+                chainId: targetChain.id
               }
             ]
           }
         })
       ],
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     expect(quote.userOps.length).toEqual(3)

@@ -1,7 +1,6 @@
-import type { Address, Chain, Hex, LocalAccount } from "viem"
-import { base } from "viem/chains"
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
+import type { Chain, Hex, LocalAccount } from "viem"
+import { beforeAll, describe, expect, test, vi } from "vitest"
+import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -10,27 +9,32 @@ import {
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeQuote from "./executeQuote"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
-import { type Instruction, getQuote } from "./getQuote"
+import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants/tokens"
 
 vi.mock("./executeQuote")
 
 describe("mee.executeQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
-  let paymentChain: Chain
-  let paymentToken: Address
+
+  let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
+  let targetChain: Chain
+  let paymentChain: Chain
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[paymentChain, targetChain] = getTestChains(network)
 
-    paymentChain = network.chain
-    paymentToken = network.paymentToken!
     eoaAccount = network.account!
+    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [base, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount
     })
 
@@ -47,7 +51,7 @@ describe("mee.executeQuote", () => {
             value: 0n
           }
         ],
-        chainId: 8453
+        chainId: targetChain.id
       }
     ]
 
@@ -62,10 +66,7 @@ describe("mee.executeQuote", () => {
 
     const quote = await getQuote(meeClient, {
       instructions: instructions,
-      feeToken: {
-        address: paymentToken,
-        chainId: paymentChain.id
-      }
+      feeToken
     })
 
     const executedQuote = await executeQuote(meeClient, { quote })

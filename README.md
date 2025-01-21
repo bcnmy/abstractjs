@@ -45,13 +45,13 @@ const meeClient = createMeeClient({ account: mcNexus })
 
 const quote = await meeClient.getQuote({
   instructions: [{
-    calls: [{ to: "0x...", value: 1n }],
+    calls: [{ to: "0x...", value: 1n, gasLimit: 100000n }],
     chainId: base.id
   }],
-  feeToken: {
-    address: mcUSDC.addressOn(base.id), // Token used to pay for the transaction
-    chainId: base.id // Chain where the payment will be processed
-  }
+  feeToken: toFeeToken({
+    mcToken: mcUSDC,
+    chainId: base.id
+  })
 })
 
 // Execute the quote and get back a transaction hash
