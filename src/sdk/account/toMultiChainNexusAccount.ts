@@ -5,7 +5,7 @@ import {
   NEXUS_ACCOUNT_FACTORY,
   TEMP_MEE_ATTESTER_ADDR
 } from "../constants"
-import type { MeeSmartAccount } from "../modules/utils/Types"
+import type { ModularSmartAccount } from "../modules/utils/Types"
 import { toNexusAccount } from "./toNexusAccount"
 import type { Signer } from "./utils/toSigner"
 
@@ -43,16 +43,20 @@ export type MultichainNexusParams = {
  */
 export type BaseMultichainSmartAccount = {
   /** Array of minimal MEE smart account instances across different chains */
-  deployments: MeeSmartAccount[]
+  deployments: ModularSmartAccount[]
   /** The signer associated with this multichain account */
   signer: Signer
   /**
    * Function to retrieve deployment information for a specific chain
    * @param chainId - The ID of the chain to query
+   * @param strictMode - Whether to throw an error if no deployment exists for the specified chain
    * @returns The smart account deployment for the specified chain
-   * @throws Error if no deployment exists for the specified chain
+   * @throws Error if no deployment exists for the specified chain and strictMode is true
    */
-  deploymentOn: (chainId: number) => MeeSmartAccount | undefined
+  deploymentOn: {
+    (chainId: number, strictMode: true): ModularSmartAccount
+    (chainId: number, strictMode?: false): ModularSmartAccount | undefined
+  }
 }
 
 export type MultichainSmartAccount = BaseMultichainSmartAccount & {
@@ -74,7 +78,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * const instructions = await mcAccount.build({
    *   amount: BigInt(1000),
    *   mcToken: mcUSDC,
-   *   chain: base
+   *   toChain: base
    * })
    */
   build: (
@@ -89,7 +93,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * const instructions = await mcAccount.buildBridgeInstructions({
    *   amount: BigInt(1000),
    *   mcToken: mcUSDC,
-   *   chain: base
+   *   toChain: base
    * })
    */
   buildBridgeInstructions: (
@@ -103,7 +107,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * const result = await mcAccount.queryBridge({
    *   amount: BigInt(1000),
    *   mcToken: mcUSDC,
-   *   chain: base
+   *   toChain: base
    * })
    */
   queryBridge: (params: QueryBridgeParams) => Promise<BridgeQueryResult | null>
@@ -157,10 +161,18 @@ export async function toMultichainNexusAccount(
     )
   )
 
-  const deploymentOn = (chainId: number) => {
+  function deploymentOn(
+    chainId: number,
+    strictMode?: boolean
+  ): ModularSmartAccount | undefined {
     const deployment = deployments.find(
       (dep) => dep.client.chain?.id === chainId
     )
+
+    if (!deployment && strictMode) {
+      throw new Error(`Deployment not found for chainId: ${chainId}`)
+    }
+
     return deployment
   }
 
@@ -168,7 +180,7 @@ export async function toMultichainNexusAccount(
     deployments,
     signer,
     deploymentOn
-  }
+  } as BaseMultichainSmartAccount
 
   const getUnifiedERC20Balance = (mcToken: MultichainToken) => {
     return getUnifiedERC20BalanceDecorator({ mcToken, account: baseAccount })

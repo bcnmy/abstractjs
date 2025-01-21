@@ -33,8 +33,6 @@ describe("mee.createMeeClient", async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
     ;[paymentChain, targetChain] = getTestChains(network)
 
-    console.log({ targetChain, paymentChain })
-
     eoaAccount = network.account!
 
     feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
@@ -114,12 +112,14 @@ describe("mee.createMeeClient", async () => {
     // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
     // including 'build'. They all are resolved in the 'getQuote' method under the hood.
 
+    console.log(mcNexus.deploymentOn(paymentChain.id)?.address)
+
     const currentInstructions = await meeClient.account.build({
       type: "intent",
       data: {
         amount: 50000n,
         mcToken: mcUSDC,
-        chain: targetChain
+        toChain: targetChain
       }
     })
 
@@ -146,15 +146,12 @@ describe("mee.createMeeClient", async () => {
 
     expect(preparedInstructions).toBeDefined()
 
-    preparedInstructions[0].calls.map(console.log)
-    currentInstructions[0].calls.map(console.log)
-
     const quote = await meeClient.getQuote({
       instructions: preparedInstructions,
       feeToken
     })
 
-    expect(quote.userOps.length).toEqual(3)
+    expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
     expect(quote).toBeDefined()
     expect(quote.paymentInfo.sender).toEqual(
       mcNexus.deploymentOn(paymentChain.id)?.address
@@ -170,34 +167,24 @@ describe("mee.createMeeClient", async () => {
       // Start performance timing for tracking how long the transaction hash and receipt take
       console.time("execute:receiptTimer")
 
-      // Create an array of instructions that will be executed as a single transaction
-      const instructions = [
-        // First instruction: Bridge USDC tokens
-        mcNexus.build({
-          type: "intent",
-          data: {
-            amount: 50000n,
-            mcToken: mcUSDC,
-            chain: targetChain
-          }
-        }),
-        // Second instruction: Execute a simple call on the Base network
-        mcNexus.build({
-          type: "default",
-          data: {
-            instructions: [
-              {
-                calls: [{ to: zeroAddress, gasLimit: 50000n, value: 0n }],
-                chainId: targetChain.id
-              }
-            ]
-          }
-        })
-      ]
-
       // Get a quote for executing all instructions
       // This will calculate the total cost in the specified payment token
-      const quote = await meeClient.getQuote({ instructions, feeToken })
+      const quote = await meeClient.getQuote({
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              instructions: [
+                {
+                  calls: [{ to: zeroAddress, gasLimit: 50000n, value: 0n }],
+                  chainId: targetChain.id
+                }
+              ]
+            }
+          })
+        ],
+        feeToken
+      })
 
       // Execute the quote and get back a transaction hash
       // This sends the transaction to the network

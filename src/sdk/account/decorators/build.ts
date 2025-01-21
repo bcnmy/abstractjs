@@ -67,7 +67,7 @@ export type BuildInstructionTypes =
  *     data: {
  *       amount: BigInt(1000000),
  *       mcToken: mcUSDC,
- *       chain: optimism
+ *       toChain: optimism
  *     }
  *   }
  * );

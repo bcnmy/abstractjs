@@ -11,12 +11,12 @@ import { getUnifiedERC20Balance } from "../getUnifiedERC20Balance"
  * Parameters for building bridge intent instructions
  * @property amount - Amount of tokens to bridge as BigInt
  * @property mcToken - {@link MultichainContract} The multichain token contract to bridge
- * @property chain - {@link Chain} The destination chain for the bridge operation
+ * @property toChain - {@link Chain} The destination chain for the bridge operation
  */
 export type BuildIntentParameters = {
   amount: bigint
   mcToken: MultichainToken
-  chain: Chain
+  toChain: Chain
 }
 
 /**
@@ -51,7 +51,7 @@ export type BuildIntentParams = BaseInstructionsParams & {
  *   {
  *     amount: BigInt("1000000"), // 1 USDC
  *     mcToken: mcUSDC,
- *     chain: optimism
+ *     toChain: optimism
  *   }
  * );
  */
@@ -60,12 +60,12 @@ export const buildIntent = async (
   parameters: BuildIntentParameters
 ): Promise<Instruction[]> => {
   const { account, currentInstructions = [] } = baseParams
-  const { amount, mcToken, chain } = parameters
+  const { amount, mcToken, toChain } = parameters
   const unifiedBalance = await getUnifiedERC20Balance({ mcToken, account })
   const { instructions } = await buildBridgeInstructions({
     account,
     amount: amount,
-    toChain: chain,
+    toChain,
     unifiedBalance
   })
   return [...currentInstructions, ...instructions]

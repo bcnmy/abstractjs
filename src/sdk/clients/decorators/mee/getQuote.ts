@@ -206,11 +206,13 @@ export const getQuote = async (
 
   const resolvedInstructions: Instruction[] = (
     await Promise.all(
-      instructions.flatMap((instructions_) =>
-        typeof instructions_ === "function"
-          ? (instructions_ as () => Promise<Instruction[]>)()
-          : instructions_
-      )
+      instructions
+        .flatMap((instructions_) =>
+          typeof instructions_ === "function"
+            ? (instructions_ as () => Promise<Instruction[]>)()
+            : instructions_
+        )
+        .filter(Boolean)
     )
   ).flat()
 

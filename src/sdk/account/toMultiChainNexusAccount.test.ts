@@ -1,5 +1,5 @@
 import { http, type Chain, type LocalAccount, isAddress, isHex } from "viem"
-import { baseSepolia } from "viem/chains"
+import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChains, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
@@ -131,5 +131,11 @@ describe("mee.toMultiChainNexusAccount", async () => {
 
     expect(payload?.amount).toBeGreaterThan(0n)
     expect(payload?.receivedAtDestination).toBeGreaterThan(0n)
+  })
+
+  test("should test type safety of deploymentOn", async () => {
+    const deployment = mcNexus.deploymentOn(base.id, true)
+    expect(deployment).toBeDefined()
+    expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
   })
 })

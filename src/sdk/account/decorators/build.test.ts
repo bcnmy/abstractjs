@@ -81,7 +81,7 @@ describe("mee:build", () => {
         data: {
           amount: BigInt(1000),
           mcToken: mcUSDC,
-          chain: targetChain
+          toChain: targetChain
         }
       }
     )

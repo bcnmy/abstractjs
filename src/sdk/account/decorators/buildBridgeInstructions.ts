@@ -252,31 +252,40 @@ export const buildBridgeInstructions = async (
     )
 
   // Build instructions by taking from best routes until we have enough
-  const bridgingInstructions: BridgingInstruction[] = []
-  const instructions: Instruction[] = []
-  let totalBridged = 0n
-  let remainingNeeded = amountToBridge
+  const { bridgingInstructions, instructions, totalBridged, remainingNeeded } =
+    bridgeResults.reduce(
+      (acc, result) => {
+        if (acc.remainingNeeded <= 0n) return acc
 
-  for (const result of bridgeResults) {
-    if (remainingNeeded <= 0n) break
+        const amountToTake =
+          result.amount >= acc.remainingNeeded
+            ? acc.remainingNeeded
+            : result.amount
 
-    const amountToTake =
-      result.amount >= remainingNeeded ? remainingNeeded : result.amount
+        const receivedFromRoute =
+          (result.receivedAtDestination * amountToTake) / result.amount
 
-    // Recalculate received amount based on portion taken
-    const receivedFromRoute =
-      (result.receivedAtDestination * amountToTake) / result.amount
-
-    instructions.push(result.userOp)
-    bridgingInstructions.push({
-      userOp: result.userOp,
-      receivedAtDestination: receivedFromRoute,
-      bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
-    })
-
-    totalBridged += receivedFromRoute
-    remainingNeeded -= amountToTake
-  }
+        return {
+          bridgingInstructions: [
+            ...acc.bridgingInstructions,
+            {
+              userOp: result.userOp,
+              receivedAtDestination: receivedFromRoute,
+              bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
+            }
+          ],
+          instructions: [...acc.instructions, result.userOp],
+          totalBridged: acc.totalBridged + receivedFromRoute,
+          remainingNeeded: acc.remainingNeeded - amountToTake
+        }
+      },
+      {
+        bridgingInstructions: [] as BridgingInstruction[],
+        instructions: [] as Instruction[],
+        totalBridged: 0n,
+        remainingNeeded: amountToBridge
+      }
+    )
 
   // Check if we got enough
   if (remainingNeeded > 0n) {

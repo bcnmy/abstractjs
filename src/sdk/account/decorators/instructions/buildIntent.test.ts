@@ -44,7 +44,7 @@ describe("mee:buildIntent", () => {
       {
         amount: 100n,
         mcToken: mcUSDC,
-        chain: targetChain
+        toChain: targetChain
       }
     )
 

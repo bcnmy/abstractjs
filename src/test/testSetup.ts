@@ -7,8 +7,9 @@ import {
   initNetwork,
   toFundedTestClients
 } from "./testUtils"
-import { base, type Chain, optimism } from "viem/chains"
-import { getChain } from "../sdk/account/utils/getChain"
+import { base, optimism } from "viem/chains"
+
+const MAINNET_CHAINS_FOR_TESTING = [optimism, base]
 
 export type NetworkConfigWithTestClients = NetworkConfigWithBundler & {
   fundedTestClients: FundedTestClients
@@ -87,12 +88,20 @@ export const paymasterTruthy = () => {
   }
 }
 
+/**
+ * Sorts the chains for testing, throwing an error if the chain is not supported
+ * @param network - The network configuration
+ * @returns The sorted chains of the order: [paymentChain, targetChain]
+ * @throws {Error} If the chain is not supported
+ */
 export const getTestChains = (network: NetworkConfig) => {
-  const sortedChains = [optimism, base].sort((a, b) =>
-    a.id === network.chain.id ? -1 : 1
+  const defaultChainsIncludePaymentChain = MAINNET_CHAINS_FOR_TESTING.some(
+    ({ id }) => Number(id) === network.chain.id
   )
-
-  console.log(sortedChains.map(({ id }) => id).map(getChain))
-
-  return sortedChains
+  if (defaultChainsIncludePaymentChain) {
+    return MAINNET_CHAINS_FOR_TESTING.sort((a, b) =>
+      a.id === network.chain.id ? -1 : 1
+    )
+  }
+  throw new Error("Unsupported chain")
 }
