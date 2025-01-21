@@ -1,2 +1,3 @@
 export * from "./utils"
-export * from "./toNexusAccount.js"
+export * from "./toNexusAccount"
+export * from "./toMultiChainNexusAccount"

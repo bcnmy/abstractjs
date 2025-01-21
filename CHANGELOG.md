@@ -1,4 +1,22 @@
-# @biconomy/sdk
+# @biconomy/abstractjs
+
+## 0.0.32
+
+### Patch Changes
+
+- 0.0.32
+
+## 0.0.31
+
+### Patch Changes
+
+- move repo origin
+
+## 0.0.30
+
+### Patch Changes
+
+- sdk to @biconomy/abstractjs rename
 
 ## 0.0.31
 
