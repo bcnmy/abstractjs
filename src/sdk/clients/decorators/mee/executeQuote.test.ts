@@ -6,12 +6,12 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeQuote from "./executeQuote"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
-import { mcUSDC } from "../../../constants/tokens"
 
 vi.mock("./executeQuote")
 

@@ -1,3 +1,4 @@
+import { base, optimism } from "viem/chains"
 import { inject, test } from "vitest"
 import {
   type FundedTestClients,
@@ -7,7 +8,6 @@ import {
   initNetwork,
   toFundedTestClients
 } from "./testUtils"
-import { base, optimism } from "viem/chains"
 
 const MAINNET_CHAINS_FOR_TESTING = [optimism, base]
 

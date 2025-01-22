@@ -19,7 +19,7 @@ import { mcUSDC } from "../../../constants/tokens"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
+describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -107,9 +107,7 @@ describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
 
     const executeSignedFusionQuoteResponse = await executeSignedFusionQuote(
       meeClient,
-      {
-        signedFusionQuote
-      }
+      { signedFusionQuote }
     )
 
     expect(executeSignedFusionQuoteResponse).toEqual(mockExecuteQuoteResponse)

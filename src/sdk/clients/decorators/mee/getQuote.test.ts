@@ -4,10 +4,10 @@ import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
 
 describe("mee.getQuote", () => {
   let network: NetworkConfig

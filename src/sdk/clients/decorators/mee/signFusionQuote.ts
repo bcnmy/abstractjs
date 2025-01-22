@@ -71,11 +71,7 @@ export const signFusionQuote = async (
   // transaction
   const call = {
     ...call_,
-    data: concatHex([
-      call_.data ?? FUSION_NATIVE_TRANSFER_PREFIX,
-      PREFIX[executionMode],
-      quote.hash
-    ])
+    data: concatHex([call_.data ?? FUSION_NATIVE_TRANSFER_PREFIX, quote.hash])
   }
 
   const signer = account_.signer

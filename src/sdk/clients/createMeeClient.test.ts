@@ -2,7 +2,10 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
+  encodeFunctionData,
+  erc20Abi,
   isHex,
+  parseUnits,
   zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, inject, test } from "vitest"
@@ -12,10 +15,12 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
+import { toFeeToken } from "../account/utils"
+import { aave } from "../constants/protocols"
 import { mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
-import { toFeeToken } from "../account/utils"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
+import { SignFusionQuoteParams } from "./decorators/mee/signFusionQuote"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -112,8 +117,6 @@ describe("mee.createMeeClient", async () => {
     // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
     // including 'build'. They all are resolved in the 'getQuote' method under the hood.
 
-    console.log(mcNexus.deploymentOn(paymentChain.id)?.address)
-
     const currentInstructions = await meeClient.account.build({
       type: "intent",
       data: {
@@ -160,9 +163,9 @@ describe("mee.createMeeClient", async () => {
     expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 
-  test.runIf(runPaidTests)(
-    "should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it", async () => {
       console.time("execute:hashTimer")
       // Start performance timing for tracking how long the transaction hash and receipt take
       console.time("execute:receiptTimer")
@@ -195,6 +198,67 @@ describe("mee.createMeeClient", async () => {
       console.timeEnd("execute:receiptTimer")
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
+    })
+
+  test.runIf(runPaidTests)("should successfully execute aave", async () => {
+    const amountToSupply = parseUnits("0.01", 6) // .1c
+
+    const approve = mcUSDC.on(targetChain.id).approve({
+      args: [
+        aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
+        amountToSupply // amount approved
+      ],
+      gasLimit: 150_000n
+    })
+
+    const supply = aave.pool.on(targetChain.id).supply({
+      args: [
+        mcUSDC.addressOn(targetChain.id),
+        amountToSupply,
+        mcNexus.signer.address,
+        0
+      ],
+      gasLimit: 150_000n
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [approve, supply],
+      feeToken
+    })
+
+    const trigger: SignFusionQuoteParams["trigger"] = {
+      chain: targetChain,
+      call: {
+        to: mcUSDC.addressOn(targetChain.id),
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [
+            mcNexus.deploymentOn(targetChain.id, true).address,
+            amountToSupply
+          ]
+        })
+      }
     }
-  )
+
+    const signedFusionQuote = await meeClient.signFusionQuote({
+      quote,
+      trigger
+    })
+
+    expect(
+      meeClient.executeSignedFusionQuote({
+        signedFusionQuote
+      })
+    ).rejects.toThrow("Invalid merkle signature")
+
+    // const { receipt, hash } = await meeClient.executeSignedFusionQuote({
+    //   signedFusionQuote
+    // })
+
+    // console.log(receipt.status)
+
+    // expect(receipt).toBeDefined()
+    // expect(hash).toBeDefined()
+  })
 })

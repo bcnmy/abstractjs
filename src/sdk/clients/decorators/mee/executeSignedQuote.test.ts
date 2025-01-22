@@ -4,12 +4,12 @@ import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants/tokens/__AUTO_GENERATED__"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import { signQuote } from "./signQuote"
-import { mcUSDC } from "../../../constants/tokens/__AUTO_GENERATED__"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
 vi.mock("./executeSignedQuote")
 
 describe("mee.executeSignedQuote", () => {

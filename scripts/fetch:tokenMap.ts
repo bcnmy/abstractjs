@@ -7,14 +7,14 @@ import coinIdsFromJson from "../.data/coinIds.json"
 import networkIdMap from "../.data/networkIdMap.json"
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-async function writeJsonToFile(data: any, filename: string) {
+export async function writeJsonToFile(data: any, filename: string) {
   // Create directory path if it doesn't exist
   const dirname = path.dirname(filename)
   fs.mkdirSync(dirname, { recursive: true })
   fs.writeFileSync(filename, JSON.stringify(data, null, 2))
 }
 
-async function writeTsToFile(data: string, filename: string) {
+export async function writeTsToFile(data: string, filename: string) {
   // Create directory path if it doesn't exist
   const dirname = path.dirname(filename)
   fs.mkdirSync(dirname, { recursive: true })

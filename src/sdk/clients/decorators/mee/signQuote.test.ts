@@ -6,11 +6,11 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import { signQuote } from "./signQuote"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
-import { mcUSDC } from "../../../constants"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig
