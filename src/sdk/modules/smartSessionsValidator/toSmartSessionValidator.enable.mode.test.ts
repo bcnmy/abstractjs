@@ -159,7 +159,6 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
         }
       ],
       chainId: BigInt(chain.id)
-      // permitERC4337Paymaster: true
     }
 
     const nexusAccount = getAccount({

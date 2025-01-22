@@ -17,7 +17,7 @@ import {
   getValueLimitPolicy
 } from "../../../constants"
 import { SmartSessionAbi } from "../../../constants/abi/SmartSessionAbi"
-import type { ModularSmartAccount } from "../../utils/Types"
+import type { AnyData, ModularSmartAccount } from "../../utils/Types"
 import {
   abiToPoliciesInfo,
   applyDefaults,
@@ -66,10 +66,12 @@ export type PreparePermissionParameters<
  */
 export const getPermissionAction = async ({
   chainId,
-  sessionRequestedInfo
+  sessionRequestedInfo,
+  withPaymaster = false
 }: {
   chainId: number
   sessionRequestedInfo: FullCreateSessionDataParams[]
+  withPaymaster: boolean
 }): Promise<PreparePermissionResponse | Error> => {
   const sessions: Session[] = []
   const permissionIds: Hex[] = []
@@ -160,16 +162,18 @@ export const getPermissionAction = async ({
       }
     }
 
+    const userOpPolicies = withPaymaster ? [getSudoPolicy()] : []
+
     const session: Session = {
       chainId: BigInt(chainId),
-      permitERC4337Paymaster: true,
+      permitERC4337Paymaster: withPaymaster,
       sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
       sessionValidatorInitData: encodeValidationData({
         threshold: 1,
         owners: [sessionInfo.sessionKeyData]
       }),
       salt: sessionInfo.salt ?? generateSalt(),
-      userOpPolicies: [],
+      userOpPolicies,
       actions: actionPolicies,
       erc7739Policies: {
         allowedERC7739Content: [],
@@ -272,6 +276,7 @@ export async function preparePermission<
     throw new Error("Account not found")
   }
 
+  const withPaymaster = !!(client as AnyData)?.paymaster
   const chainId = publicClient_?.chain?.id
 
   if (!chainId) {
@@ -282,7 +287,8 @@ export async function preparePermission<
 
   const actionResponse = await getPermissionAction({
     chainId,
-    sessionRequestedInfo: defaultedSessionRequestedInfo
+    sessionRequestedInfo: defaultedSessionRequestedInfo,
+    withPaymaster
   })
 
   if (actionResponse instanceof Error) {

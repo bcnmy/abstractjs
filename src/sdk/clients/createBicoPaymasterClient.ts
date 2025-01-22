@@ -48,7 +48,7 @@ export type PaymasterContext = {
       version: string
     }
   }
-  tokenInfo: {
+  tokenInfo?: {
     feeTokenAddress: Address
   }
   expiryDuration?: number
@@ -61,7 +61,7 @@ type ToBiconomyTokenPaymasterContextParams = {
   calculateGasLimits?: boolean
 }
 
-export const biconomySponsoredPaymasterContext = {
+export const biconomySponsoredPaymasterContext: PaymasterContext = {
   mode: "SPONSORED",
   expiryDuration: 300,
   calculateGasLimits: true,

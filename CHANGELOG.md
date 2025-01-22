@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.0.33
+
+### Patch Changes
+
+- Fix paymaster + smartSessions
+
 ## 0.0.32
 
 ### Patch Changes

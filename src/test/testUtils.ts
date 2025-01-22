@@ -502,18 +502,3 @@ export const setByteCodeDynamic = async (
     )
   )
 }
-
-export type TestnetParams = ReturnType<typeof getTestParamsForTestnet>
-export const getTestParamsForTestnet = (publicClient: PublicClient) => ({
-  validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-  factoryAddress: MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  userOperation: {
-    estimateFeesPerGas: async (_) => {
-      const feeData = await publicClient.estimateFeesPerGas()
-      return {
-        maxFeePerGas: safeMultiplier(feeData.maxFeePerGas, 1.5),
-        maxPriorityFeePerGas: safeMultiplier(feeData.maxPriorityFeePerGas, 1.5)
-      }
-    }
-  }
-})

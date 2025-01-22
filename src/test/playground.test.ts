@@ -13,7 +13,12 @@ import {
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
-import { createBicoPaymasterClient } from "../sdk/clients/createBicoPaymasterClient"
+import {
+  biconomySponsoredPaymasterContext,
+  type BicoPaymasterClient,
+  createBicoPaymasterClient,
+  type PaymasterContext
+} from "../sdk/clients/createBicoPaymasterClient"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -31,11 +36,8 @@ import { toSmartSessionsValidator } from "../sdk/modules/smartSessionsValidator/
 import { CounterAbi } from "./__contracts/abi/CounterAbi"
 import { testAddresses } from "./callDatas"
 import { toNetwork } from "./testSetup"
-import {
-  type NetworkConfig,
-  type TestnetParams,
-  getTestParamsForTestnet
-} from "./testUtils"
+import type { NetworkConfig } from "./testUtils"
+import { PaymasterClient } from "viem/account-abstraction"
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
@@ -43,7 +45,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   let chain: Chain
   let bundlerUrl: string
   let walletClient: WalletClient
-  let paymasterUrl: string
+  let paymasterUrl: string | undefined
   let nexusAccountAddress: Address
 
   // Test utils
@@ -52,12 +54,19 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   let recipientAddress: Address
   let nexusClient: NexusClient
 
+  let paymasterParams:
+    | undefined
+    | {
+        paymaster: BicoPaymasterClient
+        paymasterContext: PaymasterContext
+      }
+
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl
-    paymasterUrl = network.paymasterUrl || ""
+    paymasterUrl = network.paymasterUrl
     eoaAccount = network.account as PrivateKeyAccount
 
     recipientAddress = eoaAccount.address
@@ -72,6 +81,15 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       chain,
       transport: http()
     })
+
+    paymasterParams = paymasterUrl
+      ? {
+          paymaster: createBicoPaymasterClient({
+            transport: http(paymasterUrl)
+          }),
+          paymasterContext: biconomySponsoredPaymasterContext
+        }
+      : undefined
   })
 
   test("should init the smart account", async () => {
@@ -80,11 +98,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       chain,
       transport: http(),
       bundlerTransport: http(bundlerUrl),
-      paymaster: network.paymasterUrl
-        ? createBicoPaymasterClient({
-            transport: http(network.paymasterUrl)
-          })
-        : undefined
+      ...(paymasterParams ? paymasterParams : {})
     })
   })
 
@@ -237,7 +251,8 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       accountAddress: nexusClient.account.address,
       signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl)
+      bundlerTransport: http(bundlerUrl),
+      ...(paymasterParams ? paymasterParams : {})
     })
 
     const usePermissionsModule = toSmartSessionsValidator({
@@ -256,8 +271,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
           to: testAddresses.Counter,
           data: encodeFunctionData({
             abi: CounterAbi,
-            functionName: "incrementNumber",
-            args: []
+            functionName: "incrementNumber"
           })
         }
       ]
