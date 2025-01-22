@@ -9,7 +9,7 @@ jobs:
     permissions: write-all
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-paid-tests
+      group: ${{ github.workflow }}-${{ github.ref }}-unit-tests
       cancel-in-progress: true
     steps:
       - uses: actions/setup-node@v4
