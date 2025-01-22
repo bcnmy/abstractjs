@@ -130,9 +130,9 @@ describe("modules.smartSessions.policies", async () => {
                   token: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
                   limit: BigInt(1000)
                 }
-              ], // covered in another test
-              // usageLimit: 1000n, // TODO: failing because of attestations
-              // valueLimit: 1000n, // TODO: failing because of attestations
+              ],
+              usageLimit: 1000n,
+              valueLimit: 1000n,
               validUntil: Date.now() + 1000 * 60 * 60 * 24, // 1 day from now
               functionSelector: "0x871cc9d4" // decrementNumber
             }

@@ -119,16 +119,16 @@ describe("modules.smartSessions.dx", async () => {
       sessionRequestedInfo: [
         {
           sessionPublicKey, // Public key of the session
-          // sessionValidUntil: number
-          // sessionValidAfter: number
+          sessionValidUntil: Date.now() + 1000 * 60 * 60 * 24, // 1 day from now
+          sessionValidAfter: 0, // 0 seconds from now
           // chainIds: bigint[]
           actionPoliciesInfo: [
             {
               abi: CounterAbi,
               contractAddress: testAddresses.Counter,
-              sudo: true
-              // validUntil?: number
-              // validAfter?: number
+              sudo: true,
+              validUntil: Date.now() + 1000 * 60 * 60 * 24, // 1 day from now
+              validAfter: 0 // 0 seconds from now
               // valueLimit?: bigint
             }
           ]
