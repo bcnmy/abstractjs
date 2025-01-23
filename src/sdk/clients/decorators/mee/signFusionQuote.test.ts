@@ -1,5 +1,4 @@
-import type { Chain, Hex, LocalAccount } from "viem"
-import { optimism } from "viem/chains"
+import { isHex, type Chain, type Hex, type LocalAccount } from "viem"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -8,13 +7,12 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import executeSignedFusionQuote, {
-  type ExecuteSignedFusionQuotePayload
-} from "./executeSignedFusionQuote"
+import executeSignedFusionQuote from "./executeSignedFusionQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 import { signFusionQuote } from "./signFusionQuote"
 import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
+import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -61,34 +59,6 @@ describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
 
     expect(instructions).toBeDefined()
 
-    // Mock the execute function
-    const mockExecuteQuoteResponse: ExecuteSignedFusionQuotePayload = {
-      hash: "0x123" as Hex,
-      receipt: {
-        blobGasPrice: undefined,
-        blobGasUsed: undefined,
-        blockHash: "0x",
-        blockNumber: 0n,
-        contractAddress: undefined,
-        cumulativeGasUsed: 0n,
-        effectiveGasPrice: 0n,
-        from: "0x",
-        gasUsed: 0n,
-        logs: [],
-        logsBloom: "0x",
-        root: undefined,
-        status: "success",
-        to: null,
-        transactionHash: "0x",
-        transactionIndex: 0,
-        type: "legacy"
-      }
-    }
-    // Mock implementation for this specific test
-    vi.mocked(executeSignedFusionQuote).mockResolvedValue(
-      mockExecuteQuoteResponse
-    )
-
     const quote = await getQuote(meeClient, {
       instructions: instructions,
       feeToken
@@ -110,6 +80,20 @@ describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
       { signedFusionQuote }
     )
 
-    expect(executeSignedFusionQuoteResponse).toEqual(mockExecuteQuoteResponse)
+    const superTransactionReceipt = await waitForSupertransactionReceipt(
+      meeClient,
+      {
+        hash: executeSignedFusionQuoteResponse.hash
+      }
+    )
+
+    console.log({ superTransactionReceipt })
+    console.log(JSON.stringify(superTransactionReceipt.explorerLinks, null, 2))
+
+    expect(executeSignedFusionQuoteResponse.receipt.status).toBe("success")
+    expect(
+      isHex(executeSignedFusionQuoteResponse.receipt.transactionHash)
+    ).toBe(true)
+    expect(isHex(executeSignedFusionQuoteResponse.hash)).toBe(true)
   })
 })

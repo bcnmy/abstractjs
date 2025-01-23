@@ -20,7 +20,7 @@ import { aave } from "../constants/protocols"
 import { mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
-import { SignFusionQuoteParams } from "./decorators/mee/signFusionQuote"
+import type { SignFusionQuoteParams } from "./decorators/mee/signFusionQuote"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -203,21 +203,22 @@ describe("mee.createMeeClient", async () => {
   test.runIf(runPaidTests)("should successfully execute aave", async () => {
     const amountToSupply = parseUnits("0.01", 6) // .1c
 
+    const targetMcUSDC = mcUSDC.addressOn(targetChain.id)
+    const targetAavePool = aave.pool.addressOn(targetChain.id)
+    const targetMcNexus = mcNexus.addressOn(targetChain.id, true)
+
+    console.log({ targetMcUSDC, targetAavePool, targetMcNexus })
+
     const approve = mcUSDC.on(targetChain.id).approve({
       args: [
-        aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
+        targetAavePool, // approve to aave v3 pool contract
         amountToSupply // amount approved
       ],
       gasLimit: 150_000n
     })
 
     const supply = aave.pool.on(targetChain.id).supply({
-      args: [
-        mcUSDC.addressOn(targetChain.id),
-        amountToSupply,
-        mcNexus.signer.address,
-        0
-      ],
+      args: [targetMcUSDC, amountToSupply, mcNexus.signer.address, 0],
       gasLimit: 150_000n
     })
 
@@ -229,14 +230,11 @@ describe("mee.createMeeClient", async () => {
     const trigger: SignFusionQuoteParams["trigger"] = {
       chain: targetChain,
       call: {
-        to: mcUSDC.addressOn(targetChain.id),
+        to: targetMcUSDC,
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: "transfer",
-          args: [
-            mcNexus.deploymentOn(targetChain.id, true).address,
-            amountToSupply
-          ]
+          args: [targetMcNexus, amountToSupply]
         })
       }
     }

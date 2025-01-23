@@ -1,4 +1,4 @@
-import { http, type Chain } from "viem"
+import { type Hex, http, type Chain } from "viem"
 import type { Instruction } from "../clients/decorators/mee/getQuote"
 import {
   MEE_VALIDATOR_ADDRESS,
@@ -56,6 +56,17 @@ export type BaseMultichainSmartAccount = {
   deploymentOn: {
     (chainId: number, strictMode: true): ModularSmartAccount
     (chainId: number, strictMode?: false): ModularSmartAccount | undefined
+  }
+  /**
+   * Function to retrieve the address of the account on a specific chain
+   * @param chainId - The ID of the chain to query
+   * @param strictMode - Whether to throw an error if no deployment exists for the specified chain
+   * @returns The address of the account on the specified chain
+   * @throws Error if no deployment exists for the specified chain and strictMode is true
+   */
+  addressOn: {
+    (chainId: number, strictMode: true): Hex
+    (chainId: number, strictMode?: false): Hex | undefined
   }
 }
 
@@ -161,6 +172,16 @@ export async function toMultichainNexusAccount(
     )
   )
 
+  function addressOn(chainId: number, strictMode: true) {
+    const deployment = deployments.find(
+      (dep) => dep.client.chain?.id === chainId
+    )
+    if (!deployment && strictMode) {
+      throw new Error(`Deployment not found for chainId: ${chainId}`)
+    }
+    return deployment?.address
+  }
+
   function deploymentOn(
     chainId: number,
     strictMode?: boolean
@@ -179,7 +200,8 @@ export async function toMultichainNexusAccount(
   const baseAccount = {
     deployments,
     signer,
-    deploymentOn
+    deploymentOn,
+    addressOn
   } as BaseMultichainSmartAccount
 
   const getUnifiedERC20Balance = (mcToken: MultichainToken) => {
