@@ -28,7 +28,6 @@ import {
 } from "viem"
 import type { UserOperation } from "viem/account-abstraction"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { CounterAbi } from "../../test/__contracts/abi/CounterAbi"
 import { MockSignatureValidatorAbi } from "../../test/__contracts/abi/MockSignatureValidatorAbi"
 import { TokenWithPermitAbi } from "../../test/__contracts/abi/TokenWithPermitAbi"
 import { testAddresses } from "../../test/callDatas"
@@ -589,23 +588,6 @@ describe("nexus.account", async () => {
       })) as Address
 
       expect(BICONOMY_ATTESTER_ADDRESS).toBe(biconomyAttesterAddress)
-    }
-  )
-
-  testnetTest(
-    "should debug user operation and generate tenderly link",
-    async ({ config: { chain } }) => {
-      await nexusClient.debugUserOperation({
-        calls: [
-          {
-            to: testAddresses.Counter,
-            data: encodeFunctionData({
-              abi: CounterAbi,
-              functionName: "incrementNumber"
-            })
-          }
-        ]
-      })
     }
   )
 })

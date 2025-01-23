@@ -69,9 +69,12 @@ export const signFusionQuote = async (
   // chain not to reject the transaction. This is done in cases when the
   // user is using the transfer of native gas to the SCA as the trigger
   // transaction
+
+  const dataOrPrefix = call_.data ?? FUSION_NATIVE_TRANSFER_PREFIX
+
   const call = {
     ...call_,
-    data: concatHex([call_.data ?? FUSION_NATIVE_TRANSFER_PREFIX, quote.hash])
+    data: concatHex([dataOrPrefix, quote.hash])
   }
 
   const signer = account_.signer
@@ -82,7 +85,10 @@ export const signFusionQuote = async (
   }).extend(publicActions)
 
   const hash = await masterClient.sendTransaction(call)
-  const receipt = await masterClient.waitForTransactionReceipt({ hash })
+  const receipt = await masterClient.waitForTransactionReceipt({
+    hash,
+    confirmations: 4
+  })
   const signature = concatHex([
     PREFIX[executionMode],
     encodeAbiParameters(

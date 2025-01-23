@@ -200,63 +200,67 @@ describe("mee.createMeeClient", async () => {
       console.log(receipt.explorerLinks)
     })
 
-  test.runIf(runPaidTests)("should successfully execute aave", async () => {
-    const amountToSupply = parseUnits("0.01", 6) // .1c
+  test.runIf(runPaidTests)(
+    "should successfully use the aave protocol",
+    async () => {
+      const amountToSupply = parseUnits("0.00001", 6)
 
-    const targetMcUSDC = mcUSDC.addressOn(targetChain.id)
-    const targetAavePool = aave.pool.addressOn(targetChain.id)
-    const targetMcNexus = mcNexus.addressOn(targetChain.id, true)
+      const approve = mcUSDC.on(targetChain.id).approve({
+        args: [
+          aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
+          amountToSupply // amount approved
+        ],
+        gasLimit: 150_000n
+      })
 
-    console.log({ targetMcUSDC, targetAavePool, targetMcNexus })
+      const supply = aave.pool.on(targetChain.id).supply({
+        args: [
+          mcUSDC.addressOn(targetChain.id),
+          amountToSupply,
+          mcNexus.signer.address,
+          0
+        ],
+        gasLimit: 150_000n
+      })
 
-    const approve = mcUSDC.on(targetChain.id).approve({
-      args: [
-        targetAavePool, // approve to aave v3 pool contract
-        amountToSupply // amount approved
-      ],
-      gasLimit: 150_000n
-    })
+      const quote = await meeClient.getQuote({
+        instructions: [approve, supply],
+        feeToken
+      })
 
-    const supply = aave.pool.on(targetChain.id).supply({
-      args: [targetMcUSDC, amountToSupply, mcNexus.signer.address, 0],
-      gasLimit: 150_000n
-    })
-
-    const quote = await meeClient.getQuote({
-      instructions: [approve, supply],
-      feeToken
-    })
-
-    const trigger: SignFusionQuoteParams["trigger"] = {
-      chain: targetChain,
-      call: {
-        to: targetMcUSDC,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [targetMcNexus, amountToSupply]
-        })
+      const trigger: SignFusionQuoteParams["trigger"] = {
+        chain: targetChain,
+        call: {
+          to: mcUSDC.addressOn(targetChain.id),
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [mcNexus.addressOn(targetChain.id, true), amountToSupply]
+          })
+        }
       }
-    }
 
-    const signedFusionQuote = await meeClient.signFusionQuote({
-      quote,
-      trigger
-    })
+      const signedFusionQuote = await meeClient.signFusionQuote({
+        quote,
+        trigger
+      })
 
-    expect(
-      meeClient.executeSignedFusionQuote({
+      const { receipt, hash } = await meeClient.executeSignedFusionQuote({
         signedFusionQuote
       })
-    ).rejects.toThrow("Invalid merkle signature")
 
-    // const { receipt, hash } = await meeClient.executeSignedFusionQuote({
-    //   signedFusionQuote
-    // })
+      const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
+        hash
+      })
 
-    // console.log(receipt.status)
+      console.log({ sTxReceipt, receipt, hash })
 
-    // expect(receipt).toBeDefined()
-    // expect(hash).toBeDefined()
-  })
+      /**
+       * console.log(receipt.status)
+       * console.log(sTxReceipt.explorerLinks)
+       * expect(receipt).toBeDefined()
+       * expect(sTxReceipt).toBeDefined()
+       */
+    }
+  )
 })

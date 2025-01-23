@@ -1,4 +1,10 @@
-import { isHex, type Chain, type Hex, type LocalAccount } from "viem"
+import {
+  isHex,
+  zeroAddress,
+  type Chain,
+  type Hex,
+  type LocalAccount
+} from "viem"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -48,7 +54,7 @@ describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
       {
         calls: [
           {
-            to: "0x0000000000000000000000000000000000000000",
+            to: zeroAddress,
             gasLimit: 50000n,
             value: 0n
           }
@@ -68,10 +74,10 @@ describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
       quote,
       trigger: {
         call: {
-          to: "0x0000000000000000000000000000000000000000",
+          to: zeroAddress,
           value: 0n
         },
-        chain: network.chain
+        chain: targetChain
       }
     })
 
@@ -87,9 +93,8 @@ describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
       }
     )
 
-    console.log({ superTransactionReceipt })
     console.log(JSON.stringify(superTransactionReceipt.explorerLinks, null, 2))
-
+    expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
     expect(executeSignedFusionQuoteResponse.receipt.status).toBe("success")
     expect(
       isHex(executeSignedFusionQuoteResponse.receipt.transactionHash)

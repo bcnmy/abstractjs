@@ -19,13 +19,11 @@ import {
 } from "viem"
 import { createBundlerClient } from "viem/account-abstraction"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { getChain, getCustomChain, safeMultiplier } from "../sdk/account/utils"
+import { getChain, getCustomChain } from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import {
   ENTRYPOINT_SIMULATIONS_ADDRESS,
-  ENTRY_POINT_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+  ENTRY_POINT_ADDRESS
 } from "../sdk/constants"
 import {
   ENTRY_POINT_SIMULATIONS_CREATECALL,
@@ -37,9 +35,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../sdk/clients/createSmartAccountClient"
-import { mcUSDC } from "../sdk/constants/tokens"
 import * as hardhatExec from "./executables"
 import type { TestFileNetworkType } from "./testSetup"
+import type { AnyData } from "../sdk/modules/utils/Types"
 
 config()
 
@@ -230,28 +228,18 @@ export const initDeployments = async (
   rpcPort: number,
   shouldForkBaseSepolia = false
 ) => {
-  // Hardhat deployment of nexus repo:
-  console.log(
-    `using hardhat to deploy nexus contracts to http://localhost:${rpcPort}`
-  )
   await hardhatExec.init()
   await hardhatExec.deploy(rpcPort)
-  console.log("hardhat deployment complete.")
 
   // Dynamic bytecode deployment of contracts using setCode:
   if (!shouldForkBaseSepolia) {
     // Hardcoded bytecode deployment of contracts using setCode:
-    console.log("setting bytecode with hardcoded calldata.")
     const chain = getTestChainFromPort(rpcPort)
     const account = getTestAccount()
     const testClient = toTestClient(chain, account)
 
-    console.log("setting bytecode with dynamic calldata from a testnet")
     await setByteCodeHardcoded(testClient)
     await setByteCodeDynamic(testClient, TEST_CONTRACTS)
-
-    console.log("bytecode deployment complete.")
-    console.log("")
   }
 }
 
@@ -277,7 +265,7 @@ export const initBundlerInstance = async ({
   return { bundlerInstance, bundlerUrl, bundlerPort }
 }
 export const getBalance = (
-  testClient: MasterClient,
+  testClient: AnyData,
   owner: Hex,
   tokenAddress?: Hex
 ): Promise<bigint> => {
