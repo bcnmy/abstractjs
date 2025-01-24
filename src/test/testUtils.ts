@@ -7,15 +7,14 @@ import {
   type Address,
   type Chain,
   type Hex,
-  type PrivateKeyAccount,
-  type PublicClient,
   createPublicClient,
   createTestClient,
   createWalletClient,
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress
+  zeroAddress,
+  type LocalAccount
 } from "viem"
 import { createBundlerClient } from "viem/account-abstraction"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
@@ -64,7 +63,7 @@ export type NetworkConfig = Omit<
   NetworkConfigWithBundler,
   "instance" | "bundlerInstance"
 > & {
-  account?: PrivateKeyAccount
+  account?: LocalAccount
   paymasterUrl?: string
   meeNodeUrl?: string
 }

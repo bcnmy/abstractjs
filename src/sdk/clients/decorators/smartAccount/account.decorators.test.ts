@@ -1,8 +1,15 @@
-import { http, type Account, type Address, type Chain, isHex } from "viem"
+import {
+  http,
+  type Account,
+  type Address,
+  type Chain,
+  isHex,
+  LocalAccount
+} from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi"
 import { mockAddresses } from "../../../../test/__contracts/mockAddresses"
-import { toNetwork } from "../../../../test/testSetup"
+import { testnetTest, toNetwork } from "../../../../test/testSetup"
 import {
   type MasterClient,
   type NetworkConfig,
@@ -20,6 +27,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../createSmartAccountClient"
+import { bicoBundlerActions } from "../bundler"
 
 describe("account.decorators", async () => {
   let network: NetworkConfig
@@ -102,6 +110,34 @@ describe("account.decorators", async () => {
       })
     ).rejects.toThrow()
   })
+
+  testnetTest(
+    "should wait for a confirmed transaction receipt",
+    async ({ config: { bundlerUrl, chain, account } }) => {
+      const biconomyBundlerClient = await createSmartAccountClient({
+        signer: account!,
+        chain,
+        transport: http(),
+        bundlerTransport: http(bundlerUrl)
+      })
+
+      const hash = await biconomyBundlerClient.sendTransaction({
+        calls: [
+          {
+            to: recipientAddress,
+            value: 1n
+          }
+        ]
+      })
+
+      const confirmedReceipt =
+        await biconomyBundlerClient.waitForConfirmedTransactionReceipt({
+          userOpHash: hash
+        })
+
+      console.log({ confirmedReceipt })
+    }
+  )
 
   test("should send a user operation using sendTransaction", async () => {
     const balanceBefore = await getBalance(testClient, recipientAddress)

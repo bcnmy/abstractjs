@@ -16,11 +16,12 @@ import {
   createBundlerClient
 } from "viem/account-abstraction"
 import { biconomySponsoredPaymasterContext } from "./createBicoPaymasterClient"
-import { type BicoActions, bicoBundlerActions } from "./decorators/bundler"
-import type {
-  BicoRpcSchema,
-  GetGasFeeValuesReturnType
-} from "./decorators/bundler/getGasFeeValues"
+import {
+  type BicoActions,
+  bicoBundlerActions,
+  type BicoRpcSchema
+} from "./decorators/bundler"
+import type { GetGasFeeValuesReturnType } from "./decorators/bundler/getGasFeeValues"
 
 export type BicoBundlerClient<
   transport extends Transport = Transport,

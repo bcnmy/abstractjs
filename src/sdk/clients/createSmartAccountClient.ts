@@ -43,6 +43,7 @@ import {
   type SmartAccountActions,
   smartAccountActions
 } from "./decorators/smartAccount"
+import type { BicoActions } from "./decorators/bundler"
 
 /**
  * Nexus Client type
@@ -71,6 +72,7 @@ export type NexusClient<
   >
 > &
   BundlerActions<ModularSmartAccount> &
+  BicoActions &
   Erc7579Actions<ModularSmartAccount> &
   SmartAccountActions<chain, ModularSmartAccount> & {
     /**
