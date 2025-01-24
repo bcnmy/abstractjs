@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.0.34
+
+### Patch Changes
+
+- Add waitForConfirmedTransactionReceipt and getUserOperationStatus decorators
+
 ## 0.0.33
 
 ### Patch Changes

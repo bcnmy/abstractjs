@@ -1,11 +1,16 @@
-import type { Account, Chain, Client, PublicClient, Transport } from "viem"
+import type {
+  Account,
+  Chain,
+  Client,
+  TransactionReceipt,
+  Transport
+} from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import {
   getUserOperationStatus,
-  type GetUserOperationStatusParameters,
-  type GetUserOperationStatusReturnType
+  type GetUserOperationStatusParameters
 } from "./getUserOperationStatus"
 import type { BicoRpcSchema } from "."
 
@@ -19,7 +24,7 @@ export async function waitForConfirmedTransactionReceipt<
     BicoRpcSchema
   >,
   parameters: GetUserOperationStatusParameters & { account?: TAccount }
-): Promise<GetUserOperationStatusReturnType> {
+): Promise<TransactionReceipt> {
   const account_ = parseAccount(
     parameters?.account ?? client.account!
   ) as SmartAccount
@@ -36,7 +41,12 @@ export async function waitForConfirmedTransactionReceipt<
   )(parameters)
 
   // Recursively loop until the status is CONFIRMED with the pollingInterval
-  if (userOperationStatus.status === "CONFIRMED") return userOperationStatus
+  if (userOperationStatus.state === "CONFIRMED") {
+    return userOperationStatus.userOperationReceipt.receipt
+  }
+  if (userOperationStatus.state === "REJECTED") {
+    throw new Error(userOperationStatus.message)
+  }
 
   await new Promise((resolve) =>
     setTimeout(resolve, client.pollingInterval ?? 1000)

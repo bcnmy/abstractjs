@@ -1,4 +1,10 @@
-import type { Chain, Client, Prettify, Transport } from "viem"
+import type {
+  Chain,
+  Client,
+  Prettify,
+  TransactionReceipt,
+  Transport
+} from "viem"
 import {
   type BicoUserOperationGasPriceWithBigIntAsHex,
   type GetGasFeeValuesReturnType,
@@ -13,9 +19,7 @@ import { waitForConfirmedTransactionReceipt } from "./waitForConfirmedTransactio
 
 export type BicoRpcSchema = [
   {
-    Method:
-      | "biconomy_getUserOperationStatus"
-      | "pimlico_getUserOperationGasPrice"
+    Method: "biconomy_getGasFeeValues" | "pimlico_getUserOperationGasPrice"
     Parameters: []
     ReturnType: BicoUserOperationGasPriceWithBigIntAsHex
   },
@@ -60,7 +64,7 @@ export type BicoActions = {
    */
   waitForConfirmedTransactionReceipt: (
     params: GetUserOperationStatusParameters
-  ) => Promise<GetUserOperationStatusReturnType>
+  ) => Promise<TransactionReceipt>
 }
 
 export const bicoBundlerActions =

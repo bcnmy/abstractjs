@@ -1,7 +1,6 @@
 import type { Account, Chain, Client, Hex, Transport } from "viem"
 import type { NexusAccount } from "../../../account/toNexusAccount"
 import type { BicoRpcSchema } from "."
-import type { AnyData } from "../../../modules/utils/Types"
 
 export type BicoUserOperationGasPriceWithBigIntAsHex = {
   slow: {
@@ -63,9 +62,9 @@ export const getGasFeeValues = async (
   const usePimlico = !!(client?.account as NexusAccount)?.useTestBundler
 
   const gasPrice = await client.request({
-    method: (usePimlico
+    method: usePimlico
       ? "pimlico_getUserOperationGasPrice"
-      : "biconomy_getGasFeeValues") as AnyData,
+      : "biconomy_getGasFeeValues",
     params: []
   })
 

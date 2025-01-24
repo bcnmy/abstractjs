@@ -196,7 +196,10 @@ export const toNexusAccount = async (
     validatorAddress = MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
     key = "nexus account",
     name = "Nexus Account",
-    attesters: attesters_ = [RHINESTONE_ATTESTER_ADDRESS],
+    attesters: attesters_ = [
+      RHINESTONE_ATTESTER_ADDRESS
+      // BICONOMY_ATTESTER_ADDRESS
+    ],
     attesterThreshold = 1,
     bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
     registryAddress = REGISTRY_ADDRESS,

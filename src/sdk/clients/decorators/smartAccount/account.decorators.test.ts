@@ -27,7 +27,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../createSmartAccountClient"
-import { bicoBundlerActions } from "../bundler"
 
 describe("account.decorators", async () => {
   let network: NetworkConfig
@@ -121,7 +120,7 @@ describe("account.decorators", async () => {
         bundlerTransport: http(bundlerUrl)
       })
 
-      const hash = await biconomyBundlerClient.sendTransaction({
+      const userOpHash = await biconomyBundlerClient.sendUserOperation({
         calls: [
           {
             to: recipientAddress,
@@ -132,10 +131,10 @@ describe("account.decorators", async () => {
 
       const confirmedReceipt =
         await biconomyBundlerClient.waitForConfirmedTransactionReceipt({
-          userOpHash: hash
+          userOpHash
         })
 
-      console.log({ confirmedReceipt })
+      return confirmedReceipt
     }
   )
 
