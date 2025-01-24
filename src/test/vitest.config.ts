@@ -25,10 +25,6 @@ export default defineConfig({
         statements: 80
       }
     },
-    sequence: {
-      shuffle: false,
-      concurrent: false
-    },
     include: ["./src/test/**/*.test.ts", "./src/sdk/**/*.test.ts"],
     globalSetup: join(__dirname, "globalSetup.ts"),
     environment: "node",

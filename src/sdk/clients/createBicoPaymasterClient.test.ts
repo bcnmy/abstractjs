@@ -12,8 +12,8 @@ import {
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { toNetworks } from "../../test/testSetup"
-import { killNetwork } from "../../test/testUtils"
-import type { NetworkConfig } from "../../test/testUtils"
+import { getBalance, killNetwork } from "../../test/testUtils"
+import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import {
   type BicoPaymasterClient,
@@ -24,7 +24,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./createSmartAccountClient"
+import { BICONOMY_TOKEN_PAYMASTER } from "../account/utils/Constants"
 
+// NB These tests require ERC20 tokens to be available on testnet, so they are mostly skipped
 describe("bico.paymaster", async () => {
   // describe.runIf(paymasterTruthy())("bico.paymaster", async () => {
   let network: NetworkConfig
@@ -130,7 +132,12 @@ describe("bico.paymaster", async () => {
     expect(finalBalance).toBe(initialBalance - 1n)
   })
 
-  test("should use token paymaster to pay for gas fees, use max approval, use sendUserOperation", async () => {
+  test.skip("should use token paymaster to pay for gas fees, use max approval, use sendUserOperation", async () => {
+    const balanceOfFeeToken = await getBalance(
+      publicClient,
+      nexusAccountAddress,
+      baseSepoliaUSDCAddress
+    )
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })
@@ -173,7 +180,7 @@ describe("bico.paymaster", async () => {
     expect(finalBalance).toBe(initialBalance - 1n)
   })
 
-  test("should use token paymaster to pay for gas fees, use max approval, use sendTransaction", async () => {
+  test.skip("should use token paymaster to pay for gas fees, use max approval, use sendTransaction", async () => {
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })
@@ -219,7 +226,32 @@ describe("bico.paymaster", async () => {
     expect(finalBalance).toBe(initialBalance - 1n)
   })
 
-  test("should use token paymaster to pay for gas fees, use custom approval with token paymaster quotes", async () => {
+  test("should retrieve quotes from token paymaster", async () => {
+    const tokenList = [baseSepoliaUSDCAddress]
+    const userOp = await nexusClient.prepareUserOperation({
+      calls: [
+        {
+          to: recipientAddress,
+          value: 1n,
+          data: "0x"
+        }
+      ]
+    })
+    const quote = await paymaster.getTokenPaymasterQuotes({ userOp, tokenList })
+    expect(quote.mode).toBe("ERC20")
+    expect(quote.paymasterAddress).toBe(BICONOMY_TOKEN_PAYMASTER)
+    expect(quote.feeQuotes).toBeInstanceOf(Array)
+    expect(quote.unsupportedTokens).toBeInstanceOf(Array)
+
+    expect(quote.feeQuotes[0].symbol).toBe("USDC")
+    expect(quote.feeQuotes[0].decimal).toBe(6)
+    expect(quote.feeQuotes[0].tokenAddress).toBe(baseSepoliaUSDCAddress)
+    expect(quote.feeQuotes[0].maxGasFee).toBeGreaterThan(0)
+    expect(quote.feeQuotes[0].maxGasFeeUSD).toBeGreaterThan(0)
+    expect(quote.feeQuotes[0].exchangeRate).toBeGreaterThan(0)
+  })
+
+  test.skip("should use token paymaster to pay for gas fees, use custom approval with token paymaster quotes", async () => {
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })
@@ -234,14 +266,11 @@ describe("bico.paymaster", async () => {
       bundlerTransport: http(bundlerUrl)
     })
 
-    const usdcBalance = await publicClient.readContract({
-      address: baseSepoliaUSDCAddress,
-      abi: parseAbi([
-        "function balanceOf(address owner) public view returns (uint256 balance)"
-      ]),
-      functionName: "balanceOf",
-      args: [nexusClient.account.address]
-    })
+    const usdcBalance = await getBalance(
+      publicClient,
+      nexusClient.account.address,
+      baseSepoliaUSDCAddress
+    )
 
     expect(usdcBalance).toBeGreaterThan(0n)
 

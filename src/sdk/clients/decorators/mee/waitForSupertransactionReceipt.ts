@@ -1,4 +1,4 @@
-import type { Hex } from "viem"
+import { isHex, type Hex } from "viem"
 import {
   getExplorerTxLink,
   getJiffyScanLink,
@@ -15,17 +15,6 @@ import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 export type WaitForSupertransactionReceiptParams = {
   /** The hash of the super transaction */
   hash: Hex
-}
-
-/**
- * Explorer links for each chain
- * @type ExplorerLinks
- */
-type ExplorerLinks = { meeScan: Url } & {
-  [chainId: string]: {
-    txHash: Url
-    jiffyScan: Url
-  }
 }
 
 /**
@@ -46,7 +35,7 @@ export type WaitForSupertransactionReceiptPayload = Omit<
   "userOps"
 > & {
   userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
-  explorerLinks: ExplorerLinks
+  explorerLinks: Url[]
 }
 
 /**
@@ -75,8 +64,16 @@ export const waitForSupertransactionReceipt = async (
     const userOpError = explorerResponse.userOps.find(
       (userOp) => userOp.executionError
     )
-    if (userOpError) {
-      throw new Error(userOpError.executionError)
+    const errorFromExecutionData = explorerResponse.userOps.find(
+      ({ executionData }) => !!executionData && !isHex(executionData)
+    )
+    if (userOpError || errorFromExecutionData) {
+      throw new Error(
+        [
+          userOpError?.chainId,
+          userOpError?.executionError || errorFromExecutionData?.executionData
+        ].join(" - ")
+      )
     }
 
     const statuses = explorerResponse.userOps.map(
@@ -93,15 +90,13 @@ export const waitForSupertransactionReceipt = async (
 
     const explorerLinks = explorerResponse.userOps.reduce(
       (acc, userOp) => {
-        acc[userOp.chainId] = {
-          txHash: getExplorerTxLink(userOp.executionData, userOp.chainId),
-          jiffyScan: getJiffyScanLink(userOp.userOpHash)
-        }
+        acc.push(
+          getExplorerTxLink(userOp.executionData, userOp.chainId),
+          getJiffyScanLink(userOp.userOpHash)
+        )
         return acc
       },
-      {
-        meeScan: getMeeScanLink(params.hash)
-      } as ExplorerLinks
+      [getMeeScanLink(params.hash)] as Url[]
     )
 
     return { ...explorerResponse, explorerLinks }

@@ -11,13 +11,14 @@ import {
   encodeFunctionData,
   parseEther
 } from "viem"
+import { PaymasterClient } from "viem/account-abstraction"
 import { beforeAll, describe, expect, test } from "vitest"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
 import {
-  biconomySponsoredPaymasterContext,
   type BicoPaymasterClient,
-  createBicoPaymasterClient,
-  type PaymasterContext
+  type PaymasterContext,
+  biconomySponsoredPaymasterContext,
+  createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
 import {
   type NexusClient,
@@ -37,7 +38,6 @@ import { CounterAbi } from "./__contracts/abi/CounterAbi"
 import { testAddresses } from "./callDatas"
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
-import { PaymasterClient } from "viem/account-abstraction"
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
