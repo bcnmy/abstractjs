@@ -14,4 +14,39 @@ describe("utils.parseErrorMessage", () => {
     expect(parseErrorMessage(error)).toBe("test")
     expect(parseErrorMessage("test")).toBe("test")
   })
+
+  test("should handle errors array", () => {
+    const error = { errors: ["First error", "Second error"] }
+    expect(parseErrorMessage(error)).toBe("First error")
+  })
+
+  test("should handle message field", () => {
+    const error = { message: "Error message" }
+    expect(parseErrorMessage(error)).toBe("Error message")
+  })
+
+  test("should handle statusText field", () => {
+    const error = { statusText: "Not Found" }
+    expect(parseErrorMessage(error)).toBe("Not Found")
+  })
+
+  test("should handle nested error object", () => {
+    const error = {
+      json: {
+        errors: ["JSON error"]
+      }
+    }
+    expect(parseErrorMessage(error)).toBe(String(error))
+  })
+
+  test("should clean up common error prefixes", () => {
+    expect(parseErrorMessage("Error: Something went wrong")).toBe(
+      "Something went wrong"
+    )
+    expect(parseErrorMessage("Details: Problem occurred")).toBe(
+      "Problem occurred"
+    )
+    expect(parseErrorMessage("Message: Invalid input")).toBe("Invalid input")
+    expect(parseErrorMessage("error")).toBe("")
+  })
 })

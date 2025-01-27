@@ -47,7 +47,7 @@ describe("mee.executeQuote", () => {
         calls: [
           {
             to: "0x0000000000000000000000000000000000000000",
-            gasLimit: 500n,
+            gasLimit: 50000n,
             value: 0n
           }
         ],

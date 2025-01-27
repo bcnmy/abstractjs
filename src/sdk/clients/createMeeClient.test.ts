@@ -1,5 +1,4 @@
 import {
-  type Address,
   type Chain,
   type LocalAccount,
   encodeFunctionData,
@@ -70,7 +69,7 @@ describe("mee.createMeeClient", async () => {
           calls: [
             {
               to: zeroAddress,
-              gasLimit: 500n,
+              gasLimit: 50000n,
               value: 0n
             }
           ],
@@ -95,7 +94,7 @@ describe("mee.createMeeClient", async () => {
             calls: [
               {
                 to: zeroAddress,
-                gasLimit: 500n,
+                gasLimit: 50000n,
                 value: 0n
               }
             ],
@@ -120,7 +119,7 @@ describe("mee.createMeeClient", async () => {
     const currentInstructions = await meeClient.account.build({
       type: "intent",
       data: {
-        amount: 500n,
+        amount: 50000n,
         mcToken: mcUSDC,
         toChain: targetChain
       }
@@ -135,7 +134,7 @@ describe("mee.createMeeClient", async () => {
               calls: [
                 {
                   to: zeroAddress,
-                  gasLimit: 500n,
+                  gasLimit: 50000n,
                   value: 0n
                 }
               ],
@@ -163,9 +162,9 @@ describe("mee.createMeeClient", async () => {
     expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 
-  test
-    .runIf(runPaidTests)
-    .skip("should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it", async () => {
+  test.runIf(runPaidTests)(
+    "should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it",
+    async () => {
       console.time("execute:hashTimer")
       // Start performance timing for tracking how long the transaction hash and receipt take
       console.time("execute:receiptTimer")
@@ -179,7 +178,7 @@ describe("mee.createMeeClient", async () => {
             data: {
               instructions: [
                 {
-                  calls: [{ to: zeroAddress, gasLimit: 500n, value: 0n }],
+                  calls: [{ to: zeroAddress, gasLimit: 50000n, value: 0n }],
                   chainId: targetChain.id
                 }
               ]
@@ -198,7 +197,8 @@ describe("mee.createMeeClient", async () => {
       console.timeEnd("execute:receiptTimer")
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
-    })
+    }
+  )
 
   test.runIf(runPaidTests)(
     "should successfully use the aave protocol",
@@ -240,27 +240,30 @@ describe("mee.createMeeClient", async () => {
         }
       }
 
+      console.log({ quote })
+
       const signedFusionQuote = await meeClient.signFusionQuote({
         quote,
         trigger
       })
 
+      console.log({ signedFusionQuote })
+
       const { receipt, hash } = await meeClient.executeSignedFusionQuote({
         signedFusionQuote
       })
+
+      console.log({ receipt })
 
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
 
-      console.log({ sTxReceipt, receipt, hash })
-
-      /**
-       * console.log(receipt.status)
-       * console.log(sTxReceipt.explorerLinks)
-       * expect(receipt).toBeDefined()
-       * expect(sTxReceipt).toBeDefined()
-       */
-    }
+      console.log(receipt.status)
+      console.log(sTxReceipt.explorerLinks)
+      expect(receipt).toBeDefined()
+      expect(sTxReceipt).toBeDefined()
+    },
+    { timeout: 200000 }
   )
 })

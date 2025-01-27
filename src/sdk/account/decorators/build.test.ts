@@ -45,7 +45,7 @@ describe("mee:build", () => {
               calls: [
                 {
                   to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 500n,
+                  gasLimit: 50000n,
                   value: 0n
                 }
               ],
@@ -61,7 +61,7 @@ describe("mee:build", () => {
         {
           "calls": [
             {
-              "gasLimit": 500n,
+              "gasLimit": 50000n,
               "to": "0x0000000000000000000000000000000000000000",
               "value": 0n,
             },
@@ -96,7 +96,7 @@ describe("mee:build", () => {
               calls: [
                 {
                   to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 500n,
+                  gasLimit: 50000n,
                   value: 0n
                 }
               ],

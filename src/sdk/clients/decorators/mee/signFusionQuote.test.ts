@@ -55,7 +55,7 @@ describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
         calls: [
           {
             to: zeroAddress,
-            gasLimit: 500n,
+            gasLimit: 50000n,
             value: 0n
           }
         ],
