@@ -88,7 +88,7 @@ type StringOrStrings = string | string[]
  *   customChain
  * })
  *
- * const { wait } = await smartAccountCustomChain.sendTransaction({
+ * const { wait } = await smartAccountCustomChain.sendUserOperation({
  *   to: recipient,
  *   value: BigInt(1)
  * })

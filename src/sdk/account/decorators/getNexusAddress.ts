@@ -1,6 +1,7 @@
 import { type Address, pad, toHex } from "viem"
 import type { PublicClient } from "viem"
 import {
+  BICONOMY_ATTESTER_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
   NEXUS_ACCOUNT_FACTORY,
   RHINESTONE_ATTESTER_ADDRESS
@@ -13,7 +14,7 @@ import { K1ValidatorFactoryAbi } from "../../constants/abi/K1ValidatorFactory"
  * @property publicClient - {@link PublicClient} The public client to use for the read contract
  * @property signerAddress - {@link Address} The address of the EOA signer
  * @property index - Optional BigInt index for deterministic deployment (defaults to 0)
- * @property attesters - Optional array of {@link Address} attester addresses (defaults to [RHINESTONE_ATTESTER_ADDRESS])
+ * @property attesters - Optional array of {@link Address} attester addresses (defaults to [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS])
  * @property threshold - Optional number of required attesters (defaults to 1)
  * @property factoryAddress - Optional {@link Address} of the factory contract (defaults to MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS)
  */
@@ -59,7 +60,7 @@ export const getK1NexusAddress = async <
     publicClient,
     signerAddress,
     index = 0n,
-    attesters = [RHINESTONE_ATTESTER_ADDRESS],
+    attesters = [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
     threshold = 1,
     factoryAddress = MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
   } = params

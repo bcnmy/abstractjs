@@ -140,7 +140,7 @@ export const acrossEncodeBridgingUserOp = async (
 
   const depositCall: AbstractCall = {
     to: suggestedFees.spokePoolAddress,
-    gasLimit: 150000n,
+    gasLimit: 1500n,
     data: encodeFunctionData({
       abi: depositV3abi,
       args: [

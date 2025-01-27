@@ -27,6 +27,7 @@ import {
   createSmartAccountClient
 } from "../clients/createSmartAccountClient"
 import {
+  BICONOMY_ATTESTER_ADDRESS,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY,
   RHINESTONE_ATTESTER_ADDRESS,
@@ -88,7 +89,7 @@ describe("nexus.account.addresses", async () => {
       publicClient: testClient as unknown as PublicClient,
       signerAddress: eoaAccount.address,
       index: 0n,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS],
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
       threshold: 1,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
@@ -105,7 +106,7 @@ describe("nexus.account.addresses", async () => {
       publicClient: testClient as unknown as PublicClient,
       signerAddress: eoaAccount.address,
       index: 0n,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS],
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
       threshold: 1,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })

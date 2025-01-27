@@ -47,10 +47,11 @@ import {
   ENTRY_POINT_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  MEE_VALIDATOR_ADDRESS,
   NEXUS_BOOTSTRAP_ADDRESS,
   REGISTRY_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
+  RHINESTONE_ATTESTER_ADDRESS,
+  BICONOMY_ATTESTER_ADDRESS,
+  MEE_VALIDATOR_ADDRESSES
 } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
@@ -197,8 +198,8 @@ export const toNexusAccount = async (
     key = "nexus account",
     name = "Nexus Account",
     attesters: attesters_ = [
-      RHINESTONE_ATTESTER_ADDRESS
-      // BICONOMY_ATTESTER_ADDRESS
+      RHINESTONE_ATTESTER_ADDRESS,
+      BICONOMY_ATTESTER_ADDRESS
     ],
     attesterThreshold = 1,
     bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
@@ -206,7 +207,9 @@ export const toNexusAccount = async (
     useTestBundler = false
   } = parameters
 
-  const useMeeAccount = addressEquals(validatorAddress, MEE_VALIDATOR_ADDRESS)
+  const useMeeAccount = MEE_VALIDATOR_ADDRESSES.some((address) =>
+    addressEquals(validatorAddress, address)
+  )
 
   // @ts-ignore
   const signer = await toSigner({ signer: _signer })

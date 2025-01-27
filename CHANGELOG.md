@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Add waitForConfirmedTransactionReceipt and getUserOperationStatus decorators
+- Add waitForConfirmedUserOperationReceipt and getUserOperationStatus decorators
 
 ## 0.0.33
 

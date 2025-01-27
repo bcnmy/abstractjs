@@ -1,11 +1,8 @@
+import type { Account, Chain, Client, Transport } from "viem"
 import type {
-  Account,
-  Chain,
-  Client,
-  TransactionReceipt,
-  Transport
-} from "viem"
-import type { SmartAccount } from "viem/account-abstraction"
+  SmartAccount,
+  UserOperationReceipt
+} from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import {
@@ -14,7 +11,7 @@ import {
 } from "./getUserOperationStatus"
 import type { BicoRpcSchema } from "."
 
-export async function waitForConfirmedTransactionReceipt<
+export async function waitForConfirmedUserOperationReceipt<
   TAccount extends SmartAccount | undefined
 >(
   client: Client<
@@ -24,14 +21,14 @@ export async function waitForConfirmedTransactionReceipt<
     BicoRpcSchema
   >,
   parameters: GetUserOperationStatusParameters & { account?: TAccount }
-): Promise<TransactionReceipt> {
+): Promise<UserOperationReceipt> {
   const account_ = parseAccount(
     parameters?.account ?? client.account!
   ) as SmartAccount
 
   if (!account_)
     throw new AccountNotFoundError({
-      docsPath: "/docs/actions/wallet/waitForConfirmedTransactionReceipt"
+      docsPath: "/docs/actions/wallet/waitForConfirmedUserOperationReceipt"
     })
 
   const userOperationStatus = await getAction(
@@ -42,7 +39,12 @@ export async function waitForConfirmedTransactionReceipt<
 
   // Recursively loop until the status is CONFIRMED with the pollingInterval
   if (userOperationStatus.state === "CONFIRMED") {
-    return userOperationStatus.userOperationReceipt.receipt
+    userOperationStatus.userOperationReceipt.receipt
+    return {
+      ...userOperationStatus.userOperationReceipt,
+      // Overwrite the receipt type from the confirmed status
+      receipt: userOperationStatus.userOperationReceipt.receipt
+    }
   }
   if (userOperationStatus.state === "REJECTED") {
     throw new Error(userOperationStatus.message)
@@ -53,7 +55,7 @@ export async function waitForConfirmedTransactionReceipt<
   )
   return await getAction(
     client,
-    waitForConfirmedTransactionReceipt,
-    "waitForConfirmedTransactionReceipt"
+    waitForConfirmedUserOperationReceipt,
+    "waitForConfirmedUserOperationReceipt"
   )(parameters)
 }

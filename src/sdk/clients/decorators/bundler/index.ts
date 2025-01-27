@@ -1,10 +1,4 @@
-import type {
-  Chain,
-  Client,
-  Prettify,
-  TransactionReceipt,
-  Transport
-} from "viem"
+import type { Chain, Client, Prettify, Transport } from "viem"
 import {
   type BicoUserOperationGasPriceWithBigIntAsHex,
   type GetGasFeeValuesReturnType,
@@ -15,7 +9,12 @@ import {
   type GetUserOperationStatusParameters,
   type GetUserOperationStatusReturnType
 } from "./getUserOperationStatus"
-import { waitForConfirmedTransactionReceipt } from "./waitForConfirmedTransactionReceipt"
+import { waitForConfirmedUserOperationReceipt } from "./waitForConfirmedUserOperationReceipt"
+import type {
+  WaitForUserOperationReceiptParameters,
+  WaitForUserOperationReceiptReturnType
+} from "viem/account-abstraction"
+import { waitForUserOperationReceipt } from "./waitForUserOperationReceipt"
 
 export type BicoRpcSchema = [
   {
@@ -59,12 +58,20 @@ export type BicoActions = {
   ) => Promise<GetUserOperationStatusReturnType>
   /**
    * Waits for a transaction receipt to be confirmed.
-   * @param params - {@link WaitForConfirmedTransactionReceiptParameters}
-   * @returns The transaction receipt. {@link WaitForConfirmedTransactionReceiptReturnType}
+   * @param params - {@link WaitForConfirmedUserOperationReceiptParameters}
+   * @returns The transaction receipt. {@link WaitForConfirmedUserOperationReceiptReturnType}
    */
-  waitForConfirmedTransactionReceipt: (
+  waitForConfirmedUserOperationReceipt: (
     params: GetUserOperationStatusParameters
-  ) => Promise<TransactionReceipt>
+  ) => Promise<WaitForUserOperationReceiptReturnType>
+  /**
+   * Waits for a transaction receipt to be confirmed.
+   * @param params - {@link WaitForUserOperationReceiptParameters}
+   * @returns The transaction receipt. {@link WaitForUserOperationReceiptReturnType}
+   */
+  waitForUserOperationReceipt: (
+    params: WaitForUserOperationReceiptParameters
+  ) => Promise<WaitForUserOperationReceiptReturnType>
 }
 
 export const bicoBundlerActions =
@@ -79,7 +86,10 @@ export const bicoBundlerActions =
     getUserOperationStatus: async (
       parameters: GetUserOperationStatusParameters
     ) => getUserOperationStatus(client, parameters),
-    waitForConfirmedTransactionReceipt: async (
+    waitForConfirmedUserOperationReceipt: async (
       parameters: GetUserOperationStatusParameters
-    ) => waitForConfirmedTransactionReceipt(client, parameters)
+    ) => waitForConfirmedUserOperationReceipt(client, parameters),
+    waitForUserOperationReceipt: async (
+      parameters: WaitForUserOperationReceiptParameters
+    ) => waitForUserOperationReceipt(client, parameters)
   })

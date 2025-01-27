@@ -70,7 +70,7 @@ describe("mee.createMeeClient", async () => {
           calls: [
             {
               to: zeroAddress,
-              gasLimit: 50000n,
+              gasLimit: 500n,
               value: 0n
             }
           ],
@@ -95,7 +95,7 @@ describe("mee.createMeeClient", async () => {
             calls: [
               {
                 to: zeroAddress,
-                gasLimit: 50000n,
+                gasLimit: 500n,
                 value: 0n
               }
             ],
@@ -120,7 +120,7 @@ describe("mee.createMeeClient", async () => {
     const currentInstructions = await meeClient.account.build({
       type: "intent",
       data: {
-        amount: 50000n,
+        amount: 500n,
         mcToken: mcUSDC,
         toChain: targetChain
       }
@@ -135,7 +135,7 @@ describe("mee.createMeeClient", async () => {
               calls: [
                 {
                   to: zeroAddress,
-                  gasLimit: 50000n,
+                  gasLimit: 500n,
                   value: 0n
                 }
               ],
@@ -179,7 +179,7 @@ describe("mee.createMeeClient", async () => {
             data: {
               instructions: [
                 {
-                  calls: [{ to: zeroAddress, gasLimit: 50000n, value: 0n }],
+                  calls: [{ to: zeroAddress, gasLimit: 500n, value: 0n }],
                   chainId: targetChain.id
                 }
               ]

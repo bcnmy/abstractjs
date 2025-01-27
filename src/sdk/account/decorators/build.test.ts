@@ -34,7 +34,7 @@ describe("mee:build", () => {
     meeClient = createMeeClient({ account: mcNexus })
   })
 
-  it("should use the base option while building instructions", async () => {
+  it("should use the default option while building instructions", async () => {
     const instructions = await build(
       { account: mcNexus },
       {
@@ -45,7 +45,7 @@ describe("mee:build", () => {
               calls: [
                 {
                   to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 50000n,
+                  gasLimit: 500n,
                   value: 0n
                 }
               ],
@@ -61,7 +61,7 @@ describe("mee:build", () => {
         {
           "calls": [
             {
-              "gasLimit": 50000n,
+              "gasLimit": 500n,
               "to": "0x0000000000000000000000000000000000000000",
               "value": 0n,
             },
@@ -96,7 +96,7 @@ describe("mee:build", () => {
               calls: [
                 {
                   to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 50000n,
+                  gasLimit: 500n,
                   value: 0n
                 }
               ],
