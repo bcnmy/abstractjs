@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.0.35
+
+### Patch Changes
+
+- Updated default attester addresses
+
 ## 0.0.34
 
 ### Patch Changes
