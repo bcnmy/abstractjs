@@ -21,6 +21,13 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
 
+      - name: Fund Nexus
+        run: bun run fund:nexus
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          TESTNET_CHAIN_ID: 84532
+          MAINNET_CHAIN_ID: 10
+
       - name: Run the tests
         run: bun run test
         env:
@@ -28,7 +35,7 @@ jobs:
           PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
           PAYMASTER_URL: ${{ secrets.PAYMASTER_URL }}
           BUNDLER_URL: ${{ secrets.BUNDLER_URL }}
-          CHAIN_ID: 84532
+          TESTNET_CHAIN_ID: 84532
           MAINNET_CHAIN_ID: 10
           RUN_PAID_TESTS: true
           CI: true 

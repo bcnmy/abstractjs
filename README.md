@@ -1,4 +1,4 @@
-[![Biconomy](https://img.shields.io/badge/Made_with_%F0%9F%8D%8A_by-Biconomy-ff4e17?style=flat)](https://biconomy.io) [![License MIT](https://img.shields.io/badge/License-MIT-blue?&style=flat)](./LICENSE) [![codecov](https://codecov.io/github/bcnmy/abstractjs/graph/badge.svg?token=DTdIR5aBDA)](https://codecov.io/github/bcnmy/abstractjs)
+[![Biconomy](https://img.shields.io/badge/Made_with_%F0%9F%8D%8A_by-Biconomy-ff4e17?style=flat)](https://biconomy.io) [![License MIT](https://img.shields.io/badge/License-MIT-blue?&style=flat)](./LICENSE) [![codecov](https://codecov.io/github/bcnmy/abstractjs/graph/badge.svg?token=DTdIR5aBDA)](https://codecov.io/github/bcnmy/abstractjs)[![install size](https://packagephobia.com/badge?p=@biconomy/abstractjs)](https://packagephobia.com/result?p=@biconomy/abstractjs)
 
 # abstractjs 🚀
 
@@ -72,6 +72,13 @@ const { hash } = await meeClient.executeQuote({ quote })
 bun install --frozen-lockfile
 ```
 
+**Funding test accounts:**
+
+```bash
+# Fund test PRIVATE_KEY account with native tokens and USDC
+bun run fund:nexus
+```
+
 **Running Tests:**
 ```bash
 # Run all tests
@@ -79,6 +86,7 @@ bun run test
 
 # Run tests for a specific subset of tests (by test description)
 bun run test -t=mee
+
 ```
 
 For detailed information about the testing framework, network configurations, and debugging guidelines, please refer to our [Testing Documentation](./src/test/README.md).

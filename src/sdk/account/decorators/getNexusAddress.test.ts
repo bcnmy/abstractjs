@@ -4,16 +4,11 @@ import {
   type Chain,
   type LocalAccount,
   type PublicClient,
-  type WalletClient,
   createPublicClient
 } from "viem"
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
-import {
-  MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY
-} from "../../constants"
 import { getK1NexusAddress, getMeeNexusAddress } from "./getNexusAddress"
 
 describe("account.getNexusAddress", () => {
@@ -66,8 +61,6 @@ describe("account.getNexusAddress", () => {
       signerAddress: eoaAccount.address
     })
 
-    expect(meeAddress).toMatchInlineSnapshot(
-      `"0x1968a6Ab4a542EB22e7452AC25381AE6c0f07826"`
-    )
+    expect(meeAddress).toMatchInlineSnapshot(`"0x1968a6Ab4a542EB22e7452AC25381AE6c0f07826"`)
   })
 })

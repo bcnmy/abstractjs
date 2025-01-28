@@ -23,5 +23,5 @@ jobs:
           RUN_PLAYGROUND: true
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           BUNDLER_URL: ${{ secrets.BUNDLER_URL }}
-          CHAIN_ID: 84532
+          TESTNET_CHAIN_ID: 84532
           CI: true

@@ -1,41 +1,13 @@
-import type {
-  Account,
-  Chain,
-  Client,
-  Hex,
-  TransactionReceipt,
-  Transport
-} from "viem"
+import type { Account, Chain, Client, Hex, Transport } from "viem"
 import type { BicoRpcSchema } from "."
-import type { SmartAccount } from "viem/account-abstraction"
+import type {
+  SmartAccount,
+  UserOperationReceipt
+} from "viem/account-abstraction"
 
 export type GetUserOperationStatusParameters = {
-  userOpHash: Hex
-}
-
-interface TransactionLog {
-  address: string
-  topics: string[]
-  data: string
-  blockNumber: string
-  transactionHash: string
-  transactionIndex: number
-  blockHash: string
-  logIndex: number
-  removed: boolean
-}
-
-interface UserOperationReceipt {
-  userOpHash: string
-  entryPoint: string
-  sender: string
-  nonce: number
-  success: string
-  paymaster: string
-  actualGasCost: number
-  actualGasUsed: number
-  logs: TransactionLog[]
-  receipt: TransactionReceipt
+  /** The hash of the User Operation. */
+  hash: Hex
 }
 
 export type GetUserOperationStatusReturnType = {
@@ -58,6 +30,6 @@ export async function getUserOperationStatus<
 ): Promise<GetUserOperationStatusReturnType> {
   return await client.request({
     method: "biconomy_getUserOperationStatus",
-    params: [parameters.userOpHash]
+    params: [parameters.hash]
   })
 }

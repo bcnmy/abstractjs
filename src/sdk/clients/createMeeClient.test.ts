@@ -1,5 +1,4 @@
 import {
-  type Address,
   type Chain,
   type LocalAccount,
   encodeFunctionData,
@@ -34,6 +33,8 @@ describe("mee.createMeeClient", async () => {
   let targetChain: Chain
   let paymentChain: Chain
 
+  const index = 0n
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
     ;[paymentChain, targetChain] = getTestChains(network)
@@ -44,7 +45,8 @@ describe("mee.createMeeClient", async () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [targetChain, paymentChain],
-      signer: eoaAccount
+      signer: eoaAccount,
+      index
     })
 
     meeClient = createMeeClient({ account: mcNexus })
@@ -163,9 +165,9 @@ describe("mee.createMeeClient", async () => {
     expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 
-  test
-    .runIf(runPaidTests)
-    .skip("should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it", async () => {
+  test.runIf(runPaidTests)(
+    "should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it",
+    async () => {
       console.time("execute:hashTimer")
       // Start performance timing for tracking how long the transaction hash and receipt take
       console.time("execute:receiptTimer")
@@ -198,11 +200,12 @@ describe("mee.createMeeClient", async () => {
       console.timeEnd("execute:receiptTimer")
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
-    })
+    }
+  )
 
-  test.runIf(runPaidTests)(
-    "should successfully use the aave protocol",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should successfully use the aave protocol", async () => {
       const amountToSupply = parseUnits("0.00001", 6)
 
       const approve = mcUSDC.on(targetChain.id).approve({
@@ -253,14 +256,9 @@ describe("mee.createMeeClient", async () => {
         hash
       })
 
-      console.log({ sTxReceipt, receipt, hash })
-
-      /**
-       * console.log(receipt.status)
-       * console.log(sTxReceipt.explorerLinks)
-       * expect(receipt).toBeDefined()
-       * expect(sTxReceipt).toBeDefined()
-       */
-    }
-  )
+      console.log(receipt.status)
+      console.log(sTxReceipt.explorerLinks)
+      expect(receipt).toBeDefined()
+      expect(sTxReceipt).toBeDefined()
+    })
 })

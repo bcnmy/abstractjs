@@ -9,7 +9,7 @@ export type ExecuteSignedFusionQuoteParams = {
 }
 
 export type ExecuteSignedFusionQuotePayload = {
-  /** Hash of the executed transaction */
+  /** Hash of the executed Supertransaction */
   hash: Hex
   /** Transaction receipt */
   receipt: TransactionReceipt

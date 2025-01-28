@@ -34,7 +34,7 @@ describe("mee:build", () => {
     meeClient = createMeeClient({ account: mcNexus })
   })
 
-  it("should use the base option while building instructions", async () => {
+  it("should use the default option while building instructions", async () => {
     const instructions = await build(
       { account: mcNexus },
       {

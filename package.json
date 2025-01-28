@@ -1,6 +1,6 @@
 {
   "name": "@biconomy/abstractjs",
-  "version": "0.0.34",
+  "version": "0.0.36",
   "author": "Biconomy",
   "repository": "github:bcnmy/abstractjs",
   "main": "./dist/_cjs/index.js",
@@ -39,12 +39,12 @@
     "viem": "2.21.6",
     "vitest": "^1.3.1",
     "yargs": "^17.7.2",
-    "@rhinestone/module-sdk": ">=0.2.3"
+    "@rhinestone/module-sdk": "0.2.3"
   },
   "peerDependencies": {
     "typescript": "^5",
     "viem": "^2.20.0",
-    "@rhinestone/module-sdk": ">=0.2.3"
+    "@rhinestone/module-sdk": "0.2.3"
   },
   "exports": {
     ".": {
@@ -119,7 +119,8 @@
     "build:esm": "tsc --project ./tsconfig/tsconfig.esm.json && tsc-alias -p ./tsconfig/tsconfig.esm.json && echo > ./dist/_esm/package.json '{\"type\": \"module\",\"sideEffects\":false}'",
     "build:types": "tsc --project ./tsconfig/tsconfig.types.json && tsc-alias -p ./tsconfig/tsconfig.types.json",
     "fetch:deployment": "bun run ./scripts/fetch:deployment.ts && bun run lint --apply-unsafe",
-    "fetch:deployment:raw": "bun run ./scripts/fetch:deployment.ts"
+    "fetch:deployment:raw": "bun run ./scripts/fetch:deployment.ts",
+    "fund:nexus": "bun run ./scripts/fund:nexus.ts"
   },
   "sideEffects": false,
   "simple-git-hooks": {

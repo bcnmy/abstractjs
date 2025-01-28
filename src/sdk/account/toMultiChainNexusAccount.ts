@@ -1,12 +1,16 @@
 import { type Hex, http, type Chain } from "viem"
 import type { Instruction } from "../clients/decorators/mee/getQuote"
 import {
+  BICONOMY_EXPERIMENTAL_ATTESTER,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY,
   TEMP_MEE_ATTESTER_ADDR
 } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
-import { toNexusAccount } from "./toNexusAccount"
+import {
+  toNexusAccount,
+  type ToNexusSmartAccountParameters
+} from "./toNexusAccount"
 import type { Signer } from "./utils/toSigner"
 
 import {
@@ -31,11 +35,13 @@ import type { MultichainToken } from "./utils/Types"
 /**
  * Parameters required to create a multichain Nexus account
  */
-export type MultichainNexusParams = {
-  /** The signer instance used for account creation */
-  signer: Signer
+export type MultichainNexusParams = Partial<
+  Omit<ToNexusSmartAccountParameters, "signer">
+> & {
   /** Array of chains where the account will be deployed */
   chains: Chain[]
+  /** The signer instance used for account creation */
+  signer: ToNexusSmartAccountParameters["signer"]
 }
 
 /**
@@ -155,9 +161,9 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  * });
  */
 export async function toMultichainNexusAccount(
-  parameters: MultichainNexusParams
+  multiChainNexusParams: MultichainNexusParams
 ): Promise<MultichainSmartAccount> {
-  const { signer, chains } = parameters
+  const { chains, signer, ...accountParameters } = multiChainNexusParams
 
   const deployments = await Promise.all(
     chains.map((chain) =>
@@ -167,20 +173,11 @@ export async function toMultichainNexusAccount(
         transport: http(),
         validatorAddress: MEE_VALIDATOR_ADDRESS,
         factoryAddress: NEXUS_ACCOUNT_FACTORY,
-        attesters: [TEMP_MEE_ATTESTER_ADDR]
+        attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],
+        ...accountParameters
       })
     )
   )
-
-  function addressOn(chainId: number, strictMode: true) {
-    const deployment = deployments.find(
-      (dep) => dep.client.chain?.id === chainId
-    )
-    if (!deployment && strictMode) {
-      throw new Error(`Deployment not found for chainId: ${chainId}`)
-    }
-    return deployment?.address
-  }
 
   function deploymentOn(
     chainId: number,
@@ -197,6 +194,11 @@ export async function toMultichainNexusAccount(
     return deployment
   }
 
+  function addressOn(chainId: number, strictMode: true) {
+    const deployment = deploymentOn(chainId, strictMode)
+    return deployment?.address
+  }
+
   const baseAccount = {
     deployments,
     signer,
@@ -204,9 +206,8 @@ export async function toMultichainNexusAccount(
     addressOn
   } as BaseMultichainSmartAccount
 
-  const getUnifiedERC20Balance = (mcToken: MultichainToken) => {
-    return getUnifiedERC20BalanceDecorator({ mcToken, account: baseAccount })
-  }
+  const getUnifiedERC20Balance = (mcToken: MultichainToken) =>
+    getUnifiedERC20BalanceDecorator({ mcToken, account: baseAccount })
 
   const build = (
     params: BuildInstructionTypes,

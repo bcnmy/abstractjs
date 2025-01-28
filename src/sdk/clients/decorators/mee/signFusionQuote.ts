@@ -86,7 +86,8 @@ export const signFusionQuote = async (
 
   const hash = await masterClient.sendTransaction(call)
   const receipt = await masterClient.waitForTransactionReceipt({
-    hash
+    hash,
+    confirmations: 1
   })
   const signature = concatHex([
     PREFIX[executionMode],

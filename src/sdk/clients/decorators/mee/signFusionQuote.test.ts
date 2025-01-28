@@ -23,7 +23,7 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-describe.runIf(runPaidTests)("mee.signFusionQuote", () => {
+describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

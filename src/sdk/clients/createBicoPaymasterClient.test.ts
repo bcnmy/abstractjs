@@ -7,13 +7,12 @@ import {
   type WalletClient,
   createPublicClient,
   createWalletClient,
-  parseAbi,
   parseUnits
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { toNetworks } from "../../test/testSetup"
 import { getBalance, killNetwork } from "../../test/testUtils"
-import type { MasterClient, NetworkConfig } from "../../test/testUtils"
+import type { NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import {
   type BicoPaymasterClient,
@@ -130,6 +129,23 @@ describe("bico.paymaster", async () => {
     // Check that the balance hasn't changed
     // No gas fees were paid, so the balance should have decreased only by 1n
     expect(finalBalance).toBe(initialBalance - 1n)
+  })
+
+  test("should wait for a confirmed user operation receipt", async () => {
+    const hash = await nexusClient.sendUserOperation({
+      calls: [
+        {
+          to: recipientAddress,
+          value: 1n
+        }
+      ]
+    })
+
+    const receipt = await nexusClient.waitForConfirmedUserOperationReceipt({
+      hash
+    })
+
+    expect(receipt.success).toBe("true")
   })
 
   test.skip("should use token paymaster to pay for gas fees, use max approval, use sendUserOperation", async () => {
