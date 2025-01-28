@@ -1,11 +1,16 @@
 {
-  "name": "@biconomy/abstractjs",
+  "name": "@magicnewton/newton-account-sdk",
   "version": "0.0.36",
-  "author": "Biconomy",
-  "repository": "github:bcnmy/abstractjs",
+  "author": "MagicLabs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magiclabs/newton-account-sdk.git"
+  },
   "main": "./dist/_cjs/index.js",
   "module": "./dist/_esm/index.js",
-  "access": "public",
+  "publishConfig": {
+    "access": "restricted"
+  },
   "devDependencies": {
     "@biomejs/biome": "1.6.0",
     "@changesets/cli": "^2.27.1",
@@ -73,17 +78,12 @@
       "default": "./_cjs/modules/index.js"
     }
   },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
   "description": "SDK for Biconomy integration with support for account abstraction, smart accounts, ERC-4337.",
   "files": [
     "dist/*",
     "README.md"
   ],
-  "homepage": "https://biconomy.io",
+  "homepage": "https://magic.link",
   "keywords": [
     "erc-7579",
     "modular smart account",
@@ -124,10 +124,12 @@
   },
   "sideEffects": false,
   "simple-git-hooks": {
-    "pre-commit": "bun run format && bun run lint:fix",
-    "commit-msg": "npx --no -- commitlint --edit ${1}"
+    "pre-commit": "bun run format && bun run lint:fix"
   },
   "type": "module",
   "types": "./dist/_types/index.d.ts",
-  "typings": "./dist/_types/index.d.ts"
+  "typings": "./dist/_types/index.d.ts",
+  "bugs": {
+    "url": "https://github.com/magiclabs/newton-account-sdk/issues"
+  }
 }
