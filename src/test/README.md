@@ -31,7 +31,7 @@
 - The playground does not run in CI/CD but can be triggered manually from the GitHub Actions UI or locally via bun run playground.
 - The playground network is configured with environment variables:
     - PRIVATE_KEY
-    - CHAIN_ID
+    - TESTNET_CHAIN_ID
     - RPC_URL (optional, inferred if unset)
     - BUNDLER_URL (optional, inferred if unset)
     - PAYMASTER_URL (tests skipped if unset)

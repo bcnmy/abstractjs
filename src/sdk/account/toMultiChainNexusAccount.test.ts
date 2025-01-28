@@ -3,7 +3,13 @@ import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChains, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
-import { MEE_VALIDATOR_ADDRESS, TEMP_MEE_ATTESTER_ADDR } from "../constants"
+import {
+  BICONOMY_ATTESTER_ADDRESS,
+  BICONOMY_EXPERIMENTAL_ATTESTER,
+  MEE_VALIDATOR_ADDRESS,
+  RHINESTONE_ATTESTER_ADDRESS,
+  TEMP_MEE_ATTESTER_ADDR
+} from "../constants"
 import { NEXUS_ACCOUNT_FACTORY } from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import {
@@ -71,7 +77,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       transport: http(),
       validatorAddress: MEE_VALIDATOR_ADDRESS,
       factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [TEMP_MEE_ATTESTER_ADDR]
+      attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER]
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()

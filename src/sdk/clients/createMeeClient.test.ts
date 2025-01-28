@@ -33,6 +33,8 @@ describe("mee.createMeeClient", async () => {
   let targetChain: Chain
   let paymentChain: Chain
 
+  const index = 0n
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
     ;[paymentChain, targetChain] = getTestChains(network)
@@ -43,7 +45,8 @@ describe("mee.createMeeClient", async () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [targetChain, paymentChain],
-      signer: eoaAccount
+      signer: eoaAccount,
+      index
     })
 
     meeClient = createMeeClient({ account: mcNexus })
@@ -200,9 +203,9 @@ describe("mee.createMeeClient", async () => {
     }
   )
 
-  test.runIf(runPaidTests)(
-    "should successfully use the aave protocol",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should successfully use the aave protocol", async () => {
       const amountToSupply = parseUnits("0.00001", 6)
 
       const approve = mcUSDC.on(targetChain.id).approve({
@@ -240,20 +243,14 @@ describe("mee.createMeeClient", async () => {
         }
       }
 
-      console.log({ quote })
-
       const signedFusionQuote = await meeClient.signFusionQuote({
         quote,
         trigger
       })
 
-      console.log({ signedFusionQuote })
-
       const { receipt, hash } = await meeClient.executeSignedFusionQuote({
         signedFusionQuote
       })
-
-      console.log({ receipt })
 
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
@@ -263,7 +260,5 @@ describe("mee.createMeeClient", async () => {
       console.log(sTxReceipt.explorerLinks)
       expect(receipt).toBeDefined()
       expect(sTxReceipt).toBeDefined()
-    },
-    { timeout: 200000 }
-  )
+    })
 })

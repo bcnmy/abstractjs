@@ -99,7 +99,7 @@ export const initNetwork = async (
   type: TestFileNetworkType = "TESTNET_FROM_ENV_VARS"
 ): Promise<NetworkConfig> => {
   const privateKey = process.env.PRIVATE_KEY
-  const chainId_ = process.env.CHAIN_ID
+  const chainId_ = process.env.TESTNET_CHAIN_ID
   const mainnetChainId = process.env.MAINNET_CHAIN_ID
   const rpcUrl = process.env.RPC_URL //Optional, taken from chain (using chainId) if not provided
   const _bundlerUrl = process.env.BUNDLER_URL // Optional, taken from chain (using chainId) if not provided
@@ -109,7 +109,7 @@ export const initNetwork = async (
   let chain: Chain
 
   if (!privateKey) throw new Error("Missing env var PRIVATE_KEY")
-  if (!chainId) throw new Error("Missing env var CHAIN_ID")
+  if (!chainId) throw new Error("Missing env var TESTNET_CHAIN_ID")
   if (!paymasterUrl) console.log("Missing env var PAYMASTER_URL")
 
   try {

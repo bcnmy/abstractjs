@@ -10,7 +10,7 @@ import { biconomySponsoredPaymasterContext } from "../src/sdk/clients/createBico
 config()
 
 export const getConfig = () => {
-  const chainId = Number.parseInt(process.env.CHAIN_ID || "0")
+  const chainId = Number.parseInt(process.env.TESTNET_CHAIN_ID || "0")
   const chain = getChain(chainId)
   return {
     chain,

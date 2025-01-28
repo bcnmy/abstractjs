@@ -119,7 +119,8 @@
     "build:esm": "tsc --project ./tsconfig/tsconfig.esm.json && tsc-alias -p ./tsconfig/tsconfig.esm.json && echo > ./dist/_esm/package.json '{\"type\": \"module\",\"sideEffects\":false}'",
     "build:types": "tsc --project ./tsconfig/tsconfig.types.json && tsc-alias -p ./tsconfig/tsconfig.types.json",
     "fetch:deployment": "bun run ./scripts/fetch:deployment.ts && bun run lint --apply-unsafe",
-    "fetch:deployment:raw": "bun run ./scripts/fetch:deployment.ts"
+    "fetch:deployment:raw": "bun run ./scripts/fetch:deployment.ts",
+    "fund:nexus": "bun run ./scripts/fund:nexus.ts"
   },
   "sideEffects": false,
   "simple-git-hooks": {

@@ -2,6 +2,7 @@ import { erc20Abi } from "viem"
 import {
   arbitrum,
   avalanche,
+  baseSepolia,
   gnosis,
   mainnet,
   metis,
@@ -20,5 +21,13 @@ export const mcAUSDC = getMultichainContract<typeof erc20Abi>({
     ["0x724dc807b04555b71ed48a6896b6f41593b8c637", arbitrum.id],
     ["0x625e7708f30ca75bfd92586e17077590c60eb4cd", polygon.id],
     ["0x625e7708f30ca75bfd92586e17077590c60eb4cd", avalanche.id]
+  ]
+})
+
+export const testnetMcUSDC = getMultichainContract<typeof erc20Abi>({
+  abi: erc20Abi,
+  deployments: [
+    ["0x036CbD53842c5426634e7929541eC2318f3dCF7e", baseSepolia.id],
+    ["0x5fd84259d66Cd46123540766Be93DFE6D43130D7", optimism.id]
   ]
 })

@@ -53,8 +53,6 @@ export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,
   params: WaitForSupertransactionReceiptParams
 ): Promise<WaitForSupertransactionReceiptPayload> => {
-  console.log("waitForSupertransactionReceipt...", { params })
-
   const explorerResponse =
     await client.request<WaitForSupertransactionReceiptPayload>({
       path: `v1/explorer/${params.hash}`,
