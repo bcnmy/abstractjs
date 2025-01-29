@@ -1,5 +1,12 @@
 # @biconomy/abstractjs
 
+## 0.0.37
+
+### Patch Changes
+
+- MeeNode info validation
+- Ownables fix for moduleInitArgs
+
 ## 0.0.36
 
 ### Patch Changes

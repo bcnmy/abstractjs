@@ -164,14 +164,17 @@ export const toOwnableValidator = (
           client: client as PublicClient
         })
       } else {
-        const [_threshold, _owners] = decodeAbiParameters(
-          [
-            { name: "threshold", type: "uint256" },
-            { name: "owners", type: "address[]" }
-          ],
-          initData
-        )
-        threshold = Number(_threshold)
+        if (initData !== "0x") {
+          const [_threshold, _owners] = decodeAbiParameters(
+            [
+              { name: "threshold", type: "uint256" },
+              { name: "owners", type: "address[]" }
+            ],
+            initData
+          )
+          threshold = Number(_threshold)
+        }
+        threshold = Number(moduleInitArgs_.threshold)
       }
       return getOwnableValidatorMockSignature({ threshold })
     }
