@@ -14,6 +14,7 @@ import { toNetworks } from "../../test/testSetup"
 import { getBalance, killNetwork } from "../../test/testUtils"
 import type { NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
+import { BICONOMY_TOKEN_PAYMASTER } from "../account/utils/Constants"
 import {
   type BicoPaymasterClient,
   createBicoPaymasterClient,
@@ -23,7 +24,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./createSmartAccountClient"
-import { BICONOMY_TOKEN_PAYMASTER } from "../account/utils/Constants"
 
 // NB These tests require ERC20 tokens to be available on testnet, so they are mostly skipped
 describe("bico.paymaster", async () => {

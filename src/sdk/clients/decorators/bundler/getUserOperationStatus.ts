@@ -1,9 +1,9 @@
 import type { Account, Chain, Client, Hex, Transport } from "viem"
-import type { BicoRpcSchema } from "."
 import type {
   SmartAccount,
   UserOperationReceipt
 } from "viem/account-abstraction"
+import type { BicoRpcSchema } from "."
 
 export type GetUserOperationStatusParameters = {
   /** The hash of the User Operation. */

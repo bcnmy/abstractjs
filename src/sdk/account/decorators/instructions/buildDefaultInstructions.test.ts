@@ -33,7 +33,7 @@ describe("mee:buildDefaultInstructions", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should call the bridge with a unified balance", async () => {
@@ -42,16 +42,12 @@ describe("mee:buildDefaultInstructions", () => {
         account: mcNexus
       },
       {
-        instructions: [
+        chainId: targetChain.id,
+        calls: [
           {
-            chainId: targetChain.id,
-            calls: [
-              {
-                to: "0x0000000000000000000000000000000000000000",
-                gasLimit: 50000n,
-                value: 0n
-              }
-            ]
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
           }
         ]
       }

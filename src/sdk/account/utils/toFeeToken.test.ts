@@ -30,7 +30,7 @@ describe("mee.toFeeToken", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should get a fee token", () => {

@@ -32,7 +32,7 @@ describe("mee:buildBridgeInstructions", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should call the bridge with a unified balance", async () => {

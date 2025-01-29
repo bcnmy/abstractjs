@@ -1,13 +1,13 @@
 import { base, optimism } from "viem/chains"
-import {
-  getMultichainContract,
-  type MultichainContract
-} from "../../account/utils/getMultichainContract"
 import { polygon } from "viem/chains"
 import { arbitrum } from "viem/chains"
+import type { MultichainToken } from "../../account/utils/Types"
+import {
+  type MultichainContract,
+  getMultichainContract
+} from "../../account/utils/getMultichainContract"
 import { AaveV3PoolAbi } from "../abi/AaveV3Pool"
 import { mcAUSDC } from "../tokens"
-import type { MultichainToken } from "../../account/utils/Types"
 
 export const mcAaveV3Pool = getMultichainContract<typeof AaveV3PoolAbi>({
   abi: AaveV3PoolAbi,

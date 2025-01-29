@@ -32,7 +32,7 @@ describe("mee:queryBridge", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should query the bridge", async () => {

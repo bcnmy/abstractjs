@@ -1,19 +1,19 @@
 import type { Chain, Client, Prettify, Transport } from "viem"
+import type {
+  WaitForUserOperationReceiptParameters,
+  WaitForUserOperationReceiptReturnType
+} from "viem/account-abstraction"
 import {
   type BicoUserOperationGasPriceWithBigIntAsHex,
   type GetGasFeeValuesReturnType,
   getGasFeeValues
 } from "./getGasFeeValues"
 import {
-  getUserOperationStatus,
   type GetUserOperationStatusParameters,
-  type GetUserOperationStatusReturnType
+  type GetUserOperationStatusReturnType,
+  getUserOperationStatus
 } from "./getUserOperationStatus"
 import { waitForConfirmedUserOperationReceipt } from "./waitForConfirmedUserOperationReceipt"
-import type {
-  WaitForUserOperationReceiptParameters,
-  WaitForUserOperationReceiptReturnType
-} from "viem/account-abstraction"
 import { waitForUserOperationReceipt } from "./waitForUserOperationReceipt"
 
 export type BicoRpcSchema = [

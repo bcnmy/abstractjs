@@ -31,7 +31,7 @@ describe("mee:build", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should use the default option while building instructions", async () => {
@@ -40,18 +40,14 @@ describe("mee:build", () => {
       {
         type: "default",
         data: {
-          instructions: [
+          calls: [
             {
-              calls: [
-                {
-                  to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 50000n,
-                  value: 0n
-                }
-              ],
-              chainId: targetChain.id
+              to: "0x0000000000000000000000000000000000000000",
+              gasLimit: 50000n,
+              value: 0n
             }
-          ]
+          ],
+          chainId: targetChain.id
         }
       }
     )
@@ -91,18 +87,14 @@ describe("mee:build", () => {
       {
         type: "default",
         data: {
-          instructions: [
+          calls: [
             {
-              calls: [
-                {
-                  to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 50000n,
-                  value: 0n
-                }
-              ],
-              chainId: targetChain.id
+              to: "0x0000000000000000000000000000000000000000",
+              gasLimit: 50000n,
+              value: 0n
             }
-          ]
+          ],
+          chainId: targetChain.id
         }
       }
     )

@@ -1,8 +1,8 @@
 import type { Account, Chain, Client, Transport } from "viem"
 import {
-  waitForUserOperationReceipt as waitForUserOperationReceipt_,
+  type WaitForUserOperationReceiptParameters,
   type WaitForUserOperationReceiptReturnType,
-  type WaitForUserOperationReceiptParameters
+  waitForUserOperationReceipt as waitForUserOperationReceipt_
 } from "viem/account-abstraction"
 import { getAction } from "viem/utils"
 import type { BicoRpcSchema } from "."

@@ -1,24 +1,24 @@
 import dotenv from "dotenv"
-import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 import {
+  http,
   type Address,
   type Chain,
+  type Hex,
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
   erc20Abi,
   formatEther,
   formatUnits,
-  type Hex,
-  http,
   parseEther,
   parseUnits,
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { getChain } from "../src/sdk/account/utils/getChain"
-import { toMultichainNexusAccount, toNexusAccount } from "../src/sdk/account"
 import { base, optimism } from "viem/chains"
+import { toMultichainNexusAccount, toNexusAccount } from "../src/sdk/account"
+import { getChain } from "../src/sdk/account/utils/getChain"
+import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 
 dotenv.config()
 

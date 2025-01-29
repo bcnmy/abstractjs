@@ -1,34 +1,17 @@
+import type { BaseError, Chain, Client, Hex, Transport } from "viem"
 import {
-  type DeriveEntryPointVersion,
-  type DeriveSmartAccount,
-  type EntryPointVersion,
   type FormatUserOperationRequestErrorType,
-  type GetSmartAccountParameter,
-  type PaymasterActions,
   type PrepareUserOperationErrorType,
   type PrepareUserOperationParameters,
+  type SendUserOperationParameters,
   type SmartAccount,
   type UserOperation,
-  type UserOperationCalls,
-  type UserOperationRequest,
   formatUserOperationRequest,
   getUserOperationError,
   prepareUserOperation,
   toPackedUserOperation
 } from "viem/account-abstraction"
-
-import type {
-  Assign,
-  BaseError,
-  Chain,
-  Client,
-  Hex,
-  MaybeRequired,
-  Narrow,
-  OneOf,
-  Transport
-} from "viem"
-import { type Address, parseAccount } from "viem/accounts"
+import { parseAccount } from "viem/accounts"
 import { type RequestErrorType, getAction } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import { parseRequestArguments } from "../../../account/utils/Utils"
@@ -36,50 +19,7 @@ import { deepHexlify } from "../../../account/utils/deepHexlify"
 import { getAAError } from "../../../account/utils/getAAError"
 import { tenderlySimulation } from "../../../account/utils/tenderlySimulation"
 import type { AnyData } from "../../../modules/utils/Types"
-export type DebugUserOperationParameters<
-  account extends SmartAccount | undefined = SmartAccount | undefined,
-  accountOverride extends SmartAccount | undefined = SmartAccount | undefined,
-  calls extends readonly unknown[] = readonly unknown[],
-  //
-  _derivedAccount extends SmartAccount | undefined = DeriveSmartAccount<
-    account,
-    accountOverride
-  >,
-  _derivedVersion extends
-    EntryPointVersion = DeriveEntryPointVersion<_derivedAccount>
-> = GetSmartAccountParameter<account, accountOverride, false> &
-  (
-    | UserOperation // Accept a full-formed User Operation.
-    | Assign<
-        // Accept a partially-formed User Operation (UserOperationRequest) to be filled.
-        UserOperationRequest<_derivedVersion>,
-        OneOf<
-          { calls: UserOperationCalls<Narrow<calls>> } | { callData: Hex }
-        > & {
-          paymaster?:
-            | Address
-            | true
-            | {
-                /** Retrieves paymaster-related User Operation properties to be used for sending the User Operation. */
-                getPaymasterData?:
-                  | PaymasterActions["getPaymasterData"]
-                  | undefined
-                /** Retrieves paymaster-related User Operation properties to be used for gas estimation. */
-                getPaymasterStubData?:
-                  | PaymasterActions["getPaymasterStubData"]
-                  | undefined
-              }
-            | undefined
-          /** Paymaster context to pass to `getPaymasterData` and `getPaymasterStubData` calls. */
-          paymasterContext?: unknown | undefined
-        }
-      >
-  ) &
-  // Allow the EntryPoint address to be overridden, if no Account is provided, it will need to be required.
-  MaybeRequired<
-    { entryPointAddress?: Address },
-    _derivedAccount extends undefined ? true : false
-  >
+export type DebugUserOperationParameters = SendUserOperationParameters
 export type DebugUserOperationReturnType = Hex
 
 export type DebugUserOperationErrorType =
@@ -115,12 +55,10 @@ export type DebugUserOperationErrorType =
  * })
  */
 export async function debugUserOperation<
-  const calls extends readonly unknown[],
-  account extends SmartAccount | undefined,
-  accountOverride extends SmartAccount | undefined = undefined
+  account extends SmartAccount | undefined
 >(
   client: Client<Transport, Chain | undefined, account>,
-  parameters: DebugUserOperationParameters<account, accountOverride, calls>
+  parameters: DebugUserOperationParameters
 ) {
   const chainId = Number(client.account?.client?.chain?.id?.toString() ?? 84532)
 

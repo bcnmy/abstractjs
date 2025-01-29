@@ -1,9 +1,9 @@
 import {
-  isHex,
-  zeroAddress,
   type Chain,
   type Hex,
-  type LocalAccount
+  type LocalAccount,
+  isHex,
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
@@ -12,12 +12,12 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { toFeeToken } from "../../../account/utils/toFeeToken"
+import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeSignedFusionQuote from "./executeSignedFusionQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 import { signFusionQuote } from "./signFusionQuote"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
-import { mcUSDC } from "../../../constants/tokens"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
@@ -46,7 +46,7 @@ describe.runIf(runPaidTests).skip("mee.signFusionQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should execute a quote using executeSignedFusionQuote", async () => {

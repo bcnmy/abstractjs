@@ -1,4 +1,4 @@
-import { type Hex, http, type Chain } from "viem"
+import { http, type Chain, type Hex } from "viem"
 import type { Instruction } from "../clients/decorators/mee/getQuote"
 import {
   BICONOMY_EXPERIMENTAL_ATTESTER,
@@ -8,8 +8,8 @@ import {
 } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
-  toNexusAccount,
-  type ToNexusSmartAccountParameters
+  type ToNexusSmartAccountParameters,
+  toNexusAccount
 } from "./toNexusAccount"
 import type { Signer } from "./utils/toSigner"
 

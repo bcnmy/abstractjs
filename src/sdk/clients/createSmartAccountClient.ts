@@ -38,12 +38,12 @@ import type {
 } from "../modules/utils/Types"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import type { PaymasterContext } from "./createBicoPaymasterClient"
+import type { BicoActions } from "./decorators/bundler"
 import { type Erc7579Actions, erc7579Actions } from "./decorators/erc7579"
 import {
   type SmartAccountActions,
   smartAccountActions
 } from "./decorators/smartAccount"
-import type { BicoActions } from "./decorators/bundler"
 
 /**
  * Nexus Client type

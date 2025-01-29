@@ -18,8 +18,8 @@ import {
 import { biconomySponsoredPaymasterContext } from "./createBicoPaymasterClient"
 import {
   type BicoActions,
-  bicoBundlerActions,
-  type BicoRpcSchema
+  type BicoRpcSchema,
+  bicoBundlerActions
 } from "./decorators/bundler"
 import type { GetGasFeeValuesReturnType } from "./decorators/bundler/getGasFeeValues"
 

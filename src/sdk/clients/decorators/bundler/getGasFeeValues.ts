@@ -1,6 +1,6 @@
 import type { Account, Chain, Client, Hex, Transport } from "viem"
-import type { NexusAccount } from "../../../account/toNexusAccount"
 import type { BicoRpcSchema } from "."
+import type { NexusAccount } from "../../../account/toNexusAccount"
 
 export type BicoUserOperationGasPriceWithBigIntAsHex = {
   slow: {

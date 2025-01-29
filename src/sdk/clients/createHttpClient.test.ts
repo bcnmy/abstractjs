@@ -29,7 +29,7 @@ describe("mee.createHttpClient", async () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should instantiate a client", async () => {

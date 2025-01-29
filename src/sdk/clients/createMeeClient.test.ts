@@ -49,11 +49,11 @@ describe("mee.createMeeClient", async () => {
       index
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should get a quote", async () => {
-    const meeClient = createMeeClient({ account: mcNexus })
+    const meeClient = await createMeeClient({ account: mcNexus })
 
     const quote = await meeClient.getQuote({ instructions: [], feeToken })
 
@@ -132,18 +132,8 @@ describe("mee.createMeeClient", async () => {
       {
         type: "default",
         data: {
-          instructions: [
-            {
-              calls: [
-                {
-                  to: zeroAddress,
-                  gasLimit: 50000n,
-                  value: 0n
-                }
-              ],
-              chainId: targetChain.id
-            }
-          ]
+          calls: [{ to: zeroAddress, value: 0n }],
+          chainId: targetChain.id
         }
       },
       currentInstructions
@@ -179,12 +169,8 @@ describe("mee.createMeeClient", async () => {
           mcNexus.build({
             type: "default",
             data: {
-              instructions: [
-                {
-                  calls: [{ to: zeroAddress, gasLimit: 50000n, value: 0n }],
-                  chainId: targetChain.id
-                }
-              ]
+              calls: [{ to: zeroAddress, value: 0n }],
+              chainId: targetChain.id
             }
           })
         ],
@@ -203,17 +189,16 @@ describe("mee.createMeeClient", async () => {
     }
   )
 
-  test
-    .runIf(runPaidTests)
-    .skip("should successfully use the aave protocol", async () => {
+  test.runIf(runPaidTests)(
+    "should successfully use the aave protocol",
+    async () => {
       const amountToSupply = parseUnits("0.00001", 6)
 
       const approve = mcUSDC.on(targetChain.id).approve({
         args: [
           aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
           amountToSupply // amount approved
-        ],
-        gasLimit: 150_000n
+        ]
       })
 
       const supply = aave.pool.on(targetChain.id).supply({
@@ -222,9 +207,10 @@ describe("mee.createMeeClient", async () => {
           amountToSupply,
           mcNexus.signer.address,
           0
-        ],
-        gasLimit: 150_000n
+        ]
       })
+
+      console.time("execute:fusionReceiptTimer")
 
       const quote = await meeClient.getQuote({
         instructions: [approve, supply],
@@ -255,10 +241,12 @@ describe("mee.createMeeClient", async () => {
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
+      console.timeEnd("execute:fusionReceiptTimer")
 
       console.log(receipt.status)
       console.log(sTxReceipt.explorerLinks)
       expect(receipt).toBeDefined()
       expect(sTxReceipt).toBeDefined()
-    })
+    }
+  )
 })

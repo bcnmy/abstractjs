@@ -1,5 +1,6 @@
 import type { Address, Hex, OneOf } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 /**
@@ -8,8 +9,8 @@ import type { BaseMeeClient } from "../../createMeeClient"
 export type AbstractCall = {
   /** Address of the contract to call */
   to: Address
-  /** Gas limit for the call execution */
-  gasLimit: bigint
+  /** Gas limit for the call execution. This defaults to 500_000n. Overestimated gas will be refunded. */
+  gasLimit?: bigint
 } & OneOf<
   | { value: bigint; data?: Hex }
   | { value?: bigint; data: Hex }
@@ -216,13 +217,38 @@ export const getQuote = async (
     )
   ).flat()
 
-  const validUserOps = resolvedInstructions.every((userOp) =>
-    account_.deploymentOn(userOp.chainId)
-  )
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
-  if (!validPaymentAccount || !validUserOps) {
-    console.log(resolvedInstructions.map((x) => x.chainId))
-    throw Error("Account is not deployed on necessary chain(s)")
+
+  const validFeeToken =
+    validPaymentAccount &&
+    client.info.supported_gas_tokens
+      .map(({ chainId }) => +chainId)
+      .includes(feeToken.chainId)
+
+  const validUserOps = resolvedInstructions.every(
+    (userOp) =>
+      account_.deploymentOn(userOp.chainId) &&
+      client.info.supported_chains
+        .map(({ chainId }) => +chainId)
+        .includes(userOp.chainId)
+  )
+
+  if (!validFeeToken) {
+    throw Error(
+      `Fee token ${feeToken.address} is not supported on this chain: ${feeToken.chainId}`
+    )
+  }
+  if (!validPaymentAccount) {
+    throw Error(
+      `Account is not deployed on necessary chain(s) ${feeToken.chainId}`
+    )
+  }
+  if (!validUserOps) {
+    throw Error(
+      `User operation chain(s) not supported by the node: ${resolvedInstructions
+        .map((x) => x.chainId)
+        .join(", ")}`
+    )
   }
 
   const userOpResults = await Promise.all(
@@ -236,7 +262,7 @@ export const getQuote = async (
           deployment.getInitCode(),
           deployment.address,
           userOp.calls
-            .map((tx) => tx.gasLimit)
+            .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
             .reduce((curr, acc) => curr + acc)
             .toString(),
           userOp.chainId.toString()

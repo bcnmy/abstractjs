@@ -32,7 +32,7 @@ describe("mee.getQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should resolve instructions", async () => {
@@ -84,18 +84,14 @@ describe("mee.getQuote", () => {
         mcNexus.build({
           type: "default",
           data: {
-            instructions: [
+            calls: [
               {
-                calls: [
-                  {
-                    to: "0x0000000000000000000000000000000000000000",
-                    gasLimit: 50000n,
-                    value: 0n
-                  }
-                ],
-                chainId: targetChain.id
+                to: "0x0000000000000000000000000000000000000000",
+                gasLimit: 50000n,
+                value: 0n
               }
-            ]
+            ],
+            chainId: targetChain.id
           }
         })
       ],

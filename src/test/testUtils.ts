@@ -7,14 +7,14 @@ import {
   type Address,
   type Chain,
   type Hex,
+  type LocalAccount,
   createPublicClient,
   createTestClient,
   createWalletClient,
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress,
-  type LocalAccount
+  zeroAddress
 } from "viem"
 import { createBundlerClient } from "viem/account-abstraction"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
@@ -34,9 +34,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../sdk/clients/createSmartAccountClient"
+import type { AnyData } from "../sdk/modules/utils/Types"
 import * as hardhatExec from "./executables"
 import type { TestFileNetworkType } from "./testSetup"
-import type { AnyData } from "../sdk/modules/utils/Types"
 
 config()
 

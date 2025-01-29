@@ -61,6 +61,8 @@ describe("account.getNexusAddress", () => {
       signerAddress: eoaAccount.address
     })
 
-    expect(meeAddress).toMatchInlineSnapshot(`"0x1968a6Ab4a542EB22e7452AC25381AE6c0f07826"`)
+    expect(meeAddress).toMatchInlineSnapshot(
+      `"0x1968a6Ab4a542EB22e7452AC25381AE6c0f07826"`
+    )
   })
 })

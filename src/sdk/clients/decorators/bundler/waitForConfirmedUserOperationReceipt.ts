@@ -4,12 +4,12 @@ import type {
   UserOperationReceipt
 } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
+import type { BicoRpcSchema } from "."
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import {
-  getUserOperationStatus,
-  type GetUserOperationStatusParameters
+  type GetUserOperationStatusParameters,
+  getUserOperationStatus
 } from "./getUserOperationStatus"
-import type { BicoRpcSchema } from "."
 
 export async function waitForConfirmedUserOperationReceipt<
   TAccount extends SmartAccount | undefined

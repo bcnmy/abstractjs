@@ -1,13 +1,16 @@
-import { isHex, type Hex } from "viem"
+import { type Hex, isHex } from "viem"
+import { getAction } from "viem/utils"
 import {
   getExplorerTxLink,
   getJiffyScanLink,
   getMeeScanLink
 } from "../../../account/utils/explorer"
+import type { AnyData } from "../../../modules/utils/Types"
 import type { Url } from "../../createHttpClient"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
-import { getAction } from "viem/utils"
+
+export const DEFAULT_POLLING_INTERVAL = 1000
 
 /**
  * Parameters required for requesting a quote from the MEE service
@@ -23,7 +26,7 @@ export type WaitForSupertransactionReceiptParams = {
  * @type UserOpStatus
  */
 type UserOpStatus = {
-  executionStatus: "SUCCESS" | "PENDING"
+  executionStatus: "SUCCESS" | "PENDING" | "ERROR"
   executionData: Hex
   executionError: string
 }
@@ -53,6 +56,8 @@ export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,
   params: WaitForSupertransactionReceiptParams
 ): Promise<WaitForSupertransactionReceiptPayload> => {
+  const pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
+
   const explorerResponse =
     await client.request<WaitForSupertransactionReceiptPayload>({
       path: `v1/explorer/${params.hash}`,
@@ -66,26 +71,27 @@ export const waitForSupertransactionReceipt = async (
     ({ executionData }) => !!executionData && !isHex(executionData)
   )
 
-  if (userOpError || errorFromExecutionData) {
+  const statuses = explorerResponse.userOps.map(
+    (userOp) => userOp.executionStatus
+  )
+  const statusError = statuses.some((status) => status === "ERROR")
+
+  if (userOpError || errorFromExecutionData || statusError) {
     throw new Error(
       [
         userOpError?.chainId,
-        userOpError?.executionError || errorFromExecutionData?.executionData
+        userOpError?.executionError ||
+          errorFromExecutionData?.executionData ||
+          "Unknown error"
       ].join(" - ")
     )
   }
 
-  const statuses = explorerResponse.userOps.map(
-    (userOp) => userOp.executionStatus
-  )
-
   const statusPending = statuses.some((status) => status === "PENDING")
   if (statusPending) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, client.pollingInterval ?? 1000)
-    )
+    await new Promise((resolve) => setTimeout(resolve, pollingInterval))
     return await getAction(
-      client as any,
+      client as AnyData,
       waitForSupertransactionReceipt,
       "waitForSupertransactionReceipt"
     )(params)

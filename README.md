@@ -41,7 +41,7 @@ const mcNexus = await toMultichainNexusAccount({
   chains: [base, optimism],
   signer: eoaAccount
 })
-const meeClient = createMeeClient({ account: mcNexus })
+const meeClient = await createMeeClient({ account: mcNexus })
 
 const quote = await meeClient.getQuote({
   instructions: [{

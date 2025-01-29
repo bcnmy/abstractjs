@@ -20,6 +20,8 @@ import type {
   Instruction
 } from "../../clients/decorators/mee/getQuote"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
+
+export const LARGE_DEFAULT_GAS_LIMIT = 500_000n
 /**
  * Contract instance capable of encoding transactions across multiple chains
  * @template TAbi - The contract ABI type
@@ -59,7 +61,7 @@ export type ChainSpecificContract<TAbi extends Abi> = {
     args: AbiParametersToPrimitiveTypes<
       ExtractAbiFunction<TAbi, TFunctionName>["inputs"]
     >
-    gasLimit: bigint
+    gasLimit?: bigint
     value?: bigint
   }) => Instruction
 }
@@ -77,12 +79,12 @@ function createChainSpecificContract<TAbi extends Abi>(
 
       return ({
         args,
-        gasLimit,
+        gasLimit = LARGE_DEFAULT_GAS_LIMIT,
         value = 0n
       }: {
         // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         args: any[] // This will be typed by the ChainSpecificContract type
-        gasLimit: bigint
+        gasLimit?: bigint
         value?: bigint
       }) => {
         const params: EncodeFunctionDataParameters = {

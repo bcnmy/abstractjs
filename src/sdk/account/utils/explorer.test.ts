@@ -29,7 +29,7 @@ describe("mee.explorer", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should get a meescan url", () => {

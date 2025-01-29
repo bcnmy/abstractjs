@@ -35,7 +35,7 @@ describe("mee.executeSignedQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should execute a quote using executeSignedQuote", async () => {

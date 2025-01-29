@@ -1,6 +1,6 @@
 import type { Prettify } from "viem"
-import type { AnyData } from "../modules"
 import { parseErrorMessage } from "../account/utils/parseErrorMessage"
+import type { AnyData } from "../modules"
 
 /**
  * Parameters for initializing a Http client
@@ -65,7 +65,7 @@ export const createHttpClient = (url: Url): HttpClient => {
       ...(body ? { body: JSON.stringify(body) } : {})
     })
 
-    const json = (await result.json()) as any
+    const json = (await result.json()) as AnyData
 
     if (!result.ok) {
       console.log({ json })

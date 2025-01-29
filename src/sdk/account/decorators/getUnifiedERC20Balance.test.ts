@@ -31,7 +31,7 @@ describe("mee:getUnifiedERC20Balance", () => {
       signer: eoaAccount
     })
 
-    meeClient = createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should aggregate balances across chains correctly", async () => {

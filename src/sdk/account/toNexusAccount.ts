@@ -44,14 +44,14 @@ import {
 } from "viem/account-abstraction"
 
 import {
+  BICONOMY_ATTESTER_ADDRESS,
   ENTRY_POINT_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
+  MEE_VALIDATOR_ADDRESSES,
   NEXUS_BOOTSTRAP_ADDRESS,
   REGISTRY_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS,
-  BICONOMY_ATTESTER_ADDRESS,
-  MEE_VALIDATOR_ADDRESSES
+  RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
@@ -164,6 +164,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     publicClient: PublicClient
     walletClient: WalletClient
     useTestBundler: boolean
+    chain: Chain
   }
 >
 
@@ -611,7 +612,8 @@ export const toNexusAccount = async (
       walletClient,
       publicClient,
       attesters: attesters_,
-      useTestBundler
+      useTestBundler,
+      chain
     }
   })
 }

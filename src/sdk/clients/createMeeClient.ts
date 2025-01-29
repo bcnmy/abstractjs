@@ -2,7 +2,7 @@ import type { Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
 import { inProduction } from "../account/utils/Utils"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
-import { meeActions } from "./decorators/mee"
+import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
 /**
  * Default URL for the MEE node service
@@ -25,12 +25,13 @@ export type BaseMeeClient = Prettify<
   HttpClient & {
     pollingInterval: number
     account: MultichainSmartAccount
+    info: GetInfoPayload
   }
 >
 
-export type MeeClient = ReturnType<typeof createMeeClient>
+export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 
-export const createMeeClient = (params: CreateMeeClientParams) => {
+export const createMeeClient = async (params: CreateMeeClientParams) => {
   inProduction() &&
     console.warn(`
 --------------------------- READ ----------------------------------------------
@@ -40,10 +41,24 @@ export const createMeeClient = (params: CreateMeeClientParams) => {
 -------------------------------------------------------------------------------`)
   const { url = DEFAULT_MEE_NODE_URL, pollingInterval = 1000, account } = params
   const httpClient = createHttpClient(url)
+  const info = await getInfo(httpClient)
   const baseMeeClient = Object.assign(httpClient, {
     pollingInterval,
-    account
+    account,
+    info
   })
+
+  // Check if the account is supported by the MEE node. Throws if not.
+  const supportedChains = info.supported_chains.map(({ chainId }) =>
+    Number(chainId)
+  )
+  const supported = account.deployments.every(({ chain }) =>
+    supportedChains.includes(chain.id)
+  )
+
+  if (!supported) {
+    throw new Error("Account is not supported by the MEE node")
+  }
 
   return baseMeeClient.extend(meeActions)
 }
