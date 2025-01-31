@@ -68,10 +68,10 @@ export type WalletProvider =
 export type GetQuoteParams = SupertransactionLike & {
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
   account?: MultichainSmartAccount
-  /** Permit mode. Only available for certain tokens */
-  permitMode?: boolean
   /** Wallet provider to be used for the transaction. Defaults to BICO_V2 */
   walletProvider?: WalletProvider
+  /** Permit mode. Only available for certain tokens */
+  permitMode?: boolean
 }
 
 /**
@@ -338,10 +338,7 @@ export const getQuote = async (
   const quoteRequest: QuoteRequest = { userOps, paymentInfo, walletProvider }
   const path = permitMode ? "v1/quote-permit" : "v1/quote"
 
-  return await client.request<GetQuotePayload>({
-    path,
-    body: quoteRequest
-  })
+  return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 
 export default getQuote

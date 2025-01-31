@@ -1,4 +1,4 @@
-export const AaveV3PoolAbi = [
+export const AavePoolAbi = [
   {
     inputs: [
       {

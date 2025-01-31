@@ -31,7 +31,10 @@ describe("mee.executeQuote", () => {
     ;[paymentChain, targetChain] = getTestChains(network)
 
     eoaAccount = network.account!
-    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],

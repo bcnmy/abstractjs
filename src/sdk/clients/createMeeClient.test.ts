@@ -1,8 +1,6 @@
 import {
   type Chain,
   type LocalAccount,
-  encodeFunctionData,
-  erc20Abi,
   isHex,
   parseUnits,
   zeroAddress
@@ -15,12 +13,11 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
-import { toFeeToken } from "../account/utils"
 import { aave } from "../constants/protocols"
 import { mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
+import type { SignFusionQuoteParams } from "./decorators/mee"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
-import type { SignFusionQuoteParams } from "./decorators/mee/signFusionQuote"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -42,7 +39,10 @@ describe("mee.createMeeClient", async () => {
 
     eoaAccount = network.account!
 
-    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [targetChain, paymentChain],
@@ -138,7 +138,6 @@ describe("mee.createMeeClient", async () => {
     async () => {
       // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
       // including 'build'. They all are resolved in the 'getQuote' method under the hood.
-
       const currentInstructions = await meeClient.account.build({
         type: "intent",
         data: {
@@ -239,34 +238,18 @@ describe("mee.createMeeClient", async () => {
       })
 
       const trigger: SignFusionQuoteParams["trigger"] = {
-        chain: targetChain,
-        call: {
-          to: mcUSDC.addressOn(targetChain.id),
-          data: encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "transfer",
-            args: [mcNexus.addressOn(targetChain.id, true), amountToSupply]
-          })
-        }
+        chainId: targetChain.id,
+        address: mcUSDC.addressOn(targetChain.id),
+        amount: amountToSupply
       }
 
-      const signedFusionQuote = await meeClient.signFusionQuote({
-        quote,
-        trigger
-      })
-
-      const { receipt, hash } = await meeClient.executeSignedFusionQuote({
-        signedFusionQuote
-      })
-
+      const signedQuote = await meeClient.signQuoteOnChain({ quote, trigger })
+      const { hash } = await meeClient.executeSignedQuote({ signedQuote })
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
       console.timeEnd("execute:fusionReceiptTimer")
-
-      console.log(receipt.status)
       console.log(sTxReceipt.explorerLinks)
-      expect(receipt).toBeDefined()
       expect(sTxReceipt).toBeDefined()
     }
   )

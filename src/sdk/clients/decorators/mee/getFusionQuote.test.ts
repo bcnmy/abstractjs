@@ -7,10 +7,10 @@ import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAcco
 import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import getPermitQuote from "./getPermitQuote"
+import getFusionQuote from "./getFusionQuote"
 import type { FeeTokenInfo } from "./getQuote"
 
-describe("mee.getPermitQuote", () => {
+describe("mee.getFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -26,7 +26,10 @@ describe("mee.getPermitQuote", () => {
     ;[paymentChain, targetChain] = getTestChains(network)
 
     eoaAccount = network.account!
-    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
@@ -36,8 +39,8 @@ describe("mee.getPermitQuote", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  test("should get a permit quote", async () => {
-    const quote = await getPermitQuote(meeClient, {
+  test("should get a fusion quote", async () => {
+    const quote = await getFusionQuote(meeClient, {
       instructions: [
         mcNexus.build({
           type: "default",

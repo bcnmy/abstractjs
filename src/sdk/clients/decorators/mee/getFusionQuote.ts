@@ -1,15 +1,18 @@
+import { addressEquals } from "../../../account"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 
-export type GetPermitQuotePayload = GetQuotePayload
-export type GetPermitQuoteParams = Omit<
-  GetQuoteParams,
-  "permitMode" | "walletProvider"
->
+export type GetFusionQuotePayload = GetQuotePayload
+export type GetFusionQuoteParams = GetQuoteParams
+
+const PERMIT_PARAMS: Partial<GetQuoteParams> = {
+  permitMode: true,
+  walletProvider: "BICO_V2_EOA"
+}
 
 /**
- * Get a permit quote from the MEE service
+ * Get a fusion quote from the MEE service
  * @param client - The base MEE client
  * @param params - The parameters for the quote request
  * @returns The quote payload
@@ -17,7 +20,7 @@ export type GetPermitQuoteParams = Omit<
  *
  * @example
  * ```ts
- * const quote = await getPermitQuote(meeClient, {
+ * const quote = await getFusionQuote(meeClient, {
  *   instructions: [
  *     mcNexus.build({
  *       type: "default",
@@ -33,14 +36,16 @@ export type GetPermitQuoteParams = Omit<
  * })
  * ```
  */
-export const getPermitQuote = async (
+export const getFusionQuote = async (
   client: BaseMeeClient,
-  params: GetPermitQuoteParams
-): Promise<GetPermitQuotePayload> =>
-  await getQuote(client, {
-    ...params,
-    permitMode: true,
-    walletProvider: "BICO_V2_EOA"
-  })
+  params: GetFusionQuoteParams
+): Promise<GetFusionQuotePayload> => {
+  const { permitMode = true, ...rest } = params
 
-export default getPermitQuote
+  return await getQuote(client, {
+    ...(permitMode ? PERMIT_PARAMS : {}),
+    ...rest
+  })
+}
+
+export default getFusionQuote

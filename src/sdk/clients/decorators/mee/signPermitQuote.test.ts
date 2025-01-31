@@ -9,7 +9,7 @@ import {
   zeroAddress
 } from "viem"
 import { optimism } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
@@ -21,8 +21,8 @@ import { PERMIT_TYPEHASH, TokenWithPermitAbi } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
-import { getPermitQuote } from "./getPermitQuote"
-import type { FeeTokenInfo, Instruction } from "./getQuote"
+import getFusionQuote from "./getFusionQuote"
+import type { FeeTokenInfo } from "./getQuote"
 import { signPermitQuote } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
@@ -42,7 +42,10 @@ describe("mee.signPermitQuote", () => {
     ;[paymentChain, targetChain] = getTestChains(network)
 
     eoaAccount = network.account!
-    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
@@ -75,7 +78,7 @@ describe("mee.signPermitQuote", () => {
   })
 
   test("should sign a quote using signPermitQuote", async () => {
-    const quote = await getPermitQuote(meeClient, {
+    const quote = await getFusionQuote(meeClient, {
       instructions: [
         meeClient.account.build({
           type: "default",
@@ -98,11 +101,11 @@ describe("mee.signPermitQuote", () => {
     console.log(JSON.stringify(signedPermitQuote, null, 2))
   })
 
-  test("should execute a signed permit quote", async () => {
+  test("should execute a signed fusion quote", async () => {
     console.time("permitQuote:getQuote")
     console.time("permitQuote:getHash")
     console.time("permitQuote:receipt")
-    const quote = await getPermitQuote(meeClient, {
+    const quote = await getFusionQuote(meeClient, {
       instructions: [
         meeClient.account.build({
           type: "default",
@@ -121,11 +124,8 @@ describe("mee.signPermitQuote", () => {
     })
 
     console.timeEnd("permitQuote:getQuote")
-    const signedPermitQuote = await signPermitQuote(meeClient, { quote })
-
-    const { hash } = await executeSignedQuote(meeClient, {
-      signedQuote: signedPermitQuote
-    })
+    const signedQuote = await signPermitQuote(meeClient, { quote })
+    const { hash } = await executeSignedQuote(meeClient, { signedQuote })
     console.timeEnd("permitQuote:getHash")
     const receipt = await waitForSupertransactionReceipt(meeClient, {
       hash

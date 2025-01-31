@@ -1,3 +1,5 @@
+import type { AnyData } from "../../modules/utils/Types"
+
 export const parseErrorMessage = (error: unknown): string => {
   let resultString = String(error)
 
@@ -16,13 +18,13 @@ export const parseErrorMessage = (error: unknown): string => {
       resultString = message
     }
 
-    const errorObj = error as any
+    const errorObj = error as AnyData
     // Check for errors array first
     if (Array.isArray(errorObj.errors) && errorObj.errors.length > 0) {
       // Handle array of error objects with msg and path properties
       if (typeof errorObj.errors[0] === "object" && errorObj.errors[0].msg) {
         return errorObj.errors
-          .map(({ msg, path }) => `${path}: ${msg}`)
+          .map(({ msg, path }: AnyData) => `${path}: ${msg}`)
           .join("\n")
       }
 

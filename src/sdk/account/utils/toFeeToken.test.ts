@@ -34,7 +34,10 @@ describe("mee.toFeeToken", () => {
   })
 
   test("should get a fee token", () => {
-    const feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    const feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
 
     expect(feeToken.address).toBe(mcUSDC.addressOn(paymentChain.id))
     expect(feeToken.chainId).toBe(paymentChain.id)

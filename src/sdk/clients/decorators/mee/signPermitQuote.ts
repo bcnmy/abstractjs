@@ -1,6 +1,7 @@
 import {
   type Address,
   type Hex,
+  type PartialBy,
   concatHex,
   encodeAbiParameters,
   getAddress,
@@ -11,32 +12,27 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
-import type { GetPermitQuotePayload } from "./getPermitQuote"
-import { type MeeExecutionMode, PREFIX } from "./signQuote"
+import type { GetFusionQuotePayload } from "./getFusionQuote"
 
-/**
- * Parameters required for requesting a quote from the MEE service
- * @interface SignPermitQuoteParams
- */
-export type SignPermitQuoteParams = {
-  /** The quote to sign */
-  quote: GetPermitQuotePayload
-  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
-  account?: MultichainSmartAccount
-  /** The execution mode to use. Defaults to "direct-to-mee" */
-  executionMode?: MeeExecutionMode
-  /** The off-chain transaction to use as the trigger. This will default to information from the quote's paymentInfo */
-  trigger?: {
-    /** The address of the token to use on the relevant chain */
-    address: Address
-    /** The chainId to use */
-    chainId: number
-    /** Amount of the token to use */
-    amount: bigint
-  }
+export type Trigger = {
+  /** The address of the token to use on the relevant chain */
+  address: Address
+  /** The chainId to use */
+  chainId: number
+  /** Amount of the token to use */
+  amount: bigint
 }
 
-export type SignPermitQuotePayload = GetPermitQuotePayload & {
+export type SignFusionQuoteParams = {
+  /** The quote to sign */
+  quote: GetFusionQuotePayload
+  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
+  account?: MultichainSmartAccount
+  /** The off-chain transaction to use as the trigger. This will default to information from the quote's paymentInfo */
+  trigger: Trigger
+}
+
+export type SignPermitQuotePayload = GetFusionQuotePayload & {
   /** The signature of the quote */
   signature: Hex
 }
@@ -54,14 +50,9 @@ export type SignPermitQuotePayload = GetPermitQuotePayload & {
  */
 export const signPermitQuote = async (
   client: BaseMeeClient,
-  parameters: SignPermitQuoteParams
+  parameters: PartialBy<SignFusionQuoteParams, "trigger">
 ): Promise<SignPermitQuotePayload> => {
-  const {
-    account: account_ = client.account,
-    quote,
-    executionMode = "fusion-with-erc20permit",
-    trigger
-  } = parameters
+  const { account: account_ = client.account, quote, trigger } = parameters
 
   const {
     chainId = Number(quote.paymentInfo.chainId),
@@ -73,11 +64,6 @@ export const signPermitQuote = async (
   const { walletClient } = account_.deploymentOn(chainId, true)
   const owner = signer.address
   const spender = quote.paymentInfo.sender
-
-  // If the data field is empty, a prefix must be added in order for the
-  // chain not to reject the transaction. This is done in cases when the
-  // user is using the transfer of native gas to the SCA as the trigger
-  // transaction
 
   const token = getContract({
     abi: TokenWithPermitAbi,
@@ -114,7 +100,7 @@ export const signPermitQuote = async (
       spender: spender,
       value: amount,
       nonce,
-      // this validates the itx
+      // this validates the stx
       deadline: BigInt(quote.hash)
     },
     account: walletClient.account!
@@ -151,7 +137,7 @@ export const signPermitQuote = async (
 
   return {
     ...quote,
-    signature: concatHex([PREFIX[executionMode], encodedSignature])
+    signature: concatHex(["0x02", encodedSignature])
   }
 }
 

@@ -1,4 +1,7 @@
+import type { Address } from "viem"
+import { addressEquals } from "../../../account/utils/Utils"
 import type { HttpClient } from "../../createHttpClient"
+import type { WalletProvider } from "./getQuote"
 
 /**
  * Response payload for the getInfo endpoint
@@ -43,7 +46,7 @@ export interface PaymentToken {
   /** Token name */
   name: string
   /** Token contract address */
-  address: string
+  address: Address
   /** Token symbol */
   symbol: string
   /** Number of decimal places for the token */
@@ -57,7 +60,7 @@ export interface PaymentToken {
  */
 export interface SupportedWalletProvider {
   /** Wallet provider identifier */
-  walletProvider: string
+  walletProvider: WalletProvider
   /** List of chain IDs supported by this wallet provider */
   supportedChains: string[]
   /** Whether EOA (Externally Owned Account) is enabled */
@@ -76,5 +79,55 @@ export const getInfo = async (client: HttpClient): Promise<GetInfoPayload> =>
     path: "info",
     method: "GET"
   })
+
+type GetGasTokenByChainIdParams = {
+  /** The info payload to use */
+  info: GetInfoPayload
+  /** The chainId to use */
+  targetChainId: number
+}
+/**
+ * @internal
+ */
+export const getGasTokenByChainId = ({
+  info,
+  targetChainId
+}: GetGasTokenByChainIdParams) => {
+  const gasToken = info.supported_gas_tokens.find(
+    (gasToken) => Number(gasToken.chainId) === targetChainId
+  )
+  if (!gasToken) {
+    throw new Error(`Gas token not found for chain ${targetChainId}`)
+  }
+  return gasToken
+}
+type GetPaymentTokenByChainIdParams = {
+  /** The info payload to use */
+  info: GetInfoPayload
+  targetTokenData: {
+    /** The chainId to use */
+    chainId: number
+    /** The address of the payment token to use */
+    address: Address
+  }
+}
+/**
+ * @internal
+ */
+export const getPaymentTokenByChainId = ({
+  info,
+  targetTokenData: { chainId, address }
+}: GetPaymentTokenByChainIdParams): PaymentToken => {
+  const gasToken = getGasTokenByChainId({ info, targetChainId: chainId })
+  const paymentToken = gasToken.paymentTokens.find((paymentToken) =>
+    addressEquals(paymentToken.address, address)
+  )
+  if (!paymentToken) {
+    throw new Error(
+      `Payment token not found for chain ${chainId} and address ${address}`
+    )
+  }
+  return paymentToken
+}
 
 export default getInfo

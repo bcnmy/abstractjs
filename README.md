@@ -12,10 +12,8 @@ The Biconomy SDK is your all-in-one toolkit for building decentralized applicati
 
   - [📚 Table of Contents](#-table-of-contents)
   - [🛠️ Quickstart](#-quickstart)
-
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
-
   - [📄 Documentation and Resources](#-documentation-and-resources)
   - [💼 Examples](#-examples)
   - [License](#license)
@@ -75,7 +73,7 @@ bun install --frozen-lockfile
 **Funding test accounts:**
 
 ```bash
-# Fund test PRIVATE_KEY account with native tokens and USDC
+# Fund test nexus accounts with native tokens and USDC, using a funded PRIVATE_KEY master account
 bun run fund:nexus
 ```
 
@@ -86,7 +84,6 @@ bun run test
 
 # Run tests for a specific subset of tests (by test description)
 bun run test -t=mee
-
 ```
 
 For detailed information about the testing framework, network configurations, and debugging guidelines, please refer to our [Testing Documentation](./src/test/README.md).
@@ -97,7 +94,7 @@ For a comprehensive understanding of our project and to contribute effectively, 
 
 - [**Biconomy Documentation**](https://docs.biconomy.io)
 - [**Biconomy Dashboard**](https://dashboard.biconomy.io)
-- [**API Documentation**](https://bcnmy.github.io/sdk)
+- [**API Documentation**](https://bcnmy.github.io/abstractjs)
 - [**Contributing Guidelines**](./CONTRIBUTING.md): Learn how to contribute to our project, from code contributions to documentation improvements.
 - [**Code of Conduct**](./CODE_OF_CONDUCT.md): Our commitment to fostering an open and welcoming environment.
 - [**Security Policy**](./SECURITY.md): Guidelines for reporting security vulnerabilities.

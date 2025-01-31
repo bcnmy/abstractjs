@@ -1,23 +1,22 @@
 import type { BaseMeeClient } from "../../createMeeClient"
 import execute from "./execute"
 import executeQuote from "./executeQuote"
-import executeSignedFusionQuote, {
-  type ExecuteSignedFusionQuoteParams,
-  type ExecuteSignedFusionQuotePayload
-} from "./executeSignedFusionQuote"
 import executeSignedQuote, {
   type ExecuteSignedQuoteParams,
   type ExecuteSignedQuotePayload
 } from "./executeSignedQuote"
 import { type GetQuoteParams, type GetQuotePayload, getQuote } from "./getQuote"
-import signFusionQuote, {
+import signPermitQuote, {
   type SignFusionQuoteParams,
-  type SignFusionQuotePayload
-} from "./signFusionQuote"
+  type SignPermitQuotePayload
+} from "./signPermitQuote"
 import signQuote, {
   type SignQuotePayload,
   type SignQuoteParams
 } from "./signQuote"
+import signQuoteOnChain, {
+  type SignQuoteOnChainPayload
+} from "./signQuoteOnChain"
 import waitForSupertransactionReceipt, {
   type WaitForSupertransactionReceiptParams,
   type WaitForSupertransactionReceiptPayload
@@ -122,36 +121,35 @@ export type MeeActions = {
   ) => Promise<WaitForSupertransactionReceiptPayload>
   /**
    * Sign a fusion quote
-   * @param: {@link SignFusionQuoteParams}
-   * @returns: {@link SignFusionQuotePayload}
+   * @param: {@link SignQuoteOnChainParams}
+   * @returns: {@link SignQuoteOnChainPayload}
    * @example
    * ```typescript
-   * const signedQuote = await meeClient.signFusionQuote({
+   * const signedQuote = await meeClient.signQuoteOnChain({
    *   quote: quote,
    *   executionMode: "direct-to-mee"
    * })
    * ```
    */
-  signFusionQuote: (
+  signQuoteOnChain: (
     params: SignFusionQuoteParams
-  ) => Promise<SignFusionQuotePayload>
+  ) => Promise<SignQuoteOnChainPayload>
 
   /**
-   * Execute a signed fusion quote
-   * @param: {@link ExecuteSignedFusionQuoteParams}
-   * @returns: {@link ExecuteSignedFusionQuotePayload}
+   * Sign a quote on chain
+   * @param: {@link SignPermitQuoteParams}
+   * @returns: {@link SignPermitQuotePayload}
    * @example
    * ```typescript
-   * const hash = await meeClient.executeSignedFusionQuote({
-   *   signedFusionQuote: {
-   *     ...
-   *   }
+   * const signedQuote = await meeClient.signPermitQuote({
+   *   quote: quote,
+   *   executionMode: "direct-to-mee"
    * })
    * ```
    */
-  executeSignedFusionQuote: (
-    params: ExecuteSignedFusionQuoteParams
-  ) => Promise<ExecuteSignedFusionQuotePayload>
+  signPermitQuote: (
+    params: SignFusionQuoteParams
+  ) => Promise<SignPermitQuotePayload>
 }
 
 export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
@@ -165,18 +163,19 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
     waitForSupertransactionReceipt: (
       params: WaitForSupertransactionReceiptParams
     ) => waitForSupertransactionReceipt(meeClient, params),
-    signFusionQuote: (params: SignFusionQuoteParams) =>
-      signFusionQuote(meeClient, params),
-    executeSignedFusionQuote: (params: ExecuteSignedFusionQuoteParams) =>
-      executeSignedFusionQuote(meeClient, params)
+    signQuoteOnChain: (params: SignFusionQuoteParams) =>
+      signQuoteOnChain(meeClient, params),
+    signPermitQuote: (params: SignFusionQuoteParams) =>
+      signPermitQuote(meeClient, params)
   }
 }
 export * from "./getQuote"
-export * from "./signFusionQuote"
-export * from "./executeSignedFusionQuote"
+export * from "./executeSignedQuote"
 export * from "./signQuote"
 export * from "./executeSignedQuote"
 export * from "./execute"
 export * from "./executeQuote"
 export * from "./waitForSupertransactionReceipt"
 export * from "./getInfo"
+export * from "./signPermitQuote"
+export * from "./signQuoteOnChain"

@@ -1,5 +1,5 @@
-import type { Chain, Hex, LocalAccount } from "viem"
-import { beforeAll, describe, expect, test, vi } from "vitest"
+import { type Chain, type LocalAccount, isHex, zeroAddress } from "viem"
+import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
@@ -9,18 +9,21 @@ import {
 import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import { execute } from "./execute"
-import type { FeeTokenInfo, Instruction } from "./getQuote"
+import executeSignedQuote from "./executeSignedQuote"
+import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import { signQuoteOnChain } from "./signQuoteOnChain"
+import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
-vi.mock("./execute")
+// @ts-ignore
+const { runPaidTests } = inject("settings")
 
-describe("mee.execute", () => {
+describe.runIf(runPaidTests).skip("mee.signQuoteOnChain", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
   let mcNexus: MultichainSmartAccount
-  let meeClient: MeeClient
   let feeToken: FeeTokenInfo
+  let meeClient: MeeClient
 
   let targetChain: Chain
   let paymentChain: Chain
@@ -30,6 +33,7 @@ describe("mee.execute", () => {
     ;[paymentChain, targetChain] = getTestChains(network)
 
     eoaAccount = network.account!
+
     feeToken = {
       address: mcUSDC.addressOn(paymentChain.id),
       chainId: paymentChain.id
@@ -43,12 +47,12 @@ describe("mee.execute", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  test("should execute a quote using execute", async () => {
+  test("should execute a quote using executeSignedQuote", async () => {
     const instructions: Instruction[] = [
       {
         calls: [
           {
-            to: "0x0000000000000000000000000000000000000000",
+            to: zeroAddress,
             gasLimit: 50000n,
             value: 0n
           }
@@ -59,21 +63,33 @@ describe("mee.execute", () => {
 
     expect(instructions).toBeDefined()
 
-    // Mock the execute function
-    const mockExecuteResponse = { hash: "0x123" as Hex }
-    // Mock implementation for this specific test
-    vi.mocked(execute).mockResolvedValue(mockExecuteResponse)
-
-    const { hash } = await execute(meeClient, {
+    const quote = await getQuote(meeClient, {
       instructions: instructions,
       feeToken
     })
 
-    expect(hash).toEqual(mockExecuteResponse.hash)
-
-    expect(execute).toHaveBeenCalledWith(meeClient, {
-      instructions: instructions,
-      feeToken
+    const signedQuote = await signQuoteOnChain(meeClient, {
+      quote,
+      trigger: {
+        chainId: targetChain.id,
+        address: mcUSDC.addressOn(targetChain.id),
+        amount: 0n
+      }
     })
+
+    const executeSignedQuoteResponse = await executeSignedQuote(meeClient, {
+      signedQuote
+    })
+
+    const superTransactionReceipt = await waitForSupertransactionReceipt(
+      meeClient,
+      {
+        hash: executeSignedQuoteResponse.hash
+      }
+    )
+
+    console.log(JSON.stringify(superTransactionReceipt.explorerLinks, null, 2))
+    expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
+    expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
   })
 })
