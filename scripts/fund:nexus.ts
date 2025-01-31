@@ -7,7 +7,6 @@ import {
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
-  erc20Abi,
   formatEther,
   formatUnits,
   parseEther,
@@ -18,6 +17,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { base, optimism } from "viem/chains"
 import { toMultichainNexusAccount, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
+import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 
 dotenv.config()
@@ -111,7 +111,7 @@ async function main() {
     const usdcTx = await masterClient.sendTransaction({
       to: mainnetUsdc,
       data: encodeFunctionData({
-        abi: erc20Abi,
+        abi: TokenWithPermitAbi,
         functionName: "transfer",
         args: [mcNexusAddress, USDC_TOKEN_AMOUNT]
       })
@@ -193,7 +193,7 @@ async function main() {
     const vanillaNexusUsdcTx = await testnetClient.sendTransaction({
       to: testnetUsdc,
       data: encodeFunctionData({
-        abi: erc20Abi,
+        abi: TokenWithPermitAbi,
         functionName: "transfer",
         args: [vanillaNexusAddress, USDC_TOKEN_AMOUNT]
       })
@@ -225,7 +225,7 @@ const getBalances = async (
     }),
     publicClient.readContract({
       address: envVars.tokenAddress,
-      abi: erc20Abi,
+      abi: TokenWithPermitAbi,
       functionName: "balanceOf",
       args: [address]
     })

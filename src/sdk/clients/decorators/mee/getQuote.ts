@@ -54,6 +54,13 @@ export type SupertransactionLike = {
   feeToken: FeeTokenInfo
 }
 
+export type WalletProvider =
+  | "BICO_V2"
+  | "BICO_V2_EOA"
+  | "SAFE_V141"
+  | "ZERODEV_V24"
+  | "ZERODEV_V31"
+
 /**
  * Parameters required for requesting a quote from the MEE service
  * @type GetQuoteParams
@@ -61,6 +68,10 @@ export type SupertransactionLike = {
 export type GetQuoteParams = SupertransactionLike & {
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
   account?: MultichainSmartAccount
+  /** Permit mode. Only available for certain tokens */
+  permitMode?: boolean
+  /** Wallet provider to be used for the transaction. Defaults to BICO_V2 */
+  walletProvider?: WalletProvider
 }
 
 /**
@@ -83,6 +94,8 @@ type QuoteRequest = {
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
+  /** Wallet provider to be used for the transaction */
+  walletProvider: WalletProvider
 }
 
 /**
@@ -203,7 +216,13 @@ export const getQuote = async (
   client: BaseMeeClient,
   params: GetQuoteParams
 ): Promise<GetQuotePayload> => {
-  const { account: account_ = client.account, instructions, feeToken } = params
+  const {
+    account: account_ = client.account,
+    instructions,
+    feeToken,
+    permitMode = false,
+    walletProvider = "BICO_V2"
+  } = params
 
   const resolvedInstructions: Instruction[] = (
     await Promise.all(
@@ -312,16 +331,15 @@ export const getQuote = async (
     token: feeToken.address,
     nonce: nonce.toString(),
     chainId: feeToken.chainId.toString(),
-    ...(!isAccountDeployed && initCode ? { initCode } : {})
+    ...(!isAccountDeployed && initCode ? { initCode } : {}),
+    ...(permitMode ? { eoa: account_.signer.address } : {})
   }
 
-  const quoteRequest: QuoteRequest = {
-    userOps,
-    paymentInfo
-  }
+  const quoteRequest: QuoteRequest = { userOps, paymentInfo, walletProvider }
+  const path = permitMode ? "v1/quote-permit" : "v1/quote"
 
   return await client.request<GetQuotePayload>({
-    path: "v1/quote",
+    path,
     body: quoteRequest
   })
 }

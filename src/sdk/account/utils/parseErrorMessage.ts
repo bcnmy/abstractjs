@@ -19,6 +19,13 @@ export const parseErrorMessage = (error: unknown): string => {
     const errorObj = error as any
     // Check for errors array first
     if (Array.isArray(errorObj.errors) && errorObj.errors.length > 0) {
+      // Handle array of error objects with msg and path properties
+      if (typeof errorObj.errors[0] === "object" && errorObj.errors[0].msg) {
+        return errorObj.errors
+          .map(({ msg, path }) => `${path}: ${msg}`)
+          .join("\n")
+      }
+
       const errorMessage = String(errorObj.errors[0])
       // Extract error message from errorArgs if present
       const errorArgsMatch = errorMessage.match(/errorArgs=\[(.*?)"([^"]+)"\]/)

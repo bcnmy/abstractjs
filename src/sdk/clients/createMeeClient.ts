@@ -57,7 +57,11 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   )
 
   if (!supported) {
-    throw new Error("Account is not supported by the MEE node")
+    throw new Error(
+      `Some account chains are not supported by the MEE node. Please check the supported chains and try again. ${supportedChains.join(
+        ", "
+      )}`
+    )
   }
 
   return baseMeeClient.extend(meeActions)

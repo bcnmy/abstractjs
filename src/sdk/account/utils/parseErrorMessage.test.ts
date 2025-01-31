@@ -21,6 +21,106 @@ describe("utils.parseErrorMessage", () => {
     expect(parseErrorMessage("test")).toBe("test")
   })
 
+  test("should provide human readable error message", () => {
+    const error = {
+      errors: [
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "userOps",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.sender",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.sender",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.eoa",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.eoa",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.nonce",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.nonce",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.token",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.token",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Cannot read properties of undefined (reading 'chainId')",
+          path: "paymentInfo.token",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.chainId",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.chainId",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Invalid value",
+          path: "paymentInfo.chainId",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Unsupported chain.",
+          path: "paymentInfo.chainId",
+          location: "body"
+        },
+        {
+          type: "field",
+          msg: "Cannot read properties of undefined (reading 'map')",
+          path: "paymentInfo.chainId",
+          location: "body"
+        }
+      ]
+    }
+    expect(parseErrorMessage(error)).toBe(
+      error.errors.map(({ msg, path }) => `${path}: ${msg}`).join("\n")
+    )
+  })
+
   test("should handle errors array", () => {
     const error = { errors: ["First error", "Second error"] }
     expect(parseErrorMessage(error)).toBe("First error")

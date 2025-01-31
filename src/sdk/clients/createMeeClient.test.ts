@@ -7,6 +7,7 @@ import {
   parseUnits,
   zeroAddress
 } from "viem"
+import { gnosis } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChains, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
@@ -52,7 +53,24 @@ describe("mee.createMeeClient", async () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  test("should get a quote", async () => {
+  test.concurrent(
+    "should fail if the account is not supported by the MEE node",
+    async () => {
+      const invalidMcNexus = await toMultichainNexusAccount({
+        chains: [targetChain, paymentChain, gnosis],
+        signer: eoaAccount,
+        index
+      })
+
+      expect(() =>
+        createMeeClient({
+          account: invalidMcNexus
+        })
+      ).rejects.toThrow("Please check the supported chains and try again.")
+    }
+  )
+
+  test.concurrent("should get a quote", async () => {
     const meeClient = await createMeeClient({ account: mcNexus })
 
     const quote = await meeClient.getQuote({ instructions: [], feeToken })
@@ -65,7 +83,7 @@ describe("mee.createMeeClient", async () => {
     expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 
-  test("should sign a quote", async () => {
+  test.concurrent("should sign a quote", async () => {
     const quote = await meeClient.getQuote({
       instructions: [
         {
@@ -115,45 +133,48 @@ describe("mee.createMeeClient", async () => {
       expect(isHex(executeeQuote.hash)).toEqual(true)
     })
 
-  test("should demo the devEx of preparing instructions", async () => {
-    // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
-    // including 'build'. They all are resolved in the 'getQuote' method under the hood.
+  test.concurrent(
+    "should demo the devEx of preparing instructions",
+    async () => {
+      // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
+      // including 'build'. They all are resolved in the 'getQuote' method under the hood.
 
-    const currentInstructions = await meeClient.account.build({
-      type: "intent",
-      data: {
-        amount: 50000n,
-        mcToken: mcUSDC,
-        toChain: targetChain
-      }
-    })
-
-    const preparedInstructions = await meeClient.account.build(
-      {
-        type: "default",
+      const currentInstructions = await meeClient.account.build({
+        type: "intent",
         data: {
-          calls: [{ to: zeroAddress, value: 0n }],
-          chainId: targetChain.id
+          amount: 50000n,
+          mcToken: mcUSDC,
+          toChain: targetChain
         }
-      },
-      currentInstructions
-    )
+      })
 
-    expect(preparedInstructions).toBeDefined()
+      const preparedInstructions = await meeClient.account.build(
+        {
+          type: "default",
+          data: {
+            calls: [{ to: zeroAddress, value: 0n }],
+            chainId: targetChain.id
+          }
+        },
+        currentInstructions
+      )
 
-    const quote = await meeClient.getQuote({
-      instructions: preparedInstructions,
-      feeToken
-    })
+      expect(preparedInstructions).toBeDefined()
 
-    expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
-    expect(quote).toBeDefined()
-    expect(quote.paymentInfo.sender).toEqual(
-      mcNexus.deploymentOn(paymentChain.id)?.address
-    )
-    expect(quote.paymentInfo.token).toEqual(feeToken.address)
-    expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
-  })
+      const quote = await meeClient.getQuote({
+        instructions: preparedInstructions,
+        feeToken
+      })
+
+      expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
+      expect(quote).toBeDefined()
+      expect(quote.paymentInfo.sender).toEqual(
+        mcNexus.deploymentOn(paymentChain.id)?.address
+      )
+      expect(quote.paymentInfo.token).toEqual(feeToken.address)
+      expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
+    }
+  )
 
   test.runIf(runPaidTests)(
     "should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it",

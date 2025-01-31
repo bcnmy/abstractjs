@@ -29,7 +29,6 @@ import {
 import type { UserOperation } from "viem/account-abstraction"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { MockSignatureValidatorAbi } from "../../test/__contracts/abi/MockSignatureValidatorAbi"
-import { TokenWithPermitAbi } from "../../test/__contracts/abi/TokenWithPermitAbi"
 import { testAddresses } from "../../test/callDatas"
 import { testnetTest, toNetwork } from "../../test/testSetup"
 import {
@@ -49,6 +48,7 @@ import {
   TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
 } from "../constants"
+import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import type { NexusAccount } from "./toNexusAccount"
 import {
   addressEquals,
@@ -411,9 +411,7 @@ describe("nexus.account", async () => {
       )
     }
 
-    const appDomainSeparator = domainSeparator({
-      domain: appDomain
-    })
+    const appDomainSeparator = domainSeparator({ domain: appDomain })
 
     const contentsHash = keccak256(
       concat(["0x1901", appDomainSeparator, message.stuff])
