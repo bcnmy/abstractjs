@@ -1,4 +1,5 @@
-import { type Hex, isHex } from "viem"
+import { type Hex, type TransactionReceipt, isHex } from "viem"
+import { waitForTransactionReceipt } from "viem/actions"
 import { getAction } from "viem/utils"
 import {
   getExplorerTxLink,
@@ -19,6 +20,8 @@ export const DEFAULT_POLLING_INTERVAL = 1000
 export type WaitForSupertransactionReceiptParams = {
   /** The hash of the super transaction */
   hash: Hex
+  /** Whether to wait for the transaction receipts to be available. Defaults to true. */
+  wait?: boolean
 }
 
 /**
@@ -40,6 +43,7 @@ export type WaitForSupertransactionReceiptPayload = Omit<
 > & {
   userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
   explorerLinks: Url[]
+  receipts: TransactionReceipt[]
 }
 
 /**
@@ -56,6 +60,9 @@ export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,
   params: WaitForSupertransactionReceiptParams
 ): Promise<WaitForSupertransactionReceiptPayload> => {
+  const account = client.account
+  const wait = params.wait ?? true
+
   const pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
 
   const explorerResponse =
@@ -97,6 +104,19 @@ export const waitForSupertransactionReceipt = async (
     )(params)
   }
 
+  const receipts = wait
+    ? await Promise.all(
+        explorerResponse.userOps.map(({ chainId, executionData }) =>
+          waitForTransactionReceipt(
+            account.deploymentOn(Number(chainId), true).publicClient,
+            {
+              hash: executionData
+            }
+          )
+        )
+      )
+    : []
+
   const explorerLinks = explorerResponse.userOps.reduce(
     (acc, userOp) => {
       acc.push(
@@ -108,7 +128,7 @@ export const waitForSupertransactionReceipt = async (
     [getMeeScanLink(params.hash)] as Url[]
   )
 
-  return { ...explorerResponse, explorerLinks }
+  return { ...explorerResponse, explorerLinks, receipts }
 }
 
 export default waitForSupertransactionReceipt

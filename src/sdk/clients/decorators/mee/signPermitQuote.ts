@@ -1,10 +1,8 @@
 import {
   type Address,
   type Hex,
-  type PartialBy,
   concatHex,
   encodeAbiParameters,
-  getAddress,
   getContract,
   parseSignature
 } from "viem"
@@ -12,27 +10,26 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
-import type { GetFusionQuotePayload } from "./getFusionQuote"
+import type { GetPermitQuotePayload } from "./getPermitQuote"
+import type { GetQuotePayload } from "./getQuote"
 
 export type Trigger = {
   /** The address of the token to use on the relevant chain */
-  address: Address
+  tokenAddress: Address
   /** The chainId to use */
   chainId: number
   /** Amount of the token to use */
   amount: bigint
 }
 
-export type SignFusionQuoteParams = {
+export type SignPermitQuoteParams = {
   /** The quote to sign */
-  quote: GetFusionQuotePayload
+  fusionQuote: GetPermitQuotePayload
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
   account?: MultichainSmartAccount
-  /** The off-chain transaction to use as the trigger. This will default to information from the quote's paymentInfo */
-  trigger: Trigger
 }
 
-export type SignPermitQuotePayload = GetFusionQuotePayload & {
+export type SignPermitQuotePayload = GetQuotePayload & {
   /** The signature of the quote */
   signature: Hex
 }
@@ -50,24 +47,22 @@ export type SignPermitQuotePayload = GetFusionQuotePayload & {
  */
 export const signPermitQuote = async (
   client: BaseMeeClient,
-  parameters: PartialBy<SignFusionQuoteParams, "trigger">
+  parameters: SignPermitQuoteParams
 ): Promise<SignPermitQuotePayload> => {
-  const { account: account_ = client.account, quote, trigger } = parameters
-
   const {
-    chainId = Number(quote.paymentInfo.chainId),
-    address = getAddress(quote.paymentInfo.token),
-    amount = BigInt(quote.paymentInfo.tokenWeiAmount)
-  } = trigger ?? {}
+    account: account_ = client.account,
+    fusionQuote: { quote, trigger }
+  } = parameters
 
   const signer = account_.signer
-  const { walletClient } = account_.deploymentOn(chainId, true)
+
+  const { walletClient } = account_.deploymentOn(trigger.chainId, true)
   const owner = signer.address
   const spender = quote.paymentInfo.sender
 
   const token = getContract({
     abi: TokenWithPermitAbi,
-    address,
+    address: trigger.tokenAddress,
     client: walletClient
   })
 
@@ -82,8 +77,8 @@ export const signPermitQuote = async (
     domain: {
       name,
       version,
-      chainId,
-      verifyingContract: address
+      chainId: trigger.chainId,
+      verifyingContract: trigger.tokenAddress
     },
     types: {
       Permit: [
@@ -98,7 +93,7 @@ export const signPermitQuote = async (
     message: {
       owner,
       spender: spender,
-      value: amount,
+      value: trigger.amount,
       nonce,
       // this validates the stx
       deadline: BigInt(quote.hash)
@@ -122,12 +117,12 @@ export const signPermitQuote = async (
       { name: "s", type: "bytes32" }
     ],
     [
-      address,
+      trigger.tokenAddress,
       spender,
       domainSeparator,
       PERMIT_TYPEHASH,
-      amount,
-      BigInt(chainId),
+      trigger.amount,
+      BigInt(trigger.chainId),
       nonce,
       sigComponents.v!,
       sigComponents.r,

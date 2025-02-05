@@ -6,13 +6,15 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
+import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import { mcUSDC } from "../../../constants/tokens"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import buildDefaultInstructions from "./buildDefaultInstructions"
+import buildTransferFrom from "./buildTransferFrom"
 
-describe("mee.buildDefaultInstructions", () => {
+describe("mee.buildTransferFrom", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -36,23 +38,16 @@ describe("mee.buildDefaultInstructions", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  it("should call the bridge with a unified balance", async () => {
-    const instructions = await buildDefaultInstructions(
-      {
-        account: mcNexus
-      },
+  it("should build a trigger instruction", async () => {
+    const instructions: Instruction[] = await buildTransferFrom(
+      { account: mcNexus, currentInstructions: [] },
       {
         chainId: targetChain.id,
-        calls: [
-          {
-            to: "0x0000000000000000000000000000000000000000",
-            gasLimit: 50000n,
-            value: 0n
-          }
-        ]
+        address: mcUSDC.addressOn(targetChain.id),
+        amount: 100n
       }
     )
 
-    expect(instructions.length).toBeGreaterThan(0)
+    expect([0, 1]).toContain(instructions.length)
   })
 })

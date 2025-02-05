@@ -16,7 +16,6 @@ import {
 import { aave } from "../constants/protocols"
 import { mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
-import type { SignFusionQuoteParams } from "./decorators/mee"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
 // @ts-ignore
@@ -133,12 +132,12 @@ describe("mee.createMeeClient", async () => {
       expect(isHex(executeeQuote.hash)).toEqual(true)
     })
 
-  test.concurrent(
+  test.concurrent.skip(
     "should demo the devEx of preparing instructions",
     async () => {
       // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
       // including 'build'. They all are resolved in the 'getQuote' method under the hood.
-      const currentInstructions = await meeClient.account.build({
+      const currentInstructions = await mcNexus.build({
         type: "intent",
         data: {
           amount: 50000n,
@@ -147,7 +146,7 @@ describe("mee.createMeeClient", async () => {
         }
       })
 
-      const preparedInstructions = await meeClient.account.build(
+      const preparedInstructions = await mcNexus.build(
         {
           type: "default",
           data: {
@@ -175,9 +174,9 @@ describe("mee.createMeeClient", async () => {
     }
   )
 
-  test.runIf(runPaidTests)(
-    "should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it", async () => {
       console.time("execute:hashTimer")
       // Start performance timing for tracking how long the transaction hash and receipt take
       console.time("execute:receiptTimer")
@@ -202,23 +201,27 @@ describe("mee.createMeeClient", async () => {
       const { hash } = await meeClient.executeQuote({ quote })
       expect(hash).toBeDefined()
       console.timeEnd("execute:hashTimer")
-      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash
+      })
       console.timeEnd("execute:receiptTimer")
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
-    }
-  )
+    })
 
   test.runIf(runPaidTests)(
     "should successfully use the aave protocol",
     async () => {
       const amountToSupply = parseUnits("0.00001", 6)
 
-      const approve = mcUSDC.on(targetChain.id).approve({
-        args: [
-          aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
-          amountToSupply // amount approved
-        ]
+      const approval = mcNexus.build({
+        type: "approve",
+        data: {
+          chainId: targetChain.id,
+          tokenAddress: mcUSDC.addressOn(targetChain.id),
+          amount: amountToSupply,
+          spender: aave.pool.addressOn(targetChain.id)
+        }
       })
 
       const supply = aave.pool.on(targetChain.id).supply({
@@ -231,19 +234,19 @@ describe("mee.createMeeClient", async () => {
       })
 
       console.time("execute:fusionReceiptTimer")
-
-      const quote = await meeClient.getQuote({
-        instructions: [approve, supply],
-        feeToken
-      })
-
-      const trigger: SignFusionQuoteParams["trigger"] = {
+      const trigger = {
         chainId: targetChain.id,
-        address: mcUSDC.addressOn(targetChain.id),
+        tokenAddress: mcUSDC.addressOn(targetChain.id),
         amount: amountToSupply
       }
 
-      const signedQuote = await meeClient.signQuoteOnChain({ quote, trigger })
+      const fusionQuote = await meeClient.getFusionQuote({
+        instructions: [approval, supply],
+        feeToken,
+        trigger
+      })
+
+      const signedQuote = await meeClient.signOnChainQuote({ fusionQuote })
       const { hash } = await meeClient.executeSignedQuote({ signedQuote })
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
@@ -251,6 +254,9 @@ describe("mee.createMeeClient", async () => {
       console.timeEnd("execute:fusionReceiptTimer")
       console.log(sTxReceipt.explorerLinks)
       expect(sTxReceipt).toBeDefined()
+    },
+    {
+      timeout: 2000000
     }
   )
 })

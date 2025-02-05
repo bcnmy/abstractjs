@@ -14,7 +14,7 @@ import {
 } from "../../toMultiChainNexusAccount"
 import buildIntent from "./buildIntent"
 
-describe("mee:buildIntent", () => {
+describe("mee.buildIntent", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

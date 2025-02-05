@@ -5,7 +5,7 @@ import type { BaseInstructionsParams } from "../build"
  * Parameters for building default instructions
  * @property instructions - Single {@link Instruction} or array of instructions to add
  */
-export type BuildDefaultParams = Instruction[] | Instruction
+export type BuildDefaultParameters = Instruction[] | Instruction
 
 /**
  * Builds a base set of instructions by combining existing instructions with new ones
@@ -23,7 +23,7 @@ export type BuildDefaultParams = Instruction[] | Instruction
  */
 export const buildDefaultInstructions = async (
   baseParams: BaseInstructionsParams,
-  instructions: BuildDefaultParams
+  instructions: BuildDefaultParameters
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   return [

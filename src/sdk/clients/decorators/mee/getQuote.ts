@@ -1,6 +1,7 @@
 import type { Address, Hex, OneOf } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 /**
@@ -49,8 +50,13 @@ export type Supertransaction = {
   feeToken: FeeTokenInfo
 }
 
+export type InstructionLike =
+  | Promise<Instruction[]>
+  | Instruction[]
+  | Instruction
+
 export type SupertransactionLike = {
-  instructions: (Promise<Instruction[]> | Instruction[])[] | Instruction[]
+  instructions: InstructionLike[]
   feeToken: FeeTokenInfo
 }
 
@@ -68,10 +74,10 @@ export type WalletProvider =
 export type GetQuoteParams = SupertransactionLike & {
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
   account?: MultichainSmartAccount
-  /** Wallet provider to be used for the transaction. Defaults to BICO_V2 */
-  walletProvider?: WalletProvider
-  /** Permit mode. Only available for certain tokens */
-  permitMode?: boolean
+  /** Path to the quote endpoint. Defaults to "v1/quote" */
+  path?: string
+  /** Eoa address to be used for the transaction. Only for use with permit enabled tokens */
+  eoa?: Address
 }
 
 /**
@@ -94,8 +100,6 @@ type QuoteRequest = {
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
-  /** Wallet provider to be used for the transaction */
-  walletProvider: WalletProvider
 }
 
 /**
@@ -214,28 +218,17 @@ export type GetQuotePayload = {
  */
 export const getQuote = async (
   client: BaseMeeClient,
-  params: GetQuoteParams
+  parameters: GetQuoteParams
 ): Promise<GetQuotePayload> => {
   const {
     account: account_ = client.account,
     instructions,
     feeToken,
-    permitMode = false,
-    walletProvider = "BICO_V2"
-  } = params
+    path = "v1/quote",
+    eoa
+  } = parameters
 
-  const resolvedInstructions: Instruction[] = (
-    await Promise.all(
-      instructions
-        .flatMap((instructions_) =>
-          typeof instructions_ === "function"
-            ? (instructions_ as () => Promise<Instruction[]>)()
-            : instructions_
-        )
-        .filter(Boolean)
-    )
-  ).flat()
-
+  const resolvedInstructions = await resolveInstructions(instructions)
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
 
   const validFeeToken =
@@ -272,36 +265,23 @@ export const getQuote = async (
 
   const userOpResults = await Promise.all(
     resolvedInstructions.map((userOp) => {
-      const deployment = account_.deploymentOn(userOp.chainId)
-      if (deployment) {
-        return Promise.all([
-          deployment.encodeExecuteBatch(userOp.calls),
-          deployment.getNonce(),
-          deployment.isDeployed(),
-          deployment.getInitCode(),
-          deployment.address,
-          userOp.calls
-            .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
-            .reduce((curr, acc) => curr + acc)
-            .toString(),
-          userOp.chainId.toString()
-        ])
-      }
-      return null
+      const deployment = account_.deploymentOn(userOp.chainId, true)
+      return Promise.all([
+        deployment.encodeExecuteBatch(userOp.calls),
+        deployment.getNonce(),
+        deployment.isDeployed(),
+        deployment.getInitCode(),
+        deployment.address,
+        userOp.calls
+          .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
+          .reduce((curr, acc) => curr + acc)
+          .toString(),
+        userOp.chainId.toString()
+      ])
     })
   )
 
-  const validUserOpResults = userOpResults.filter(Boolean) as [
-    Hex,
-    bigint,
-    boolean,
-    Hex,
-    Address,
-    string,
-    string
-  ][]
-
-  const userOps = validUserOpResults.map(
+  const userOps = userOpResults.map(
     ([
       callData,
       nonce_,
@@ -331,14 +311,16 @@ export const getQuote = async (
     token: feeToken.address,
     nonce: nonce.toString(),
     chainId: feeToken.chainId.toString(),
-    ...(!isAccountDeployed && initCode ? { initCode } : {}),
-    ...(permitMode ? { eoa: account_.signer.address } : {})
+    ...(eoa ? { eoa } : {}),
+    ...(!isAccountDeployed && initCode ? { initCode } : {})
   }
 
-  const quoteRequest: QuoteRequest = { userOps, paymentInfo, walletProvider }
-  const path = permitMode ? "v1/quote-permit" : "v1/quote"
+  const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
-  return await client.request<GetQuotePayload>({ path, body: quoteRequest })
+  return await client.request<GetQuotePayload>({
+    path,
+    body: quoteRequest
+  })
 }
 
 export default getQuote

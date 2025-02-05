@@ -11,7 +11,7 @@ import {
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import buildBridgeInstructions from "./buildBridgeInstructions"
 
-describe("mee:buildBridgeInstructions", () => {
+describe("mee.buildBridgeInstructions", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

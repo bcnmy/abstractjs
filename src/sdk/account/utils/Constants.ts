@@ -1,8 +1,8 @@
 import { type Hex, concat, keccak256, pad, toHex } from "viem"
-export const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
+export const ADDRESS_ZERO: Hex = "0x0000000000000000000000000000000000000000"
 export const MAGIC_BYTES =
   "0x6492649264926492649264926492649264926492649264926492649264926492"
-export const BICONOMY_TOKEN_PAYMASTER =
+export const BICONOMY_TOKEN_PAYMASTER: Hex =
   "0x00000000301515A5410e0d768aF4f53c416edf19"
 export const DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS =
   "0x8EBDcA5ce92f9aBF1D1ab21de24068B2a2EaF808"
@@ -72,22 +72,23 @@ export const ERC20_ABI = [
 ]
 
 // define mode and exec type enums
-export const CALLTYPE_SINGLE = "0x00" // 1 byte
-export const CALLTYPE_BATCH = "0x01" // 1 byte
-export const EXECTYPE_DEFAULT = "0x00" // 1 byte
-export const EXECTYPE_TRY = "0x01" // 1 byte
-export const EXECTYPE_DELEGATE = "0xFF" // 1 byte
-export const MODE_DEFAULT = "0x00000000" // 4 bytes
-export const UNUSED = "0x00000000" // 4 bytes
-export const MODE_PAYLOAD = "0x00000000000000000000000000000000000000000000" // 22 bytes
+export const CALLTYPE_SINGLE: Hex = "0x00" // 1 byte
+export const CALLTYPE_BATCH: Hex = "0x01" // 1 byte
+export const EXECTYPE_DEFAULT: Hex = "0x00" // 1 byte
+export const EXECTYPE_TRY: Hex = "0x01" // 1 byte
+export const EXECTYPE_DELEGATE: Hex = "0xFF" // 1 byte
+export const MODE_DEFAULT: Hex = "0x00000000" // 4 bytes
+export const UNUSED: Hex = "0x00000000" // 4 bytes
+export const MODE_PAYLOAD: Hex =
+  "0x00000000000000000000000000000000000000000000" // 22 bytes
 
-export const GENERIC_FALLBACK_SELECTOR = "0xcb5baf0f"
+export const GENERIC_FALLBACK_SELECTOR: Hex = "0xcb5baf0f"
 
 export const SENTINEL_ADDRESS: Hex =
   "0x0000000000000000000000000000000000000001"
 
-export const MODE_VALIDATION = "0x00"
-export const MODE_MODULE_ENABLE = "0x01"
+export const MODE_VALIDATION: Hex = "0x00"
+export const MODE_MODULE_ENABLE: Hex = "0x01"
 
 export const MODULE_ENABLE_MODE_TYPE_HASH = keccak256(
   toHex("ModuleEnableMode(address module, bytes32 initDataHash)")

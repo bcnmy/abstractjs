@@ -32,6 +32,7 @@ import {
   queryBridge as queryBridgeDecorator
 } from "./decorators/queryBridge"
 import type { MultichainToken } from "./utils/Types"
+
 /**
  * Parameters required to create a multichain Nexus account
  */
@@ -42,6 +43,10 @@ export type MultichainNexusParams = Partial<
   chains: Chain[]
   /** The signer instance used for account creation */
   signer: ToNexusSmartAccountParameters["signer"]
+  /** Smart mode. Defaults to true. When true, instructions passed execute() calls will have instructions
+   * edited, prepended to or modified with approvals (etc) for the account's chains. These instructions
+   * will be inferred and might cause unintended behavior if not used correctly. */
+  smartMode?: boolean
 }
 
 /**
@@ -74,6 +79,10 @@ export type BaseMultichainSmartAccount = {
     (chainId: number, strictMode: true): Hex
     (chainId: number, strictMode?: false): Hex | undefined
   }
+  /** Smart mode. Defaults to true. When true, instructions passed execute() calls will have instructions
+   * edited, prepended to or modified with approvals (etc) for the account's chains. These instructions
+   * will be inferred and might cause unintended behavior if not used correctly. */
+  smartMode: MultichainNexusParams["smartMode"]
 }
 
 export type MultichainSmartAccount = BaseMultichainSmartAccount & {
@@ -163,7 +172,12 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
 export async function toMultichainNexusAccount(
   multiChainNexusParams: MultichainNexusParams
 ): Promise<MultichainSmartAccount> {
-  const { chains, signer, ...accountParameters } = multiChainNexusParams
+  const {
+    chains,
+    signer,
+    smartMode = true,
+    ...accountParameters
+  } = multiChainNexusParams
 
   const deployments = await Promise.all(
     chains.map((chain) =>
@@ -203,7 +217,8 @@ export async function toMultichainNexusAccount(
     deployments,
     signer,
     deploymentOn,
-    addressOn
+    addressOn,
+    smartMode
   } as BaseMultichainSmartAccount
 
   const getUnifiedERC20Balance = (mcToken: MultichainToken) =>

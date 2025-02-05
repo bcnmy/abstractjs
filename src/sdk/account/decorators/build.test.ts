@@ -10,7 +10,7 @@ import {
 } from "../toMultiChainNexusAccount"
 import { build } from "./build"
 
-describe("mee:build", () => {
+describe("mee.build", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

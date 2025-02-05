@@ -11,7 +11,7 @@ import {
 import type { MultichainAddressMapping } from "./buildBridgeInstructions"
 import { queryBridge } from "./queryBridge"
 
-describe("mee:queryBridge", () => {
+describe("mee.queryBridge", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

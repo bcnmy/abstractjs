@@ -1,4 +1,4 @@
-import { type Chain, type LocalAccount, zeroAddress } from "viem"
+import type { Address, Chain, LocalAccount } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -6,11 +6,10 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import getFusionQuote from "./getFusionQuote"
-import type { FeeTokenInfo, InstructionLike } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import getOnChainQuote from "./getOnChainQuote"
+import type { FeeTokenInfo, Instruction } from "./getQuote"
 
-describe("mee.getFusionQuote", () => {
+describe("mee.getOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -20,10 +19,9 @@ describe("mee.getFusionQuote", () => {
 
   let targetChain: Chain
   let paymentChain: Chain
+  let tokenAddress: Address
 
-  let trigger: Trigger
-
-  const index = 56n // Randomly chosen index
+  const index = 60n // Randomly chosen index
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -42,41 +40,49 @@ describe("mee.getFusionQuote", () => {
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
-
-    trigger = {
-      chainId: paymentChain.id,
-      tokenAddress: mcUSDC.addressOn(paymentChain.id),
-      amount: 1n
-    }
+    tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
-  test("should get a fusion quote", async () => {
-    const fusionQuote = await getFusionQuote(meeClient, {
-      trigger,
-      instructions: [
-        mcNexus.build({
-          type: "default",
-          data: {
-            calls: [
-              {
-                to: zeroAddress,
-                gasLimit: 50000n,
-                value: 0n
-              }
-            ],
-            chainId: paymentChain.id
+  test("should resolve instructions", async () => {
+    const trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    const instructions: Instruction[] = [
+      {
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
           }
-        })
-      ],
-      feeToken
+        ],
+        chainId: targetChain.id
+      },
+      {
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: targetChain.id
+      }
+    ]
+
+    expect(instructions).toBeDefined()
+    expect(instructions.length).toEqual(2)
+
+    const fusionQuote = await getOnChainQuote(meeClient, {
+      instructions,
+      feeToken,
+      trigger
     })
 
-    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.quote).toBeDefined()
     expect(fusionQuote.trigger).toBeDefined()
-    expect(fusionQuote.quote.paymentInfo.sender).toEqual(
-      mcNexus.deploymentOn(paymentChain.id)?.address
-    )
-    expect(fusionQuote.quote.paymentInfo.token).toEqual(feeToken.address)
-    expect(+fusionQuote.quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
 })

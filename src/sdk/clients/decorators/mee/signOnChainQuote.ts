@@ -4,73 +4,62 @@ import {
   concatHex,
   createWalletClient,
   encodeAbiParameters,
-  encodeFunctionData,
-  erc20Abi,
-  getAddress,
   publicActions
 } from "viem"
-import type { Call } from "../../../account/utils/Types"
+import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"
+import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { GetQuotePayload } from "./getQuote"
-import type { SignFusionQuoteParams } from "./signPermitQuote"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 
-export type SignQuoteOnChainPayload = GetQuotePayload & {
+export type SignOnChainQuotePayload = GetQuotePayload & {
   /** The signature of the quote */
   signature: Hex
 }
 
+export type SignOnChainQuoteParams = {
+  /** The quote to sign */
+  fusionQuote: GetOnChainQuotePayload
+  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
+  account?: MultichainSmartAccount
+}
+
 /**
- * Signs a fusion quote
+ * Signs a fusion quote with a tx send client side.
+ *
  * @param client - The Mee client to use
  * @param params - The parameters for the fusion quote
  * @returns The signed quote
  * @example
- * const signedQuote = await signQuoteOnChain(meeClient, {
+ * const signedQuote = await signOnChainQuote(meeClient, {
  *   quote: quotePayload,
  *   account: smartAccount
  * })
  */
-export const signQuoteOnChain = async (
+export const signOnChainQuote = async (
   client: BaseMeeClient,
-  params: SignFusionQuoteParams
-): Promise<SignQuoteOnChainPayload> => {
+  params: SignOnChainQuoteParams
+): Promise<SignOnChainQuotePayload> => {
   const {
     account: account_ = client.account,
-    quote,
-    trigger,
-    quote: { paymentInfo }
+    fusionQuote: { quote, trigger }
   } = params
 
-  const {
-    chainId = Number(paymentInfo.chainId),
-    address = getAddress(paymentInfo.token),
-    amount = BigInt(paymentInfo.tokenWeiAmount)
-  } = trigger ?? {}
+  const { chain } = account_.deploymentOn(trigger.chainId, true)
 
-  const nexusAddress = account_.addressOn(chainId, true)
-  const { chain } = account_.deploymentOn(chainId, true)
-
-  const triggerCall: Call = {
-    to: address,
-    data: encodeFunctionData({
-      abi: erc20Abi,
-      functionName: "transfer",
-      args: [nexusAddress, amount]
-    })
-  }
+  const [
+    {
+      calls: [triggerCall]
+    }
+  ] = await account_.build({ type: "approve", data: trigger })
 
   // If the data field is empty, a prefix must be added in order for the
   // chain not to reject the transaction. This is done in cases when the
   // user is using the transfer of native gas to the SCA as the trigger
   // transaction
   const dataOrPrefix = triggerCall.data ?? FUSION_NATIVE_TRANSFER_PREFIX
-
-  const call = {
-    ...triggerCall,
-    data: concatHex([dataOrPrefix, quote.hash])
-  }
+  const call = { ...triggerCall, data: concatHex([dataOrPrefix, quote.hash]) }
 
   const signer = account_.signer
   const masterClient = createWalletClient({
@@ -80,7 +69,7 @@ export const signQuoteOnChain = async (
   }).extend(publicActions)
 
   const hash = await masterClient.sendTransaction(call)
-  await masterClient.waitForTransactionReceipt({ hash, confirmations: 1 })
+  await masterClient.waitForTransactionReceipt({ hash })
 
   const signature = concatHex([
     "0x01",
@@ -96,4 +85,4 @@ export const signQuoteOnChain = async (
   }
 }
 
-export default signQuoteOnChain
+export default signOnChainQuote

@@ -7,12 +7,10 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import { getGasToken } from "./getGasToken"
-import getInfo from "./getInfo"
-import { getPaymentToken } from "./getPaymentToken"
+import { getInfo } from "./getInfo"
 import type { FeeTokenInfo } from "./getQuote"
 
-describe("mee.getInfo", () => {
+describe("mee.getPaymentToken", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -22,8 +20,6 @@ describe("mee.getInfo", () => {
 
   let targetChain: Chain
   let paymentChain: Chain
-
-  const index = 84n // Randomly chosen index
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -37,8 +33,7 @@ describe("mee.getInfo", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      signer: eoaAccount,
-      index
+      signer: eoaAccount
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -70,27 +65,8 @@ describe("mee.getInfo", () => {
     expect(tokenSymbols).toContain("USDC")
   })
 
-  test("should return gas token for valid chain id", async () => {
-    const result = await getGasToken(meeClient, {
-      chainId: 1,
-      address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-    })
-    expect(result.chainId).toBe("1")
-    expect(result.paymentTokens).toHaveLength(6)
-    expect(result.paymentTokens[0].symbol).toBe("ETH")
-  })
-
-  test("should throw error for invalid chain id", () => {
-    expect(() =>
-      getGasToken(meeClient, {
-        chainId: 999,
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-      })
-    ).rejects.toThrow("Gas token not found for chain 999")
-  })
-
   test("should return payment token for valid chain id and address", async () => {
-    const result = await getPaymentToken(meeClient, {
+    const result = await meeClient.getPaymentToken({
       chainId: 1,
       tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     })
@@ -101,25 +77,5 @@ describe("mee.getInfo", () => {
         "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
       )
     ).toBe(true)
-  })
-
-  test("should throw error for invalid address", () => {
-    expect(() =>
-      getPaymentToken(meeClient, {
-        chainId: 1,
-        tokenAddress: "0x1234567890123456789012345678901234567890"
-      })
-    ).rejects.toThrow(
-      "Payment token not found for chain 1 and address 0x1234567890123456789012345678901234567890"
-    )
-  })
-
-  test("should throw error for invalid chain id", () => {
-    expect(() =>
-      getPaymentToken(meeClient, {
-        chainId: 999,
-        tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-      })
-    ).rejects.toThrow("Gas token not found for chain 999")
   })
 })

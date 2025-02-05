@@ -10,7 +10,7 @@ import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { mcUSDC } from "../../constants/tokens"
 import { getUnifiedERC20Balance } from "./getUnifiedERC20Balance"
 
-describe("mee:getUnifiedERC20Balance", () => {
+describe("mee.getUnifiedERC20Balance", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

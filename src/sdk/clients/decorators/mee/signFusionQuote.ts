@@ -1,14 +1,22 @@
-import { getAddress } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { getPaymentTokenByChainId } from "./getInfo"
-import { type SignFusionQuoteParams, signPermitQuote } from "./signPermitQuote"
-import type { SignQuotePayload } from "./signQuote"
-import signQuoteOnChain from "./signQuoteOnChain"
+import { getPaymentToken } from "./getPaymentToken"
+import signOnChainQuote, {
+  type SignOnChainQuotePayload,
+  type SignOnChainQuoteParams
+} from "./signOnChainQuote"
+import {
+  type SignPermitQuoteParams,
+  type SignPermitQuotePayload,
+  signPermitQuote
+} from "./signPermitQuote"
 
-export type GenericSignFusionQuoteParams = SignFusionQuoteParams & {
-  /** Whether to use permit mode. Defaults to true */
-  permitMode?: boolean
-}
+export type SignFusionQuoteParameters =
+  | SignPermitQuoteParams
+  | SignOnChainQuoteParams
+
+export type SignFusionQuotePayload =
+  | SignOnChainQuotePayload
+  | SignPermitQuotePayload
 
 /**
  * Signs a fusion quote
@@ -23,36 +31,16 @@ export type GenericSignFusionQuoteParams = SignFusionQuoteParams & {
  */
 export const signFusionQuote = async (
   client: BaseMeeClient,
-  parameters: GenericSignFusionQuoteParams
-): Promise<SignQuotePayload> => {
-  const {
-    permitMode = true,
-    trigger,
-    quote,
-    quote: { paymentInfo },
-    ...rest
-  } = parameters
+  parameters: SignFusionQuoteParameters
+): Promise<SignFusionQuotePayload> => {
+  const { permitEnabled } = await getPaymentToken(
+    client,
+    parameters.fusionQuote.trigger
+  )
 
-  // Default the trigger to the paymentInfo if not provided
-  const {
-    chainId = Number(paymentInfo.chainId),
-    address = getAddress(paymentInfo.token),
-    amount = BigInt(paymentInfo.tokenWeiAmount)
-  } = trigger ?? {}
-
-  const params = { quote, trigger: { chainId, address, amount }, ...rest }
-
-  if (!permitMode) {
-    return signQuoteOnChain(client, params)
-  }
-  const { permitEnabled } = getPaymentTokenByChainId({
-    info: client.info,
-    targetTokenData: { chainId, address }
-  })
-  if (permitEnabled) {
-    return signPermitQuote(client, params)
-  }
-  return signQuoteOnChain(client, params)
+  return permitEnabled
+    ? signPermitQuote(client, parameters)
+    : signOnChainQuote(client, parameters)
 }
 
 export default signFusionQuote
