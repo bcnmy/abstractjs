@@ -20,7 +20,7 @@ import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
-import type { FeeTokenInfo } from "./getQuote"
+import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { signPermitQuote } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
@@ -115,25 +115,62 @@ describe("mee.signPermitQuote", () => {
       console.time("signPermitQuote:getHash")
       console.time("signPermitQuote:receipt")
 
-      const fusionQuote = await getFusionQuote(meeClient, {
-        trigger: {
-          chainId: paymentChain.id,
-          tokenAddress,
-          amount: 1n
-        },
+      const trigger = {
+        chainId: paymentChain.id,
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 1n
+      }
+
+      // const fusionQuote = await getFusionQuote(meeClient, {
+      //   trigger: {
+      //     chainId: paymentChain.id,
+      //     tokenAddress,
+      //     amount: 1n
+      //   },
+      //   instructions: [
+      //     mcNexus.build({
+      //       type: "transfer",
+      //       data: {
+      //         chainId: paymentChain.id,
+      //         tokenAddress,
+      //         amount: 1n,
+      //         recipient: eoaAccount.address
+      //       }
+      //     })
+      //   ],
+      //   feeToken
+      // })
+
+      const recipient = mcNexus.deploymentOn(paymentChain.id, true).address
+      const owner = mcNexus.signer.address
+
+      const quote = await getQuote(meeClient, {
+        path: "v1/quote-permit",
+        eoa: mcNexus.signer.address,
         instructions: [
+          mcNexus.build({
+            type: "transferFrom",
+            data: { ...trigger, recipient, owner }
+          }),
           mcNexus.build({
             type: "transfer",
             data: {
-              chainId: paymentChain.id,
-              tokenAddress,
-              amount: 1n,
+              ...trigger,
               recipient: eoaAccount.address
             }
           })
         ],
         feeToken
       })
+
+      const fusionQuote = {
+        quote,
+        trigger: {
+          ...trigger,
+          amount:
+            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+        }
+      }
 
       console.timeEnd("signPermitQuote:getQuote")
       const signedQuote = await signPermitQuote(meeClient, { fusionQuote })

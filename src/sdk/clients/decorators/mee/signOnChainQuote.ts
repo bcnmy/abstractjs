@@ -52,7 +52,10 @@ export const signOnChainQuote = async (
     {
       calls: [triggerCall]
     }
-  ] = await account_.build({ type: "approve", data: trigger })
+  ] = await account_.build({
+    type: "approve",
+    data: { ...trigger, spender: account_.signer.address }
+  })
 
   // If the data field is empty, a prefix must be added in order for the
   // chain not to reject the transaction. This is done in cases when the

@@ -3,37 +3,68 @@ import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
+/**
+ * Payload returned when requesting an on-chain quote.
+ * Includes both the standard quote payload and trigger information.
+ */
 export type GetOnChainQuotePayload = { quote: GetQuotePayload } & {
-  trigger: Trigger
-}
-export type GetOnChainQuoteParams = GetQuoteParams & {
+  /**
+   * Trigger information containing payment token details and amount
+   * @see {@link Trigger}
+   */
   trigger: Trigger
 }
 
 /**
- * Get a fusion quote from the MEE service
- * @param client - The base MEE client
- * @param params - The parameters for the quote request
- * @returns The quote payload
- * @throws If the token does not support ERC20Permit
+ * Parameters for requesting an on-chain quote
+ */
+export type GetOnChainQuoteParams = GetQuoteParams & {
+  /**
+   * Trigger information for the transaction
+   * @see {@link Trigger}
+   */
+  trigger: Trigger
+}
+
+/**
+ * Gets a quote for an on-chain transaction from the MEE service.
+ * This method is used when the payment token doesn't support ERC20Permit
+ * or when a standard on-chain transaction is preferred.
+ *
+ * @param client - The base MEE client instance
+ * @param parameters - Parameters for the quote request
+ * @param parameters.trigger - Payment token and amount information
+ * @param parameters.instructions - Array of transaction instructions to execute
+ * @param [parameters.account] - Optional account to use (defaults to client.account)
+ *
+ * @returns Promise resolving to quote payload with trigger information
  *
  * @example
- * ```ts
+ * ```typescript
  * const quote = await getOnChainQuote(meeClient, {
  *   instructions: [
  *     mcNexus.build({
  *       type: "default",
  *       data: {
  *         calls: [
- *           { to: "0x0000000000000000000000000000000000000000", gasLimit: 50000n, value: 0n }
+ *           {
+ *             to: "0x0000000000000000000000000000000000000000",
+ *             gasLimit: 50000n,
+ *             value: 0n
+ *           }
  *         ],
  *         chainId: targetChain.id
  *       }
  *     })
  *   ],
- *   feeToken
- * })
+ *   trigger: {
+ *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
+ *     amount: "1000000" // 1 USDC (6 decimals)
+ *   }
+ * });
  * ```
+ *
+ * @throws Will throw an error if the token does not support ERC20Permit
  */
 export const getOnChainQuote = async (
   client: BaseMeeClient,
@@ -46,9 +77,12 @@ export const getOnChainQuote = async (
     ...rest
   } = parameters
 
+  const recipient = account_.deploymentOn(trigger.chainId, true).address
+  const owner = account_.signer.address
+
   const triggerTransfer = account_.build({
     type: "transferFrom",
-    data: trigger
+    data: { ...trigger, recipient, owner }
   })
 
   const quote = await getQuote(client, {

@@ -13,37 +13,79 @@ import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuotePayload } from "./getQuote"
 
+/**
+ * Parameters for a token permit trigger
+ */
 export type Trigger = {
-  /** The address of the token to use on the relevant chain */
+  /**
+   * The address of the token to use on the relevant chain
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+   */
   tokenAddress: Address
-  /** The chainId to use */
+  /**
+   * The chainId to use
+   * @example 1 // Ethereum Mainnet
+   */
   chainId: number
-  /** Amount of the token to use */
+  /**
+   * Amount of the token to use, in the token's smallest unit
+   * @example 1000000n // 1 USDC (6 decimals)
+   */
   amount: bigint
 }
 
+/**
+ * Parameters for signing a permit quote
+ */
 export type SignPermitQuoteParams = {
-  /** The quote to sign */
+  /**
+   * The quote to sign
+   * @see {@link GetPermitQuotePayload}
+   */
   fusionQuote: GetPermitQuotePayload
-  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
+  /**
+   * Optional smart account to execute the transaction
+   * If not provided, uses the client's default account
+   */
   account?: MultichainSmartAccount
 }
 
+/**
+ * Response payload containing the signed permit quote
+ */
 export type SignPermitQuotePayload = GetQuotePayload & {
-  /** The signature of the quote */
+  /**
+   * The signature of the quote, prefixed with '0x02' and concatenated with
+   * the encoded permit parameters and signature components
+   */
   signature: Hex
 }
 
 /**
- * Signs a quote
- * @param client - The Mee client to use
- * @param params - The parameters for the quote
- * @returns The signed quote
+ * Signs a permit quote using EIP-2612 permit signatures. This enables gasless
+ * approvals for ERC20 tokens that implement the permit extension.
+ *
+ * @param client - The Mee client instance
+ * @param parameters - Parameters for signing the permit quote
+ * @param parameters.fusionQuote - The permit quote to sign
+ * @param [parameters.account] - Optional account to use for signing
+ *
+ * @returns Promise resolving to the quote payload with permit signature
+ *
  * @example
+ * ```typescript
  * const signedPermitQuote = await signPermitQuote(meeClient, {
- *   quote: quotePayload,
- *   account: smartAccount
- * })
+ *   fusionQuote: {
+ *     quote: quotePayload,
+ *     trigger: {
+ *       tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+ *       chainId: 1,
+ *       amount: 1000000n // 1 USDC
+ *     }
+ *   },
+ *   account: smartAccount // Optional
+ * });
+ * ```
  */
 export const signPermitQuote = async (
   client: BaseMeeClient,
@@ -95,7 +137,6 @@ export const signPermitQuote = async (
       spender: spender,
       value: trigger.amount,
       nonce,
-      // this validates the stx
       deadline: BigInt(quote.hash)
     },
     account: walletClient.account!

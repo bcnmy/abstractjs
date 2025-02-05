@@ -14,11 +14,13 @@ import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 export const DEFAULT_POLLING_INTERVAL = 1000
 
 /**
- * Parameters required for requesting a quote from the MEE service
- * @type WaitForSupertransactionReceiptParams
+ * Parameters for waiting for a supertransaction receipt
  */
 export type WaitForSupertransactionReceiptParams = {
-  /** The hash of the super transaction */
+  /**
+   * The transaction hash to wait for
+   * @example "0x123..."
+   */
   hash: Hex
   /** Whether to wait for the transaction receipts to be available. Defaults to true. */
   wait?: boolean
@@ -33,9 +35,9 @@ type UserOpStatus = {
   executionData: Hex
   executionError: string
 }
+
 /**
- * The payload returned by the waitForSupertransactionReceipt function
- * @type WaitForSupertransactionReceiptPayload
+ * Response payload containing the supertransaction receipt details
  */
 export type WaitForSupertransactionReceiptPayload = Omit<
   GetQuotePayload,
@@ -44,17 +46,48 @@ export type WaitForSupertransactionReceiptPayload = Omit<
   userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
   explorerLinks: Url[]
   receipts: TransactionReceipt[]
+  /**
+   * The transaction hash
+   * @example "0x123..."
+   */
+  hash: Hex
+  /**
+   * Status of the transaction
+   * @example "success"
+   */
+  status: string
 }
 
 /**
- * Waits for a super transaction receipt to be available
- * @param client - The Mee client to use
- * @param params - The parameters for the super transaction
- * @returns The receipt of the super transaction
+ * Waits for a supertransaction receipt to be available. This function polls the MEE service
+ * until the transaction is confirmed across all involved chains.
+ *
+ * @param client - The Mee client instance
+ * @param params - Parameters for retrieving the receipt
+ * @param params.hash - The supertransaction hash to wait for
+ *
+ * @returns Promise resolving to the supertransaction receipt
+ *
  * @example
- * const receipt = await waitForSupertransactionReceipt(client, {
- *   hash: "0x..."
- * })
+ * ```typescript
+ * const receipt = await waitForSupertransactionReceipt(meeClient, {
+ *   hash: "0x123..."
+ * });
+ * // Returns:
+ * // {
+ * //   hash: "0x123...",
+ * //   status: "success",
+ * //   receipts: [{
+ * //     chainId: "1",
+ * //     hash: "0x456..."
+ * //   }]
+ * // }
+ * ```
+ *
+ * @throws Will throw an error if:
+ * - The transaction fails on any chain
+ * - The polling times out
+ * - The transaction hash is invalid
  */
 export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,

@@ -49,174 +49,177 @@ import waitForSupertransactionReceipt, {
   type WaitForSupertransactionReceiptPayload
 } from "./waitForSupertransactionReceipt"
 
+/**
+ * Collection of MEE (Multi-chain Execution Environment) actions for transaction handling
+ */
 export type MeeActions = {
   /**
    * Get a quote for executing a set of instructions
-   * @param params - {@link GetQuoteParams}
-   * @returns: {@link GetQuotePayload}
+   * @param params - Parameters for generating the quote
+   * @param params.instructions - Array of transaction instructions to execute
+   * @param params.feeToken - Token to use for gas payment
+   * @returns Promise resolving to quote information
    * @throws Error if the account is not deployed on any required chain
+   *
    * @example
    * ```typescript
    * const quote = await meeClient.getQuote({
-   *   instructions: [...],
+   *   instructions: [{
+   *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+   *     data: "0x...",
+   *     value: "0"
+   *   }],
    *   feeToken: {
-   *     address: '0x...',
+   *     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
    *     chainId: 1
    *   }
-   * })
+   * });
    * ```
    */
   getQuote: (params: GetQuoteParams) => Promise<GetQuotePayload>
 
   /**
    * Sign a quote for executing a set of instructions
-   * @param: {@link SignQuoteParams}
-   * @returns: {@link SignQuotePayload}
+   * @param params - Parameters for signing the quote
+   * @param params.quote - Quote to sign
+   * @returns Promise resolving to signed quote data
+   *
    * @example
    * ```typescript
-   * const SignQuotePayload = await meeClient.signQuote({
-   *   quote: quote,
-   *   executionMode: "direct-to-mee"
-   * })
+   * const signedQuote = await meeClient.signQuote({
+   *   quote: quote
+   * });
    * ```
    */
   signQuote: (params: SignQuoteParams) => Promise<SignQuotePayload>
 
   /**
-   * Execute a signed quote
-   * @param: {@link ExecuteSignedQuoteParams}
-   * @returns: {@link ExecuteSignedQuotePayload}
+   * Execute a previously signed quote
+   * @param params - Parameters for executing the signed quote
+   * @param params.signedQuote - The signed quote to execute
+   * @returns Promise resolving to transaction hash
+   *
    * @example
    * ```typescript
-   * const hash = await meeClient.executeSignedQuote({
-   *   signedQuote: {
-   *     ...
-   *   }
-   * })
+   * const result = await meeClient.executeSignedQuote({
+   *   signedQuote: signedQuote
+   * });
    * ```
    */
   executeSignedQuote: (
     params: ExecuteSignedQuoteParams
   ) => Promise<ExecuteSignedQuotePayload>
+
   /**
-   * Execute a quote by fetching it, signing it, and then executing the signed quote.
-   * @param: {@link GetQuoteParams}
-   * @returns: {@link ExecuteSignedQuotePayload}
+   * Convenience method that combines getQuote, signQuote, and executeSignedQuote
+   * into a single operation
+   * @param params - Parameters for generating and executing the quote
+   * @returns Promise resolving to transaction hash
+   *
    * @example
    * ```typescript
-   * const hash = await meeClient.execute({
-   *   instructions: [...],
+   * const result = await meeClient.execute({
+   *   instructions: [{
+   *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+   *     data: "0x...",
+   *     value: "0"
+   *   }],
    *   feeToken: {
-   *     address: '0x...',
+   *     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
    *     chainId: 1
    *   }
-   * })
+   * });
    * ```
    */
   execute: (params: GetQuoteParams) => Promise<ExecuteSignedQuotePayload>
 
   /**
-   * Execute a quote by fetching it, signing it, and then executing the signed quote.
-   * @param: {@link GetQuoteParams}
-   * @returns: {@link ExecuteSignedQuotePayload}
+   * Execute a quote by signing and executing it
+   * @param params - Parameters for signing and executing the quote
+   * @returns Promise resolving to transaction hash
+   *
    * @example
    * ```typescript
-   * const hash = await meeClient.executeQuote({
-   *   instructions: [...],
-   *   feeToken: {
-   *     address: '0x...',
-   *     chainId: 1
-   *   }
-   * })
+   * const result = await meeClient.executeQuote({
+   *   quote: quote
+   * });
    * ```
    */
   executeQuote: (params: SignQuoteParams) => Promise<ExecuteSignedQuotePayload>
 
   /**
-   * Wait for a super transaction receipt to be available
-   * @param: {@link WaitForSupertransactionReceiptParams}
-   * @returns: {@link WaitForSupertransactionReceiptPayload}
+   * Wait for a supertransaction receipt to be available
+   * @param params - Parameters for retrieving the receipt
+   * @param params.hash - Transaction hash to wait for
+   * @returns Promise resolving to transaction receipt
+   *
    * @example
    * ```typescript
    * const receipt = await meeClient.waitForSupertransactionReceipt({
-   *   hash: "0x..."
-   * })
+   *   hash: "0x123..."
+   * });
    * ```
    */
   waitForSupertransactionReceipt: (
     params: WaitForSupertransactionReceiptParams
   ) => Promise<WaitForSupertransactionReceiptPayload>
-  /**
-   * Sign a fusion quote
-   * @param: {@link SignOnChainQuoteParams}
-   * @returns: {@link SignOnChainQuotePayload}
-   * @example
-   * ```typescript
-   * const signedQuote = await meeClient.signOnChainQuote({
-   *   quote: quote,
-   *   executionMode: "direct-to-mee"
-   * })
-   * ```
-   */
 
+  /**
+   * Sign an on-chain quote for standard transactions
+   * @param params - Parameters for signing the on-chain quote
+   * @returns Promise resolving to signed quote data
+   */
   signOnChainQuote: (
     params: SignOnChainQuoteParams
   ) => Promise<SignOnChainQuotePayload>
 
   /**
-   * Sign a quote on chain
-   * @param: {@link SignPermitQuoteParams}
-   * @returns: {@link SignPermitQuotePayload}
-   * @example
-   * ```typescript
-   * const signedQuote = await meeClient.signPermitQuote({
-   *   quote: quote,
-   *   executionMode: "direct-to-mee"
-   * })
-   * ```
+   * Sign a permit quote for ERC20Permit-enabled tokens
+   * @param params - Parameters for signing the permit quote
+   * @returns Promise resolving to signed permit data
    */
   signPermitQuote: (
     params: SignPermitQuoteParams
   ) => Promise<SignPermitQuotePayload>
 
   /**
-   * Get a permit quote for executing a set of instructions
-   * @param params: {@link GetPermitQuoteParams}
-   * @returns: {@link GetPermitQuotePayload}
+   * Get a permit quote for ERC20Permit-enabled tokens
+   * @param params - Parameters for generating the permit quote
+   * @returns Promise resolving to permit quote data
    */
   getPermitQuote: (
     params: GetPermitQuoteParams
   ) => Promise<GetPermitQuotePayload>
 
   /**
-   * Get a gas token for a specific chain
-   * @param params: {@link GetGasTokenParams}
-   * @returns: {@link GetGasTokenPayload}
+   * Get gas token information for a specific chain
+   * @param params - Parameters for retrieving gas token info
+   * @returns Promise resolving to gas token data
    */
   getGasToken: (params: GetGasTokenParams) => Promise<GetGasTokenPayload>
 
   /**
-   * Get a payment token for a specific chain
-   * @param params: {@link GetPaymentTokenParams}
-   * @returns: {@link GetPaymentTokenPayload}
+   * Get payment token information for a specific chain
+   * @param params - Parameters for retrieving payment token info
+   * @returns Promise resolving to payment token data
    */
   getPaymentToken: <EParams extends GetPaymentTokenParams>(
     params: EParams
   ) => Promise<GetPaymentTokenPayload>
 
   /**
-   * Get a quote on chain
-   * @param params: {@link GetOnChainQuoteParams}
-   * @returns: {@link GetOnChainQuotePayload}
+   * Get an on-chain quote for standard transactions
+   * @param params - Parameters for generating the on-chain quote
+   * @returns Promise resolving to on-chain quote data
    */
   getOnChainQuote: (
     params: GetOnChainQuoteParams
   ) => Promise<GetOnChainQuotePayload>
 
   /**
-   * Get a fusion quote for executing a set of instructions
-   * @param params: {@link GetFusionQuoteParams}
-   * @returns: {@link GetFusionQuotePayload}
+   * Get a fusion quote that automatically selects between permit and on-chain
+   * @param params - Parameters for generating the fusion quote
+   * @returns Promise resolving to fusion quote data
    */
   getFusionQuote: (
     params: GetFusionQuoteParams
@@ -224,14 +227,19 @@ export type MeeActions = {
 
   /**
    * Sign a fusion quote
-   * @param params: {@link SignFusionQuoteParams}
-   * @returns: {@link SignFusionQuotePayload}
+   * @param params - Parameters for signing the fusion quote
+   * @returns Promise resolving to signed fusion quote data
    */
   signFusionQuote: (
     params: SignFusionQuoteParameters
   ) => Promise<SignFusionQuotePayload>
 }
 
+/**
+ * Creates an instance of MEE actions using the provided client
+ * @param meeClient - Base MEE client instance
+ * @returns Object containing all MEE actions
+ */
 export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
   return {
     getGasToken: (params: GetGasTokenParams) => getGasToken(meeClient, params),

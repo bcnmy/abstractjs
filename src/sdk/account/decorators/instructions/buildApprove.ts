@@ -6,52 +6,78 @@ import type {
 } from "../../../clients/decorators/mee"
 import type { BaseInstructionsParams } from "../build"
 
+/**
+ * Parameters for building an approval instruction
+ */
 export type BuildApproveParameters = Trigger & {
   /**
-   * Permit mode will use the approve function, which requires a gas limit
+   * Gas limit for the approval transaction. Required when using the standard
+   * approve function instead of permit.
+   * @example 50000n
    */
   gasLimit?: bigint
   /**
-   * The spender of the token
+   * Spender address.
+   * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
-  spender?: Address
+  spender: Address
 }
 
 /**
- * Builds a trigger instruction for an approval
- * @param baseParams - {@link BaseInstructionsParams} Base configuration for instructions
- * @param parameters - {@link BuildApproveParameters} The parameters for the trigger action
- * @returns Promise resolving to an array of {@link Instruction}
+ * Parameters for the buildApprove function
+ */
+export type BuildApproveParams = BaseInstructionsParams & {
+  /**
+   * Parameters specific to the approval instruction
+   * @see {@link BuildApproveParameters}
+   */
+  parameters: BuildApproveParameters
+}
+
+/**
+ * Builds an instruction for approving token spending. This is typically used
+ * when the token doesn't support ERC20Permit and a standard approve transaction
+ * is needed.
+ *
+ * @param baseParams - Base configuration for the instruction
+ * @param baseParams.account - The account that will execute the approval
+ * @param baseParams.currentInstructions - Optional array of existing instructions to append to
+ * @param parameters - Parameters for the approval
+ * @param parameters.chainId - Chain ID where the approval will be executed
+ * @param parameters.tokenAddress - Address of the token to approve
+ * @param parameters.amount - Amount to approve
+ * @param [parameters.gasLimit] - Optional gas limit for the approval
+ * @param [parameters.spender] - Optional spender address
+ *
+ * @returns Promise resolving to array of instructions
  *
  * @example
- * // Build a trigger instruction for an approval
+ * ```typescript
  * const instructions = await buildApprove(
  *   { account: myMultichainAccount },
  *   {
  *     chainId: 1,
- *     address: myUSDC.addressOn(1),
- *     amount: 100n
+ *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
+ *     amount: 1000000n, // 1 USDC
+ *     gasLimit: 50000n,
+ *     spender: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
  *   }
- * )
+ * );
+ * ```
  */
-export type BuildApproveParams = BaseInstructionsParams & {
-  parameters: BuildApproveParameters
-}
-
 export const buildApprove = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildApproveParameters
 ): Promise<Instruction[]> => {
-  const { account, currentInstructions = [] } = baseParams
+  const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
-  const spender_ = spender ?? account.addressOn(chainId, true)
 
   const triggerCall: AbstractCall = {
     to: tokenAddress,
     data: encodeFunctionData({
       abi: erc20Abi,
       functionName: "approve",
-      args: [spender_, amount]
+      args: [spender, amount]
     }),
     ...(gasLimit ? { gasLimit } : {})
   }

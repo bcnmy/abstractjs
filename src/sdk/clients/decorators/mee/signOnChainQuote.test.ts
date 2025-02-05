@@ -47,8 +47,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       index
     })
 
-    console.log("address", mcNexus.addressOn(paymentChain.id, true))
-
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
