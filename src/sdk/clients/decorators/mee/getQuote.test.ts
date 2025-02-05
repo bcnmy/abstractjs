@@ -64,10 +64,7 @@ describe("mee.getQuote", () => {
     expect(instructions).toBeDefined()
     expect(instructions.length).toEqual(2)
 
-    const quote = await getQuote(meeClient, {
-      instructions: instructions,
-      feeToken
-    })
+    const quote = await getQuote(meeClient, { instructions, feeToken })
 
     expect(quote).toBeDefined()
   })

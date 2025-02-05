@@ -92,7 +92,7 @@ describe("mee.getPermitQuote", () => {
         mcNexus.build({
           type: "intent",
           data: {
-            amount: BigInt(1000),
+            amount: 1n,
             mcToken: mcUSDC,
             toChain: targetChain
           }

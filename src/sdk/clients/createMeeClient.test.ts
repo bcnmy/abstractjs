@@ -105,81 +105,51 @@ describe("mee.createMeeClient", async () => {
     expect(isHex(signedQuote.signature)).toEqual(true)
   })
 
-  test
-    .runIf(runPaidTests)
-    .skip("should execute a quote by getting it, signing it, and then executing the signed quote", async () => {
-      const quote = await meeClient.getQuote({
-        instructions: [
-          {
-            calls: [
-              {
-                to: zeroAddress,
-                gasLimit: 50000n,
-                value: 0n
-              }
-            ],
-            chainId: targetChain.id
-          }
-        ],
-        feeToken
-      })
-
-      const signedQuote = await meeClient.signQuote({ quote })
-      const executeeQuote = await meeClient.executeSignedQuote({ signedQuote })
-
-      expect(executeeQuote).toBeDefined()
-      expect(executeeQuote.hash).toBeDefined()
-      expect(isHex(executeeQuote.hash)).toEqual(true)
+  test.concurrent("should demo preparing instructions", async () => {
+    // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
+    // including 'build'. They all are resolved in the 'getQuote' method under the hood.
+    const currentInstructions = await mcNexus.build({
+      type: "intent",
+      data: {
+        amount: 50000n,
+        mcToken: mcUSDC,
+        toChain: targetChain
+      }
     })
 
-  test.concurrent.skip(
-    "should demo the devEx of preparing instructions",
-    async () => {
-      // These can be any 'Instruction', or any helper method that resolves to a 'Instruction',
-      // including 'build'. They all are resolved in the 'getQuote' method under the hood.
-      const currentInstructions = await mcNexus.build({
-        type: "intent",
+    const preparedInstructions = await mcNexus.build(
+      {
+        type: "default",
         data: {
-          amount: 50000n,
-          mcToken: mcUSDC,
-          toChain: targetChain
+          calls: [{ to: zeroAddress, value: 0n }],
+          chainId: targetChain.id
         }
-      })
+      },
+      currentInstructions
+    )
 
-      const preparedInstructions = await mcNexus.build(
-        {
-          type: "default",
-          data: {
-            calls: [{ to: zeroAddress, value: 0n }],
-            chainId: targetChain.id
-          }
-        },
-        currentInstructions
-      )
+    expect(preparedInstructions).toBeDefined()
 
-      expect(preparedInstructions).toBeDefined()
+    const quote = await meeClient.getQuote({
+      instructions: preparedInstructions,
+      feeToken
+    })
 
-      const quote = await meeClient.getQuote({
-        instructions: preparedInstructions,
-        feeToken
-      })
+    expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
+    expect(quote).toBeDefined()
+    expect(quote.paymentInfo.sender).toEqual(
+      mcNexus.deploymentOn(paymentChain.id)?.address
+    )
+    expect(quote.paymentInfo.token).toEqual(feeToken.address)
+    expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
+  })
 
-      expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
-      expect(quote).toBeDefined()
-      expect(quote.paymentInfo.sender).toEqual(
-        mcNexus.deploymentOn(paymentChain.id)?.address
-      )
-      expect(quote.paymentInfo.token).toEqual(feeToken.address)
-      expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
-    }
-  )
-
-  test
-    .runIf(runPaidTests)
-    .skip("should demo the devEx for getting a quote with preconfigured instructions, then signing and executing it", async () => {
-      console.time("execute:hashTimer")
+  test.runIf(runPaidTests)(
+    "should get a quote, then execute it with executeQuote",
+    async () => {
+      console.time("executeQuote:hashTimer")
       // Start performance timing for tracking how long the transaction hash and receipt take
-      console.time("execute:receiptTimer")
+      console.time("executeQuote:receiptTimer")
 
       // Get a quote for executing all instructions
       // This will calculate the total cost in the specified payment token
@@ -200,28 +170,26 @@ describe("mee.createMeeClient", async () => {
       // This sends the transaction to the network
       const { hash } = await meeClient.executeQuote({ quote })
       expect(hash).toBeDefined()
-      console.timeEnd("execute:hashTimer")
+      console.timeEnd("executeQuote:hashTimer")
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
-      console.timeEnd("execute:receiptTimer")
+      console.timeEnd("executeQuote:receiptTimer")
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
-    })
+    }
+  )
 
   test.runIf(runPaidTests)(
-    "should successfully use the aave protocol",
+    "should successfully use the aave protocol using a fusion quote",
     async () => {
       const amountToSupply = parseUnits("0.00001", 6)
 
-      const approval = mcNexus.build({
-        type: "approve",
-        data: {
-          chainId: targetChain.id,
-          tokenAddress: mcUSDC.addressOn(targetChain.id),
-          amount: amountToSupply,
-          spender: aave.pool.addressOn(targetChain.id)
-        }
+      const approval = mcUSDC.on(targetChain.id).approve({
+        args: [
+          aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
+          amountToSupply // amount approved
+        ]
       })
 
       const supply = aave.pool.on(targetChain.id).supply({
@@ -233,10 +201,10 @@ describe("mee.createMeeClient", async () => {
         ]
       })
 
-      console.time("execute:fusionReceiptTimer")
+      console.time("meeClient.executeFusionQuote:receiptTimer")
       const trigger = {
-        chainId: targetChain.id,
-        tokenAddress: mcUSDC.addressOn(targetChain.id),
+        chainId: paymentChain.id,
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
         amount: amountToSupply
       }
 
@@ -246,12 +214,11 @@ describe("mee.createMeeClient", async () => {
         trigger
       })
 
-      const signedQuote = await meeClient.signOnChainQuote({ fusionQuote })
-      const { hash } = await meeClient.executeSignedQuote({ signedQuote })
+      const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
-      console.timeEnd("execute:fusionReceiptTimer")
+      console.timeEnd("meeClient.executeFusionQuote:receiptTimer")
       console.log(sTxReceipt.explorerLinks)
       expect(sTxReceipt).toBeDefined()
     },

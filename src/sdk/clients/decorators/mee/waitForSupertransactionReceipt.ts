@@ -6,6 +6,7 @@ import {
   getJiffyScanLink,
   getMeeScanLink
 } from "../../../account/utils/explorer"
+import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import type { AnyData } from "../../../modules/utils/Types"
 import type { Url } from "../../createHttpClient"
 import type { BaseMeeClient } from "../../createMeeClient"
@@ -118,12 +119,11 @@ export const waitForSupertransactionReceipt = async (
 
   if (userOpError || errorFromExecutionData || statusError) {
     throw new Error(
-      [
-        userOpError?.chainId,
+      parseErrorMessage(
         userOpError?.executionError ||
           errorFromExecutionData?.executionData ||
           "Unknown error"
-      ].join(" - ")
+      )
     )
   }
 

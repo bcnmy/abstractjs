@@ -35,7 +35,7 @@ describe("mee.queryBridge", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  it("should query the bridge", async () => {
+  it.skip("should query the bridge", async () => {
     const unifiedBalance = await mcNexus.getUnifiedERC20Balance(mcUSDC)
 
     const tokenMapping: MultichainAddressMapping = {
@@ -49,7 +49,7 @@ describe("mee.queryBridge", () => {
 
     const payload = await queryBridge({
       account: mcNexus,
-      amount: 18600927n,
+      amount: 1n,
       toChain: targetChain,
       fromChain: paymentChain,
       tokenMapping

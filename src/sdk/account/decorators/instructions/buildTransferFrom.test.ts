@@ -38,13 +38,15 @@ describe("mee.buildTransferFrom", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  it("should build a trigger instruction", async () => {
+  it("should build a transferFrom instruction", async () => {
     const instructions: Instruction[] = await buildTransferFrom(
       { account: mcNexus, currentInstructions: [] },
       {
         chainId: targetChain.id,
-        address: mcUSDC.addressOn(targetChain.id),
-        amount: 100n
+        tokenAddress: mcUSDC.addressOn(targetChain.id),
+        amount: 100n,
+        recipient: mcNexus.addressOn(targetChain.id, true),
+        sender: eoaAccount.address
       }
     )
 

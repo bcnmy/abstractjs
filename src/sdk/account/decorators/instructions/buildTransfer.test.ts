@@ -39,13 +39,14 @@ describe("mee.buildTransfer", () => {
     tokenAddress = mcUSDC.addressOn(targetChain.id)
   })
 
-  it("should build a trigger instruction", async () => {
+  it("should build a transfer instruction", async () => {
     const instructions: Instruction[] = await buildTransfer(
       { account: mcNexus, currentInstructions: [] },
       {
         chainId: targetChain.id,
-        tokenAddress: mcUSDC.addressOn(targetChain.id),
-        amount: 100n
+        tokenAddress,
+        amount: 100n,
+        recipient: mcNexus.addressOn(targetChain.id, true)
       }
     )
 

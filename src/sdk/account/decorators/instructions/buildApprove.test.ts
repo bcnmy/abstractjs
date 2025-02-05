@@ -40,13 +40,14 @@ describe("mee.buildApprove", () => {
     tokenAddress = mcUSDC.addressOn(targetChain.id)
   })
 
-  it("should build a trigger instruction", async () => {
+  it("should build an approval instruction", async () => {
     const instructions: Instruction[] = await buildApprove(
       { account: mcNexus, currentInstructions: [] },
       {
         chainId: targetChain.id,
         tokenAddress,
-        amount: 100n
+        amount: 100n,
+        spender: mcNexus.addressOn(targetChain.id, true)
       }
     )
 

@@ -1,5 +1,10 @@
 import type { BaseMeeClient } from "../../createMeeClient"
 import execute from "./execute"
+import {
+  type ExecuteFusionQuoteParams,
+  type ExecuteFusionQuotePayload,
+  executeFusionQuote
+} from "./executeFusionQuote"
 import executeQuote from "./executeQuote"
 import executeSignedQuote, {
   type ExecuteSignedQuoteParams,
@@ -233,6 +238,15 @@ export type MeeActions = {
   signFusionQuote: (
     params: SignFusionQuoteParameters
   ) => Promise<SignFusionQuotePayload>
+
+  /**
+   * Execute a fusion quote
+   * @param params - Parameters for executing the fusion quote
+   * @returns Promise resolving to transaction hash
+   */
+  executeFusionQuote: (
+    params: ExecuteFusionQuoteParams
+  ) => Promise<ExecuteFusionQuotePayload>
 }
 
 /**
@@ -265,7 +279,9 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
     getFusionQuote: (params: GetFusionQuoteParams) =>
       getFusionQuote(meeClient, params),
     signFusionQuote: (params: SignFusionQuoteParameters) =>
-      signFusionQuote(meeClient, params)
+      signFusionQuote(meeClient, params),
+    executeFusionQuote: (params: SignFusionQuoteParameters) =>
+      executeFusionQuote(meeClient, params)
   }
 }
 export * from "./getQuote"
@@ -283,3 +299,4 @@ export * from "./getOnChainQuote"
 export * from "./getFusionQuote"
 export * from "./signFusionQuote"
 export * from "./getPermitQuote"
+export * from "./executeFusionQuote"

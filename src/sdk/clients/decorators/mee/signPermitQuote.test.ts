@@ -121,36 +121,16 @@ describe("mee.signPermitQuote", () => {
         amount: 1n
       }
 
-      // const fusionQuote = await getFusionQuote(meeClient, {
-      //   trigger: {
-      //     chainId: paymentChain.id,
-      //     tokenAddress,
-      //     amount: 1n
-      //   },
-      //   instructions: [
-      //     mcNexus.build({
-      //       type: "transfer",
-      //       data: {
-      //         chainId: paymentChain.id,
-      //         tokenAddress,
-      //         amount: 1n,
-      //         recipient: eoaAccount.address
-      //       }
-      //     })
-      //   ],
-      //   feeToken
-      // })
-
-      const recipient = mcNexus.deploymentOn(paymentChain.id, true).address
-      const owner = mcNexus.signer.address
+      const recipient = mcNexus.addressOn(paymentChain.id, true)
+      const sender = mcNexus.signer.address
 
       const quote = await getQuote(meeClient, {
         path: "v1/quote-permit",
-        eoa: mcNexus.signer.address,
+        eoa: sender,
         instructions: [
           mcNexus.build({
             type: "transferFrom",
-            data: { ...trigger, recipient, owner }
+            data: { ...trigger, recipient, sender }
           }),
           mcNexus.build({
             type: "transfer",

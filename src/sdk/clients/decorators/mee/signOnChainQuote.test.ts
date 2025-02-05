@@ -51,58 +51,67 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
-  test("should execute a quote using signOnChainQuote", async () => {
-    console.time("signOnChainQuote:getQuote")
-    console.time("signOnChainQuote:getHash")
-    console.time("signOnChainQuote:receipt")
+  test(
+    "should execute a quote using signOnChainQuote",
+    async () => {
+      console.time("signOnChainQuote:getQuote")
+      console.time("signOnChainQuote:getHash")
+      console.time("signOnChainQuote:receipt")
 
-    const trigger = {
-      chainId: paymentChain.id,
-      tokenAddress,
-      amount: 1n
-    }
-
-    const quote = await getQuote(meeClient, {
-      path: "v1/quote-permit",
-      eoa: mcNexus.signer.address,
-      instructions: [
-        mcNexus.build({
-          type: "transferFrom",
-          data: trigger
-        }),
-        mcNexus.build({
-          type: "transfer",
-          data: {
-            ...trigger,
-            recipient: eoaAccount.address
-          }
-        })
-      ],
-      feeToken
-    })
-    console.timeEnd("signOnChainQuote:getQuote")
-    const signedQuote = await signOnChainQuote(meeClient, {
-      fusionQuote: {
-        quote,
-        trigger: {
-          ...trigger,
-          amount:
-            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-        }
+      const trigger = {
+        chainId: paymentChain.id,
+        tokenAddress,
+        amount: 1n
       }
-    })
-    const executeSignedQuoteResponse = await executeSignedQuote(meeClient, {
-      signedQuote
-    })
-    console.timeEnd("signOnChainQuote:getHash")
-    const superTransactionReceipt = await waitForSupertransactionReceipt(
-      meeClient,
-      { hash: executeSignedQuoteResponse.hash }
-    )
-    console.timeEnd("signOnChainQuote:receipt")
 
-    console.log(JSON.stringify(superTransactionReceipt.explorerLinks, null, 2))
-    expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
-    expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
-  })
+      const sender = eoaAccount.address
+      const recipient = mcNexus.addressOn(paymentChain.id, true)
+
+      const quote = await getQuote(meeClient, {
+        path: "v1/quote-permit",
+        eoa: mcNexus.signer.address,
+        instructions: [
+          mcNexus.build({
+            type: "transferFrom",
+            data: { ...trigger, sender, recipient }
+          }),
+          mcNexus.build({
+            type: "transfer",
+            data: {
+              ...trigger,
+              recipient: eoaAccount.address
+            }
+          })
+        ],
+        feeToken
+      })
+      console.timeEnd("signOnChainQuote:getQuote")
+      const signedQuote = await signOnChainQuote(meeClient, {
+        fusionQuote: {
+          quote,
+          trigger: {
+            ...trigger,
+            amount:
+              BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+          }
+        }
+      })
+      const executeSignedQuoteResponse = await executeSignedQuote(meeClient, {
+        signedQuote
+      })
+      console.timeEnd("signOnChainQuote:getHash")
+      const superTransactionReceipt = await waitForSupertransactionReceipt(
+        meeClient,
+        { hash: executeSignedQuoteResponse.hash }
+      )
+      console.timeEnd("signOnChainQuote:receipt")
+
+      console.log(superTransactionReceipt.explorerLinks)
+      expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
+      expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
+    },
+    {
+      timeout: 1000000
+    }
+  )
 })

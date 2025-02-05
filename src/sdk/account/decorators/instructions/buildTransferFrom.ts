@@ -1,10 +1,9 @@
-import { type Address, encodeFunctionData } from "viem"
+import { type Address, encodeFunctionData, erc20Abi } from "viem"
 import type {
   AbstractCall,
   Instruction,
   Trigger
 } from "../../../clients/decorators/mee"
-import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseInstructionsParams } from "../build"
 
 /**
@@ -21,7 +20,7 @@ export type BuildTransferFromParameters = Trigger & {
    * Owner address.
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
-  owner: Address
+  sender: Address
   /**
    * Recipient address.
    * @example "0x1234567890123456789012345678901234567890"
@@ -77,15 +76,15 @@ export const buildTransferFrom = async (
   parameters: BuildTransferFromParameters
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, owner, recipient } =
+  const { chainId, tokenAddress, amount, gasLimit, sender, recipient } =
     parameters
 
   const triggerCall: AbstractCall = {
     to: tokenAddress,
     data: encodeFunctionData({
-      abi: TokenWithPermitAbi,
+      abi: erc20Abi,
       functionName: "transferFrom",
-      args: [owner, recipient, amount]
+      args: [sender, recipient, amount]
     }),
     ...(gasLimit ? { gasLimit } : {})
   }

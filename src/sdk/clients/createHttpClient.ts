@@ -68,6 +68,7 @@ export const createHttpClient = (url: Url): HttpClient => {
     const json = (await result.json()) as AnyData
 
     if (!result.ok) {
+      console.log({ json })
       throw new Error(parseErrorMessage(json ?? result.statusText))
     }
 

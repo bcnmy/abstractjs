@@ -1,56 +1,87 @@
 import type { AnyData } from "../../modules/utils/Types"
 
-export const parseErrorMessage = (error: unknown): string => {
-  let resultString = String(error)
+// Helper functions to extract specific error patterns
+const extractFailedOpError = (message: string): string | null => {
+  const match = message.match(/errorArgs=\[.*?,\s*"([^"]+)"\]/)
+  return match?.[1] || null
+}
 
-  // Handle object-like errors with errors array or message field
-  if (typeof error === "object" && error !== null) {
-    if (error instanceof Error) {
-      const message = String(error.message)
+const extractGasLimitError = (message: string): string | null => {
+  const match = message.match(/code=([A-Z_]+),\s*version=/)
+  return match?.[1] || null
+}
 
-      // Check for FailedOp error pattern
-      const failedOpMatch = message.match(/errorArgs=\[.*?,\s*"([^"]+)"\]/)
-      if (failedOpMatch?.[1]) {
-        error.message = failedOpMatch[1] // Update the original error message
-        return failedOpMatch[1]
-      }
+const extractRevertError = (message: string): string | null => {
+  const match = message.match(/"reason":"([^"]+)"/)
+  return match?.[1] || null
+}
 
-      resultString = message
-    }
-
-    const errorObj = error as AnyData
-    // Check for errors array first
-    if (Array.isArray(errorObj.errors) && errorObj.errors.length > 0) {
-      // Handle array of error objects with msg and path properties
-      if (typeof errorObj.errors[0] === "object" && errorObj.errors[0].msg) {
-        return errorObj.errors
-          .map(({ msg, path }: AnyData) => `${path}: ${msg}`)
-          .join("\n")
-      }
-
-      const errorMessage = String(errorObj.errors[0])
-      // Extract error message from errorArgs if present
-      const errorArgsMatch = errorMessage.match(/errorArgs=\[(.*?)"([^"]+)"\]/)
-      if (errorArgsMatch?.[2]) {
-        return errorArgsMatch[2]
-      }
-      resultString = errorMessage
-    }
-    // Then check for message field
-    else if (errorObj.message) {
-      resultString = String(errorObj.message)
-    }
-    // Then check for statusText
-    else if (errorObj.statusText) {
-      resultString = String(errorObj.statusText)
-    }
+const handleErrorsArray = (errors: AnyData[]): string => {
+  // Handle array of error objects with msg and path properties
+  if (typeof errors[0] === "object" && errors[0].msg) {
+    return errors.map(({ msg, path }: AnyData) => `${path}: ${msg}`).join("\n")
   }
 
-  // Clean up common error prefixes and trim
-  resultString = resultString
+  const errorMessage = String(errors[0])
+  const errorArgsMatch = errorMessage.match(/errorArgs=\[(.*?)"([^"]+)"\]/)
+  return errorArgsMatch?.[2] || errorMessage
+}
+
+const cleanErrorMessage = (message: string): string => {
+  return message
     .replace(/^(Error|Details|Message):\s*/i, "")
     .replace(/^error$/i, "")
     .trim()
+}
 
-  return resultString
+export const parseErrorMessage = (error: unknown): string => {
+  if (typeof error !== "object" || error === null) {
+    const cleanedMessage = cleanErrorMessage(String(error))
+    return (
+      extractFailedOpError(cleanedMessage) ||
+      extractGasLimitError(cleanedMessage) ||
+      extractRevertError(cleanedMessage) ||
+      cleanedMessage
+    )
+  }
+
+  const errorObj = error as AnyData
+
+  // Handle Across API error
+  if (errorObj?.type === "AcrossApiError") {
+    return errorObj?.type
+  }
+
+  // Handle Error instances
+  if (error instanceof Error) {
+    const message = String(error.message)
+
+    // Try different error patterns
+    const errorMessage =
+      extractFailedOpError(message) ||
+      extractGasLimitError(message) ||
+      extractRevertError(message) ||
+      message
+
+    if (errorMessage !== message) {
+      error.message = errorMessage // Update the original error message
+    }
+    return cleanErrorMessage(errorMessage)
+  }
+
+  // Handle object with errors array
+  if (Array.isArray(errorObj.errors) && errorObj.errors.length > 0) {
+    return cleanErrorMessage(handleErrorsArray(errorObj.errors))
+  }
+
+  // Handle object with message or statusText
+  const message = String(errorObj.message || errorObj.statusText || error)
+  const cleanedMessage = cleanErrorMessage(message)
+
+  return (
+    extractFailedOpError(cleanedMessage) ||
+    extractGasLimitError(cleanedMessage) ||
+    extractRevertError(cleanedMessage) ||
+    cleanedMessage
+  )
 }

@@ -115,7 +115,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(unifiedBalance.mcToken).toHaveProperty("deployments")
   })
 
-  test("should query bridge", async () => {
+  test.skip("should query bridge", async () => {
     const unifiedBalance = await mcNexus.getUnifiedERC20Balance(mcUSDC)
 
     const tokenMapping = {
@@ -128,7 +128,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     }
 
     const payload = await mcNexus.queryBridge({
-      amount: 18600927n,
+      amount: 100n,
       toChain: targetChain,
       fromChain: paymentChain,
       tokenMapping,

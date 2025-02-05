@@ -74,12 +74,12 @@ export const getPermitQuote = async (
     ...rest
   } = parameters
 
-  const recipient = account_.deploymentOn(trigger.chainId, true).address
-  const owner = account_.signer.address
+  const sender = account_.signer.address
+  const recipient = account_.addressOn(trigger.chainId, true)
 
   const triggerTransfer = account_.build({
     type: "transferFrom",
-    data: { ...trigger, recipient, owner }
+    data: { ...trigger, recipient, sender }
   })
 
   const quote = await getQuote(client, {
