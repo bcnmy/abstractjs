@@ -20,6 +20,9 @@ import {
   type BuildTransferFromParameters,
   buildTransferFrom
 } from "./instructions/buildTransferFrom"
+import buildWithdrawal, {
+  type BuildWithdrawalParameters
+} from "./instructions/buildWithdrawal"
 
 /**
  * Base parameters for building instructions
@@ -82,6 +85,16 @@ export type BuildApproveInstruction = {
 }
 
 /**
+ * Build action which is used to build instructions for a withdrawal
+ * @property type - Literal "withdrawal" to identify the action type
+ * @property data - {@link BuildWithdrawalParameters} The parameters for the withdrawal action
+ */
+export type BuildWithdrawalInstruction = {
+  type: "withdrawal"
+  data: BuildWithdrawalParameters
+}
+
+/**
  * Union type of all possible build instruction types
  */
 export type BuildInstructionTypes =
@@ -90,7 +103,7 @@ export type BuildInstructionTypes =
   | BuildTransferFromInstruction
   | BuildTransferInstruction
   | BuildApproveInstruction
-
+  | BuildWithdrawalInstruction
 /**
  * Builds transaction instructions based on the provided action type and parameters
  *
@@ -150,6 +163,9 @@ export const build = async (
     }
     case "approve": {
       return buildApprove(baseParams, data)
+    }
+    case "withdrawal": {
+      return buildWithdrawal(baseParams, data)
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

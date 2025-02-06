@@ -7,10 +7,11 @@ import {
   toBytes,
   zeroAddress
 } from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { optimism } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -24,6 +25,9 @@ import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { signPermitQuote } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
+// @ts-ignore
+const { runPaidTests } = inject("settings")
+
 describe("mee.signPermitQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -36,6 +40,8 @@ describe("mee.signPermitQuote", () => {
   let paymentChain: Chain
   let tokenAddress: Address
 
+  let recipientAccount: LocalAccount
+
   const index = 89n // Randomly chosen index
 
   beforeAll(async () => {
@@ -43,6 +49,7 @@ describe("mee.signPermitQuote", () => {
     ;[paymentChain, targetChain] = getTestChains(network)
 
     eoaAccount = network.account!
+    recipientAccount = privateKeyToAccount(generatePrivateKey())
     feeToken = {
       address: mcUSDC.addressOn(paymentChain.id),
       chainId: paymentChain.id
@@ -108,7 +115,7 @@ describe("mee.signPermitQuote", () => {
     expect(signedPermitQuote).toBeDefined()
   })
 
-  test(
+  test.runIf(runPaidTests)(
     "should execute a signed fusion quote using signPermitQuote",
     async () => {
       console.time("signPermitQuote:getQuote")
@@ -136,7 +143,7 @@ describe("mee.signPermitQuote", () => {
             type: "transfer",
             data: {
               ...trigger,
-              recipient: eoaAccount.address
+              recipient: recipientAccount.address
             }
           })
         ],
@@ -158,8 +165,15 @@ describe("mee.signPermitQuote", () => {
       console.timeEnd("signPermitQuote:getHash")
       const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
       console.timeEnd("signPermitQuote:receipt")
+
       expect(receipt).toBeDefined()
       console.log(receipt.explorerLinks)
+      const balanceOfRecipient = await getBalance(
+        mcNexus.deploymentOn(paymentChain.id, true).publicClient,
+        recipientAccount.address,
+        tokenAddress
+      )
+      expect(balanceOfRecipient).toBe(trigger.amount)
     },
     { timeout: 200000 }
   )

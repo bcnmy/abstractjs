@@ -1,7 +1,8 @@
 import { type Chain, type Hex, type LocalAccount, isHex } from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -23,7 +24,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let mcNexus: MultichainSmartAccount
   let feeToken: FeeTokenInfo
   let meeClient: MeeClient
-
+  let recipientAccount: LocalAccount
   let targetChain: Chain
   let paymentChain: Chain
   let tokenAddress: Hex
@@ -35,6 +36,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     ;[paymentChain, targetChain] = getTestChains(network)
 
     eoaAccount = network.account!
+    recipientAccount = privateKeyToAccount(generatePrivateKey())
 
     feeToken = {
       address: mcUSDC.addressOn(paymentChain.id),
@@ -64,12 +66,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         amount: 1n
       }
 
-      const sender = eoaAccount.address
+      const sender = mcNexus.signer.address
       const recipient = mcNexus.addressOn(paymentChain.id, true)
 
       const quote = await getQuote(meeClient, {
         path: "v1/quote-permit",
-        eoa: mcNexus.signer.address,
+        eoa: sender,
         instructions: [
           mcNexus.build({
             type: "transferFrom",
@@ -79,12 +81,13 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
             type: "transfer",
             data: {
               ...trigger,
-              recipient: eoaAccount.address
+              recipient: recipientAccount.address
             }
           })
         ],
         feeToken
       })
+
       console.timeEnd("signOnChainQuote:getQuote")
       const signedQuote = await signOnChainQuote(meeClient, {
         fusionQuote: {
@@ -109,6 +112,13 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       console.log(superTransactionReceipt.explorerLinks)
       expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
       expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
+
+      const balanceOfRecipient = await getBalance(
+        mcNexus.deploymentOn(paymentChain.id, true).publicClient,
+        recipientAccount.address,
+        tokenAddress
+      )
+      expect(balanceOfRecipient).toBe(trigger.amount)
     },
     {
       timeout: 1000000

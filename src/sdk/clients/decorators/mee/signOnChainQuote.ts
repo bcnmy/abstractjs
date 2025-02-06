@@ -1,11 +1,4 @@
-import {
-  http,
-  type Hex,
-  concatHex,
-  createWalletClient,
-  encodeAbiParameters,
-  publicActions
-} from "viem"
+import { type Hex, concatHex, encodeAbiParameters } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
@@ -46,7 +39,7 @@ export const signOnChainQuote = async (
     fusionQuote: { quote, trigger }
   } = params
 
-  const { chain } = account_.deploymentOn(trigger.chainId, true)
+  const { chain, walletClient } = account_.deploymentOn(trigger.chainId, true)
 
   const [
     {
@@ -64,15 +57,10 @@ export const signOnChainQuote = async (
   const dataOrPrefix = triggerCall.data ?? FUSION_NATIVE_TRANSFER_PREFIX
   const call = { ...triggerCall, data: concatHex([dataOrPrefix, quote.hash]) }
 
-  const signer = account_.signer
-  const masterClient = createWalletClient({
-    account: signer,
-    chain,
-    transport: http()
-  }).extend(publicActions)
-
-  const hash = await masterClient.sendTransaction(call)
-  await masterClient.waitForTransactionReceipt({ hash })
+  // @ts-ignore
+  const hash = await walletClient.sendTransaction(call)
+  // @ts-ignore
+  await walletClient.waitForTransactionReceipt({ hash })
 
   const signature = concatHex([
     "0x01",

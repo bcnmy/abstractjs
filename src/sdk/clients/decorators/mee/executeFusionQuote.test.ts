@@ -1,4 +1,10 @@
-import { type Address, type Chain, type LocalAccount, zeroAddress } from "viem"
+import {
+  http,
+  type Address,
+  type Chain,
+  type LocalAccount,
+  zeroAddress
+} from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChains, toNetwork } from "../../../../test/testSetup"
@@ -49,7 +55,8 @@ describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      index
+      index,
+      transports: [http(), http()]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
