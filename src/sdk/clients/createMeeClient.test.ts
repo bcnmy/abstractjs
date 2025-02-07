@@ -1,20 +1,24 @@
 import {
+  http,
+  type Address,
   type Chain,
   type LocalAccount,
+  type Transport,
   isHex,
   parseUnits,
   zeroAddress
 } from "viem"
-import { gnosis } from "viem/chains"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { gnosis, optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChains, toNetwork } from "../../test/testSetup"
-import type { NetworkConfig } from "../../test/testUtils"
+import { getTestChainConfig, toNetwork } from "../../test/testSetup"
+import { type NetworkConfig, getBalance } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
 import { aave } from "../constants/protocols"
-import { mcUSDC } from "../constants/tokens"
+import { mcAUSDC, mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
@@ -24,17 +28,19 @@ const { runPaidTests } = inject("settings")
 describe("mee.createMeeClient", async () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
+  let recipientAccount: LocalAccount
   let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
-  let targetChain: Chain
   let paymentChain: Chain
-
+  let targetChain: Chain
+  let transports: Transport[]
+  let tokenAddress: Address
   const index = 0n
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
 
@@ -44,19 +50,24 @@ describe("mee.createMeeClient", async () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [targetChain, paymentChain],
+      chains: [paymentChain, targetChain],
       signer: eoaAccount,
+      transports,
       index
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
+    recipientAccount = privateKeyToAccount(generatePrivateKey())
+    tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
   test.concurrent(
     "should fail if the account is not supported by the MEE node",
     async () => {
+      const transports = [http(), http(), http()]
       const invalidMcNexus = await toMultichainNexusAccount({
-        chains: [targetChain, paymentChain, gnosis],
+        chains: [paymentChain, targetChain, gnosis],
+        transports,
         signer: eoaAccount,
         index
       })
@@ -147,10 +158,6 @@ describe("mee.createMeeClient", async () => {
   test.runIf(runPaidTests)(
     "should get a quote, then execute it with executeQuote",
     async () => {
-      console.time("executeQuote:hashTimer")
-      // Start performance timing for tracking how long the transaction hash and receipt take
-      console.time("executeQuote:receiptTimer")
-
       // Get a quote for executing all instructions
       // This will calculate the total cost in the specified payment token
       const quote = await meeClient.getQuote({
@@ -176,54 +183,125 @@ describe("mee.createMeeClient", async () => {
       })
       console.timeEnd("executeQuote:receiptTimer")
       expect(receipt).toBeDefined()
-      console.log(receipt.explorerLinks)
+    }
+  )
+
+  test.runIf(runPaidTests)(
+    "should execute a quote using signOnChainQuote",
+    async () => {
+      const trigger = {
+        chainId: optimism.id,
+        tokenAddress,
+        amount: 1n
+      }
+
+      const sender = mcNexus.signer.address
+      const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
+
+      const fusionQuote = await meeClient.getOnChainQuote({
+        trigger,
+        instructions: [
+          mcNexus.build({
+            type: "transferFrom",
+            data: { ...trigger, sender, recipient }
+          }),
+          mcNexus.build({
+            type: "transfer",
+            data: {
+              ...trigger,
+              recipient: recipientAccount.address
+            }
+          })
+        ],
+        feeToken
+      })
+
+      const signedQuote = await meeClient.signOnChainQuote({ fusionQuote })
+      const executeSignedQuoteResponse = await meeClient.executeSignedQuote({
+        signedQuote
+      })
+      const superTransactionReceipt =
+        await meeClient.waitForSupertransactionReceipt({
+          hash: executeSignedQuoteResponse.hash
+        })
+      expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
+      expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
+
+      const balanceOfRecipient = await getBalance(
+        mcNexus.deploymentOn(optimism.id, true).publicClient,
+        recipientAccount.address,
+        tokenAddress
+      )
+      expect(balanceOfRecipient).toBe(trigger.amount)
     }
   )
 
   test.runIf(runPaidTests)(
     "should successfully use the aave protocol using a fusion quote",
     async () => {
-      const amountToSupply = parseUnits("0.00001", 6)
+      const amountToSupply = parseUnits("0.1", 6)
 
-      const approval = mcUSDC.on(targetChain.id).approve({
-        args: [
-          aave.pool.addressOn(targetChain.id), // approve to aave v3 pool contract
-          amountToSupply // amount approved
-        ]
-      })
+      const balanceBefore = await getBalance(
+        mcNexus.deploymentOn(targetChain.id, true).publicClient,
+        mcNexus.signer.address,
+        mcAUSDC.addressOn(targetChain.id)
+      )
 
-      const supply = aave.pool.on(targetChain.id).supply({
-        args: [
-          mcUSDC.addressOn(targetChain.id),
-          amountToSupply,
-          mcNexus.signer.address,
-          0
-        ]
-      })
-
-      console.time("meeClient.executeFusionQuote:receiptTimer")
       const trigger = {
         chainId: paymentChain.id,
         tokenAddress: mcUSDC.addressOn(paymentChain.id),
         amount: amountToSupply
       }
 
+      console.time("aave:getFusionQuote")
+      console.time("aave:executeFusionQuote")
+      console.time("aave:waitForSupertransactionReceipt")
       const fusionQuote = await meeClient.getFusionQuote({
-        instructions: [approval, supply],
+        instructions: [
+          mcNexus.build({
+            type: "intent",
+            data: {
+              amount: amountToSupply,
+              mcToken: mcUSDC,
+              toChain: targetChain
+            }
+          }),
+          mcNexus.build({
+            type: "approve",
+            data: {
+              chainId: targetChain.id,
+              tokenAddress: mcUSDC.addressOn(targetChain.id),
+              amount: amountToSupply,
+              spender: aave.pool.addressOn(targetChain.id)
+            }
+          }),
+          aave.pool.on(targetChain.id).supply({
+            args: [
+              mcUSDC.addressOn(targetChain.id),
+              amountToSupply,
+              mcNexus.signer.address,
+              0
+            ]
+          })
+        ],
         feeToken,
         trigger
       })
-
+      console.timeEnd("aave:getFusionQuote")
       const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+      console.timeEnd("aave:executeFusionQuote")
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
-      console.timeEnd("meeClient.executeFusionQuote:receiptTimer")
+      console.timeEnd("aave:waitForSupertransactionReceipt")
       console.log(sTxReceipt.explorerLinks)
+      const balanceAfter = await getBalance(
+        mcNexus.deploymentOn(targetChain.id, true).publicClient,
+        mcNexus.signer.address,
+        mcAUSDC.addressOn(targetChain.id)
+      )
+      expect(balanceAfter).toBeGreaterThan(balanceBefore)
       expect(sTxReceipt).toBeDefined()
-    },
-    {
-      timeout: 2000000
     }
   )
 })

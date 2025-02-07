@@ -1,8 +1,8 @@
-import type { Chain, LocalAccount } from "viem"
+import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 
 import { aave } from "."
-import { getTestChains, toNetwork } from "../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -14,17 +14,19 @@ describe("mee.protocols", async () => {
   let eoaAccount: LocalAccount
   let mcNexus: MultichainSmartAccount
 
-  let targetChain: Chain
   let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount
     })
   })
@@ -52,12 +54,8 @@ describe("mee.protocols", async () => {
     expect(lpToken.deployments).toMatchInlineSnapshot(`
       Map {
         1 => "0x98c23e9d8f34fefb1b7bd6a91b7ff122f4e16f5c",
-        100 => "0xc6b7aca6de8a6044e0e32d0c841a89244a10d284",
-        10 => "0x625e7708f30ca75bfd92586e17077590c60eb4cd",
-        1088 => "0x885c8aec5867571582545f894a5906971db9bf27",
-        42161 => "0x724dc807b04555b71ed48a6896b6f41593b8c637",
-        137 => "0x625e7708f30ca75bfd92586e17077590c60eb4cd",
-        43114 => "0x625e7708f30ca75bfd92586e17077590c60eb4cd",
+        10 => "0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5",
+        8453 => "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB",
       }
     `)
   })

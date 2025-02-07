@@ -1,4 +1,4 @@
-import { http, type Chain, type Hex, type Transport } from "viem"
+import type { Chain, Hex, Transport } from "viem"
 import type { Instruction } from "../clients/decorators/mee/getQuote"
 import {
   BICONOMY_EXPERIMENTAL_ATTESTER,
@@ -42,7 +42,7 @@ export type MultichainNexusParams = Partial<
   /** Array of chains where the account will be deployed */
   chains: Chain[]
   /** Transport to use for the Nexus Account */
-  transports?: Transport[]
+  transports: Transport[]
   /** The signer instance used for account creation */
   signer: ToNexusSmartAccountParameters["signer"]
 }
@@ -147,7 +147,8 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  * @example
  * const account = await toMultichainNexusAccount({
  *   signer: mySigner,
- *   chains: [optimism, base]
+ *   chains: [optimism, base],
+ *   transports: [http(), http()]
  * });
  *
  * // Get deployment on specific chain
@@ -169,12 +170,18 @@ export async function toMultichainNexusAccount(
   const { chains, signer, transports, ...accountParameters } =
     multiChainNexusParams
 
+  if (transports && transports.length !== chains.length) {
+    throw new Error(
+      "The number of transports must match the number of chains provided"
+    )
+  }
+
   const deployments = await Promise.all(
     chains.map((chain, i) =>
       toNexusAccount({
         chain,
         signer,
-        transport: transports?.[i] ?? http(),
+        transport: transports[i],
         validatorAddress: MEE_VALIDATOR_ADDRESS,
         factoryAddress: NEXUS_ACCOUNT_FACTORY,
         attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],

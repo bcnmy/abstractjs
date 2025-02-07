@@ -41,7 +41,7 @@ import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../clients/createSmartAccountClient"
+} from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
@@ -49,7 +49,7 @@ import {
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
 } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
-import type { NexusAccount } from "./toNexusAccount"
+import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
   addressEquals,
   getAccountDomainStructFields,
@@ -91,14 +91,18 @@ describe("nexus.account", async () => {
       transport: http()
     })
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     nexusAccount = nexusClient.account

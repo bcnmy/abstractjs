@@ -20,10 +20,11 @@ import {
   toTestClient
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
+import { toNexusAccount } from "../../account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../clients/createSmartAccountClient"
+} from "../../clients/createBicoBundlerClient"
 import { SmartSessionMode, getUniversalActionPolicy } from "../../constants"
 import { parseReferenceValue } from "../utils/Helpers"
 import type { Module } from "../utils/Types"
@@ -58,12 +59,14 @@ describe("modules.smartSessions", async () => {
     sessionPublicKey = sessionKeyAccount.address
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    nexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        chain,
+        signer: eoaAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     sessionsModule = toSmartSessionsValidator({
@@ -280,13 +283,15 @@ describe("modules.smartSessions", async () => {
 
     const parsedSessionData = parse(cachedSessionData) as SessionData
 
-    const smartSessionNexusClient = await createSmartAccountClient({
-      chain,
-      accountAddress: nexusClient.account.address,
-      signer: sessionKeyAccount,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        accountAddress: parsedSessionData.granter,
+        chain,
+        signer: sessionKeyAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     const usePermissionsModule = toSmartSessionsValidator({

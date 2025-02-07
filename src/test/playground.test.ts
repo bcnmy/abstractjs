@@ -13,17 +13,18 @@ import {
 } from "viem"
 import { PaymasterClient } from "viem/account-abstraction"
 import { beforeAll, describe, expect, test } from "vitest"
+import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
+import {
+  type NexusClient,
+  createSmartAccountClient
+} from "../sdk/clients/createBicoBundlerClient"
 import {
   type BicoPaymasterClient,
   type PaymasterContext,
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import {
-  type NexusClient,
-  createSmartAccountClient
-} from "../sdk/clients/createSmartAccountClient"
 import { SmartSessionMode } from "../sdk/constants"
 import type {
   CreateSessionDataParams,
@@ -93,11 +94,14 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   })
 
   test("should init the smart account", async () => {
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
+    nexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        chain,
+        signer: eoaAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl),
       ...(paymasterParams ? paymasterParams : {})
     })
   })
@@ -246,12 +250,15 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       }
     }
 
-    const smartSessionNexusClient = await createSmartAccountClient({
-      chain,
-      accountAddress: nexusClient.account.address,
-      signer: eoaAccount,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        accountAddress: sessionData.granter,
+        chain,
+        signer: eoaAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl),
       ...(paymasterParams ? paymasterParams : {})
     })
 

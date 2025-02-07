@@ -53,7 +53,7 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
  *             value: 0n
  *           }
  *         ],
- *         chainId: targetChain.id
+ *         chainId: base.id
  *       }
  *     })
  *   ],

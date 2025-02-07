@@ -1,6 +1,6 @@
-import type { Chain, LocalAccount } from "viem"
+import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChains, toNetwork } from "../../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
@@ -15,13 +15,13 @@ describe("mee.getQuote", () => {
   let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
-
-  let targetChain: Chain
   let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -31,6 +31,7 @@ describe("mee.getQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount
     })
 
@@ -69,38 +70,34 @@ describe("mee.getQuote", () => {
     expect(quote).toBeDefined()
   })
 
-  test(
-    "should resolve unresolved instructions",
-    async () => {
-      const quote = await getQuote(meeClient, {
-        instructions: [
-          mcNexus.build({
-            type: "intent",
-            data: {
-              amount: 1n,
-              mcToken: mcUSDC,
-              toChain: targetChain
-            }
-          }),
-          mcNexus.build({
-            type: "default",
-            data: {
-              calls: [
-                {
-                  to: "0x0000000000000000000000000000000000000000",
-                  gasLimit: 50000n,
-                  value: 0n
-                }
-              ],
-              chainId: targetChain.id
-            }
-          })
-        ],
-        feeToken
-      })
+  test("should resolve unresolved instructions", async () => {
+    const quote = await getQuote(meeClient, {
+      instructions: [
+        mcNexus.build({
+          type: "intent",
+          data: {
+            amount: 1n,
+            mcToken: mcUSDC,
+            toChain: targetChain
+          }
+        }),
+        mcNexus.build({
+          type: "default",
+          data: {
+            calls: [
+              {
+                to: "0x0000000000000000000000000000000000000000",
+                gasLimit: 50000n,
+                value: 0n
+              }
+            ],
+            chainId: targetChain.id
+          }
+        })
+      ],
+      feeToken
+    })
 
-      expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
-    },
-    { timeout: 100000 }
-  )
+    expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
+  })
 })

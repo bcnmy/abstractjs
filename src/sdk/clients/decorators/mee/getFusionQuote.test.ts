@@ -1,6 +1,11 @@
-import { type Chain, type LocalAccount, zeroAddress } from "viem"
+import {
+  type Chain,
+  type LocalAccount,
+  type Transport,
+  zeroAddress
+} from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChains, toNetwork } from "../../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
@@ -18,16 +23,17 @@ describe("mee.getFusionQuote", () => {
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
-  let targetChain: Chain
-  let paymentChain: Chain
-
   let trigger: Trigger
 
   const index = 56n // Randomly chosen index
 
+  let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -37,6 +43,7 @@ describe("mee.getFusionQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount,
       index
     })

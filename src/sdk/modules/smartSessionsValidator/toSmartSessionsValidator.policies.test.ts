@@ -16,10 +16,11 @@ import {
   toTestClient
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
+import { type NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../clients/createSmartAccountClient"
+} from "../../clients/createBicoBundlerClient"
 import type { Module } from "../utils/Types"
 import { smartSessionCreateActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
@@ -36,7 +37,7 @@ describe("modules.smartSessions.policies", async () => {
   let nexusAccountAddress: Address
   let sessionKeyAccount: LocalAccount
   let sessionPublicKey: Address
-
+  let nexusAccount: NexusAccount
   let sessionsModule: Module
 
   beforeAll(async () => {
@@ -50,15 +51,19 @@ describe("modules.smartSessions.policies", async () => {
 
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       useTestBundler: true
     })
 
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
+    })
+
+    nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
 
     sessionsModule = toSmartSessionsValidator({
       account: nexusClient.account,
@@ -94,12 +99,9 @@ describe("modules.smartSessions.policies", async () => {
   })
 
   test("should grant permission with all available policies", async () => {
-    const usersNexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    const usersNexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     // Create a smart sessions module for the user's account

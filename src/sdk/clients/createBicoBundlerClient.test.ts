@@ -68,7 +68,7 @@ describe("bico.bundler", async () => {
     ])
     expect(chainId).toEqual(chain.id)
     expect(supportedEntrypoints).to.include(ENTRY_POINT_ADDRESS)
-    expect(preparedUserOp).toHaveProperty("signature")
+    expect(preparedUserOp).not.toHaveProperty("signature") // Removed signature from user operation
   })
 
   test.concurrent(

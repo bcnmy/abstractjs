@@ -4,6 +4,7 @@ import {
   type Address,
   type Chain,
   type Hex,
+  type Transport,
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
@@ -27,7 +28,6 @@ type EnvVars = {
   PRIVATE_KEY: Hex
   TESTNET_CHAIN_ID: number
 }
-const MAINNET_CHAINS_FOR_TESTING = [optimism, base]
 const NATIVE_TOKEN_AMOUNT = parseEther("0.001")
 const USDC_TOKEN_AMOUNT = parseUnits("1", 6)
 const index = 0n
@@ -59,20 +59,22 @@ async function main() {
   }
 
   console.log("\n=== MEE Nexus Account ===")
-  const chains = getTestChains(chain)
-  const [paymentChain, targetChain] = chains
+  const chains = [optimism, base]
+  const transports: Transport[] = [http(), http()]
+
   const mcNexus = await toMultichainNexusAccount({
     signer: account,
     chains,
+    transports,
     index
   })
 
   const mcNexusAddress = await mcNexus
-    .deploymentOn(paymentChain.id, true)
+    .deploymentOn(optimism.id, true)
     .getAddress()
 
   console.log(`Address: ${mcNexusAddress}`)
-  console.log(`Network: ${paymentChain.name}`)
+  console.log(`Network: ${optimism.name}`)
 
   const [meeNexusNativeBalance, usdcNexusBalance] = await getBalances(
     { chainId: MAINNET_CHAIN_ID, tokenAddress: mainnetUsdc },
@@ -85,7 +87,7 @@ async function main() {
   const masterClient = createWalletClient({
     account,
     transport: http(),
-    chain: paymentChain
+    chain: optimism
   }).extend(publicActions)
 
   if (meeNexusNativeBalance >= NATIVE_TOKEN_AMOUNT) {
@@ -99,8 +101,7 @@ async function main() {
     })
 
     const nativeTxReceipt = await masterClient.waitForTransactionReceipt({
-      hash: nativeTx,
-      confirmations: 1
+      hash: nativeTx
     })
     console.log("Native Transaction:", nativeTxReceipt.transactionHash)
   }
@@ -118,8 +119,7 @@ async function main() {
     })
 
     const usdcTxReceipt = await masterClient.waitForTransactionReceipt({
-      hash: usdcTx,
-      confirmations: 1
+      hash: usdcTx
     })
     console.log("USDC Transaction:", usdcTxReceipt.transactionHash)
   }
@@ -176,8 +176,7 @@ async function main() {
     })
     const vanillaNexusUsdcTxReceipt =
       await testnetClient.waitForTransactionReceipt({
-        hash: nativeTx,
-        confirmations: 1
+        hash: nativeTx
       })
     console.log(
       `Vanilla Nexus USDC Transaction on testnet chain ${testnetChain.name}:`,
@@ -200,8 +199,7 @@ async function main() {
     })
     const vanillaNexusUsdcTxReceipt =
       await testnetClient.waitForTransactionReceipt({
-        hash: vanillaNexusUsdcTx,
-        confirmations: 1
+        hash: vanillaNexusUsdcTx
       })
     console.log(
       "Vanilla Nexus USDC Transaction:",
@@ -246,18 +244,6 @@ const getEnvVars = (): EnvVars => {
     PRIVATE_KEY: `0x${PRIVATE_KEY}`,
     TESTNET_CHAIN_ID: Number(TESTNET_CHAIN_ID)
   }
-}
-
-const getTestChains = (chain: Chain) => {
-  const defaultChainsIncludePaymentChain = MAINNET_CHAINS_FOR_TESTING.some(
-    ({ id }) => Number(id) === chain.id
-  )
-  if (defaultChainsIncludePaymentChain) {
-    return MAINNET_CHAINS_FOR_TESTING.sort((a, b) =>
-      a.id === chain.id ? -1 : 1
-    )
-  }
-  throw new Error("Unsupported chain")
 }
 
 main()

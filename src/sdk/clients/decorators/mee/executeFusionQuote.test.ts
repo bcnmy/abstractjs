@@ -3,11 +3,11 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
-  zeroAddress
+  type Transport
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChains, toNetwork } from "../../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -16,7 +16,6 @@ import {
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeFusionQuote from "./executeFusionQuote"
-import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import type { FeeTokenInfo } from "./getQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
@@ -24,7 +23,8 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {
+// Tests below are skipped because they conflict with permit flows when the same nonce for the eoa is used
+describe.runIf(runPaidTests).skip("mee.executeFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -32,17 +32,18 @@ describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {
   let feeToken: FeeTokenInfo
   let meeClient: MeeClient
 
-  let targetChain: Chain
-  let paymentChain: Chain
-
   let recipientAccount: LocalAccount
   let tokenAddress: Address
 
   const index = 101n // Randomly chosen index
 
+  let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     recipientAccount = privateKeyToAccount(generatePrivateKey())
 
@@ -54,62 +55,58 @@ describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount,
-      index,
-      transports: [http(), http()]
+      index
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
-  test(
-    "should execute a signed fusion quote using executeFusionQuote",
-    async () => {
-      console.time("executeFusionQuote:getQuote")
-      console.time("executeFusionQuote:receipt")
+  test("should execute a signed fusion quote using executeFusionQuote", async () => {
+    console.time("executeFusionQuote:getQuote")
+    console.time("executeFusionQuote:receipt")
 
-      const triggerAmount = 1n
+    const triggerAmount = 1n
 
-      const { publicClient } = mcNexus.deploymentOn(paymentChain.id, true)
-      const usdcFromPaymentChain = mcUSDC.addressOn(paymentChain.id)
+    const { publicClient } = mcNexus.deploymentOn(paymentChain.id, true)
 
-      const trigger = {
-        chainId: paymentChain.id,
-        tokenAddress,
-        amount: triggerAmount
-      }
-
-      const fusionQuote = await getFusionQuote(meeClient, {
-        trigger,
-        instructions: [
-          mcNexus.build({
-            type: "transfer",
-            data: {
-              ...trigger,
-              recipient: recipientAccount.address
-            }
-          })
-        ],
-        feeToken
-      })
-
-      console.timeEnd("executeFusionQuote:getQuote")
-      const { hash } = await executeFusionQuote(meeClient, { fusionQuote })
-      const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
-      console.timeEnd("executeFusionQuote:receipt")
-      expect(receipt).toBeDefined()
-      console.log(receipt.explorerLinks)
-
-      const recipientBalanceAfter = await getBalance(
-        publicClient,
-        recipientAccount.address,
-        usdcFromPaymentChain
-      )
-      expect(recipientBalanceAfter).toBe(triggerAmount)
-    },
-    {
-      timeout: 2000000
+    const trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: triggerAmount
     }
-  )
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [
+        mcNexus.build({
+          type: "transfer",
+          data: {
+            ...trigger,
+            recipient: recipientAccount.address
+          }
+        })
+      ],
+      feeToken
+    })
+
+    console.timeEnd("executeFusionQuote:getQuote")
+    const { hash } = await executeFusionQuote(meeClient, { fusionQuote })
+    const receipt = await waitForSupertransactionReceipt(meeClient, {
+      hash,
+      confirmations: 3
+    })
+    console.timeEnd("executeFusionQuote:receipt")
+    expect(receipt).toBeDefined()
+    console.log(receipt.explorerLinks)
+
+    const recipientBalanceAfter = await getBalance(
+      publicClient,
+      recipientAccount.address,
+      tokenAddress
+    )
+    expect(recipientBalanceAfter).toBe(triggerAmount)
+  })
 })

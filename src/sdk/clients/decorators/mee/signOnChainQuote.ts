@@ -39,7 +39,11 @@ export const signOnChainQuote = async (
     fusionQuote: { quote, trigger }
   } = params
 
-  const { chain, walletClient } = account_.deploymentOn(trigger.chainId, true)
+  const {
+    chain,
+    walletClient,
+    address: spender
+  } = account_.deploymentOn(trigger.chainId, true)
 
   const [
     {
@@ -47,13 +51,9 @@ export const signOnChainQuote = async (
     }
   ] = await account_.build({
     type: "approve",
-    data: { ...trigger, spender: account_.signer.address }
+    data: { ...trigger, spender }
   })
 
-  // If the data field is empty, a prefix must be added in order for the
-  // chain not to reject the transaction. This is done in cases when the
-  // user is using the transfer of native gas to the SCA as the trigger
-  // transaction
   const dataOrPrefix = triggerCall.data ?? FUSION_NATIVE_TRANSFER_PREFIX
   const call = { ...triggerCall, data: concatHex([dataOrPrefix, quote.hash]) }
 

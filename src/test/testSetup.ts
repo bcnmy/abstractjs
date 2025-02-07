@@ -1,4 +1,5 @@
-import { base, optimism } from "viem/chains"
+import { http, type Transport } from "viem"
+import { type Chain, base, optimism } from "viem/chains"
 import { inject, test } from "vitest"
 import {
   type FundedTestClients,
@@ -9,7 +10,11 @@ import {
   toFundedTestClients
 } from "./testUtils"
 
-const MAINNET_CHAINS_FOR_TESTING = [optimism, base]
+const MAINNET_CHAINS_FOR_TESTING: Chain[] = [optimism, base]
+const MAINNET_TRANSPORTS_FOR_TESTING: Transport[] = [
+  http(`https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`),
+  http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`)
+]
 
 export type NetworkConfigWithTestClients = NetworkConfigWithBundler & {
   fundedTestClients: FundedTestClients
@@ -91,17 +96,28 @@ export const paymasterTruthy = () => {
 /**
  * Sorts the chains for testing, throwing an error if the chain is not supported
  * @param network - The network configuration
- * @returns The sorted chains of the order: [paymentChain, targetChain]
+ * @returns The sorted chains of the order: [optimism, base]
  * @throws {Error} If the chain is not supported
  */
-export const getTestChains = (network: NetworkConfig) => {
+export const getTestChainConfig = (
+  network: NetworkConfig
+): [Chain[], Transport[]] => {
   const defaultChainsIncludePaymentChain = MAINNET_CHAINS_FOR_TESTING.some(
     ({ id }) => Number(id) === network.chain.id
   )
   if (defaultChainsIncludePaymentChain) {
-    return MAINNET_CHAINS_FOR_TESTING.sort((a, b) =>
-      a.id === network.chain.id ? -1 : 1
+    const pairedChains = MAINNET_CHAINS_FOR_TESTING.map((chain, i) => ({
+      chain,
+      transport: MAINNET_TRANSPORTS_FOR_TESTING[i]
+    }))
+    const sortedPairedChains = pairedChains.sort((a, b) =>
+      a.chain.id === network.chain.id ? -1 : 1
     )
+    const sortedChains = sortedPairedChains.map(({ chain }) => chain)
+    const sortedTransports = sortedPairedChains.map(
+      ({ transport }) => transport
+    )
+    return [sortedChains, sortedTransports]
   }
   throw new Error("Unsupported chain")
 }

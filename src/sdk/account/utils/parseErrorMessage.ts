@@ -2,6 +2,27 @@ import type { AnyData } from "../../modules/utils/Types"
 
 // Helper functions to extract specific error patterns
 const extractFailedOpError = (message: string): string | null => {
+  // First try to match AA23 revert message pattern
+  const aa23Match = message.match(
+    /errorArgs=\[.*?,\s*"(AA23[^"]+)",\s*"(0x[^"]+)"\]/
+  )
+  if (aa23Match) {
+    // If it's an AA23 error, return the decoded message
+    try {
+      // Extract the hex data starting after the first 32 bytes (position of string)
+      const hexData = aa23Match[2].slice(130)
+      // Convert hex to ASCII, removing null bytes, control characters, and padding
+      const decoded = Buffer.from(hexData.replace(/00+$/, ""), "hex")
+        .toString()
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: <explanation>
+        .replace(/[\u0000-\u001F]/g, "") // Remove all control characters
+      return decoded
+    } catch {
+      return aa23Match[1] // Fallback to AA23 message if decoding fails
+    }
+  }
+
+  // Original pattern for other error types
   const match = message.match(/errorArgs=\[.*?,\s*"([^"]+)"\]/)
   return match?.[1] || null
 }
@@ -23,8 +44,13 @@ const handleErrorsArray = (errors: AnyData[]): string => {
   }
 
   const errorMessage = String(errors[0])
-  const errorArgsMatch = errorMessage.match(/errorArgs=\[(.*?)"([^"]+)"\]/)
-  return errorArgsMatch?.[2] || errorMessage
+  // Try to extract error using the same patterns as the main function
+  return (
+    extractFailedOpError(errorMessage) ||
+    extractGasLimitError(errorMessage) ||
+    extractRevertError(errorMessage) ||
+    errorMessage
+  )
 }
 
 const cleanErrorMessage = (message: string): string => {
@@ -49,7 +75,7 @@ export const parseErrorMessage = (error: unknown): string => {
 
   // Handle Across API error
   if (errorObj?.type === "AcrossApiError") {
-    return errorObj?.type
+    return [errorObj?.type, errorObj?.message].join(": ")
   }
 
   // Handle Error instances

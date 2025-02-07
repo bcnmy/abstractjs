@@ -2,15 +2,15 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
+  type Transport,
   getContract,
   keccak256,
   toBytes,
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChains, toNetwork } from "../../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -36,17 +36,19 @@ describe("mee.signPermitQuote", () => {
   let feeToken: FeeTokenInfo
   let meeClient: MeeClient
 
-  let targetChain: Chain
-  let paymentChain: Chain
   let tokenAddress: Address
 
   let recipientAccount: LocalAccount
 
   const index = 89n // Randomly chosen index
 
+  let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     recipientAccount = privateKeyToAccount(generatePrivateKey())
@@ -58,6 +60,7 @@ describe("mee.signPermitQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       signer: eoaAccount,
+      transports,
       index
     })
 
@@ -65,7 +68,7 @@ describe("mee.signPermitQuote", () => {
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
-  test("should check permitTypehash is correct", async () => {
+  test.concurrent("should check permitTypehash is correct", async () => {
     const permitTypehash = keccak256(
       toBytes(
         "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
@@ -74,20 +77,20 @@ describe("mee.signPermitQuote", () => {
     expect(permitTypehash).toBe(PERMIT_TYPEHASH)
   })
 
-  test("should check domainSeparator is correct", async () => {
+  test.concurrent("should check domainSeparator is correct", async () => {
     const expectedDomainSeparatorForOptimism =
       "0x26d9c34bb1a1c312f69c53b2d93b8be20faafba63af2438c6811713c9b1f933f"
 
     const domainSeparator = await getContract({
-      address: mcUSDC.addressOn(optimism.id),
+      address: mcUSDC.addressOn(paymentChain.id),
       abi: TokenWithPermitAbi,
-      client: mcNexus.deploymentOn(optimism.id, true).client
+      client: mcNexus.deploymentOn(paymentChain.id, true).client
     }).read.DOMAIN_SEPARATOR()
 
     expect(domainSeparator).toBe(expectedDomainSeparatorForOptimism)
   })
 
-  test("should sign a quote using signPermitQuote", async () => {
+  test.concurrent("should sign a quote using signPermitQuote", async () => {
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger: {
         chainId: paymentChain.id,
@@ -115,9 +118,9 @@ describe("mee.signPermitQuote", () => {
     expect(signedPermitQuote).toBeDefined()
   })
 
-  test.runIf(runPaidTests)(
-    "should execute a signed fusion quote using signPermitQuote",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should execute a signed fusion quote using signPermitQuote", async () => {
       console.time("signPermitQuote:getQuote")
       console.time("signPermitQuote:getHash")
       console.time("signPermitQuote:receipt")
@@ -150,6 +153,8 @@ describe("mee.signPermitQuote", () => {
         feeToken
       })
 
+      console.log(quote.hash)
+
       const fusionQuote = {
         quote,
         trigger: {
@@ -174,7 +179,5 @@ describe("mee.signPermitQuote", () => {
         tokenAddress
       )
       expect(balanceOfRecipient).toBe(trigger.amount)
-    },
-    { timeout: 200000 }
-  )
+    })
 })

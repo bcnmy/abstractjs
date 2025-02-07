@@ -33,10 +33,11 @@ bun add @biconomy/abstractjs viem @rhinestone/module-sdk
 import { toMultichainNexusAccount, mcUSDC } from "@biconomy/abstractjs";
 import { base, optimism } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
-
+import { http } from "viem";
 const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
 const mcNexus = await toMultichainNexusAccount({
   chains: [base, optimism],
+  transports: [http(), http()],
   signer: eoaAccount
 })
 const meeClient = await createMeeClient({ account: mcNexus })

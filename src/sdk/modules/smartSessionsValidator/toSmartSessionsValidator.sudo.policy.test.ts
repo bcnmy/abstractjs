@@ -19,10 +19,11 @@ import {
   toTestClient
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
+import { type NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../clients/createSmartAccountClient"
+} from "../../clients/createBicoBundlerClient"
 import { SmartSessionMode } from "../../constants"
 import type { Module } from "../utils/Types"
 import { parse, stringify } from "./Helpers"
@@ -42,7 +43,7 @@ describe("modules.smartSessions.sudo.policy", async () => {
   let nexusAccountAddress: Address
   let sessionKeyAccount: LocalAccount
   let sessionPublicKey: Address
-
+  let nexusAccount: NexusAccount
   let stringifiedSessionDatum: string // Session data to be stored by the dApp
 
   let sessionsModule: Module
@@ -58,12 +59,16 @@ describe("modules.smartSessions.sudo.policy", async () => {
 
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       useTestBundler: true
+    })
+
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
@@ -152,13 +157,15 @@ describe("modules.smartSessions.sudo.policy", async () => {
 
     // Create a new Nexus client for the session
     // This client will be used to interact with the smart contract account using the session key
-    const smartSessionNexusClient = await createSmartAccountClient({
-      chain,
-      accountAddress: usersSessionData.granter,
-      signer: sessionKeyAccount,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        accountAddress: usersSessionData.granter,
+        chain,
+        signer: sessionKeyAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     // Create a new smart sessions module with the session key

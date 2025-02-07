@@ -2,14 +2,11 @@ import {
   http,
   type Address,
   type Chain,
-  Hex,
   type LocalAccount,
   type PublicClient,
   type WalletClient,
   createWalletClient,
-  isHex,
-  pad,
-  toHex
+  isHex
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { base, baseSepolia } from "viem/chains"
@@ -25,7 +22,7 @@ import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../clients/createSmartAccountClient"
+} from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
   BICONOMY_EXPERIMENTAL_ATTESTER,
@@ -68,17 +65,21 @@ describe("nexus.account.addresses", async () => {
       transport: http()
     })
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
     })
 
-    nexusAccount = nexusClient.account
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
+    })
+
+    nexusAccountAddress = await nexusAccount.getAddress()
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
@@ -121,13 +122,19 @@ describe("nexus.account.addresses", async () => {
   test("should override account address", async () => {
     const someoneElsesNexusAddress =
       "0xf0479e036343bC66dc49dd374aFAF98402D0Ae5f"
-    const newNexusClient = await createSmartAccountClient({
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
+
+    const newNexusAccount = await toNexusAccount({
       accountAddress: someoneElsesNexusAddress,
-      signer: eoaAccount
+      chain,
+      signer: eoaAccount,
+      transport: http()
     })
+
+    const newNexusClient = createSmartAccountClient({
+      account: newNexusAccount,
+      transport: http(bundlerUrl)
+    })
+
     const accountAddress = await newNexusClient.account.getAddress()
     const someoneElseCounterfactualAddress =
       await newNexusClient.account.getCounterFactualAddress()
@@ -138,20 +145,24 @@ describe("nexus.account.addresses", async () => {
   })
 
   test("should check that mainnet and testnet addresses are different", async () => {
-    const mainnetClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain: base,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    const mainnetClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        chain: base,
+        signer: eoaAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
-    const testnetClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain: baseSepolia,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    const testnetClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        chain: baseSepolia,
+        signer: eoaAccount,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     const testnetAddress = await testnetClient.account.getAddress()
