@@ -1,6 +1,12 @@
-import type { Chain, LocalAccount, PublicClient, WalletClient } from "viem"
+import type {
+  Chain,
+  LocalAccount,
+  PublicClient,
+  Transport,
+  WalletClient
+} from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { getTestChains, toNetwork } from "../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import {
   getTestAccount,
   killNetwork,
@@ -27,12 +33,13 @@ describe("nexus.account.getFactoryData", async () => {
   let eoaAccount: LocalAccount
   let nexusAccount: NexusAccount
   let walletClient: WalletClient
-  let targetChain: Chain
   let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl

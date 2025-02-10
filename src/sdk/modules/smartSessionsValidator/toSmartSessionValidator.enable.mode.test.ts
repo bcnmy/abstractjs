@@ -27,7 +27,7 @@ import { type NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../clients/createSmartAccountClient"
+} from "../../clients/createBicoBundlerClient"
 import {
   MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
   OWNABLE_VALIDATOR_ADDRESS,
@@ -105,14 +105,15 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
 
     nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
 
-    nexusClient = await createSmartAccountClient({
-      index,
-      account: nexusAccount,
-      signer: eoaAccount,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    nexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        index,
+        signer: eoaAccount,
+        chain,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     await fundAndDeployClients(testClient, [nexusClient])
@@ -296,13 +297,16 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
 
     // Create a new Nexus client for the session
     // This client will be used to interact with the smart contract account using the session key
-    const smartSessionNexusClient = await createSmartAccountClient({
-      index,
-      accountAddress: usersSessionData.granter,
-      signer: eoaAccount as Signer,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl)
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        accountAddress: usersSessionData.granter,
+        index,
+        signer: eoaAccount as Signer,
+        chain,
+        transport: http(),
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     // Create a new smart sessions module with the session key

@@ -79,7 +79,7 @@ export type BridgeQueryResult = {
  *   tokenMapping: {
  *     deployments: [
  *       { chainId: 10, address: "0x123..." },
- *       { chainId: targetChain.id, address: "0x456..." }
+ *       { chainId: base.id, address: "0x456..." }
  *     ],
  *     on: (chainId) => deployments.find(d => d.chainId === chainId).address
  *   }

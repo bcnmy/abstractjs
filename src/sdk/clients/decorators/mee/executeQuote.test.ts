@@ -1,12 +1,12 @@
-import type { Chain, Hex, LocalAccount } from "viem"
+import type { Chain, Hex, LocalAccount, Transport } from "viem"
+import { base, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test, vi } from "vitest"
-import { getTestChains, toNetwork } from "../../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeQuote from "./executeQuote"
@@ -23,18 +23,23 @@ describe("mee.executeQuote", () => {
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
-  let targetChain: Chain
   let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
-    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    feeToken = {
+      address: mcUSDC.addressOn(optimism.id),
+      chainId: optimism.id
+    }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount
     })
 
@@ -51,7 +56,7 @@ describe("mee.executeQuote", () => {
             value: 0n
           }
         ],
-        chainId: targetChain.id
+        chainId: base.id
       }
     ]
 

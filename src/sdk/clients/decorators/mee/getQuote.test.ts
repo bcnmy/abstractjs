@@ -1,10 +1,9 @@
-import type { Chain, LocalAccount } from "viem"
+import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChains, toNetwork } from "../../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
@@ -16,19 +15,23 @@ describe("mee.getQuote", () => {
   let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
-
-  let targetChain: Chain
   let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
-    feeToken = toFeeToken({ mcToken: mcUSDC, chainId: paymentChain.id })
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount
     })
 
@@ -62,10 +65,7 @@ describe("mee.getQuote", () => {
     expect(instructions).toBeDefined()
     expect(instructions.length).toEqual(2)
 
-    const quote = await getQuote(meeClient, {
-      instructions: instructions,
-      feeToken
-    })
+    const quote = await getQuote(meeClient, { instructions, feeToken })
 
     expect(quote).toBeDefined()
   })
@@ -76,7 +76,7 @@ describe("mee.getQuote", () => {
         mcNexus.build({
           type: "intent",
           data: {
-            amount: BigInt(1000),
+            amount: 1n,
             mcToken: mcUSDC,
             toChain: targetChain
           }

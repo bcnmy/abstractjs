@@ -17,9 +17,13 @@ import {
   toTestClient
 } from "../../../../test/testUtils"
 import {
+  type NexusAccount,
+  toNexusAccount
+} from "../../../account/toNexusAccount"
+import {
   type NexusClient,
   createSmartAccountClient
-} from "../../../clients/createSmartAccountClient"
+} from "../../../clients/createBicoBundlerClient"
 import {
   OWNABLE_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
@@ -41,7 +45,7 @@ describe("modules.ownables.decorators", async () => {
   let userThreeAddress: Address
   let recipient: Account
   let recipientAddress: Address
-
+  let nexusAccount: NexusAccount
   beforeAll(async () => {
     network = await toNetwork()
 
@@ -54,14 +58,18 @@ describe("modules.ownables.decorators", async () => {
     userThreeAddress = userThree.address
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()

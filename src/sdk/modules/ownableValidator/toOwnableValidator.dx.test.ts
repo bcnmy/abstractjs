@@ -8,7 +8,8 @@ import {
   toTestClient
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
-import { createSmartAccountClient } from "../../clients/createSmartAccountClient"
+import { toNexusAccount } from "../../account/toNexusAccount"
+import { createSmartAccountClient } from "../../clients/createBicoBundlerClient"
 import { TEST_ADDRESS_K1_VALIDATOR_ADDRESS } from "../../constants"
 import { TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS } from "../../constants"
 import { ownableActions } from "./decorators"
@@ -61,14 +62,18 @@ describe("modules.ownableValidator.dx", async () => {
 
     // Create a Nexus client for the main account (eoaAccount)
     // This client will be used to interact with the smart contract account
-    const nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    const nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    const nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     // Fund the account and deploy the smart contract wallet

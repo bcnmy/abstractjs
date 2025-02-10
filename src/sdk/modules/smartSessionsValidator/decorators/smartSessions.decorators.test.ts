@@ -12,10 +12,11 @@ import {
   killNetwork,
   toTestClient
 } from "../../../../test/testUtils"
+import { toNexusAccount } from "../../../account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../../clients/createSmartAccountClient"
+} from "../../../clients/createBicoBundlerClient"
 import {
   TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
@@ -52,14 +53,16 @@ describe("modules.smartSessions.decorators", async () => {
     sessionPublicKey = sessionKeyAccount.address
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+    nexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        chain,
+        signer: eoaAccount,
+        transport: http(),
+        validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     sessionRequestedInfo = [
@@ -89,7 +92,7 @@ describe("modules.smartSessions.decorators", async () => {
   })
 
   test("should test create smart session decorators", async () => {
-    const sessionsModule = toSmartSessionsValidator({
+    sessionsModule = toSmartSessionsValidator({
       account: nexusClient.account,
       signer: eoaAccount
     })
@@ -118,12 +121,15 @@ describe("modules.smartSessions.decorators", async () => {
     })
 
     const smartSessionNexusClient = await createSmartAccountClient({
-      chain,
-      accountAddress: nexusClient.account.address,
-      signer: sessionKeyAccount,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+      account: await toNexusAccount({
+        chain,
+        signer: sessionKeyAccount,
+        transport: http(),
+        validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
+        useTestBundler: true
+      }),
+      transport: http(bundlerUrl)
     })
 
     const nexusSessionClient = smartSessionNexusClient.extend(

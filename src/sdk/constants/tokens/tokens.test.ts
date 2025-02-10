@@ -1,8 +1,8 @@
-import type { Chain, LocalAccount } from "viem"
+import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 
 import * as tokens from "."
-import { getTestChains, toNetwork } from "../../../test/testSetup"
+import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -15,17 +15,19 @@ describe("mee.tokens", async () => {
   let eoaAccount: LocalAccount
   let mcNexus: MultichainSmartAccount
 
-  let targetChain: Chain
   let paymentChain: Chain
+  let targetChain: Chain
+  let transports: Transport[]
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[paymentChain, targetChain] = getTestChains(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
+      transports,
       signer: eoaAccount
     })
   })
@@ -42,14 +44,14 @@ describe("mee.tokens", async () => {
   test("should instantiate a client", async () => {
     const token = tokens.mcUSDC
     const tokenWithChain = token.addressOn(10)
-    const mcNexusAddress = mcNexus.deploymentOn(targetChain.id)?.address
+    const mcNexusAddress = mcNexus.deploymentOn(paymentChain.id)?.address
 
     if (!mcNexusAddress) {
       throw new Error("mcNexusAddress is undefined")
     }
 
     const balances = await token.read({
-      onChains: [targetChain, paymentChain],
+      onChains: [paymentChain, targetChain],
       functionName: "balanceOf",
       args: [mcNexusAddress],
       account: mcNexus

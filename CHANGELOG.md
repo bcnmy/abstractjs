@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.0.38
+
+### Patch Changes
+
+- Fusion support
+
 ## 0.0.37
 
 ### Patch Changes

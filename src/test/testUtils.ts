@@ -11,6 +11,7 @@ import {
   createPublicClient,
   createTestClient,
   createWalletClient,
+  erc20Abi,
   parseAbi,
   publicActions,
   walletActions,
@@ -30,14 +31,14 @@ import {
   TEST_CONTRACTS
 } from "./callDatas"
 
+import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../sdk/clients/createSmartAccountClient"
+} from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
 import * as hardhatExec from "./executables"
 import type { TestFileNetworkType } from "./testSetup"
-
 config()
 
 const BASE_SEPOLIA_RPC_URL =
@@ -263,22 +264,21 @@ export const initBundlerInstance = async ({
   const bundlerInstance = await toBundlerInstance({ rpcUrl, bundlerPort })
   return { bundlerInstance, bundlerUrl, bundlerPort }
 }
-export const getBalance = (
+
+export const getBalance = async (
   testClient: AnyData,
   owner: Hex,
   tokenAddress?: Hex
 ): Promise<bigint> => {
   if (!tokenAddress) {
-    return testClient.getBalance({ address: owner })
+    return await testClient.getBalance({ address: owner })
   }
-  return testClient.readContract({
+  return await testClient.readContract({
     address: tokenAddress,
-    abi: parseAbi([
-      "function balanceOf(address owner) public view returns (uint256 balance)"
-    ]),
+    abi: erc20Abi,
     functionName: "balanceOf",
     args: [owner]
-  }) as Promise<bigint>
+  })
 }
 
 export const nonZeroBalance = async (
@@ -317,11 +317,14 @@ export const toFundedTestClients = async ({
 
   const testClient = toTestClient(chain, getTestAccount())
 
-  const nexus = await createSmartAccountClient({
-    signer: account,
-    transport: http(),
-    bundlerTransport: http(bundlerUrl),
-    chain
+  const nexus = createSmartAccountClient({
+    account: await toNexusAccount({
+      chain,
+      signer: account,
+      transport: http(),
+      useTestBundler: true
+    }),
+    transport: http(bundlerUrl)
   })
 
   const smartAccountAddress = await nexus.account.getAddress()

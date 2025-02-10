@@ -82,10 +82,14 @@ type StringOrStrings = string | string[]
  *   transport: http()
  * })
  *
- * const smartAccountCustomChain = await createSmartAccountClient({
- *   signer: walletClientWithCustomChain,
- *   bundlerUrl,
- *   customChain
+ * const smartAccountCustomChain = createSmartAccountClient({
+ *   account: await toNexusAccount({
+ *     chain: customChain,
+ *     signer: walletClientWithCustomChain,
+ *     transport: http(),
+ *     useTestBundler: true
+ *   }),
+ *   transport: http(bundlerUrl),
  * })
  *
  * const { wait } = await smartAccountCustomChain.sendUserOperation({

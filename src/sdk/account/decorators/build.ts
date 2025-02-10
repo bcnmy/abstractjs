@@ -1,13 +1,28 @@
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import {
-  type BuildDefaultParams,
+  type BuildApproveParameters,
+  buildApprove
+} from "./instructions/buildApprove"
+import {
+  type BuildDefaultParameters,
   buildDefaultInstructions
 } from "./instructions/buildDefaultInstructions"
 import {
   type BuildIntentParameters,
   buildIntent
 } from "./instructions/buildIntent"
+import {
+  type BuildTransferParameters,
+  buildTransfer
+} from "./instructions/buildTransfer"
+import {
+  type BuildTransferFromParameters,
+  buildTransferFrom
+} from "./instructions/buildTransferFrom"
+import buildWithdrawal, {
+  type BuildWithdrawalParameters
+} from "./instructions/buildWithdrawal"
 
 /**
  * Base parameters for building instructions
@@ -26,7 +41,7 @@ export type BaseInstructionsParams = {
  */
 export type BuildDefaultInstruction = {
   type: "default"
-  data: BuildDefaultParams
+  data: BuildDefaultParameters
 }
 
 /**
@@ -40,12 +55,55 @@ export type BuildIntentInstruction = {
 }
 
 /**
+ * Trigger build action which is used to build instructions for triggering a transfer
+ * @property type - Literal "trigger" to identify the action type
+ * @property data - {@link BuildTransferFromParameters} The parameters for the trigger action
+ */
+export type BuildTransferFromInstruction = {
+  type: "transferFrom"
+  data: BuildTransferFromParameters
+}
+
+/**
+ * Build action which is used to build instructions for a transfer
+ * @property type - Literal "transfer" to identify the action type
+ * @property data - {@link BuildTransferParameters} The parameters for the transfer action
+ */
+export type BuildTransferInstruction = {
+  type: "transfer"
+  data: BuildTransferParameters
+}
+
+/**
+ * Build action which is used to build instructions for an approval
+ * @property type - Literal "approve" to identify the action type
+ * @property data - {@link BuildApproveParameters} The parameters for the approval action
+ */
+export type BuildApproveInstruction = {
+  type: "approve"
+  data: BuildApproveParameters
+}
+
+/**
+ * Build action which is used to build instructions for a withdrawal
+ * @property type - Literal "withdrawal" to identify the action type
+ * @property data - {@link BuildWithdrawalParameters} The parameters for the withdrawal action
+ */
+export type BuildWithdrawalInstruction = {
+  type: "withdrawal"
+  data: BuildWithdrawalParameters
+}
+
+/**
  * Union type of all possible build instruction types
  */
 export type BuildInstructionTypes =
   | BuildDefaultInstruction
   | BuildIntentInstruction
-
+  | BuildTransferFromInstruction
+  | BuildTransferInstruction
+  | BuildApproveInstruction
+  | BuildWithdrawalInstruction
 /**
  * Builds transaction instructions based on the provided action type and parameters
  *
@@ -96,6 +154,18 @@ export const build = async (
     }
     case "default": {
       return buildDefaultInstructions(baseParams, data)
+    }
+    case "transferFrom": {
+      return buildTransferFrom(baseParams, data)
+    }
+    case "transfer": {
+      return buildTransfer(baseParams, data)
+    }
+    case "approve": {
+      return buildApprove(baseParams, data)
+    }
+    case "withdrawal": {
+      return buildWithdrawal(baseParams, data)
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

@@ -11,22 +11,30 @@ import {
 import {
   type BundlerActions,
   type BundlerClientConfig,
-  type PaymasterActions,
-  type SmartAccount,
   createBundlerClient
 } from "viem/account-abstraction"
-import { biconomySponsoredPaymasterContext } from "./createBicoPaymasterClient"
+import type { AnyData, ModularSmartAccount } from "../modules/utils/Types"
 import {
-  type BicoActions,
-  type BicoRpcSchema,
-  bicoBundlerActions
-} from "./decorators/bundler"
-import type { GetGasFeeValuesReturnType } from "./decorators/bundler/getGasFeeValues"
+  type PaymasterContext,
+  biconomySponsoredPaymasterContext
+} from "./createBicoPaymasterClient"
+import { type BicoActions, bicoBundlerActions } from "./decorators/bundler"
+import { getGasFeeValues } from "./decorators/bundler/getGasFeeValues"
+import { type Erc7579Actions, erc7579Actions } from "./decorators/erc7579"
+import {
+  type SmartAccountActions,
+  smartAccountActions
+} from "./decorators/smartAccount"
 
-export type BicoBundlerClient<
+/**
+ * Nexus Client type
+ */
+export type NexusClient<
   transport extends Transport = Transport,
   chain extends Chain | undefined = Chain | undefined,
-  account extends SmartAccount | undefined = SmartAccount | undefined,
+  account extends ModularSmartAccount | undefined =
+    | ModularSmartAccount
+    | undefined,
   client extends Client | undefined = Client | undefined,
   rpcSchema extends RpcSchema | undefined = undefined
 > = Prettify<
@@ -34,17 +42,41 @@ export type BicoBundlerClient<
     transport,
     chain extends Chain
       ? chain
-      : // biome-ignore lint/suspicious/noExplicitAny: We need any to infer the chain type
-        client extends Client<any, infer chain>
+      : client extends Client<AnyData, infer chain>
         ? chain
         : undefined,
     account,
     rpcSchema extends RpcSchema
-      ? [...BundlerRpcSchema, ...BicoRpcSchema, ...rpcSchema]
-      : [...BundlerRpcSchema, ...BicoRpcSchema],
-    BundlerActions<account> & PaymasterActions & BicoActions
+      ? [...BundlerRpcSchema, ...rpcSchema]
+      : BundlerRpcSchema,
+    BundlerActions<account>
   >
->
+> &
+  BundlerActions<ModularSmartAccount> &
+  BicoActions &
+  Erc7579Actions<ModularSmartAccount> &
+  SmartAccountActions<chain, ModularSmartAccount> & {
+    /**
+     * The Nexus account associated with this client
+     */
+    account: ModularSmartAccount
+    /**
+     * Optional client for additional functionality
+     */
+    client?: client | Client | undefined
+    /**
+     * Optional paymaster configuration
+     */
+    paymaster?: BundlerClientConfig["paymaster"] | undefined
+    /**
+     * Optional paymaster context
+     */
+    paymasterContext?: PaymasterContext | undefined
+    /**
+     * Optional user operation configuration
+     */
+    userOperation?: BundlerClientConfig["userOperation"] | undefined
+  }
 
 type BicoBundlerClientConfig = Omit<BundlerClientConfig, "transport"> &
   OneOf<
@@ -73,7 +105,7 @@ type BicoBundlerClientConfig = Omit<BundlerClientConfig, "transport"> &
  */
 export const createBicoBundlerClient = (
   parameters: BicoBundlerClientConfig
-): BicoBundlerClient => {
+) => {
   if (
     !parameters.apiKey &&
     !parameters.bundlerUrl &&
@@ -97,24 +129,31 @@ export const createBicoBundlerClient = (
           }`
         )
 
-  const defaultedUserOperation = parameters.userOperation ?? {
-    estimateFeesPerGas: async (_) => {
-      const gasFees: GetGasFeeValuesReturnType =
-        await bundler_.getGasFeeValues()
-      return gasFees.fast
-    }
-  }
-
   const defaultedPaymasterContext = parameters.paymaster
     ? parameters.paymasterContext ?? biconomySponsoredPaymasterContext
     : undefined
+
+  const defaultedUserOperation = parameters.userOperation ?? {
+    estimateFeesPerGas: async ({ bundlerClient }) => {
+      return (await getGasFeeValues(bundlerClient)).fast
+    }
+  }
 
   const bundler_ = createBundlerClient({
     ...parameters,
     transport: defaultedTransport,
     paymasterContext: defaultedPaymasterContext,
     userOperation: defaultedUserOperation
-  }).extend(bicoBundlerActions())
+  })
+    .extend(bicoBundlerActions())
+    .extend(erc7579Actions())
+    .extend(smartAccountActions())
 
-  return bundler_ as BicoBundlerClient
+  return bundler_ as unknown as NexusClient
 }
+
+// Aliases for backwards compatibility
+export const createSmartAccountClient = createBicoBundlerClient
+export const createNexusClient = createSmartAccountClient
+export const createNexusSessionClient = createSmartAccountClient
+export type BicoBundlerClient = NexusClient

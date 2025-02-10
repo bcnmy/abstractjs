@@ -421,14 +421,15 @@ export type EthersWallet = {
 
 export const getAllowance = async (
   client: PublicClient,
-  accountAddress: Address,
-  tokenAddress: Address
+  owner: Address,
+  tokenAddress: Address,
+  grantee = BICONOMY_TOKEN_PAYMASTER
 ): Promise<bigint> => {
   const approval = await client.readContract({
     address: tokenAddress,
     abi: erc20Abi,
     functionName: "allowance",
-    args: [accountAddress, BICONOMY_TOKEN_PAYMASTER]
+    args: [owner, grantee]
   })
 
   return approval as bigint

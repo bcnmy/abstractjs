@@ -4,55 +4,57 @@ import type { BaseMeeClient } from "../../createMeeClient"
 
 import type { GetQuotePayload } from "./getQuote"
 
-export type MeeExecutionMode =
-  | "direct-to-mee"
-  | "fusion-with-onchain-tx"
-  | "fusion-with-erc20permit"
-
 /**
- * Parameters required for requesting a quote from the MEE service
- * @interface SignQuoteParams
+ * Parameters required for signing a quote from the MEE service
  */
 export type SignQuoteParams = {
-  /** The quote to sign */
+  /**
+   * The quote payload to be signed
+   * @see {@link GetQuotePayload}
+   */
   quote: GetQuotePayload
-  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
+  /**
+   * Optional smart account to execute the transaction
+   * If not provided, uses the client's default account
+   */
   account?: MultichainSmartAccount
-  /** The execution mode to use. Defaults to "direct-to-mee" */
-  executionMode?: MeeExecutionMode
 }
 
+/**
+ * Response payload containing the signed quote data
+ */
 export type SignQuotePayload = GetQuotePayload & {
-  /** The signature of the quote */
+  /**
+   * The signature of the quote
+   * Prefixed with '0x00' and concatenated with the signed message
+   */
   signature: Hex
 }
 
-export const PREFIX: Record<MeeExecutionMode, Hex> = {
-  "direct-to-mee": "0x00",
-  "fusion-with-onchain-tx": "0x01",
-  "fusion-with-erc20permit": "0x02"
-}
-
 /**
- * Signs a quote
- * @param client - The Mee client to use
- * @param params - The parameters for the quote
- * @returns The signed quote
+ * Signs a quote using the provided account's signer or the client's default account.
+ * The signature is required for executing the quote through the MEE service.
+ *
+ * @param client - The Mee client instance
+ * @param params - Parameters for signing the quote
+ * @param params.quote - The quote to sign
+ * @param [params.account] - Optional account to use for signing
+ *
+ * @returns Promise resolving to the quote payload with added signature
+ *
  * @example
+ * ```typescript
  * const signedQuote = await signQuote(meeClient, {
  *   quote: quotePayload,
- *   account: smartAccount
- * })
+ *   account: smartAccount // Optional
+ * });
+ * ```
  */
 export const signQuote = async (
   client: BaseMeeClient,
   params: SignQuoteParams
 ): Promise<SignQuotePayload> => {
-  const {
-    account: account_ = client.account,
-    quote,
-    executionMode = "direct-to-mee"
-  } = params
+  const { account: account_ = client.account, quote } = params
 
   const signer = account_.signer
 
@@ -62,7 +64,7 @@ export const signQuote = async (
 
   return {
     ...quote,
-    signature: concatHex([PREFIX[executionMode], signedMessage])
+    signature: concatHex(["0x00", signedMessage])
   }
 }
 

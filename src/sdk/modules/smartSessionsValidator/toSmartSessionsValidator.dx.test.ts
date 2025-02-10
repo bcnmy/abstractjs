@@ -18,10 +18,11 @@ import {
   toTestClient
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
+import { type NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../clients/createSmartAccountClient"
+} from "../../clients/createBicoBundlerClient"
 import { SmartSessionMode } from "../../constants"
 import type { Module } from "../utils/Types"
 import { parse, stringify } from "./Helpers"
@@ -40,7 +41,7 @@ describe("modules.smartSessions.dx", async () => {
   let usersNexusClient: NexusClient
   let sessionKeyAccount: LocalAccount
   let sessionPublicKey: Address
-
+  let nexusAccount: NexusAccount
   let stringifiedSessionDatum: string
   let sessionsModule: Module
 
@@ -53,6 +54,12 @@ describe("modules.smartSessions.dx", async () => {
     sessionKeyAccount = privateKeyToAccount(generatePrivateKey()) // Generally belongs to the dapp
     sessionPublicKey = sessionKeyAccount.address
     testClient = toTestClient(chain, getTestAccount(5))
+    nexusAccount = await toNexusAccount({
+      chain,
+      signer: eoaAccount,
+      transport: http(),
+      useTestBundler: true
+    })
   })
 
   afterAll(async () => {
@@ -80,12 +87,9 @@ describe("modules.smartSessions.dx", async () => {
 
     // Create a Nexus client for the main account (eoaAccount)
     // This client will be used to interact with the smart contract account
-    usersNexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
-      chain,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    usersNexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     // Fund the account and deploy the smart contract wallet
@@ -153,13 +157,14 @@ describe("modules.smartSessions.dx", async () => {
 
     // Create a new Nexus client for the session
     // This client will be used to interact with the smart contract account using the session key
-    const smartSessionNexusClient = await createSmartAccountClient({
-      chain,
-      accountAddress: usersSessionData.granter,
-      signer: sessionKeyAccount,
-      transport: http(),
-      bundlerTransport: http(bundlerUrl),
-      useTestBundler: true
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: await toNexusAccount({
+        chain,
+        accountAddress: usersSessionData.granter,
+        signer: sessionKeyAccount,
+        transport: http()
+      }),
+      transport: http(bundlerUrl)
     })
 
     // Create a new smart sessions module with the session key

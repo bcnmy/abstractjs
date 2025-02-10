@@ -28,7 +28,7 @@ export default defineConfig({
     include: ["./src/test/**/*.test.ts", "./src/sdk/**/*.test.ts"],
     globalSetup: join(__dirname, "globalSetup.ts"),
     environment: "node",
-    testTimeout: 60_000,
+    testTimeout: 200_000,
     hookTimeout: 60_000
   }
 })

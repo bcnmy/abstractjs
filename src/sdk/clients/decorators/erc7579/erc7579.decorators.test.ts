@@ -18,13 +18,17 @@ import {
   toTestClient
 } from "../../../../test/testUtils"
 import {
+  type NexusAccount,
+  toNexusAccount
+} from "../../../account/toNexusAccount"
+import {
   TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
 } from "../../../constants"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../../createSmartAccountClient"
+} from "../../createBicoBundlerClient"
 
 describe("erc7579.decorators", async () => {
   let network: NetworkConfig
@@ -34,6 +38,7 @@ describe("erc7579.decorators", async () => {
   // Test utils
   let testClient: MasterClient
   let eoaAccount: Account
+  let nexusAccount: NexusAccount
   let nexusClient: NexusClient
   let nexusAccountAddress: Address
   let recipient: Account
@@ -49,14 +54,18 @@ describe("erc7579.decorators", async () => {
     recipientAddress = recipient.address
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()

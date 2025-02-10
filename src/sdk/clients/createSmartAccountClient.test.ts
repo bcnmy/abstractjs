@@ -23,6 +23,7 @@ import {
   topUp
 } from "../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
+import { toNexusAccount } from "../account/toNexusAccount"
 import { ERROR_MESSAGES } from "../account/utils/Constants"
 import { Logger } from "../account/utils/Logger"
 import {
@@ -38,7 +39,7 @@ import {
 import {
   type NexusClient,
   createSmartAccountClient
-} from "./createSmartAccountClient"
+} from "./createBicoBundlerClient"
 
 describe("nexus.client", async () => {
   let network: NetworkConfig
@@ -68,16 +69,20 @@ describe("nexus.client", async () => {
     privKey = generatePrivateKey()
     const account = privateKeyToAccount(privKey)
 
-    nexusClient = await createSmartAccountClient({
+    const nexusAccount = await toNexusAccount({
       signer: account,
       chain,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
     })
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+
+    nexusClient = createSmartAccountClient({
+      bundlerUrl,
+      account: nexusAccount
+    })
+    nexusAccountAddress = await nexusAccount.getAddress()
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
@@ -269,27 +274,34 @@ describe("nexus.client", async () => {
 
   test("should compare signatures of viem and ethers signer", async () => {
     const viemSigner = privateKeyToAccount(privKey)
-
     const wallet = new Wallet(privKey)
 
-    const viemNexusClient = await createSmartAccountClient({
+    const viemAccount = await toNexusAccount({
       signer: viemSigner,
       chain,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
     })
 
-    const ethersNexusClient = await createSmartAccountClient({
+    const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    const viemNexusClient = createSmartAccountClient({
+      bundlerUrl,
+      account: viemAccount
+    })
+
+    const ethersNexusClient = createSmartAccountClient({
+      bundlerUrl,
+      account: ethersAccount
     })
 
     const sig1 = await viemNexusClient.signMessage({ message: "123" })
@@ -300,14 +312,19 @@ describe("nexus.client", async () => {
 
   test("should send user operation using ethers Wallet", async () => {
     const ethersWallet = new ethers.Wallet(privKey)
-    const ethersNexusClient = await createSmartAccountClient({
+
+    const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    const ethersNexusClient = createSmartAccountClient({
+      bundlerUrl,
+      account: ethersAccount
     })
 
     const hash = await ethersNexusClient.sendUserOperation({

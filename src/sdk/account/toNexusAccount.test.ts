@@ -29,7 +29,6 @@ import {
 import type { UserOperation } from "viem/account-abstraction"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { MockSignatureValidatorAbi } from "../../test/__contracts/abi/MockSignatureValidatorAbi"
-import { TokenWithPermitAbi } from "../../test/__contracts/abi/TokenWithPermitAbi"
 import { testAddresses } from "../../test/callDatas"
 import { testnetTest, toNetwork } from "../../test/testSetup"
 import {
@@ -42,14 +41,15 @@ import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../clients/createSmartAccountClient"
+} from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
 } from "../constants"
-import type { NexusAccount } from "./toNexusAccount"
+import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
+import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
   addressEquals,
   getAccountDomainStructFields,
@@ -91,14 +91,18 @@ describe("nexus.account", async () => {
       transport: http()
     })
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
       factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
       useTestBundler: true
+    })
+
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     nexusAccount = nexusClient.account
@@ -411,9 +415,7 @@ describe("nexus.account", async () => {
       )
     }
 
-    const appDomainSeparator = domainSeparator({
-      domain: appDomain
-    })
+    const appDomainSeparator = domainSeparator({ domain: appDomain })
 
     const contentsHash = keccak256(
       concat(["0x1901", appDomainSeparator, message.stuff])

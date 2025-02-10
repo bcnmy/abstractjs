@@ -24,7 +24,7 @@ const erc20ABI = [
   }
 ] as const
 
-describe("mee:getMultichainContract", () => {
+describe("mee.getMultichainContract", () => {
   const mockDeployments: [Address, number][] = [
     ["0x1234567890123456789012345678901234567890", optimism.id],
     ["0x0987654321098765432109876543210987654321", base.id]

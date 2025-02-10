@@ -435,6 +435,13 @@ export const TokenWithPermitAbi = [
     type: "function"
   },
   {
+    inputs: [],
+    name: "version",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
     inputs: [
       {
         internalType: "address",

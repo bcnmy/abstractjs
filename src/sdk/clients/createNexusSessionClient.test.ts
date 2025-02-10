@@ -13,6 +13,7 @@ import {
   toTestClient
 } from "../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
+import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { SMART_SESSIONS_ADDRESS, SmartSessionMode } from "../constants"
 import { parse, stringify } from "../modules/smartSessionsValidator/Helpers"
 import type {
@@ -28,7 +29,7 @@ import type { Module } from "../modules/utils/Types"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "./createSmartAccountClient"
+} from "./createBicoBundlerClient"
 
 describe("nexus.session.client", async () => {
   let network: NetworkConfig
@@ -43,6 +44,7 @@ describe("nexus.session.client", async () => {
   let sessionKeyAccount: LocalAccount
   let sessionPublicKey: Address
   let cachedSessionData: string
+  let nexusAccount: NexusAccount
 
   let sessionsModule: Module
 
@@ -57,14 +59,19 @@ describe("nexus.session.client", async () => {
 
     testClient = toTestClient(chain, getTestAccount(5))
 
-    nexusClient = await createSmartAccountClient({
-      signer: eoaAccount,
+    nexusAccount = await toNexusAccount({
       chain,
+      signer: eoaAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       useTestBundler: true
     })
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
+    })
+
+    nexusAccountAddress = await nexusAccount.getAddress()
 
     sessionsModule = toSmartSessionsValidator({
       account: nexusClient.account,
@@ -177,13 +184,17 @@ describe("nexus.session.client", async () => {
       functionName: "getNumber"
     })
 
-    const smartSessionNexusClient = await createSmartAccountClient({
+    const nexusAccount = await toNexusAccount({
+      accountAddress: sessionData.granter,
       chain,
-      accountAddress: nexusClient.account.address,
       signer: sessionKeyAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       useTestBundler: true
+    })
+
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
     })
 
     const usePermissionsModule = toSmartSessionsValidator({
@@ -235,13 +246,17 @@ describe("nexus.session.client", async () => {
       moduleData: sessionData.moduleData
     })
 
-    const smartSessionNexusClient = await createSmartAccountClient({
+    const newNexusAccount = await toNexusAccount({
       chain,
       accountAddress: nexusClient.account.address,
       signer: sessionKeyAccount,
       transport: http(),
-      bundlerTransport: http(bundlerUrl),
       useTestBundler: true
+    })
+
+    const smartSessionNexusClient = createSmartAccountClient({
+      account: newNexusAccount,
+      transport: http(bundlerUrl)
     })
 
     const useSmartSessionNexusClient = smartSessionNexusClient.extend(

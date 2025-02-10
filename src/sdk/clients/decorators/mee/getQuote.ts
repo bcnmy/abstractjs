@@ -1,15 +1,20 @@
 import type { Address, Hex, OneOf } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 /**
- * Represents an abstract call to be executed in the transaction
+ * Represents an abstract call to be executed in the transaction.
+ * Each call specifies a target contract and optional parameters.
  */
 export type AbstractCall = {
   /** Address of the contract to call */
   to: Address
-  /** Gas limit for the call execution. This defaults to 500_000n. Overestimated gas will be refunded. */
+  /**
+   * Gas limit for the call execution. Defaults to 500_000n.
+   * Overestimated gas will be refunded.
+   */
   gasLimit?: bigint
 } & OneOf<
   | { value: bigint; data?: Hex }
@@ -21,9 +26,15 @@ export type AbstractCall = {
  * Information about the fee token to be used for the transaction
  */
 export type FeeTokenInfo = {
-  /** Address of the fee token */
+  /**
+   * Address of the fee token
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+   */
   address: Address
-  /** Chain ID where the fee token is deployed */
+  /**
+   * Chain ID where the fee token is deployed
+   * @example 1 // Ethereum Mainnet
+   */
   chainId: number
 }
 
@@ -34,13 +45,16 @@ export type FeeTokenInfo = {
 export type Instruction = {
   /** Array of abstract calls to be executed in the transaction */
   calls: AbstractCall[]
-  /** Chain ID where the transaction will be executed */
+  /**
+   * Chain ID where the transaction will be executed
+   * @example 1 // Ethereum Mainnet
+   */
   chainId: number
 }
 
 /**
- * Represents a supertransaction, which is a collection of instructions to be executed in a single transaction
- * @type Supertransaction
+ * Represents a supertransaction, which is a collection of instructions
+ * to be executed in a single transaction across multiple chains
  */
 export type Supertransaction = {
   /** Array of instructions to be executed in the transaction */
@@ -49,18 +63,53 @@ export type Supertransaction = {
   feeToken: FeeTokenInfo
 }
 
+/**
+ * Union type for different instruction formats that can be provided
+ */
+export type InstructionLike =
+  | Promise<Instruction[]>
+  | Instruction[]
+  | Instruction
+
+/**
+ * Parameters for creating a supertransaction with flexible instruction formats
+ */
 export type SupertransactionLike = {
-  instructions: (Promise<Instruction[]> | Instruction[])[] | Instruction[]
+  /** Array of instructions in various formats */
+  instructions: InstructionLike[]
+  /** Token to be used for paying fees */
   feeToken: FeeTokenInfo
 }
 
 /**
+ * Supported wallet providers for executing transactions
+ */
+export type WalletProvider =
+  | "BICO_V2"
+  | "BICO_V2_EOA"
+  | "SAFE_V141"
+  | "ZERODEV_V24"
+  | "ZERODEV_V31"
+
+/**
  * Parameters required for requesting a quote from the MEE service
- * @type GetQuoteParams
  */
 export type GetQuoteParams = SupertransactionLike & {
-  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
+  /**
+   * Optional smart account to execute the transaction.
+   * If not provided, uses the client's default account
+   */
   account?: MultichainSmartAccount
+  /**
+   * Path to the quote endpoint. Defaults to "v1/quote"
+   * @example "v1/quote"
+   */
+  path?: string
+  /**
+   * EOA address to be used for the transaction.
+   * Only required when using permit-enabled tokens
+   */
+  eoa?: Address
 }
 
 /**
@@ -87,7 +136,6 @@ type QuoteRequest = {
 
 /**
  * Basic payment information required for a quote request
- * @interface PaymentInfo
  */
 export type PaymentInfo = {
   /** Address of the account paying for the transaction */
@@ -104,8 +152,6 @@ export type PaymentInfo = {
 
 /**
  * Extended payment information including calculated token amounts
- * @interface FilledPaymentInfo
- * @extends {Required<PaymentInfo>}
  */
 export type FilledPaymentInfo = Required<PaymentInfo> & {
   /** Human-readable token amount */
@@ -118,7 +164,6 @@ export type FilledPaymentInfo = Required<PaymentInfo> & {
 
 /**
  * Detailed user operation structure with all required fields
- * @interface MeeFilledUserOp
  */
 export interface MeeFilledUserOp {
   /** Address of the account initiating the operation */
@@ -145,7 +190,6 @@ export interface MeeFilledUserOp {
 
 /**
  * Extended user operation details including timing and gas parameters
- * @interface MeeFilledUserOpDetails
  */
 export interface MeeFilledUserOpDetails {
   /** Complete user operation data */
@@ -168,7 +212,6 @@ export interface MeeFilledUserOpDetails {
 
 /**
  * Complete quote response from the MEE service
- * @type GetQuotePayload
  */
 export type GetQuotePayload = {
   /** Hash of the supertransaction */
@@ -184,39 +227,50 @@ export type GetQuotePayload = {
 }
 
 /**
- * Requests a quote from the MEE service for executing a set of instructions
- * @async
+ * Requests a quote from the MEE service for executing a set of instructions.
+ * This function handles the complexity of creating a supertransaction quote
+ * that can span multiple chains.
+ *
  * @param client - MEE client instance used to make the request
- * @param params - Parameters for the quote request
+ * @param parameters - Parameters for the quote request
  * @returns Promise resolving to a committed supertransaction quote
- * @throws Error if the account is not deployed on any required chain
+ *
  * @example
  * ```typescript
  * const quote = await getQuote(meeClient, {
- *   instructions: [...],
- *   feeToken: { address: '0x...', chainId: 1 },
- *   account: smartAccount
+ *   instructions: [{
+ *     calls: [{
+ *       to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+ *       data: "0x...",
+ *       value: 0n
+ *     }],
+ *     chainId: 1 // Ethereum Mainnet
+ *   }],
+ *   feeToken: {
+ *     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
+ *     chainId: 1
+ *   }
  * });
  * ```
+ *
+ * @throws Will throw an error if:
+ * - The account is not deployed on required chains
+ * - The fee token is not supported
+ * - The chain(s) are not supported by the node
  */
 export const getQuote = async (
   client: BaseMeeClient,
-  params: GetQuoteParams
+  parameters: GetQuoteParams
 ): Promise<GetQuotePayload> => {
-  const { account: account_ = client.account, instructions, feeToken } = params
+  const {
+    account: account_ = client.account,
+    instructions,
+    feeToken,
+    path = "v1/quote",
+    eoa
+  } = parameters
 
-  const resolvedInstructions: Instruction[] = (
-    await Promise.all(
-      instructions
-        .flatMap((instructions_) =>
-          typeof instructions_ === "function"
-            ? (instructions_ as () => Promise<Instruction[]>)()
-            : instructions_
-        )
-        .filter(Boolean)
-    )
-  ).flat()
-
+  const resolvedInstructions = await resolveInstructions(instructions)
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
 
   const validFeeToken =
@@ -253,36 +307,23 @@ export const getQuote = async (
 
   const userOpResults = await Promise.all(
     resolvedInstructions.map((userOp) => {
-      const deployment = account_.deploymentOn(userOp.chainId)
-      if (deployment) {
-        return Promise.all([
-          deployment.encodeExecuteBatch(userOp.calls),
-          deployment.getNonce(),
-          deployment.isDeployed(),
-          deployment.getInitCode(),
-          deployment.address,
-          userOp.calls
-            .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
-            .reduce((curr, acc) => curr + acc)
-            .toString(),
-          userOp.chainId.toString()
-        ])
-      }
-      return null
+      const deployment = account_.deploymentOn(userOp.chainId, true)
+      return Promise.all([
+        deployment.encodeExecuteBatch(userOp.calls),
+        deployment.getNonce(),
+        deployment.isDeployed(),
+        deployment.getInitCode(),
+        deployment.address,
+        userOp.calls
+          .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
+          .reduce((curr, acc) => curr + acc)
+          .toString(),
+        userOp.chainId.toString()
+      ])
     })
   )
 
-  const validUserOpResults = userOpResults.filter(Boolean) as [
-    Hex,
-    bigint,
-    boolean,
-    Hex,
-    Address,
-    string,
-    string
-  ][]
-
-  const userOps = validUserOpResults.map(
+  const userOps = userOpResults.map(
     ([
       callData,
       nonce_,
@@ -312,16 +353,14 @@ export const getQuote = async (
     token: feeToken.address,
     nonce: nonce.toString(),
     chainId: feeToken.chainId.toString(),
+    ...(eoa ? { eoa } : {}),
     ...(!isAccountDeployed && initCode ? { initCode } : {})
   }
 
-  const quoteRequest: QuoteRequest = {
-    userOps,
-    paymentInfo
-  }
+  const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
   return await client.request<GetQuotePayload>({
-    path: "v1/quote",
+    path,
     body: quoteRequest
   })
 }
