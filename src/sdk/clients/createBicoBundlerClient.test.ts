@@ -44,11 +44,14 @@ describe("bico.bundler", async () => {
       chain,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
-    bicoBundler = createBicoBundlerClient({ bundlerUrl, account: nexusAccount })
+    bicoBundler = createBicoBundlerClient({
+      mock: true,
+      bundlerUrl,
+      account: nexusAccount
+    })
     nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
     await topUp(testClient, nexusAccountAddress)
   })

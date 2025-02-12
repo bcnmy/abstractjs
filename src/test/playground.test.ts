@@ -98,10 +98,10 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
       transport: http(bundlerUrl),
+      mock: true,
       ...(paymasterParams ? paymasterParams : {})
     })
   })
@@ -255,10 +255,10 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         accountAddress: sessionData.granter,
         chain,
         signer: eoaAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
       transport: http(bundlerUrl),
+      mock: true,
       ...(paymasterParams ? paymasterParams : {})
     })
 

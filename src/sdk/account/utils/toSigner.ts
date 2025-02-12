@@ -112,7 +112,7 @@ export async function toSigner<
     walletClient = signer as WalletClient<Transport, Chain | undefined, Account>
   }
 
-  const addressFromWalletClient =
+  const addressFromWalletClient: Hex =
     walletClient?.account?.address ?? (await walletClient?.getAddresses())?.[0]
 
   if (!addressFromWalletClient) {

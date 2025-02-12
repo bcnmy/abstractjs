@@ -48,7 +48,6 @@ import {
   ENTRY_POINT_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
   MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  MEE_VALIDATOR_ADDRESSES,
   NEXUS_BOOTSTRAP_ADDRESS,
   REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
@@ -56,16 +55,18 @@ import {
 // Constants
 import { EntrypointAbi } from "../constants/abi"
 import {
-  getK1NexusAddress,
-  getMeeNexusAddress
+  getDefaultNexusAddress,
+  getK1NexusAddress
 } from "./decorators/getNexusAddress"
 
 // Modules
 import { toK1Validator } from "../modules/k1Validator/toK1Validator"
 import type { Module } from "../modules/utils/Types"
 
-import { getK1FactoryData } from "./decorators/getFactoryData"
-import { getMeeFactoryData } from "./decorators/getFactoryData"
+import {
+  getDefaultFactoryData,
+  getK1FactoryData
+} from "./decorators/getFactoryData"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -105,10 +106,6 @@ export type ToNexusSmartAccountParameters = {
   index?: bigint | undefined
   /** Optional active validation module */
   module?: Module
-  /** Optional factory address */
-  factoryAddress?: Address
-  /** Optional K1 validator address */
-  validatorAddress?: Address
   /** Optional account address override */
   accountAddress?: Address
   /** Attester addresses to apply to the account */
@@ -119,8 +116,6 @@ export type ToNexusSmartAccountParameters = {
   bootStrapAddress?: Address
   /** Optional registry address */
   registryAddress?: Address
-  /** Optional use test bundler */
-  useTestBundler?: boolean
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -132,7 +127,32 @@ export type ToNexusSmartAccountParameters = {
     | "pollingInterval"
     | "rpcSchema"
   >
+> &
+  OneOf<
+    CustomNexusConfigurationParameters | DefaultNexusConfigurationParameters
+  >
+
+type NexusConfigurationParameters = {
+  /** Factory address */
+  factoryAddress: Address
+  /** Validator address */
+  validatorAddress: Address
+  /** Optional validator init data. Defaults to signer address */
+  validatorInitData?: Hex
+}
+
+type DefaultNexusConfigurationParameters = {
+  /** Use k1 config. Defaults to true. This is gas optimized and recommended for default usage */
+  useK1Config?: true
+} & UnionPartialBy<
+  NexusConfigurationParameters,
+  "factoryAddress" | "validatorAddress"
 >
+
+type CustomNexusConfigurationParameters = {
+  /** For custom configurations, useK1Config must be false. factoryAddress and validatorAddress must be provided */
+  useK1Config: false
+} & NexusConfigurationParameters
 
 /**
  * Nexus Smart Account type
@@ -163,7 +183,6 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     signer: Signer
     publicClient: PublicClient
     walletClient: WalletClient
-    useTestBundler: boolean
     chain: Chain
   }
 >
@@ -205,16 +224,12 @@ export const toNexusAccount = async (
     attesterThreshold = 1,
     bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
     registryAddress = REGISTRY_ADDRESS,
-    useTestBundler = false
+    useK1Config = true,
+    validatorInitData: validatorInitData_
   } = parameters
-
-  const useMeeAccount = MEE_VALIDATOR_ADDRESSES.some((address) =>
-    addressEquals(validatorAddress, address)
-  )
 
   // @ts-ignore
   const signer = await toSigner({ signer: _signer })
-
   const walletClient = createWalletClient({
     account: signer,
     chain,
@@ -223,11 +238,7 @@ export const toNexusAccount = async (
     name
   }).extend(publicActions)
   const signerAddress = walletClient.account.address
-
-  const publicClient = createPublicClient({
-    chain,
-    transport
-  })
+  const publicClient = createPublicClient({ chain, transport })
 
   const entryPointContract = getContract({
     address: ENTRY_POINT_ADDRESS,
@@ -238,9 +249,16 @@ export const toNexusAccount = async (
     }
   })
 
-  const factoryData = useMeeAccount
-    ? await getMeeFactoryData({
+  const validatorInitData = validatorInitData_ ?? signerAddress
+  const factoryData = useK1Config
+    ? await getK1FactoryData({
         signerAddress,
+        index,
+        attesters: attesters_,
+        attesterThreshold
+      })
+    : await getDefaultFactoryData({
+        validatorInitData,
         index,
         publicClient,
         walletClient,
@@ -249,12 +267,6 @@ export const toNexusAccount = async (
         attesters: attesters_,
         attesterThreshold,
         validatorAddress
-      })
-    : await getK1FactoryData({
-        signerAddress,
-        index,
-        attesters: attesters_,
-        attesterThreshold
       })
 
   /**
@@ -284,18 +296,19 @@ export const toNexusAccount = async (
       }
     }
 
-    const addressFromFactory = useMeeAccount
-      ? await getMeeNexusAddress({
-          publicClient,
-          signerAddress,
-          index
-        })
-      : await getK1NexusAddress({
+    const addressFromFactory = useK1Config
+      ? await getK1NexusAddress({
           publicClient,
           signerAddress,
           index,
           attesters: attesters_,
           threshold: attesterThreshold,
+          factoryAddress
+        })
+      : await getDefaultNexusAddress({
+          publicClient,
+          signerAddress,
+          index,
           factoryAddress
         })
 
@@ -612,7 +625,6 @@ export const toNexusAccount = async (
       walletClient,
       publicClient,
       attesters: attesters_,
-      useTestBundler,
       chain
     }
   })

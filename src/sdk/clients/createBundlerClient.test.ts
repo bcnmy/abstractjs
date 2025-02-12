@@ -7,7 +7,8 @@ import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
 import { MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS } from "../constants"
 import { MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS } from "../constants"
-import type { NexusClient } from "./createSmartAccountClient"
+import type { NexusClient } from "./createBicoBundlerClient"
+import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
 
@@ -16,19 +17,19 @@ const COMPETITORS = [
     name: "Pimlico",
     chain: baseSepolia,
     bundlerUrl: `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
-    useTestBundler: true
+    mock: true
   },
   {
     name: "Biconomy",
     bundlerUrl: `https://bundler.biconomy.io/api/v3/${baseSepolia.id}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44`,
     chain: baseSepolia,
-    useTestBundler: false
+    mock: false
   }
 ]
 
 describe.each(COMPETITORS)(
   "nexus.interoperability with $name",
-  async ({ bundlerUrl, chain, useTestBundler }) => {
+  async ({ bundlerUrl, chain, mock }) => {
     const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY as Hex}`)
 
     const publicClient = createPublicClient({
@@ -47,8 +48,7 @@ describe.each(COMPETITORS)(
         transport: http(),
         // You can omit this outside of a testing context
         validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-        useTestBundler
+        factoryAddress: MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
       })
 
       nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
@@ -63,7 +63,8 @@ describe.each(COMPETITORS)(
         )
       }
 
-      bundlerClient = createBundlerClient({
+      bundlerClient = createBicoBundlerClient({
+        mock,
         chain,
         transport: http(bundlerUrl),
         account: nexusAccount,

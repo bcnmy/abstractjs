@@ -69,10 +69,10 @@ describe("modules.smartSessions.uni.policy", async () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
@@ -296,10 +296,10 @@ describe("modules.smartSessions.uni.policy", async () => {
         accountAddress: parsedSessionData.granter,
         chain,
         signer: sessionKeyAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     const usePermissionsModule = toSmartSessionsValidator({

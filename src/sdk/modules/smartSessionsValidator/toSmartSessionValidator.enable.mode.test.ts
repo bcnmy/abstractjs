@@ -99,21 +99,15 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
       index,
       signer: eoaAccount,
       chain,
-      transport: http(),
-      useTestBundler: true
+      transport: http()
     })
 
     nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
 
     nexusClient = createSmartAccountClient({
-      account: await toNexusAccount({
-        index,
-        signer: eoaAccount,
-        chain,
-        transport: http(),
-        useTestBundler: true
-      }),
-      transport: http(bundlerUrl)
+      account: nexusAccount,
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     await fundAndDeployClients(testClient, [nexusClient])
@@ -303,10 +297,10 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
         index,
         signer: eoaAccount as Signer,
         chain,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     // Create a new smart sessions module with the session key

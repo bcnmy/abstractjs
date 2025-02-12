@@ -185,7 +185,8 @@ export async function toMultichainNexusAccount(
         validatorAddress: MEE_VALIDATOR_ADDRESS,
         factoryAddress: NEXUS_ACCOUNT_FACTORY,
         attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],
-        ...accountParameters
+        ...accountParameters,
+        useK1Config: false
       })
     )
   )

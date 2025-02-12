@@ -85,13 +85,13 @@ describe("modules.smartSessions.dx", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      useTestBundler: true
+      transport: http()
     })
 
     usersNexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     // Fund the account and deploy the smart contract wallet
@@ -181,13 +181,13 @@ describe("modules.smartSessions.dx", async () => {
       accountAddress: usersSessionData.granter,
       chain,
       signer: sessionKeyAccount,
-      transport: http(),
-      useTestBundler: true
+      transport: http()
     })
 
     const smartSessionNexusClient = createSmartAccountClient({
       account: smartSessionNexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     // Create a new smart sessions module with the session key

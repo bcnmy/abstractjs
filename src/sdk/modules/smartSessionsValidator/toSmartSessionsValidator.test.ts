@@ -63,10 +63,10 @@ describe("modules.smartSessions", async () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     sessionsModule = toSmartSessionsValidator({
@@ -288,10 +288,10 @@ describe("modules.smartSessions", async () => {
         accountAddress: parsedSessionData.granter,
         chain,
         signer: sessionKeyAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     const usePermissionsModule = toSmartSessionsValidator({

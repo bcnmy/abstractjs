@@ -57,13 +57,13 @@ describe("modules.k1Validator", async () => {
       signer: eoaAccount,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()

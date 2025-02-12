@@ -22,6 +22,7 @@ jobs:
         env:
           RUN_PLAYGROUND: true
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_TWO: ${{ secrets.PRIVATE_KEY_TWO }}
           BUNDLER_URL: ${{ secrets.BUNDLER_URL }}
           TESTNET_CHAIN_ID: 84532
           CI: true

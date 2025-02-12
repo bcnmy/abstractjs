@@ -54,13 +54,13 @@ describe("modules.smartSessions.policies", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      useTestBundler: true
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
@@ -101,7 +101,8 @@ describe("modules.smartSessions.policies", async () => {
   test("should grant permission with all available policies", async () => {
     const usersNexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     // Create a smart sessions module for the user's account

@@ -21,7 +21,7 @@ import {
   TEMP_MEE_ATTESTER_ADDR
 } from "../../constants"
 import type { NexusAccount } from "../toNexusAccount"
-import { getK1FactoryData, getMeeFactoryData } from "./getFactoryData"
+import { getDefaultFactoryData, getK1FactoryData } from "./getFactoryData"
 
 describe("nexus.account.getFactoryData", async () => {
   let network: NetworkConfig
@@ -64,8 +64,8 @@ describe("nexus.account.getFactoryData", async () => {
   })
 
   test("should check factory data with mee", async () => {
-    const factoryData = await getMeeFactoryData({
-      signerAddress: eoaAccount.address,
+    const factoryData = await getDefaultFactoryData({
+      validatorInitData: eoaAccount.address,
       index: 0n,
       attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],
       attesterThreshold: 1,

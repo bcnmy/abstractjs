@@ -86,6 +86,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       chain: baseSepolia,
       signer: eoaAccount,
       transport: http(),
+      useK1Config: false,
       validatorAddress: MEE_VALIDATOR_ADDRESS,
       factoryAddress: NEXUS_ACCOUNT_FACTORY,
       attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER]

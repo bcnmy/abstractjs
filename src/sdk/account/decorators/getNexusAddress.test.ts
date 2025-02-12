@@ -9,7 +9,7 @@ import {
 import { beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
-import { getK1NexusAddress, getMeeNexusAddress } from "./getNexusAddress"
+import { getDefaultNexusAddress, getK1NexusAddress } from "./getNexusAddress"
 
 describe("account.getNexusAddress", () => {
   let network: NetworkConfig
@@ -56,7 +56,7 @@ describe("account.getNexusAddress", () => {
   test("should check mee nexus address", async () => {
     const index = 1n
 
-    const meeAddress = await getMeeNexusAddress({
+    const meeAddress = await getDefaultNexusAddress({
       publicClient: publicClient as unknown as PublicClient,
       signerAddress: eoaAccount.address
     })

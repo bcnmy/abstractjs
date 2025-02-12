@@ -62,13 +62,13 @@ describe("modules.smartSessions.sudo.policy", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      useTestBundler: true
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
@@ -162,10 +162,10 @@ describe("modules.smartSessions.sudo.policy", async () => {
         accountAddress: usersSessionData.granter,
         chain,
         signer: sessionKeyAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     // Create a new smart sessions module with the session key

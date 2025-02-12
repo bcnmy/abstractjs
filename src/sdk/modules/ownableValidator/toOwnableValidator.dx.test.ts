@@ -67,13 +67,13 @@ describe("modules.ownableValidator.dx", async () => {
       signer: eoaAccount,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     const nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     // Fund the account and deploy the smart contract wallet
@@ -87,7 +87,7 @@ describe("modules.ownableValidator.dx", async () => {
       account: nexusClient.account,
       signer: eoaAccount,
       moduleInitArgs: {
-        threshold: 2n,
+        threshold: 2,
         owners: [userThree.address, userTwo.address]
       }
     })

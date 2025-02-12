@@ -83,8 +83,8 @@ bun run fund:nexus
 # Run all tests
 bun run test
 
-# Run tests for a specific subset of tests (by test description)
-bun run test -t=mee
+# Run tests in watch mode for a specific subset of tests (by test description)
+bun run test:watch -t=mee
 ```
 
 For detailed information about the testing framework, network configurations, and debugging guidelines, please refer to our [Testing Documentation](./src/test/README.md).

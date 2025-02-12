@@ -2,8 +2,7 @@ import {
   type Address,
   type Hex,
   type PublicClient,
-  decodeAbiParameters,
-  encodeAbiParameters
+  decodeAbiParameters
 } from "viem"
 import {
   OWNABLE_VALIDATOR_ADDRESS,
@@ -16,7 +15,6 @@ import {
 import type {
   ModularSmartAccount,
   Module,
-  ModuleMeta,
   ModuleParameters
 } from "../utils/Types"
 import { toModule } from "../utils/toModule"
@@ -44,7 +42,7 @@ type ToOwnableValidatorModuleParameters = Omit<
  */
 export type GetOwnablesModuleInitDataParams = {
   /** The threshold number of signatures required for operations. */
-  threshold: bigint
+  threshold: number
   /** Array of owner addresses for the module. */
   owners: Address[]
 }
@@ -53,26 +51,6 @@ export type GetOwnablesModuleInitDataParams = {
  * Parameters specific to the Ownable module.
  */
 export type OwnableModuleParameters = ModuleParameters
-
-/**
- * Generates the initialization data for the Ownables module.
- *
- * @param parameters - The parameters for initializing the module.
- * @returns The module metadata including the address, type, and encoded init data.
- */
-export const getOwnablesModuleInitData = (
-  parameters: GetOwnablesModuleInitDataParams
-): ModuleMeta => ({
-  address: OWNABLE_VALIDATOR_ADDRESS,
-  type: "validator",
-  initData: encodeAbiParameters(
-    [
-      { name: "threshold", type: "uint256" },
-      { name: "owners", type: "address[]" }
-    ],
-    [parameters.threshold, parameters.owners]
-  )
-})
 
 /**
  * Generates the initialization data for the Ownables module.
@@ -99,7 +77,7 @@ export const getOwnablesInitData = (_?: GetOwnablesModuleInitDataParams): Hex =>
  *   account: mySmartAccount,
  *   signer: mySigner,
  *   moduleInitArgs: {
- *     threshold: 2n,
+ *     threshold: 2,
  *     owners: ['0x123...', '0x456...']
  *   }
  * });
@@ -123,18 +101,19 @@ export const toOwnableValidator = (
       threshold: 1,
       owners: [signer.address]
     },
+    moduleInitData: moduleInitData_,
     deInitData = "0x"
   } = parameters
 
-  const nexusAccount = getAccount({
-    address: account.address,
-    type: "nexus"
-  })
+  const nexusAccount = getAccount({ address: account.address, type: "nexus" })
 
-  const moduleInitData = getOwnableValidator({
-    threshold: moduleInitArgs_.threshold,
-    owners: moduleInitArgs_.owners
-  })
+  const moduleInitData =
+    moduleInitData_ ??
+    getOwnableValidator({
+      threshold: moduleInitArgs_.threshold,
+      owners: moduleInitArgs_.owners
+    })
+
   const initData = initData_ ?? getOwnablesInitData(initArgs_)
 
   return toModule({

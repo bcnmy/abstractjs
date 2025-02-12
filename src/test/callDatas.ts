@@ -1,6 +1,8 @@
 import type { Address, Hex } from "viem"
-import { baseSepolia } from "viem/chains"
+import { base, baseSepolia } from "viem/chains"
 import {
+  NEXUS_ACCOUNT_FACTORY,
+  NEXUS_BOOTSTRAP_ADDRESS,
   OWNABLE_EXECUTOR_ADDRESS,
   OWNABLE_VALIDATOR_ADDRESS,
   REGISTRY_ADDRESS,

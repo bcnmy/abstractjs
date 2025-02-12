@@ -415,7 +415,7 @@ export type EthersWallet = {
   signMessage: (...args: AnyData[]) => Promise<AnyData>
   signTypedData: (...args: AnyData[]) => Promise<AnyData>
   getAddress: () => Promise<AnyData>
-  address: Address | string
+  address: Address
   provider: AnyData
 }
 

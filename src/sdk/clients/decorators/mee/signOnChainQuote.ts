@@ -16,6 +16,8 @@ export type SignOnChainQuoteParams = {
   fusionQuote: GetOnChainQuotePayload
   /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
   account?: MultichainSmartAccount
+  /** The number of confirmations to wait for. Defaults to 2 */
+  confirmations?: number
 }
 
 /**
@@ -35,6 +37,7 @@ export const signOnChainQuote = async (
   params: SignOnChainQuoteParams
 ): Promise<SignOnChainQuotePayload> => {
   const {
+    confirmations = 2,
     account: account_ = client.account,
     fusionQuote: { quote, trigger }
   } = params
@@ -60,7 +63,7 @@ export const signOnChainQuote = async (
   // @ts-ignore
   const hash = await walletClient.sendTransaction(call)
   // @ts-ignore
-  await walletClient.waitForTransactionReceipt({ hash })
+  await walletClient.waitForTransactionReceipt({ hash, confirmations })
 
   const signature = concatHex([
     "0x01",

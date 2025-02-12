@@ -75,7 +75,11 @@ export const getK1FactoryData = async ({
  * @property walletClient - {@link WalletClient} Viem wallet client instance
  * @property bootStrapAddress - Optional {@link Address} of the bootstrap contract (defaults to NEXUS_BOOTSTRAP_ADDRESS)
  */
-export type GetMeeFactoryDataParams = GetK1FactoryDataParams & {
+export type GetDefaultFactoryDataParams = {
+  validatorInitData: Hex
+  index: bigint
+  attesters: Address[]
+  attesterThreshold: number
   validatorAddress?: Address
   registryAddress?: Address
   publicClient: PublicClient
@@ -86,7 +90,7 @@ export type GetMeeFactoryDataParams = GetK1FactoryDataParams & {
 /**
  * Generates encoded factory data for MEE account creation
  *
- * @param params - {@link GetMeeFactoryDataParams} Parameters for MEE account creation
+ * @param params - {@link GetDefaultFactoryDataParams} Parameters for MEE account creation
  * @param params.validatorAddress - Optional validator address
  * @param params.attesters - Array of attester addresses
  * @param params.registryAddress - Optional registry contract address
@@ -100,7 +104,7 @@ export type GetMeeFactoryDataParams = GetK1FactoryDataParams & {
  * @returns Promise resolving to {@link Hex} encoded function data for account creation
  *
  * @example
- * const factoryData = await getMeeFactoryData({
+ * const factoryData = await getDefaultFactoryData({
  *   signerAddress: "0x123...",
  *   index: BigInt(0),
  *   attesters: ["0xabc...", "0xdef..."],
@@ -110,17 +114,21 @@ export type GetMeeFactoryDataParams = GetK1FactoryDataParams & {
  *   validatorAddress: "0x789..." // optional
  * });
  */
-export const getMeeFactoryData = async ({
-  validatorAddress = MEE_VALIDATOR_ADDRESS,
-  attesters,
-  registryAddress = REGISTRY_ADDRESS,
-  attesterThreshold,
-  publicClient,
-  walletClient,
-  bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-  signerAddress,
-  index
-}: GetMeeFactoryDataParams): Promise<Hex> => {
+export const getDefaultFactoryData = async (
+  parameters: GetDefaultFactoryDataParams
+): Promise<Hex> => {
+  const {
+    validatorAddress = MEE_VALIDATOR_ADDRESS,
+    attesters,
+    registryAddress = REGISTRY_ADDRESS,
+    attesterThreshold,
+    publicClient,
+    walletClient,
+    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
+    validatorInitData,
+    index
+  } = parameters
+
   const nexusBootstrap = getContract({
     address: bootStrapAddress,
     abi: NexusBootstrapAbi,
@@ -134,7 +142,7 @@ export const getMeeFactoryData = async ({
     await nexusBootstrap.read.getInitNexusWithSingleValidatorCalldata([
       {
         module: validatorAddress,
-        data: signerAddress
+        data: validatorInitData
       },
       registryAddress,
       attesters,

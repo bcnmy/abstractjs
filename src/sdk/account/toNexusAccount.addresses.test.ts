@@ -70,13 +70,13 @@ describe("nexus.account.addresses", async () => {
       signer: eoaAccount,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     nexusAccountAddress = await nexusAccount.getAddress()
@@ -132,7 +132,8 @@ describe("nexus.account.addresses", async () => {
 
     const newNexusClient = createSmartAccountClient({
       account: newNexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     const accountAddress = await newNexusClient.account.getAddress()
@@ -149,9 +150,9 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: base,
         signer: eoaAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
+      mock: true,
       transport: http(bundlerUrl)
     })
 
@@ -159,9 +160,9 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: baseSepolia,
         signer: eoaAccount,
-        transport: http(),
-        useTestBundler: true
+        transport: http()
       }),
+      mock: true,
       transport: http(bundlerUrl)
     })
 
@@ -175,13 +176,14 @@ describe("nexus.account.addresses", async () => {
     const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
 
     const meeAccount = await toNexusAccount({
+      useK1Config: false,
       signer: eoaAccount,
       chain: baseSepolia,
       transport: http(),
       validatorAddress: MEE_VALIDATOR_ADDRESS,
       factoryAddress: NEXUS_ACCOUNT_FACTORY,
       attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],
-      useTestBundler: true
+      validatorInitData: eoaAccount.address
     })
 
     const meeAddress = await meeAccount.getAddress()

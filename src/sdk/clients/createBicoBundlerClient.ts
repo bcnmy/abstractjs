@@ -57,6 +57,10 @@ export type NexusClient<
   Erc7579Actions<ModularSmartAccount> &
   SmartAccountActions<chain, ModularSmartAccount> & {
     /**
+     * Whether to use the test bundler. Conditionally used by the `getGasFeeValues` decorator.
+     */
+    mock: boolean
+    /**
      * The Nexus account associated with this client
      */
     account: ModularSmartAccount
@@ -78,8 +82,12 @@ export type NexusClient<
     userOperation?: BundlerClientConfig["userOperation"] | undefined
   }
 
-type BicoBundlerClientConfig = Omit<BundlerClientConfig, "transport"> &
-  OneOf<
+type BicoBundlerClientConfig = Omit<BundlerClientConfig, "transport"> & {
+  /**
+   * Whether to use the test bundler. Conditionally used by the `getGasFeeValues` decorator.
+   */
+  mock?: boolean
+} & OneOf<
     | {
         transport: Transport
       }
@@ -106,36 +114,41 @@ type BicoBundlerClientConfig = Omit<BundlerClientConfig, "transport"> &
 export const createBicoBundlerClient = (
   parameters: BicoBundlerClientConfig
 ) => {
-  if (
-    !parameters.apiKey &&
-    !parameters.bundlerUrl &&
-    !parameters.transport &&
-    !parameters?.chain
-  ) {
+  const {
+    mock = false,
+    transport,
+    bundlerUrl,
+    apiKey,
+    paymaster,
+    paymasterContext,
+    userOperation,
+    chain
+  } = parameters
+
+  if (!apiKey && !bundlerUrl && !transport && !chain) {
     throw new Error(
       "Cannot set determine a bundler url, please provide a chain."
     )
   }
 
-  const defaultedTransport = parameters.transport
-    ? parameters.transport
-    : parameters.bundlerUrl
-      ? http(parameters.bundlerUrl)
+  const defaultedTransport = transport
+    ? transport
+    : bundlerUrl
+      ? http(bundlerUrl)
       : http(
           // @ts-ignore: Type saftey provided by the if statement above
-          `https://bundler.biconomy.io/api/v3/${parameters.chain.id}/${
-            parameters.apiKey ??
-            "nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14"
+          `https://bundler.biconomy.io/api/v3/${chain?.id}/${
+            apiKey ?? "nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14"
           }`
         )
 
-  const defaultedPaymasterContext = parameters.paymaster
-    ? parameters.paymasterContext ?? biconomySponsoredPaymasterContext
+  const defaultedPaymasterContext = paymaster
+    ? paymasterContext ?? biconomySponsoredPaymasterContext
     : undefined
 
-  const defaultedUserOperation = parameters.userOperation ?? {
-    estimateFeesPerGas: async ({ bundlerClient }) => {
-      return (await getGasFeeValues(bundlerClient)).fast
+  const defaultedUserOperation = userOperation ?? {
+    estimateFeesPerGas: async () => {
+      return (await getGasFeeValues(bundler_)).fast
     }
   }
 
@@ -145,11 +158,12 @@ export const createBicoBundlerClient = (
     paymasterContext: defaultedPaymasterContext,
     userOperation: defaultedUserOperation
   })
+    .extend((client: AnyData) => ({ ...client, mock }))
     .extend(bicoBundlerActions())
     .extend(erc7579Actions())
-    .extend(smartAccountActions())
+    .extend(smartAccountActions()) as unknown as NexusClient
 
-  return bundler_ as unknown as NexusClient
+  return bundler_
 }
 
 // Aliases for backwards compatibility

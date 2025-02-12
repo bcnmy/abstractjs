@@ -59,10 +59,10 @@ describe("modules.smartSessions.decorators", async () => {
         signer: eoaAccount,
         transport: http(),
         validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-        useTestBundler: true
+        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     sessionRequestedInfo = [
@@ -126,10 +126,10 @@ describe("modules.smartSessions.decorators", async () => {
         signer: sessionKeyAccount,
         transport: http(),
         validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-        useTestBundler: true
+        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
       }),
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     const nexusSessionClient = smartSessionNexusClient.extend(

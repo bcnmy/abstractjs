@@ -87,7 +87,7 @@ type StringOrStrings = string | string[]
  *     chain: customChain,
  *     signer: walletClientWithCustomChain,
  *     transport: http(),
- *     useTestBundler: true
+ *     mock: true
  *   }),
  *   transport: http(bundlerUrl),
  * })

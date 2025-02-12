@@ -74,13 +74,13 @@ describe("nexus.client", async () => {
       chain,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     nexusClient = createSmartAccountClient({
       bundlerUrl,
-      account: nexusAccount
+      account: nexusAccount,
+      mock: true
     })
     nexusAccountAddress = await nexusAccount.getAddress()
   })
@@ -281,8 +281,7 @@ describe("nexus.client", async () => {
       chain,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     const ethersAccount = await toNexusAccount({
@@ -290,18 +289,19 @@ describe("nexus.client", async () => {
       chain,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     const viemNexusClient = createSmartAccountClient({
       bundlerUrl,
-      account: viemAccount
+      account: viemAccount,
+      mock: true
     })
 
     const ethersNexusClient = createSmartAccountClient({
       bundlerUrl,
-      account: ethersAccount
+      account: ethersAccount,
+      mock: true
     })
 
     const sig1 = await viemNexusClient.signMessage({ message: "123" })
@@ -318,13 +318,13 @@ describe("nexus.client", async () => {
       chain,
       transport: http(),
       validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-      useTestBundler: true
+      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
     })
 
     const ethersNexusClient = createSmartAccountClient({
       bundlerUrl,
-      account: ethersAccount
+      account: ethersAccount,
+      mock: true
     })
 
     const hash = await ethersNexusClient.sendUserOperation({
