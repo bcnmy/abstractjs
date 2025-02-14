@@ -17,6 +17,7 @@ export type BuildIntentParameters = {
   amount: bigint
   mcToken: MultichainToken
   toChain: Chain
+  mode?: "DEBIT" | "OPTIMISTIC"
 }
 
 /**
@@ -60,13 +61,14 @@ export const buildIntent = async (
   parameters: BuildIntentParameters
 ): Promise<Instruction[]> => {
   const { account, currentInstructions = [] } = baseParams
-  const { amount, mcToken, toChain } = parameters
+  const { amount, mcToken, toChain, mode } = parameters
   const unifiedBalance = await getUnifiedERC20Balance({ mcToken, account })
   const { instructions } = await buildBridgeInstructions({
     account,
     amount: amount,
     toChain,
-    unifiedBalance
+    unifiedBalance,
+    mode
   })
   return [...currentInstructions, ...instructions]
 }

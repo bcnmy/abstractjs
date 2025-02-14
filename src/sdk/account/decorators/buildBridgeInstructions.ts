@@ -50,6 +50,7 @@ export type MultichainBridgingParams = {
   amount: bigint
   bridgingPlugins?: BridgingPlugin[]
   feeData?: FeeData
+  mode?: "DEBIT" | "OPTIMISTIC"
 }
 
 /**
@@ -126,6 +127,7 @@ export type BridgingInstructions = {
  * @param params.unifiedBalance - Current token balances across chains
  * @param params.bridgingPlugins - Optional array of bridging plugins (defaults to Across)
  * @param params.feeData - Optional fee configuration
+ * @param params.mode - The mode of the bridge operation, defaults to "DEBIT". In optimistic mode, the bridging instructions are returned without preexisting balance checks.
  *
  * @returns Promise resolving to {@link BridgingInstructions} containing all necessary operations
  *
@@ -156,11 +158,11 @@ export const buildBridgeInstructions = async (
     toChain,
     unifiedBalance,
     bridgingPlugins = [toAcrossPlugin()],
-    feeData
+    feeData,
+    mode = "DEBIT"
   } = params
 
-  // Create token address mapping
-  const tokenMapping: MultichainAddressMapping = {
+  const tokenMapping = {
     on: (chainId: number) =>
       unifiedBalance.mcToken.deployments.get(chainId) || "0x",
     deployments: Array.from(
@@ -194,19 +196,24 @@ export const buildBridgeInstructions = async (
   // Get available balances from source chains
   const sourceBalances = unifiedBalance.breakdown
     .filter((balance) => balance.chainId !== toChain.id)
-    .map((balance) => {
+    .map((balance_) => {
+      // If we are in optimistic mode, we need to retrieve instructions for the bridging action regardless of the balance
+      const balancePerChain =
+        mode === "DEBIT" ? balance_ : { ...balance_, balance: targetAmount }
+
       // If this is the fee payment chain, adjust available balance
-      const isFeeChain = feeData && feeData.txFeeChainId === balance.chainId
+      const isFeeChain =
+        feeData && feeData.txFeeChainId === balancePerChain.chainId
 
       const availableBalance =
         isFeeChain && "txFeeAmount" in feeData
-          ? balance.balance > feeData.txFeeAmount
-            ? balance.balance - feeData.txFeeAmount
+          ? balancePerChain.balance > feeData.txFeeAmount
+            ? balancePerChain.balance - feeData.txFeeAmount
             : 0n
-          : balance.balance
+          : balancePerChain.balance
 
       return {
-        chainId: balance.chainId,
+        chainId: balancePerChain.chainId,
         balance: availableBalance
       }
     })
@@ -241,7 +248,6 @@ export const buildBridgeInstructions = async (
       })
     )
   })
-
   const bridgeResults = (await Promise.all(bridgeQueries))
     .filter((result): result is BridgeQueryResult => result !== null)
     // Sort by received amount relative to sent amount
