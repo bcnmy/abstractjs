@@ -19,9 +19,10 @@ import type {
   AbstractCall,
   Instruction
 } from "../../clients/decorators/mee/getQuote"
+import type { AnyData } from "../../modules/utils/Types"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
 
-export const LARGE_DEFAULT_GAS_LIMIT = 500_000n
+export const LARGE_DEFAULT_GAS_LIMIT = 700_000n
 /**
  * Contract instance capable of encoding transactions across multiple chains
  * @template TAbi - The contract ABI type
@@ -49,6 +50,16 @@ export type MultichainContract<TAbi extends Abi> = {
       result: ContractFunctionReturnType<TAbi, "pure" | "view", TFunctionName>
     }>
   >
+  build: <
+    TFunctionName extends ContractFunctionName<TAbi, "payable" | "nonpayable">
+  >(params: {
+    type: TFunctionName
+    data: {
+      chainId: number
+      args: ContractFunctionArgs<TAbi, "payable" | "nonpayable", TFunctionName>
+      gasLimit?: bigint
+    }
+  }) => Promise<Instruction>
 }
 
 /**
@@ -165,8 +176,42 @@ export function getMultichainContract<TAbi extends Abi>(config: {
       if (!address) {
         throw new Error(`No deployment found for chain ${chainId}`)
       }
-
       return createChainSpecificContract(config.abi, chainId, address)
+    },
+    build: async <
+      TFunctionName extends ContractFunctionName<TAbi, "payable" | "nonpayable">
+    >(params: {
+      type: TFunctionName
+      data: {
+        chainId: number
+        args: ContractFunctionArgs<
+          TAbi,
+          "payable" | "nonpayable",
+          TFunctionName
+        >
+        gasLimit?: bigint
+      }
+    }): Promise<Instruction> => {
+      const {
+        data: { chainId, args: args_, gasLimit },
+        type: functionName
+      } = params
+
+      const address = deployments.get(chainId)
+      if (!address) {
+        throw new Error(`No deployment found for chain ${chainId}`)
+      }
+      const result = createChainSpecificContract(config.abi, chainId, address)[
+        functionName
+      ]({
+        args: args_ as AnyData,
+        ...(gasLimit ? { gasLimit } : {})
+      })
+
+      return {
+        chainId: chainId,
+        calls: result.calls
+      }
     },
     addressOn: (chainId: number) => {
       const address = deployments.get(chainId)
