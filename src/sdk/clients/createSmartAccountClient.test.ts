@@ -231,7 +231,7 @@ describe("nexus.client", async () => {
 
   test("should throw an error, chain id not found", async () => {
     const chainId = 0
-    expect(() => getChain(chainId)).toThrow(ERROR_MESSAGES.CHAIN_NOT_FOUND)
+    expect(() => getChain(chainId)).toThrow("Chain 0 not found.")
   })
 
   test("should have attached erc757 actions", async () => {

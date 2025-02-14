@@ -4,6 +4,9 @@ import {
   type BuildApproveParameters,
   buildApprove
 } from "./instructions/buildApprove"
+import buildBatch, {
+  type BuildBatchParameters
+} from "./instructions/buildBatch"
 import {
   type BuildDefaultParameters,
   buildDefaultInstructions
@@ -95,6 +98,16 @@ export type BuildWithdrawalInstruction = {
 }
 
 /**
+ * Build action which is used to build instructions for a batch
+ * @property type - Literal "batch" to identify the action type
+ * @property data - {@link BuildBatchParameters} The parameters for the batch action
+ */
+export type BuildBatchInstruction = {
+  type: "batch"
+  data: BuildBatchParameters
+}
+
+/**
  * Union type of all possible build instruction types
  */
 export type BuildInstructionTypes =
@@ -104,6 +117,7 @@ export type BuildInstructionTypes =
   | BuildTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
+  | BuildBatchInstruction
 /**
  * Builds transaction instructions based on the provided action type and parameters
  *
@@ -166,6 +180,9 @@ export const build = async (
     }
     case "withdrawal": {
       return buildWithdrawal(baseParams, data)
+    }
+    case "batch": {
+      return buildBatch(baseParams, data)
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

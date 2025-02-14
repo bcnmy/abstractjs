@@ -74,11 +74,10 @@ export async function getUnifiedERC20Balance(
   const { mcToken, account: account_ } = parameters
 
   const relevantTokensByChain = Array.from(mcToken.deployments).filter(
-    ([chainId]) => {
-      return account_.deployments.some(
+    ([chainId]) =>
+      account_.deployments.some(
         (account) => account.client.chain?.id === chainId
       )
-    }
   )
 
   const balances = await Promise.all(

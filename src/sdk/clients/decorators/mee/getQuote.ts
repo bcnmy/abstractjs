@@ -67,6 +67,7 @@ export type Supertransaction = {
  * Union type for different instruction formats that can be provided
  */
 export type InstructionLike =
+  | Promise<Instruction>
   | Promise<Instruction[]>
   | Instruction[]
   | Instruction
@@ -304,12 +305,13 @@ export const getQuote = async (
         .join(", ")}`
     )
   }
-
   const userOpResults = await Promise.all(
     resolvedInstructions.map((userOp) => {
       const deployment = account_.deploymentOn(userOp.chainId, true)
       return Promise.all([
-        deployment.encodeExecuteBatch(userOp.calls),
+        userOp.calls.length > 1
+          ? deployment.encodeExecuteBatch(userOp.calls)
+          : deployment.encodeExecute(userOp.calls[0]),
         deployment.getNonce(),
         deployment.isDeployed(),
         deployment.getInitCode(),

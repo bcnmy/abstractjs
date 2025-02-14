@@ -33,6 +33,10 @@ import getPermitQuote, {
   type GetPermitQuotePayload
 } from "./getPermitQuote"
 import { type GetQuoteParams, type GetQuotePayload, getQuote } from "./getQuote"
+import getSupertransactionReceipt, {
+  type GetSupertransactionReceiptParams,
+  type GetSupertransactionReceiptPayload
+} from "./getSupertransactionReceipt"
 import signFusionQuote, {
   type SignFusionQuotePayload,
   type SignFusionQuoteParameters
@@ -53,7 +57,6 @@ import waitForSupertransactionReceipt, {
   type WaitForSupertransactionReceiptParams,
   type WaitForSupertransactionReceiptPayload
 } from "./waitForSupertransactionReceipt"
-
 /**
  * Collection of MEE (Multi-chain Execution Environment) actions for transaction handling
  */
@@ -247,6 +250,15 @@ export type MeeActions = {
   executeFusionQuote: (
     params: ExecuteFusionQuoteParams
   ) => Promise<ExecuteFusionQuotePayload>
+
+  /**
+   * Get a supertransaction receipt
+   * @param params - Parameters for retrieving the receipt
+   * @returns Promise resolving to the supertransaction receipt
+   */
+  getSupertransactionReceipt: (
+    params: GetSupertransactionReceiptParams
+  ) => Promise<GetSupertransactionReceiptPayload>
 }
 
 /**
@@ -281,7 +293,9 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
     signFusionQuote: (params: SignFusionQuoteParameters) =>
       signFusionQuote(meeClient, params),
     executeFusionQuote: (params: SignFusionQuoteParameters) =>
-      executeFusionQuote(meeClient, params)
+      executeFusionQuote(meeClient, params),
+    getSupertransactionReceipt: (params: GetSupertransactionReceiptParams) =>
+      getSupertransactionReceipt(meeClient, params)
   }
 }
 export * from "./getQuote"
@@ -300,3 +314,4 @@ export * from "./getFusionQuote"
 export * from "./signFusionQuote"
 export * from "./getPermitQuote"
 export * from "./executeFusionQuote"
+export * from "./getSupertransactionReceipt"

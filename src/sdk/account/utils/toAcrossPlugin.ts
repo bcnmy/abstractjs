@@ -1,6 +1,12 @@
 import { type Address, parseAbi } from "abitype"
 
 import { encodeFunctionData, erc20Abi } from "viem"
+import {
+  arbitrumSepolia,
+  baseSepolia,
+  optimismSepolia,
+  sepolia
+} from "viem/chains"
 import { createHttpClient } from "../../clients/createHttpClient"
 import type {
   AbstractCall,
@@ -53,8 +59,16 @@ type AcrossSuggestedFeesParams = {
   amount: bigint
 }
 
+const TESTNET_IDS: number[] = [
+  sepolia.id,
+  baseSepolia.id,
+  optimismSepolia.id,
+  arbitrumSepolia.id
+]
+
 // Create HTTP client instance
 const acrossClient = createHttpClient("https://app.across.to/api")
+const testnetAcrossClient = createHttpClient("https://testnet.across.to/api")
 
 /**
  * Fetches suggested fees from Across bridge API
@@ -72,8 +86,12 @@ const acrossGetSuggestedFees = async ({
   originChainId,
   destinationChainId,
   amount
-}: AcrossSuggestedFeesParams): Promise<AcrossRelayFeeResponse> =>
-  acrossClient.request<AcrossRelayFeeResponse>({
+}: AcrossSuggestedFeesParams): Promise<AcrossRelayFeeResponse> => {
+  const client = TESTNET_IDS.includes(originChainId)
+    ? testnetAcrossClient
+    : acrossClient
+
+  return client.request<AcrossRelayFeeResponse>({
     path: "suggested-fees",
     method: "GET",
     params: {
@@ -84,6 +102,7 @@ const acrossGetSuggestedFees = async ({
       amount: amount.toString()
     }
   })
+}
 
 /**
  * Encodes a bridging operation for the Across protocol into a user operation
@@ -103,12 +122,8 @@ export const acrossEncodeBridgingUserOp = async (
 
   const inputToken = tokenMapping.on(fromChain.id)
   const outputToken = tokenMapping.on(toChain.id)
-  const depositor = account.deploymentOn(fromChain.id)?.address
-  const recipient = account.deploymentOn(toChain.id)?.address
-
-  if (!depositor || !recipient) {
-    throw new Error("No depositor or recipient found")
-  }
+  const depositor = account.addressOn(fromChain.id, true)
+  const recipient = account.addressOn(toChain.id, true)
 
   const suggestedFees = await acrossGetSuggestedFees({
     amount: bridgingAmount,

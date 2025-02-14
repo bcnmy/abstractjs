@@ -51,6 +51,10 @@ export async function toSigner<
   >
   address?: Address
 }): Promise<LocalAccount> {
+  if (!signer) {
+    throw new Error("Signer is required")
+  }
+
   if ("provider" in signer) {
     const wallet = signer as EthersWallet
     const address = await wallet.getAddress()
@@ -98,6 +102,7 @@ export async function toSigner<
         })
       }
     }
+
     if (!address) {
       // For TS to be happy
       throw new Error("address is required")

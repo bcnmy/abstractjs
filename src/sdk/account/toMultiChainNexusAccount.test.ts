@@ -69,12 +69,13 @@ describe("mee.toMultiChainNexusAccount", async () => {
   })
 
   test("should handle empty chains array", async () => {
-    const multiChainAccount = await toMultichainNexusAccount({
-      signer: eoaAccount,
-      chains: [],
-      transports: []
-    })
-    expect(multiChainAccount.deployments).toHaveLength(0)
+    expect(() =>
+      toMultichainNexusAccount({
+        signer: eoaAccount,
+        chains: [],
+        transports: []
+      })
+    ).rejects.toThrow("No chains provided")
   })
 
   test("should have configured accounts correctly", async () => {

@@ -1,4 +1,4 @@
-import type { Chain, LocalAccount, Transport } from "viem"
+import type { Address, Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -12,16 +12,18 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import buildIntent from "./buildIntent"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import buildApprove from "./buildApprove"
+import buildBatch from "./buildBatch"
+import buildWithdrawal from "./buildWithdrawal"
 
-describe("mee.buildIntent", () => {
+describe("mee.buildBatch", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
+  let tokenAddress: Address
   let paymentChain: Chain
   let targetChain: Chain
   let transports: Transport[]
@@ -39,39 +41,35 @@ describe("mee.buildIntent", () => {
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
+    tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
-  it("should highlight building intent instructions", async () => {
-    const instructions: Instruction[] = await buildIntent(
-      { account: mcNexus },
+  it("should build a batch instruction", async () => {
+    const instructions: Instruction[] = await buildBatch(
+      { account: mcNexus, currentInstructions: [] },
       {
-        amount: 1000000n,
-        mcToken: mcUSDC,
-        toChain: targetChain
+        instructions: [
+          buildApprove(
+            { account: mcNexus, currentInstructions: [] },
+            {
+              chainId: targetChain.id,
+              tokenAddress,
+              amount: 100n,
+              spender: mcNexus.addressOn(targetChain.id, true)
+            }
+          ),
+          buildWithdrawal(
+            { account: mcNexus, currentInstructions: [] },
+            {
+              chainId: targetChain.id,
+              tokenAddress,
+              amount: 1n
+            }
+          )
+        ]
       }
     )
 
-    console.log(instructions.map((x) => x.calls.length))
-    expect([1, 0]).toContain(instructions.length)
-  })
-  it("should highlight building optimistic intent instructions", async () => {
-    const newMcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports,
-      signer: privateKeyToAccount(generatePrivateKey())
-    })
-
-    const instructions: Instruction[] = await buildIntent(
-      { account: newMcNexus },
-      {
-        amount: 1000000n,
-        mcToken: mcUSDC,
-        toChain: targetChain,
-        mode: "OPTIMISTIC"
-      }
-    )
-
-    // console.log(...instructions.map((x) => x.calls))
-    expect([1, 0]).toContain(instructions.length)
+    expect(instructions[0].calls.length).toBe(2)
   })
 })

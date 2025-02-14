@@ -17,7 +17,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
-import { aave } from "../constants/protocols"
+import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
@@ -275,18 +275,23 @@ describe("mee.createMeeClient", async () => {
               spender: aave.pool.addressOn(targetChain.id)
             }
           }),
-          aave.pool.on(targetChain.id).supply({
-            args: [
-              mcUSDC.addressOn(targetChain.id),
-              amountToSupply,
-              mcNexus.signer.address,
-              0
-            ]
+          mcAaveV3Pool.build({
+            type: "supply",
+            data: {
+              chainId: targetChain.id,
+              args: [
+                mcUSDC.addressOn(targetChain.id),
+                amountToSupply,
+                mcNexus.signer.address,
+                0
+              ]
+            }
           })
         ],
         feeToken,
         trigger
       })
+
       console.timeEnd("aave:getFusionQuote")
       const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
       console.timeEnd("aave:executeFusionQuote")

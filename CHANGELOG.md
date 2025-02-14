@@ -1,5 +1,16 @@
 # @biconomy/abstractjs
 
+## 0.0.40
+
+### Patch Changes
+
+- Fixed mee signer issues with metamask
+- Added export for UniswapSwapRouterAbi
+- Introduced optimistic mode parameter for across relayer
+- Made interfacing with multichain contracts consitent while building instructions
+- Added getSupertransactionReceipt helper
+- Added buildBatch instruction helper
+
 ## 0.0.39
 
 ### Patch Changes

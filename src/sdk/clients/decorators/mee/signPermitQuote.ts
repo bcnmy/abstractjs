@@ -14,7 +14,7 @@ import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuotePayload } from "./getQuote"
 
 /**
- * Parameters for a token permit trigger
+ * Parameters for a token trigger
  */
 export type Trigger = {
   /**

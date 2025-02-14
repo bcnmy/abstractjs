@@ -167,8 +167,16 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
 export async function toMultichainNexusAccount(
   multiChainNexusParams: MultichainNexusParams
 ): Promise<MultichainSmartAccount> {
-  const { chains, signer, transports, ...accountParameters } =
-    multiChainNexusParams
+  const {
+    chains,
+    signer: unresolvedSigner,
+    transports,
+    ...accountParameters
+  } = multiChainNexusParams
+
+  if (chains.length === 0) {
+    throw new Error("No chains provided")
+  }
 
   if (transports && transports.length !== chains.length) {
     throw new Error(
@@ -180,7 +188,7 @@ export async function toMultichainNexusAccount(
     chains.map((chain, i) =>
       toNexusAccount({
         chain,
-        signer,
+        signer: unresolvedSigner,
         transport: transports[i],
         validatorAddress: MEE_VALIDATOR_ADDRESS,
         factoryAddress: NEXUS_ACCOUNT_FACTORY,
@@ -212,8 +220,8 @@ export async function toMultichainNexusAccount(
   }
 
   const baseAccount = {
+    signer: deployments[0].signer, // This signer is resolved
     deployments,
-    signer,
     deploymentOn,
     addressOn
   } as BaseMultichainSmartAccount
