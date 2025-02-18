@@ -56,11 +56,8 @@ export const waitForSupertransactionReceipt = async (
   const pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
 
   const explorerResponse = await getSupertransactionReceipt(client, parameters)
-  const statuses = explorerResponse.userOps.map(
-    (userOp) => userOp.executionStatus
-  )
-  const statusPending = statuses.some((status) => status === "PENDING")
-  if (statusPending) {
+  const FINALLY_STATUSES = ["SUCCESS", "ERROR"]
+  if (!FINALLY_STATUSES.includes(explorerResponse.transactionStatus)) {
     await new Promise((resolve) => setTimeout(resolve, pollingInterval))
     return await waitForSupertransactionReceipt(client, parameters)
   }

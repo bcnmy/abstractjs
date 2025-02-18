@@ -1,4 +1,5 @@
 import type { Chain, LocalAccount, Transport } from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, it } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -13,7 +14,6 @@ import {
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import buildIntent from "./buildIntent"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 
 describe("mee.buildIntent", () => {
   let network: NetworkConfig
@@ -51,9 +51,9 @@ describe("mee.buildIntent", () => {
       }
     )
 
-    console.log(instructions.map((x) => x.calls.length))
     expect([1, 0]).toContain(instructions.length)
   })
+
   it("should highlight building optimistic intent instructions", async () => {
     const newMcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
@@ -66,12 +66,12 @@ describe("mee.buildIntent", () => {
       {
         amount: 1000000n,
         mcToken: mcUSDC,
-        toChain: targetChain,
+        toChain: paymentChain,
         mode: "OPTIMISTIC"
       }
     )
 
-    // console.log(...instructions.map((x) => x.calls))
-    expect([1, 0]).toContain(instructions.length)
+    expect(instructions.length).toBe(1)
+    expect(instructions[0].calls.length).toBe(2)
   })
 })

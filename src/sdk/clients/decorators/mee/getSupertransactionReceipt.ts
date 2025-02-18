@@ -12,6 +12,7 @@ import {
   getMeeScanLink
 } from "../../../account/utils/explorer"
 import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
+import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { Url } from "../../createHttpClient"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
@@ -34,7 +35,7 @@ export type GetSupertransactionReceiptParams =
  * The status of a user operation
  * @type UserOpStatus
  */
-type UserOpStatus = {
+export type UserOpStatus = {
   executionStatus: "SUCCESS" | "PENDING" | "ERROR"
   executionData: Hex
   executionError: string
@@ -59,7 +60,7 @@ export type GetSupertransactionReceiptPayload = Omit<
    * Status of the transaction
    * @example "success"
    */
-  status: string
+  transactionStatus: string
 }
 
 export const getSupertransactionReceipt = async (
@@ -96,29 +97,21 @@ export const getSupertransactionReceipt = async (
     )
   }
 
-  const statusPending = statuses.some((status) => status === "PENDING")
-
   const receipts = await Promise.allSettled(
     explorerResponse.userOps.map(({ chainId, executionData }) =>
       executionData
         ? getTransactionReceiptFromViem(
             account.deploymentOn(Number(chainId), true).publicClient,
-            { ...params, hash: executionData }
+            { confirmations, ...parameters, hash: executionData }
           )
         : Promise.reject(new Error("No execution data"))
     )
   )
 
-  const txsFullfilled = receipts.every(
-    (receipt) => receipt.status === "fulfilled"
+  const transactionStatus = await parseTransactionStatus(
+    explorerResponse.userOps,
+    receipts
   )
-
-  // const txsRejected = receipts.some((receipt) => receipt.status === "rejected")
-  const globalStatus = txsFullfilled
-    ? "SUCCESS"
-    : statusPending
-      ? "PENDING"
-      : "ERROR"
 
   const explorerLinks = explorerResponse.userOps.reduce(
     (acc, userOp) => {
@@ -131,7 +124,12 @@ export const getSupertransactionReceipt = async (
     [getMeeScanLink(params.hash)] as Url[]
   )
 
-  return { ...explorerResponse, explorerLinks, receipts, status: globalStatus }
+  return {
+    ...explorerResponse,
+    explorerLinks,
+    receipts,
+    transactionStatus
+  }
 }
 
 export default getSupertransactionReceipt

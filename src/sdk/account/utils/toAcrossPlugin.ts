@@ -181,7 +181,7 @@ export const acrossEncodeBridgingUserOp = async (
   }
 
   return {
-    userOp: userOp,
+    userOp,
     receivedAtDestination: outputAmount,
     bridgingDurationExpectedMs: undefined
   }

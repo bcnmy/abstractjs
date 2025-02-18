@@ -8,7 +8,6 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { toFeeToken } from "./toFeeToken"
 
 describe("mee.toFeeToken", () => {
   let network: NetworkConfig

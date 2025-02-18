@@ -1,3 +1,4 @@
+import { partitionInstructions } from "../../../account/utils/partitionInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
@@ -85,10 +86,16 @@ export const getOnChainQuote = async (
     data: { ...trigger, recipient, sender }
   })
 
+  const partitionedInstructions = await partitionInstructions({
+    account: account_,
+    triggerCall: triggerTransfer,
+    instructions
+  })
+
   const quote = await getQuote(client, {
     path: "v1/quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,
-    instructions: [triggerTransfer, ...instructions],
+    instructions: partitionedInstructions,
     ...rest
   })
   const trigger_ = {

@@ -298,8 +298,8 @@ describe("mee.createMeeClient", async () => {
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
         hash
       })
+
       console.timeEnd("aave:waitForSupertransactionReceipt")
-      console.log(sTxReceipt.explorerLinks)
       const balanceAfter = await getBalance(
         mcNexus.deploymentOn(targetChain.id, true).publicClient,
         mcNexus.signer.address,
