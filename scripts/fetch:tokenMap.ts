@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { getAddress, isHex } from "viem"
-import { baseSepolia } from "viem/chains"
+import { base, baseSepolia, optimism } from "viem/chains"
 import coinDataFromJson from "../.data/coinData.json"
 import coinIdsFromJson from "../.data/coinIds.json"
 import networkIdMap from "../.data/networkIdMap.json"
@@ -125,6 +125,10 @@ function sanitiseCoins(networks: Networks, coinData: Coin[]): FinalisedCoin[] {
   const HARDCODE = {
     usdc: {
       [baseSepolia.id]: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    },
+    usdt: {
+      [base.id]: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+      [optimism.id]: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58"
     }
   }
 

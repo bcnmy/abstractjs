@@ -1,4 +1,4 @@
-import { partitionInstructions } from "../../../account/utils/partitionInstructions"
+import { batchInstructions } from "../../../account/utils/batchInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
@@ -86,7 +86,7 @@ export const getOnChainQuote = async (
     data: { ...trigger, recipient, sender }
   })
 
-  const partitionedInstructions = await partitionInstructions({
+  const partitionedInstructions = await batchInstructions({
     account: account_,
     triggerCall: triggerTransfer,
     instructions

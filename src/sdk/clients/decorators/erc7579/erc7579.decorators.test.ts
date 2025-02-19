@@ -135,4 +135,17 @@ describe("erc7579.decorators", async () => {
     const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
     expect(success).toBe(true)
   })
+
+  test("should install it again", async () => {
+    const hash = await nexusClient.installModule({
+      module: {
+        type: "validator",
+        address: mockAddresses.MockValidator,
+        initData: encodePacked(["address"], [eoaAccount.address])
+      }
+    })
+
+    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
+    expect(success).toBe(true)
+  })
 })

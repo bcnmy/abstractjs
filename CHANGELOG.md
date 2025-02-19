@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.0.41
+
+### Patch Changes
+
+- Improved batching logic
+
 ## 0.0.40
 
 ### Patch Changes
