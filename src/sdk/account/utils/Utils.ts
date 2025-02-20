@@ -11,7 +11,6 @@ import {
   decodeFunctionResult,
   encodeAbiParameters,
   encodeFunctionData,
-  encodePacked,
   erc20Abi,
   hexToBytes,
   keccak256,
@@ -341,21 +340,23 @@ export const getAccountDomainStructFields = async (
     functionName: "eip712Domain"
   })) as EIP712DomainReturn
 
-  const [fields, name, version, chainId, verifyingContract, salt, extensions] =
+  const [, name, version, chainId, verifyingContract, salt] =
     accountDomainStructFields
 
   const params = parseAbiParameters([
-    "bytes1, bytes32, bytes32, uint256, address, bytes32, bytes32"
+    "bytes32",
+    "bytes32",
+    "uint256",
+    "address",
+    "bytes32"
   ])
 
   return encodeAbiParameters(params, [
-    fields,
     keccak256(toBytes(name)),
     keccak256(toBytes(version)),
     chainId,
     verifyingContract,
-    salt,
-    keccak256(encodePacked(["uint256[]"], [extensions]))
+    salt
   ])
 }
 

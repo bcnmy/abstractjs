@@ -101,7 +101,6 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         transport: http()
       }),
       transport: http(bundlerUrl),
-      mock: true,
       ...(paymasterParams ? paymasterParams : {})
     })
   })
@@ -258,7 +257,6 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         transport: http()
       }),
       transport: http(bundlerUrl),
-      mock: true,
       ...(paymasterParams ? paymasterParams : {})
     })
 

@@ -68,7 +68,7 @@ export const biconomySponsoredPaymasterContext: PaymasterContext = {
   sponsorshipInfo: {
     smartAccountInfo: {
       name: "BICONOMY",
-      version: "3.0.0"
+      version: "1.0.0"
     }
   }
 }
@@ -82,7 +82,7 @@ export const toBiconomyTokenPaymasterContext = (
     sponsorshipInfo: {
       smartAccountInfo: {
         name: "BICONOMY",
-        version: "3.0.0"
+        version: "1.0.0"
       }
     },
     tokenInfo: {

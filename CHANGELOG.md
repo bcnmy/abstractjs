@@ -5,6 +5,10 @@
 ### Patch Changes
 
 - Improved batching logic
+- Added mcWeth
+- Fixed getAccountMeta helper
+- Fixed EIP712Sign logic after EIP 7779 changes
+- Added tests for installing & uninstalling smart sessions
 
 ## 0.0.40
 

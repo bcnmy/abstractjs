@@ -103,7 +103,7 @@ export const NEXUS_DOMAIN_TYPEHASH =
   "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
 
 export const PARENT_TYPEHASH =
-  "TypedDataSign(Contents contents,bytes1 fields,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt,uint256[] extensions)Contents(bytes32 stuff)"
+  "TypedDataSign(Contents contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)Contents(bytes32 stuff)"
 export const eip1271MagicValue: Hex = "0x1626ba7e"
 
 export const EXECUTE_SINGLE = concat([

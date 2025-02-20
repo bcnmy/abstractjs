@@ -206,28 +206,6 @@ describe("nexus.account", async () => {
     expect(isValidEthSigned).toBe(true)
   })
 
-  test.skip("should verify signatures from prepared UserOperation", async () => {
-    const mockSigVerifierContract = getContract({
-      address: testAddresses.MockSignatureValidator,
-      abi: MockSignatureValidatorAbi,
-      client: testClient
-    })
-
-    const userOperation = await nexusClient.prepareUserOperation({
-      calls: [{ to: userTwo.address, value: 1n }]
-    })
-
-    const userOpHash = nexusClient.account.getUserOpHash(userOperation)
-
-    const isValid = await mockSigVerifierContract.read.verify([
-      userOpHash,
-      userOperation.signature,
-      eoaAccount.address
-    ])
-
-    expect(isValid).toBe(true)
-  })
-
   test("should have 4337 account actions", async () => {
     const [
       isDeployed,
@@ -294,11 +272,10 @@ describe("nexus.account", async () => {
     expect(entryPointVersion).toBe("0.7")
   })
 
-  test.skip("should test isValidSignature EIP712Sign to be valid with viem", async () => {
+  test("should test isValidSignature EIP712Sign to be valid with viem", async () => {
     const message = {
       contents: keccak256(toBytes("test", { size: 32 }))
     }
-
     const domainSeparator = await testClient.readContract({
       address: await nexusAccount.getAddress(),
       abi: parseAbi([
@@ -365,7 +342,7 @@ describe("nexus.account", async () => {
     expect(contractResponse).toBe(eip1271MagicValue)
   })
 
-  test.skip("should sign using signTypedData SDK method", async () => {
+  test("should sign using signTypedData SDK method", async () => {
     const appDomain = {
       chainId: chain.id,
       name: "TokenWithPermit",
