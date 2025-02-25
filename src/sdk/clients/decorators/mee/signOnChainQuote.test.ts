@@ -81,6 +81,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     const sender = mcNexus.signer.address
     const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
 
+    console.log({ recipient })
+
     const quote = await getQuote(meeClient, {
       path: "v1/quote-permit",
       eoa: sender,

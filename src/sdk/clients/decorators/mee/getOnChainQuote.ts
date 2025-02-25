@@ -92,6 +92,8 @@ export const getOnChainQuote = async (
     instructions
   })
 
+  console.log({ partitionedInstructions })
+
   const quote = await getQuote(client, {
     path: "v1/quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,

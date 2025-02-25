@@ -64,6 +64,7 @@ export async function installModule<
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
+    module,
     module: { address, initData, type }
   } = parameters
 
@@ -74,6 +75,7 @@ export async function installModule<
   }
 
   const account = parseAccount(account_) as SmartAccount
+  console.log({ module })
 
   const calls = [
     {
@@ -111,6 +113,11 @@ export async function installModule<
   if (addressEquals(address, SMART_SESSIONS_ADDRESS)) {
     const nexusAccount = account as NexusAccount
 
+    console.log(
+      "nexusAccount?.validatorAddress",
+      nexusAccount?.validatorAddress
+    )
+
     if (nexusAccount?.validatorAddress) {
       calls.push({
         to: nexusAccount.validatorAddress,
@@ -143,6 +150,8 @@ export async function installModule<
       accountAddress: account.address
     })
 
+    console.log("trustedAttesters", trustedAttesters)
+
     const needToAddTrustAttesters = trustedAttesters.length === 0
 
     if (needToAddTrustAttesters && nexusAccount?.attesters?.length) {
@@ -158,6 +167,8 @@ export async function installModule<
       })
     }
   }
+
+  console.log({ calls })
 
   return getAction(
     client,

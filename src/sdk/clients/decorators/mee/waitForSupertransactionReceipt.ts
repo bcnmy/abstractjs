@@ -57,6 +57,8 @@ export const waitForSupertransactionReceipt = async (
 
   const explorerResponse = await getSupertransactionReceipt(client, parameters)
   const FINALLY_STATUSES = ["SUCCESS", "ERROR"]
+
+  console.log(explorerResponse.transactionStatus)
   if (!FINALLY_STATUSES.includes(explorerResponse.transactionStatus)) {
     await new Promise((resolve) => setTimeout(resolve, pollingInterval))
     return await waitForSupertransactionReceipt(client, parameters)
