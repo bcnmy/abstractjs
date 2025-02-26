@@ -1,8 +1,5 @@
 import type { Chain, Client, Hash, Hex, Transport } from "viem"
-import type {
-  GetSmartAccountParameter,
-  SmartAccount
-} from "viem/account-abstraction"
+import type { SmartAccount } from "viem/account-abstraction"
 import type { ModuleType } from "../../../modules/utils/Types.js"
 import { accountId } from "./accountId.js"
 import { type GetActiveHookParameters, getActiveHook } from "./getActiveHook.js"
@@ -51,7 +48,7 @@ import {
 } from "./uninstallModules.js"
 
 export type Erc7579Actions<TSmartAccount extends SmartAccount | undefined> = {
-  accountId: (args?: GetSmartAccountParameter<TSmartAccount>) => Promise<string>
+  accountId: (args?: { account?: TSmartAccount }) => Promise<string>
   installModule: (args: InstallModuleParameters<TSmartAccount>) => Promise<Hash>
   installModules: (
     args: InstallModulesParameters<TSmartAccount>

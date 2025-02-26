@@ -234,7 +234,6 @@ describe("mee.createMeeClient", async () => {
         tokenAddress
       )
 
-      console.log({ balanceOfRecipient }, trigger.amount)
       expect(balanceOfRecipient).toBe(trigger.amount)
     }
   )

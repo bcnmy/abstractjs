@@ -7,11 +7,7 @@ import {
   encodeFunctionData,
   getAddress
 } from "viem"
-import {
-  type GetSmartAccountParameter,
-  type SmartAccount,
-  sendUserOperation
-} from "viem/account-abstraction"
+import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import type { ModuleType } from "../../../modules/utils/Types"
@@ -19,7 +15,7 @@ import { parseModuleTypeId } from "./supportsModule"
 
 export type InstallModulesParameters<
   TSmartAccount extends SmartAccount | undefined
-> = GetSmartAccountParameter<TSmartAccount> & {
+> = { account?: TSmartAccount } & {
   modules: {
     type: ModuleType
     address: Address

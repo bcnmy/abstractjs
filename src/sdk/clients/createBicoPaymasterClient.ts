@@ -40,7 +40,7 @@ type BicoPaymasterClientConfig = Omit<PaymasterClientConfig, "transport"> &
 /**
  * Context for the Bico SPONSORED Paymaster.
  */
-export type PaymasterContext = {
+export type BiconomyPaymasterContext = {
   mode: "ERC20" | "SPONSORED"
   sponsorshipInfo?: {
     smartAccountInfo: {
@@ -61,7 +61,7 @@ type ToBiconomyTokenPaymasterContextParams = {
   calculateGasLimits?: boolean
 }
 
-export const biconomySponsoredPaymasterContext: PaymasterContext = {
+export const biconomySponsoredPaymasterContext: BiconomyPaymasterContext = {
   mode: "SPONSORED",
   expiryDuration: 300,
   calculateGasLimits: true,
@@ -73,9 +73,18 @@ export const biconomySponsoredPaymasterContext: PaymasterContext = {
   }
 }
 
+export const toBiconomySponsoredPaymasterContext = (
+  params?: Partial<BiconomyPaymasterContext>
+): BiconomyPaymasterContext => {
+  return {
+    ...biconomySponsoredPaymasterContext,
+    ...params
+  }
+}
+
 export const toBiconomyTokenPaymasterContext = (
   params: ToBiconomyTokenPaymasterContextParams
-): PaymasterContext => {
+): BiconomyPaymasterContext => {
   const { feeTokenAddress, expiryDuration, calculateGasLimits } = params
   return {
     mode: "ERC20",

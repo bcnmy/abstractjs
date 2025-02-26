@@ -14,10 +14,7 @@ import {
   createBundlerClient
 } from "viem/account-abstraction"
 import type { AnyData, ModularSmartAccount } from "../modules/utils/Types"
-import {
-  type PaymasterContext,
-  biconomySponsoredPaymasterContext
-} from "./createBicoPaymasterClient"
+import { biconomySponsoredPaymasterContext } from "./createBicoPaymasterClient"
 import { type BicoActions, bicoBundlerActions } from "./decorators/bundler"
 import { getGasFeeValues } from "./decorators/bundler/getGasFeeValues"
 import { type Erc7579Actions, erc7579Actions } from "./decorators/erc7579"
@@ -75,7 +72,7 @@ export type NexusClient<
     /**
      * Optional paymaster context
      */
-    paymasterContext?: PaymasterContext | undefined
+    paymasterContext?: unknown
     /**
      * Optional user operation configuration
      */

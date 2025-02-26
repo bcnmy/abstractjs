@@ -86,18 +86,16 @@ export const getOnChainQuote = async (
     data: { ...trigger, recipient, sender }
   })
 
-  const partitionedInstructions = await batchInstructions({
+  const batchedInstructions = await batchInstructions({
     account: account_,
     triggerCall: triggerTransfer,
     instructions
   })
 
-  console.log({ partitionedInstructions })
-
   const quote = await getQuote(client, {
     path: "v1/quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,
-    instructions: partitionedInstructions,
+    instructions: batchedInstructions,
     ...rest
   })
   const trigger_ = {

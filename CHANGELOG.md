@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.1.1
+
+### Patch Changes
+
+- Added GasBuffer option to increase gasValues returned from the bundler prior to sending the userOp
+
 ## 0.1.0
 
 ### Minor Changes

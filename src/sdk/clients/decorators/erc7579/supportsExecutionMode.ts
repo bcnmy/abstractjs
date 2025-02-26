@@ -10,10 +10,7 @@ import {
   toBytes,
   toHex
 } from "viem"
-import type {
-  GetSmartAccountParameter,
-  SmartAccount
-} from "viem/account-abstraction"
+import type { SmartAccount } from "viem/account-abstraction"
 import { call, readContract } from "viem/actions"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
@@ -31,7 +28,7 @@ export type ExecutionMode<callType extends CallType> = {
 export type SupportsExecutionModeParameters<
   TSmartAccount extends SmartAccount | undefined,
   callType extends CallType = CallType
-> = GetSmartAccountParameter<TSmartAccount> & ExecutionMode<callType>
+> = { account?: TSmartAccount } & ExecutionMode<callType>
 
 function parseCallType(callType: CallType) {
   switch (callType) {

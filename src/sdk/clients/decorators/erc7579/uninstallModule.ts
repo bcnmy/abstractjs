@@ -7,11 +7,7 @@ import {
   encodeFunctionData,
   getAddress
 } from "viem"
-import {
-  type GetSmartAccountParameter,
-  type SmartAccount,
-  sendUserOperation
-} from "viem/account-abstraction"
+import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
 import { getInstalledValidators, getPreviousModule } from "."
@@ -21,7 +17,7 @@ import { parseModuleTypeId } from "./supportsModule"
 
 export type UninstallModuleParameters<
   TSmartAccount extends SmartAccount | undefined
-> = GetSmartAccountParameter<TSmartAccount> & {
+> = { account?: TSmartAccount } & {
   module: ModuleMeta
   maxFeePerGas?: bigint
   maxPriorityFeePerGas?: bigint

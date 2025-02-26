@@ -37,7 +37,7 @@ export const signOnChainQuote = async (
   params: SignOnChainQuoteParams
 ): Promise<SignOnChainQuotePayload> => {
   const {
-    confirmations = 3,
+    confirmations = 2,
     account: account_ = client.account,
     fusionQuote: { quote, trigger }
   } = params
@@ -47,8 +47,6 @@ export const signOnChainQuote = async (
     walletClient,
     address: spender
   } = account_.deploymentOn(trigger.chainId, true)
-
-  console.log({ ...trigger, spender })
 
   const [
     {
@@ -64,7 +62,6 @@ export const signOnChainQuote = async (
 
   // @ts-ignore
   const hash = await walletClient.sendTransaction(call)
-  console.log({ hash, confirmations })
   // @ts-ignore
   await walletClient.waitForTransactionReceipt({ hash, confirmations })
 

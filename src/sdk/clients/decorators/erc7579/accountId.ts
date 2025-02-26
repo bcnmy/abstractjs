@@ -6,10 +6,7 @@ import {
   decodeFunctionResult,
   encodeFunctionData
 } from "viem"
-import type {
-  GetSmartAccountParameter,
-  SmartAccount
-} from "viem/account-abstraction"
+import type { SmartAccount } from "viem/account-abstraction"
 import { call, readContract } from "viem/actions"
 import { getAction } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
@@ -31,7 +28,7 @@ import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
  */
 export async function accountId<TSmartAccount extends SmartAccount | undefined>(
   client: Client<Transport, Chain | undefined, TSmartAccount>,
-  args?: GetSmartAccountParameter<TSmartAccount>
+  args?: { account?: TSmartAccount }
 ): Promise<string> {
   let account_ = client.account
 

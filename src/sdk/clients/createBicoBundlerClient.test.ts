@@ -1,6 +1,12 @@
-import { http, type Account, type Address, type Chain } from "viem"
+import {
+  http,
+  type Account,
+  type Address,
+  type Chain,
+  LocalAccount
+} from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../test/testSetup"
+import { testnetTest, toNetwork } from "../../test/testSetup"
 import {
   getTestAccount,
   killNetwork,
@@ -10,13 +16,13 @@ import {
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import {
-  ENTRY_POINT_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
 } from "../constants"
 import {
   type BicoBundlerClient,
-  createBicoBundlerClient
+  createBicoBundlerClient,
+  createSmartAccountClient
 } from "./createBicoBundlerClient"
 
 describe("bico.bundler", async () => {
@@ -60,19 +66,64 @@ describe("bico.bundler", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test.concurrent("should have 4337 bundler actions", async () => {
-    const [chainId, supportedEntrypoints, preparedUserOp] = await Promise.all([
-      bicoBundler.getChainId(),
-      bicoBundler.getSupportedEntryPoints(),
-      bicoBundler.prepareUserOperation({
-        account: nexusAccount,
-        calls: [{ to: eoaAccount.address, data: "0x" }]
+  testnetTest(
+    "should demo adjusting gas estimates returned by bico bundler",
+    async ({ config: { account, chain, bundlerUrl } }) => {
+      if (!account) {
+        throw new Error("Account is required")
+      }
+      const nexusAccount = await toNexusAccount({
+        chain,
+        signer: account,
+        transport: http()
       })
-    ])
-    expect(chainId).toEqual(chain.id)
-    expect(supportedEntrypoints).to.include(ENTRY_POINT_ADDRESS)
-    expect(preparedUserOp).not.toHaveProperty("signature") // Removed signature from user operation
-  })
+
+      const nexusClient = createSmartAccountClient({
+        account: nexusAccount,
+        transport: http(bundlerUrl)
+      })
+
+      const [
+        preparedUserOperationWithoutGasBuffer,
+        preparedUserOperationWithGasBuffer
+      ] = await Promise.all([
+        nexusClient.prepareUserOperation({
+          calls: [
+            {
+              to: account.address,
+              value: 1n
+            }
+          ]
+        }),
+        nexusClient.prepareUserOperation({
+          gasBuffer: {
+            factor: 1.2,
+            fields: ["preVerificationGas", "verificationGasLimit"]
+          },
+          calls: [
+            {
+              to: account.address,
+              value: 1n
+            }
+          ]
+        })
+      ])
+
+      expect(
+        preparedUserOperationWithGasBuffer.preVerificationGas
+      ).toBeGreaterThan(
+        preparedUserOperationWithoutGasBuffer.preVerificationGas
+      )
+      expect(
+        preparedUserOperationWithGasBuffer.verificationGasLimit
+      ).toBeGreaterThan(
+        preparedUserOperationWithoutGasBuffer.verificationGasLimit
+      )
+      expect(preparedUserOperationWithGasBuffer.callGasLimit).toEqual(
+        preparedUserOperationWithoutGasBuffer.callGasLimit
+      )
+    }
+  )
 
   test.concurrent(
     "should have been extended by biconomy specific actions",

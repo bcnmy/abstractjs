@@ -1,8 +1,5 @@
 import type { Chain, Client, Hex, Transport } from "viem"
-import type {
-  GetSmartAccountParameter,
-  SmartAccount
-} from "viem/account-abstraction"
+import type { SmartAccount } from "viem/account-abstraction"
 import { readContract } from "viem/actions"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
@@ -10,10 +7,9 @@ import { GENERIC_FALLBACK_SELECTOR } from "../../../account/utils/Constants"
 
 export type GetFallbackBySelectorParameters<
   TSmartAccount extends SmartAccount | undefined
-> = GetSmartAccountParameter<TSmartAccount> &
-  Partial<{
-    selector?: Hex
-  }>
+> = { account?: TSmartAccount } & Partial<{
+  selector?: Hex
+}>
 
 /**
  * Retrieves the fallback handler for a given selector in a smart account.

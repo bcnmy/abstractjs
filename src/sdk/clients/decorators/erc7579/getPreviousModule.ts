@@ -1,8 +1,5 @@
 import type { Client, Hex } from "viem"
-import type {
-  GetSmartAccountParameter,
-  SmartAccount
-} from "viem/account-abstraction"
+import type { SmartAccount } from "viem/account-abstraction"
 import { getAddress } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import type { ModuleMeta } from "../../../modules/utils/Types"
@@ -10,7 +7,7 @@ const SENTINEL_ADDRESS = "0x0000000000000000000000000000000000000001" as const
 
 export type GetPreviousModuleParameters<
   TSmartAccount extends SmartAccount | undefined
-> = GetSmartAccountParameter<TSmartAccount> & {
+> = { account?: TSmartAccount } & {
   module: ModuleMeta
   installedValidators?: readonly Hex[]
   installedExecutors?: readonly Hex[]

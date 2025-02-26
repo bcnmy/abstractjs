@@ -68,11 +68,9 @@ export async function debugUserOperation<
     if (!account_ && !parameters.sender) throw new AccountNotFoundError()
     const account = account_ ? parseAccount(account_) : undefined
 
-    console.log("debugUserOperation", { parameters }, client?.paymaster)
-
     const request = account
       ? await getAction(
-          removedPaymaster,
+          client,
           prepareUserOperation,
           "prepareUserOperation"
         )(parameters as unknown as PrepareUserOperationParameters)

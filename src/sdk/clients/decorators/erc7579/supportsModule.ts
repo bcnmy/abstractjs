@@ -6,10 +6,7 @@ import {
   decodeFunctionResult,
   encodeFunctionData
 } from "viem"
-import type {
-  GetSmartAccountParameter,
-  SmartAccount
-} from "viem/account-abstraction"
+import type { SmartAccount } from "viem/account-abstraction"
 import { call, readContract } from "viem/actions"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
@@ -18,7 +15,7 @@ import type { ModuleType } from "../../../modules/utils/Types"
 
 export type SupportsModuleParameters<
   TSmartAccount extends SmartAccount | undefined
-> = GetSmartAccountParameter<TSmartAccount> & {
+> = { account?: TSmartAccount } & {
   type: ModuleType
 }
 

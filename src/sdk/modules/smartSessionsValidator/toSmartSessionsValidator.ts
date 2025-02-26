@@ -128,8 +128,8 @@ export const toSmartSessionsValidator = (
           threshold: 1
         })
       }),
-    signUserOpHash: async (userOpHash: Hex) => {
-      return encodeSmartSessionSignature({
+    signUserOpHash: async (userOpHash: Hex) =>
+      encodeSmartSessionSignature({
         mode,
         permissionId: permissionIds[permissionIdIndex],
         enableSessionData,
@@ -137,6 +137,5 @@ export const toSmartSessionsValidator = (
           message: { raw: userOpHash as Hex }
         })
       })
-    }
   }) as SmartSessionModule
 }

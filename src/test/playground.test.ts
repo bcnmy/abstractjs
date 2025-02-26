@@ -21,7 +21,7 @@ import {
 } from "../sdk/clients/createBicoBundlerClient"
 import {
   type BicoPaymasterClient,
-  type PaymasterContext,
+  type BiconomyPaymasterContext,
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
@@ -59,7 +59,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     | undefined
     | {
         paymaster: BicoPaymasterClient
-        paymasterContext: PaymasterContext
+        paymasterContext: BiconomyPaymasterContext
       }
 
   beforeAll(async () => {

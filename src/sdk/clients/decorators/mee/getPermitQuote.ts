@@ -83,7 +83,7 @@ export const getPermitQuote = async (
     data: { ...trigger, recipient, sender }
   })
 
-  const partitionedInstructions = await batchInstructions({
+  const batchedInstructions = await batchInstructions({
     account: account_,
     triggerCall: triggerTransfer,
     instructions
@@ -92,7 +92,7 @@ export const getPermitQuote = async (
   const quote = await getQuote(client, {
     path: "v1/quote-permit", // Use different endpoint for permit enabled tokens
     eoa: account_.signer.address,
-    instructions: partitionedInstructions,
+    instructions: batchedInstructions,
     ...rest
   })
 

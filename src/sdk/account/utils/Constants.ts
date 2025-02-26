@@ -15,9 +15,15 @@ export const ADDRESS_RESOLVER_ADDRESS =
   "0x00000E81673606e07fC79CE5F1b3B26957844468"
 
 export const DefaultGasLimit = {
-  callGasLimit: 800000,
-  verificationGasLimit: 1000000,
-  preVerificationGas: 100000
+  callGasLimit: 800000n,
+  verificationGasLimit: 1000000n,
+  preVerificationGas: 100000n
+}
+
+export const LargeGasLimit = {
+  callGasLimit: 10000000n,
+  verificationGasLimit: 15000000n,
+  preVerificationGas: 1500000n
 }
 
 export const ERROR_MESSAGES = {
