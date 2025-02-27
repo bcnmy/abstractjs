@@ -1,20 +1,38 @@
-import { http, type Address, type Hex, createPublicClient } from "viem"
-import { createBundlerClient } from "viem/account-abstraction"
+import {
+  http,
+  type Address,
+  type Chain,
+  type Hex,
+  type LocalAccount,
+  type Transport,
+  createPublicClient
+} from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
+import { toNetwork } from "../../test/testSetup"
+import type { NetworkConfig } from "../../test/testUtils"
+import {
+  type MultichainSmartAccount,
+  toMultichainNexusAccount
+} from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import { MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS } from "../constants"
+import {
+  MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
+  mcUSDC,
+  testnetMcUSDC
+} from "../constants"
 import { MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS } from "../constants"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
+import { type MeeClient, createMeeClient } from "./createMeeClient"
 import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
 
 const COMPETITORS = [
   {
-    name: "Pimlico",
+    name: "Alto",
     chain: baseSepolia,
     bundlerUrl: `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
     mock: true
@@ -27,16 +45,60 @@ const COMPETITORS = [
   }
 ]
 
+const calls = [
+  {
+    to: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" as Address, // vitalik.eth
+    value: 1n
+  }
+]
+
+describe("nexus.interoperability with 'MeeNode'", () => {
+  let network: NetworkConfig
+  let eoaAccount: LocalAccount
+
+  let mcNexus: MultichainSmartAccount
+  let meeClient: MeeClient
+
+  let chain: Chain
+
+  beforeAll(async () => {
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    eoaAccount = network.account!
+    chain = baseSepolia
+
+    mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      transports: [http()],
+      signer: eoaAccount
+    })
+
+    meeClient = await createMeeClient({ account: mcNexus })
+  })
+
+  test("should send a transaction through the MeeNode", async () => {
+    const { hash } = await meeClient.execute({
+      instructions: [
+        {
+          calls,
+          chainId: baseSepolia.id
+        }
+      ],
+      feeToken: {
+        address: testnetMcUSDC.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(receipt.transactionStatus).toBe("SUCCESS")
+  })
+})
+
 describe.each(COMPETITORS)(
-  "nexus.interoperability with $name",
+  "nexus.interoperability with $name bundler",
   async ({ bundlerUrl, chain, mock }) => {
     const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY as Hex}`)
-
-    const publicClient = createPublicClient({
-      chain,
-      transport: http()
-    })
-    const recipientAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" // vitalik.eth
+    const publicClient = createPublicClient({ chain, transport: http() })
     let nexusAccountAddress: Address
     let nexusAccount: NexusAccount
     let bundlerClient: NexusClient
@@ -86,15 +148,6 @@ describe.each(COMPETITORS)(
         .extend(smartAccountActions()) as unknown as NexusClient
     })
 
-    test("should have standard bundler methods", () => {
-      expect(bundlerClient).toHaveProperty("sendUserOperation")
-      expect(bundlerClient.sendUserOperation).toBeInstanceOf(Function)
-      expect(bundlerClient).toHaveProperty("estimateUserOperationGas")
-      expect(bundlerClient.estimateUserOperationGas).toBeInstanceOf(Function)
-      expect(bundlerClient).toHaveProperty("getUserOperationReceipt")
-      expect(bundlerClient.getUserOperationReceipt).toBeInstanceOf(Function)
-    })
-
     test("should send a transaction through bundler", async () => {
       // Get initial balance
       const initialBalance = await publicClient.getBalance({
@@ -102,14 +155,7 @@ describe.each(COMPETITORS)(
       })
 
       // Send user operation
-      const userOp = await bundlerClient.prepareUserOperation({
-        calls: [
-          {
-            to: recipientAddress,
-            value: 1n
-          }
-        ]
-      })
+      const userOp = await bundlerClient.prepareUserOperation({ calls })
 
       const userOpHash = await bundlerClient.sendUserOperation(userOp)
 
