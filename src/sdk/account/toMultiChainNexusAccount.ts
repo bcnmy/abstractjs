@@ -4,7 +4,7 @@ import {
   BICONOMY_EXPERIMENTAL_ATTESTER,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY,
-  TEMP_MEE_ATTESTER_ADDR
+  RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
@@ -192,7 +192,10 @@ export async function toMultichainNexusAccount(
         transport: transports[i],
         validatorAddress: MEE_VALIDATOR_ADDRESS,
         factoryAddress: NEXUS_ACCOUNT_FACTORY,
-        attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],
+        attesters: [
+          RHINESTONE_ATTESTER_ADDRESS,
+          BICONOMY_EXPERIMENTAL_ATTESTER
+        ],
         ...accountParameters,
         useK1Config: false
       })

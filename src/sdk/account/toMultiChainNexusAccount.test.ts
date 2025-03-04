@@ -11,11 +11,9 @@ import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
-  BICONOMY_ATTESTER_ADDRESS,
   BICONOMY_EXPERIMENTAL_ATTESTER,
   MEE_VALIDATOR_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS,
-  TEMP_MEE_ATTESTER_ADDR
+  RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
 import { NEXUS_ACCOUNT_FACTORY } from "../constants"
 import { mcUSDC } from "../constants/tokens"
@@ -90,7 +88,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       useK1Config: false,
       validatorAddress: MEE_VALIDATOR_ADDRESS,
       factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER]
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_EXPERIMENTAL_ATTESTER]
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()

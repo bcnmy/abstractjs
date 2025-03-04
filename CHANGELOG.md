@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.2.0
+
+### Minor Changes
+
+- Update MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS address, resulting in changed default addresses for users
+
 ## 0.1.1
 
 ### Patch Changes

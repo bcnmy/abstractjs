@@ -1,9 +1,11 @@
-import type {
-  Chain,
-  LocalAccount,
-  PublicClient,
-  Transport,
-  WalletClient
+import {
+  http,
+  type Chain,
+  type LocalAccount,
+  type PublicClient,
+  type Transport,
+  type WalletClient,
+  createWalletClient
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
@@ -17,8 +19,7 @@ import {
   BICONOMY_ATTESTER_ADDRESS,
   BICONOMY_EXPERIMENTAL_ATTESTER,
   MEE_VALIDATOR_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS,
-  TEMP_MEE_ATTESTER_ADDR
+  RHINESTONE_ATTESTER_ADDRESS
 } from "../../constants"
 import type { NexusAccount } from "../toNexusAccount"
 import { getDefaultFactoryData, getK1FactoryData } from "./getFactoryData"
@@ -45,6 +46,11 @@ describe("nexus.account.getFactoryData", async () => {
     bundlerUrl = network.bundlerUrl
     eoaAccount = network.account!
     testClient = toTestClient(chain, getTestAccount(5))
+    walletClient = createWalletClient({
+      account: eoaAccount,
+      chain,
+      transport: http()
+    })
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
@@ -67,7 +73,7 @@ describe("nexus.account.getFactoryData", async () => {
     const factoryData = await getDefaultFactoryData({
       validatorInitData: eoaAccount.address,
       index: 0n,
-      attesters: [TEMP_MEE_ATTESTER_ADDR, BICONOMY_EXPERIMENTAL_ATTESTER],
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_EXPERIMENTAL_ATTESTER],
       attesterThreshold: 1,
       validatorAddress: MEE_VALIDATOR_ADDRESS,
       publicClient: testClient as unknown as PublicClient,
