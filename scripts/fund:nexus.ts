@@ -18,7 +18,12 @@ import { privateKeyToAccount } from "viem/accounts"
 import { base, optimism } from "viem/chains"
 import { toMultichainNexusAccount, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
-import { TokenWithPermitAbi } from "../src/sdk/constants"
+import {
+  NEXUS_ACCOUNT_FACTORY,
+  OWNABLE_VALIDATOR_ADDRESS,
+  TokenWithPermitAbi,
+  getOwnableValidator
+} from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 
 dotenv.config()

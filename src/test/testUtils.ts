@@ -42,7 +42,7 @@ import type { TestFileNetworkType } from "./testSetup"
 config()
 
 const BASE_SEPOLIA_RPC_URL =
-  "https://virtual.base-sepolia.rpc.tenderly.co/25344426-d008-45d9-ac9f-93910c696110"
+  "https://virtual.base-sepolia.rpc.tenderly.co/a6f1df5f-ab4e-4ef7-a03b-4b1df81fdad4"
 
 type AnvilInstance = ReturnType<typeof anvil>
 type BundlerInstance = ReturnType<typeof alto>

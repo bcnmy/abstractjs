@@ -53,26 +53,44 @@ export const MockHandlerAbi = [
     type: "fallback"
   },
   {
-    inputs: [],
-    name: "NAME",
-    outputs: [
+    inputs: [
       {
         internalType: "string",
-        name: "",
+        name: "input",
         type: "string"
+      },
+      {
+        internalType: "bytes4",
+        name: "selector",
+        type: "bytes4"
       }
     ],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [],
-    name: "VERSION",
+    name: "complexReturnData",
     outputs: [
       {
-        internalType: "string",
+        internalType: "uint256",
         name: "",
-        type: "string"
+        type: "uint256"
+      },
+      {
+        internalType: "bytes",
+        name: "",
+        type: "bytes"
+      },
+      {
+        internalType: "address",
+        name: "",
+        type: "address"
+      },
+      {
+        internalType: "uint64",
+        name: "",
+        type: "uint64"
+      },
+      {
+        internalType: "address",
+        name: "",
+        type: "address"
       }
     ],
     stateMutability: "view",
@@ -93,6 +111,19 @@ export const MockHandlerAbi = [
   },
   {
     inputs: [],
+    name: "getName",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string"
+      }
+    ],
+    stateMutability: "pure",
+    type: "function"
+  },
+  {
+    inputs: [],
     name: "getState",
     outputs: [
       {
@@ -102,6 +133,19 @@ export const MockHandlerAbi = [
       }
     ],
     stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getVersion",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string"
+      }
+    ],
+    stateMutability: "pure",
     type: "function"
   },
   {
@@ -195,6 +239,19 @@ export const MockHandlerAbi = [
     name: "onUninstall",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "returnBytes",
+    outputs: [
+      {
+        internalType: "bytes",
+        name: "",
+        type: "bytes"
+      }
+    ],
+    stateMutability: "view",
     type: "function"
   },
   {

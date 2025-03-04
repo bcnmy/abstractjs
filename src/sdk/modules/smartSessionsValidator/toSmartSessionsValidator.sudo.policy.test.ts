@@ -1,6 +1,5 @@
 import {
   http,
-  type AbiFunction,
   type Address,
   type Chain,
   type Hex,

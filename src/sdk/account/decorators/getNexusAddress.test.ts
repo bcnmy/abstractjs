@@ -49,7 +49,7 @@ describe("account.getNexusAddress", () => {
     })
 
     expect(k1AddressWithParams).toMatchInlineSnapshot(
-      `"0x93828A8f4405F112a65bf1732a4BE8f5B4C99322"`
+      `"0xf5268d33A8F3CB71C7bD653BbE870Eb12723355e"`
     )
   })
 
@@ -62,7 +62,7 @@ describe("account.getNexusAddress", () => {
     })
 
     expect(meeAddress).toMatchInlineSnapshot(
-      `"0x1968a6Ab4a542EB22e7452AC25381AE6c0f07826"`
+      `"0xc49aAf4Ebe5d6627672ad5b4D96C83AFe4179963"`
     )
   })
 })

@@ -1,9 +1,9 @@
 import {
   http,
-  isAddress,
   type Chain,
   type LocalAccount,
-  type PrivateKeyAccount
+  type PrivateKeyAccount,
+  isAddress
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../../../test/testSetup"

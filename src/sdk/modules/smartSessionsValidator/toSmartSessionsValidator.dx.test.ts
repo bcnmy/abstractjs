@@ -2,7 +2,6 @@ import {
   http,
   type Address,
   type Chain,
-  type Hex,
   type LocalAccount,
   encodeFunctionData
 } from "viem"
@@ -23,7 +22,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../clients/createBicoBundlerClient"
-import { SmartSessionMode } from "../../constants"
 import type { Module } from "../utils/Types"
 import { parse, stringify } from "./Helpers"
 import type { SessionData } from "./Types"

@@ -148,6 +148,8 @@ export const isVersionOlder = (
 export type AddressConfig = {
   attesters: Hex[]
   factoryAddress: Hex
+  bootStrapAddress: Hex
+  validatorAddress: Hex
 }
 /**
  * Returns the appropriate configuration based on the SDK version

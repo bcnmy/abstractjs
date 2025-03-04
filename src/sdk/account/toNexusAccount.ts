@@ -44,13 +44,9 @@ import {
 } from "viem/account-abstraction"
 
 import {
-  BICONOMY_ATTESTER_ADDRESS,
   ENTRY_POINT_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  NEXUS_BOOTSTRAP_ADDRESS,
-  REGISTRY_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
+  LATEST_DEFAULT_ADDRESSES,
+  REGISTRY_ADDRESS
 } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
@@ -222,28 +218,25 @@ export const toNexusAccount = async (
     signer: _signer,
     index = 0n,
     module: module_,
-    validatorAddress = MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
     key = "nexus account",
     name = "Nexus Account",
     attesterThreshold = 1,
-    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    registryAddress = REGISTRY_ADDRESS,
     useK1Config = true,
     validatorInitData: validatorInitData_,
     oldVersion,
-    attesters: attesters_ = [
-      RHINESTONE_ATTESTER_ADDRESS,
-      BICONOMY_ATTESTER_ADDRESS
-    ],
-    factoryAddress: factoryAddress_ = MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+    registryAddress = REGISTRY_ADDRESS
   } = parameters
 
-  let attesters = attesters_
-  let factoryAddress = factoryAddress_
+  let {
+    attesters = LATEST_DEFAULT_ADDRESSES.attesters,
+    factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
+    validatorAddress = LATEST_DEFAULT_ADDRESSES.validatorAddress,
+    bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
+  } = parameters
+
   if (oldVersion) {
-    const config = getConfigFromVersion(oldVersion)
-    attesters = config.attesters
-    factoryAddress = config.factoryAddress
+    ;({ attesters, factoryAddress, validatorAddress, bootStrapAddress } =
+      getConfigFromVersion(oldVersion))
   }
 
   // @ts-ignore
