@@ -140,7 +140,7 @@ export const createBicoBundlerClient = (
         )
 
   const defaultedPaymasterContext = paymaster
-    ? paymasterContext ?? biconomySponsoredPaymasterContext
+    ? (paymasterContext ?? biconomySponsoredPaymasterContext)
     : undefined
 
   const defaultedUserOperation = userOperation ?? {

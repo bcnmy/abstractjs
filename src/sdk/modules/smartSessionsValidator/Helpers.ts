@@ -28,7 +28,6 @@ import type {
   Rule
 } from "./Types"
 import { ONE_YEAR_FROM_NOW_IN_SECONDS } from "./decorators/preparePermission"
-
 export const MAX_RULES = 16
 
 /**
@@ -137,20 +136,21 @@ export const toActionConfig = (config: ActionConfig) => {
     })
   }
 
+  const paramRules = filledRules.map((rule) => {
+    const parsedRef = parseReferenceValue(rule.ref)
+    return {
+      condition: rule.condition,
+      offset: rule.offsetIndex * 32,
+      isLimited: rule.isLimited,
+      ref: parsedRef,
+      usage: rule.usage
+    }
+  })
   return {
     valueLimitPerUse: BigInt(config.valueLimitPerUse),
     paramRules: {
-      length: config.paramRules.length,
-      rules: filledRules.map((rule) => {
-        const parsedRef = parseReferenceValue(rule.ref)
-        return {
-          condition: rule.condition,
-          offset: rule.offsetIndex * 32,
-          isLimited: rule.isLimited,
-          ref: parsedRef,
-          usage: rule.usage
-        }
-      })
+      length: BigInt(config.paramRules.length),
+      rules: paramRules
     }
   }
 }

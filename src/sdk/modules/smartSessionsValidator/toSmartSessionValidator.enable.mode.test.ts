@@ -47,7 +47,6 @@ import type { SessionData } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
 
-// @note Temporary skipped for a quick fix
 describe.skip("modules.smartSessions.enable.mode.dx", async () => {
   let network: NetworkConfig
 
@@ -135,7 +134,7 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
 
     const session: Session = {
       sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
-      permitERC4337Paymaster: true,
+      permitERC4337Paymaster: false,
       sessionValidatorInitData: encodeValidationData({
         threshold: 1,
         owners: [sessionPublicKey]
