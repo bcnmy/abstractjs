@@ -7,8 +7,7 @@ import {
   parseAbi
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { type NexusAccount, addressEquals, toNexusAccount } from "."
-import { toNetwork } from "../../test/testSetup"
+import { toNetwork } from "../../../../test/testSetup"
 import {
   type MasterClient,
   type NetworkConfig,
@@ -17,14 +16,16 @@ import {
   killNetwork,
   toTestClient,
   topUp
-} from "../../test/testUtils"
+} from "../../../../test/testUtils"
+import { type NexusAccount, addressEquals } from "../../../account"
+import { toNexusAccount } from "../../../account/toNexusAccount"
+import { LATEST_DEFAULT_ADDRESSES } from "../../../constants"
 import {
   type NexusClient,
   createSmartAccountClient
-} from "../clients/createBicoBundlerClient"
-import { LATEST_DEFAULT_ADDRESSES } from "../constants"
+} from "../../createBicoBundlerClient"
 
-describe("migration", async () => {
+describe("decorators.smartAccount.upgradeSmartAccount", async () => {
   let network: NetworkConfig
   let chain: Chain
   let bundlerUrl: string
@@ -40,7 +41,6 @@ describe("migration", async () => {
   let oldNexusClient: NexusClient
   let oldNexusAccountAddress: Address
   let oldNexusAccount: NexusAccount
-  let newNexusClient: NexusClient
   let newNexusAccount: NexusAccount
   let newNexusAccountAddress: Address
   beforeAll(async () => {
@@ -69,12 +69,6 @@ describe("migration", async () => {
       chain,
       signer: eoaAccount,
       transport: http()
-    })
-
-    newNexusClient = createSmartAccountClient({
-      account: newNexusAccount,
-      transport: http(bundlerUrl),
-      mock: true
     })
 
     oldNexusAccountAddress = await oldNexusAccount.getAddress()
@@ -126,7 +120,7 @@ describe("migration", async () => {
   })
 
   test("expect the new account not to have been deployed yet", async () => {
-    const isDeployed = await newNexusClient.account.isDeployed()
+    const isDeployed = await newNexusAccount.isDeployed()
     expect(isDeployed).toBeFalsy()
   })
 

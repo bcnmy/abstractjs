@@ -1,5 +1,13 @@
 # @biconomy/abstractjs
 
+## 0.2.1
+
+### Patch Changes
+
+- Added an additional configuration to version config to cater for accounts < 0.0.34
+- Added an upgradeSmartAccount decorator to the smart account client
+- Added a new test for the upgradeSmartAccount decorator
+
 ## 0.2.0
 
 ### Minor Changes
