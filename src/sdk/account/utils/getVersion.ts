@@ -1,5 +1,9 @@
 import type { Hex } from "viem"
-import { DEFAULT_CONFIGURATIONS_BY_VERSION } from "../../constants"
+import {
+  DEFAULT_CONFIGURATIONS_BY_VERSION,
+  EARLIEST_DEFAULT_ADDRESSES,
+  LATEST_DEFAULT_ADDRESSES
+} from "../../constants"
 import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 
 /**
@@ -145,11 +149,53 @@ export const isVersionOlder = (
   return comparison < 0
 }
 
+/**
+ * Checks if a version is newer than a specified version
+ *
+ * This function determines if a given version is higher than (comes after)
+ * a specified version, which is useful for forward compatibility checks.
+ *
+ * @param {string} currentVersion - The version to check
+ * @param {string} referenceVersion - The version to compare against
+ * @returns {boolean} Returns true if currentVersion > referenceVersion, false otherwise
+ *
+ * @example
+ * ```typescript
+ * import { isVersionNewer } from '@biconomy/abstractjs'
+ *
+ * // Returns true (current version is newer than reference)
+ * isVersionNewer("1.3.0", "1.2.3")
+ *
+ * // Returns false (current version is older than reference)
+ * isVersionNewer("1.2.0", "1.3.0")
+ *
+ * // Returns false (versions are equal)
+ * isVersionNewer("1.2.3", "1.2.3")
+ * ```
+ */
+export const isVersionNewer = (
+  currentVersion: string,
+  referenceVersion: string
+): boolean => {
+  // Use the existing semverCompare function
+  const comparison = semverCompare(currentVersion, referenceVersion)
+  // Return true if currentVersion > referenceVersion (comparison > 0)
+  return comparison > 0
+}
+
 export type AddressConfig = {
+  /** The attesters for the account */
   attesters: Hex[]
+  /** The factory address for the account */
   factoryAddress: Hex
+  /** The bootstrap address for the account */
   bootStrapAddress: Hex
+  /** The validator address for the account */
   validatorAddress: Hex
+  /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
+  accountId: `biconomy.nexus.${number}.${number}.${number}`
+  /** The implementation address for the account */
+  implementationAddress: Hex
 }
 /**
  * Returns the appropriate configuration based on the SDK version
@@ -167,12 +213,21 @@ export function getConfigFromVersion(
 
   // If the version is not explicitly listed, find the closest compatible version
   // Sort the available versions in descending order
-  const availableVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_VERSION).sort(
+  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_VERSION).sort(
     (a, b) => semverCompare(b, a)
   )
+  // First check if the version is after the latest version...
+  if (isVersionNewer(oldVersion, allVersions[0])) {
+    return LATEST_DEFAULT_ADDRESSES
+  }
+  // Also check if it's before the earliest version, use the earliest version
+  if (isVersionOlder(oldVersion, allVersions[allVersions.length - 1])) {
+    return EARLIEST_DEFAULT_ADDRESSES
+  }
 
   // Find the first version that is less than or equal to the requested version
-  for (const availableVersion of availableVersions) {
+  for (const availableVersion of allVersions) {
+    // Then sort it through the available versions...
     if (versionMeetsRequirement(oldVersion, availableVersion)) {
       return DEFAULT_CONFIGURATIONS_BY_VERSION[availableVersion]
     }
@@ -180,7 +235,7 @@ export function getConfigFromVersion(
 
   // If no compatible version is found, throw an error
   throw new Error(
-    `Unsupported SDK version: ${oldVersion}. Compatible versions are: ${availableVersions.join(
+    `Unsupported SDK version: ${oldVersion}. Compatible versions are: ${allVersions.join(
       ", "
     )}`
   )

@@ -184,6 +184,8 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     factoryData: Hex
     factoryAddress: Address
     validatorAddress: Address
+    bootStrapAddress: Address
+    registryAddress: Address
     attesters: Address[]
     signer: Signer
     publicClient: PublicClient
@@ -633,6 +635,8 @@ export const toNexusAccount = async (
       factoryData,
       factoryAddress,
       validatorAddress,
+      bootStrapAddress,
+      registryAddress,
       signer,
       walletClient,
       publicClient,

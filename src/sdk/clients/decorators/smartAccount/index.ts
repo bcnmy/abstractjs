@@ -35,6 +35,10 @@ import {
 import { sendTransaction } from "./sendTransaction"
 import { signMessage } from "./signMessage"
 import { signTypedData } from "./signTypedData"
+import {
+  type UpgradeSmartAccountParameters,
+  upgradeSmartAccount
+} from "./upgradeSmartAccount"
 import { waitForTransactionReceipt } from "./waitForTransactionReceipt"
 import { writeContract } from "./writeContract"
 
@@ -388,6 +392,21 @@ export type SmartAccountActions<
   prepareUserOperation: (
     params: PrepareUserOperationParameters
   ) => Promise<ReturnType<typeof prepareUserOperationWithoutSignature>>
+  /**
+   * Upgrades a smart account to a new implementation.
+   *
+   * @param parameters - Parameters including optional custom implementation address and initialization data
+   * @returns The hash of the user operation as a hexadecimal string
+   *
+   * @example
+   * ```typescript
+   * const hash = await client.upgradeSmartAccount()
+   * console.log(hash) // '0x...'
+   * ```
+   */
+  upgradeSmartAccount: (
+    args?: UpgradeSmartAccountParameters<TSmartAccount>
+  ) => Promise<Hash>
 }
 
 export function smartAccountActions() {
@@ -408,6 +427,7 @@ export function smartAccountActions() {
       waitForTransactionReceipt(client, args),
     debugUserOperation: (args) => debugUserOperation(client, args),
     prepareUserOperation: (args) =>
-      prepareUserOperationWithoutSignature(client, args)
+      prepareUserOperationWithoutSignature(client, args),
+    upgradeSmartAccount: (args) => upgradeSmartAccount(client, args)
   })
 }
