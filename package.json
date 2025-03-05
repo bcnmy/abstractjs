@@ -36,14 +36,14 @@
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.8",
     "tslib": "^2.6.3",
+    "viem": "^2.26.2",
     "typedoc": "^0.25.9",
-    "viem": "^2.22.0",
     "yargs": "^17.7.2"
   },
   "peerDependencies": {
-    "typescript": "^5",
-    "viem": "^2.22.0",
-    "@rhinestone/module-sdk": "0.2.3"
+    "@rhinestone/module-sdk": "0.2.3",
+    "viem": "^2.26.2",
+    "typescript": "^5"
   },
   "exports": {
     ".": {

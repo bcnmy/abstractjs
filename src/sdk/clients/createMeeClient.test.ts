@@ -9,7 +9,7 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { gnosis, optimism } from "viem/chains"
+import { gnosisChiado, optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
@@ -66,7 +66,7 @@ describe("mee.createMeeClient", async () => {
     async () => {
       const transports = [http(), http(), http()]
       const invalidMcNexus = await toMultichainNexusAccount({
-        chains: [paymentChain, targetChain, gnosis],
+        chains: [paymentChain, targetChain, gnosisChiado],
         transports,
         signer: eoaAccount,
         index

@@ -27,6 +27,7 @@ import {
   toHex
 } from "viem"
 import type { UserOperation } from "viem/account-abstraction"
+import { baseSepolia } from "viem/chains"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { MockSignatureValidatorAbi } from "../../test/__contracts/abi/MockSignatureValidatorAbi"
 import { testAddresses } from "../../test/callDatas"
@@ -54,7 +55,9 @@ import {
   getAccountMeta
 } from "./utils"
 import {
+  NEXUS_DOMAIN_NAME,
   NEXUS_DOMAIN_TYPEHASH,
+  NEXUS_DOMAIN_VERSION,
   PARENT_TYPEHASH,
   eip1271MagicValue
 } from "./utils/Constants"
@@ -109,6 +112,62 @@ describe("nexus.account", async () => {
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
+  })
+
+  test("should check isValidSignature using EIP-6492", async () => {
+    const undeployedAccount = await toNexusAccount({
+      chain: baseSepolia,
+      signer: eoaAccount,
+      transport: http(),
+      index: 103n // undeployed
+    })
+
+    const message = "0x1234"
+
+    const undeployedAccountAddress = await undeployedAccount.getAddress()
+    expect(await undeployedAccount.isDeployed()).toBe(false)
+    const data = hashMessage(message)
+
+    // Calculate the domain separator
+    const domainSeparator = keccak256(
+      encodeAbiParameters(
+        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
+        [
+          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
+          keccak256(toBytes(NEXUS_DOMAIN_NAME)),
+          keccak256(toBytes(NEXUS_DOMAIN_VERSION)),
+          BigInt(baseSepolia.id),
+          undeployedAccountAddress
+        ]
+      )
+    )
+
+    // Calculate the parent struct hash
+    const parentStructHash = keccak256(
+      encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
+        keccak256(toBytes("PersonalSign(bytes prefixed)")),
+        data
+      ])
+    )
+
+    // Calculate the final hash
+    const resultHash: Hex = keccak256(
+      concat(["0x1901", domainSeparator, parentStructHash])
+    )
+    const signature = await undeployedAccount.signMessage({
+      message: { raw: toBytes(resultHash) }
+    })
+
+    const viemResponse = await createPublicClient({
+      chain: baseSepolia,
+      transport: http()
+    }).verifyMessage({
+      address: undeployedAccountAddress,
+      message,
+      signature
+    })
+
+    expect(viemResponse).toBe(true)
   })
 
   test("should check isValidSignature PersonalSign is valid", async () => {
@@ -182,9 +241,7 @@ describe("nexus.account", async () => {
     })
 
     // Sign with Ethereum signed message
-    const ethSignature = await eoaAccount.signMessage({
-      message
-    })
+    const ethSignature = await eoaAccount.signMessage({ message })
 
     const isValidRegular = await mockSigVerifierContract.read.verify([
       messageHash,

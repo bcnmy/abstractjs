@@ -66,7 +66,6 @@ import {
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
-  MAGIC_BYTES,
   PARENT_TYPEHASH
 } from "./utils/Constants"
 // Utils
@@ -419,7 +418,6 @@ export const toNexusAccount = async (
       ["address", "uint256", "bytes"],
       [call.to as Hex, BigInt(call.value ?? 0n), (call.data ?? "0x") as Hex]
     )
-
     return encodeFunctionData({
       abi: parseAbi([
         "function execute(bytes32 mode, bytes calldata executionCalldata) external"
@@ -477,35 +475,7 @@ export const toNexusAccount = async (
     message
   }: { message: SignableMessage }): Promise<Hex> => {
     const tempSignature = await module.signMessage(message)
-
-    const signature = encodePacked(
-      ["address", "bytes"],
-      [module.address as Hex, tempSignature]
-    )
-
-    const erc6492Signature = concat([
-      encodeAbiParameters(
-        [
-          {
-            type: "address",
-            name: "create2Factory"
-          },
-          {
-            type: "bytes",
-            name: "factoryCalldata"
-          },
-          {
-            type: "bytes",
-            name: "originalERC1271Signature"
-          }
-        ],
-        [factoryAddress, factoryData, signature]
-      ),
-      MAGIC_BYTES
-    ])
-
-    const accountIsDeployed = await isDeployed()
-    return accountIsDeployed ? signature : erc6492Signature
+    return encodePacked(["address", "bytes"], [module.address, tempSignature])
   }
 
   /**
