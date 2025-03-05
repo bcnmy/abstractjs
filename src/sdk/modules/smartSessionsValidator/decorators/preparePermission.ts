@@ -99,7 +99,7 @@ export const getPermissionAction = async ({
 
       // create uni action policy here..
       const uniActionPolicyInfo = getUniversalActionPolicy(
-        toActionConfig(actionConfig)
+        toActionConfig(actionConfig) as AnyData
       )
       policyData.push(uniActionPolicyInfo)
     }

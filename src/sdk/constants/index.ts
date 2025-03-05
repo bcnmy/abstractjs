@@ -13,6 +13,7 @@ import {
 } from "../account/utils/Constants"
 import type { AddressConfig } from "../account/utils/getVersion"
 import { ParamCondition } from "../modules/smartSessionsValidator/Types"
+import type { AnyData } from "../modules/utils/Types"
 
 export * from "./abi"
 export * from "./tokens"
@@ -147,14 +148,14 @@ export {
 export const UNIVERSAL_ACTION_POLICY_ADDRESS: Hex = getUniversalActionPolicy({
   valueLimitPerUse: 0n,
   paramRules: {
-    length: 16,
+    length: 16n,
     rules: new Array(16).fill({
       condition: ParamCondition.EQUAL,
       isLimited: false,
       offset: 0,
       ref: toHex(toBytes("0x", { size: 32 })),
       usage: { limit: BigInt(0), used: BigInt(0) }
-    })
+    }) as AnyData
   }
 }).address
 

@@ -20,7 +20,6 @@ import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
 import {
   MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-  mcUSDC,
   testnetMcUSDC
 } from "../constants"
 import { MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS } from "../constants"

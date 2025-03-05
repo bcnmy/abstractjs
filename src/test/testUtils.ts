@@ -184,6 +184,7 @@ export const toBundlerInstance = async ({
   const instance = alto({
     entrypoints: [ENTRY_POINT_ADDRESS],
     rpcUrl: rpcUrl,
+    utilityPrivateKey: pKey,
     executorPrivateKeys: [pKey],
     entrypointSimulationContract: ENTRYPOINT_SIMULATIONS_ADDRESS,
     safeMode: false,

@@ -12,6 +12,7 @@ import {
   type MasterClient,
   type NetworkConfig,
   fundAndDeployClients,
+  getBalance,
   getTestAccount,
   killNetwork,
   toTestClient
@@ -73,6 +74,7 @@ describe("modules.ownables.decorators", async () => {
     })
 
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+
     await fundAndDeployClients(testClient, [nexusClient])
   })
 
