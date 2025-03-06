@@ -7,7 +7,9 @@ import {
   getContract,
   pad,
   parseAbi,
-  toHex
+  toHex,
+  zeroAddress,
+  zeroHash
 } from "viem"
 import {
   MEE_VALIDATOR_ADDRESS,
@@ -15,6 +17,7 @@ import {
   REGISTRY_ADDRESS
 } from "../../constants"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
+import { COMPOSABILITY_MODULE_ADDRESS } from "../../modules/composability/toComposabilityFallback"
 
 /**
  * Parameters for generating K1 factory initialization data
@@ -157,5 +160,54 @@ export const getDefaultFactoryData = async (
     ]),
     functionName: "createAccount",
     args: [initData, salt]
+  })
+}
+
+export type GetComposabilityFactoryDataParams = {
+  attesters: Address[]
+  attesterThreshold: number
+  validatorAddress: Address
+  validatorInitData: Hex
+  composabilityModuleAddress?: Address
+  registryAddress?: Address
+}
+
+export const getComposabilityFactoryData = async (
+  parameters: GetComposabilityFactoryDataParams
+): Promise<Hex> => {
+  const {
+    validatorAddress,
+    validatorInitData,
+    composabilityModuleAddress = COMPOSABILITY_MODULE_ADDRESS,
+    registryAddress = REGISTRY_ADDRESS,
+    attesters,
+    attesterThreshold
+  } = parameters
+
+  const fallback = {
+    module: composabilityModuleAddress,
+    data: toHex("0x7192a248")
+  }
+
+  return encodeFunctionData({
+    abi: NexusBootstrapAbi,
+    functionName: "initNexus",
+    args: [
+      [
+        {
+          module: validatorAddress,
+          data: validatorInitData
+        }
+      ],
+      [fallback],
+      {
+        module: zeroAddress,
+        data: zeroHash
+      },
+      [fallback],
+      registryAddress,
+      attesters,
+      attesterThreshold
+    ]
   })
 }

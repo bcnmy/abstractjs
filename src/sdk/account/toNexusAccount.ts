@@ -264,6 +264,7 @@ export const toNexusAccount = async (
   })
 
   const validatorInitData = validatorInitData_ ?? signerAddress
+
   const factoryData = useK1Config
     ? await getK1FactoryData({
         signerAddress,

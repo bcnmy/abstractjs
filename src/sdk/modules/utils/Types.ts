@@ -73,6 +73,8 @@ export type ModuleParameters = {
   account?: ModularSmartAccount
   /** Data for the module */
   data?: Record<string, unknown>
+  /** type of module */
+  type?: ModuleType
 } & Partial<ModuleActions> &
   Partial<RequiredModuleParameters>
 
