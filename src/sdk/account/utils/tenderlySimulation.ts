@@ -9,19 +9,19 @@ import { deepHexlify } from "./deepHexlify"
 
 export type AnyUserOperation = Partial<UserOperation<"0.7"> | RpcUserOperation>
 
-export const getSimulationUserOp = (partialUserOp: AnyUserOperation) => {
-  const simulationGasLimits = {
-    callGasLimit: 100_000_000_000n,
-    verificationGasLimit: 100_000_000_000n,
-    preVerificationGas: 1n,
-    maxFeePerGas: 100_000_000_000n,
-    maxPriorityFeePerGas: 1n,
-    paymasterVerificationGasLimit: 100_000_000_000n,
-    paymasterPostOpGasLimit: 100_000n
-  }
+export const DUMMY_SIMULATION_GAS = {
+  callGasLimit: 100_000_000_000n,
+  verificationGasLimit: 100_000_000_000n,
+  preVerificationGas: 1n,
+  maxFeePerGas: 100_000_000_000n,
+  maxPriorityFeePerGas: 1n,
+  paymasterVerificationGasLimit: 100_000_000_000n,
+  paymasterPostOpGasLimit: 100_000n
+}
 
+export const getSimulationUserOp = (partialUserOp: AnyUserOperation) => {
   const mergedUserOp = deepHexlify({
-    ...simulationGasLimits,
+    ...DUMMY_SIMULATION_GAS,
     ...partialUserOp
   })
 

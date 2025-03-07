@@ -9,6 +9,9 @@ import { sanitizeSignature } from "../utils/Helpers"
 import type { Module, ModuleMeta, ModuleParameters } from "../utils/Types"
 import { toModule } from "../utils/toModule"
 
+export const DUMMY_SIGNATURE: Hex =
+  "0x81d4b4981670cb18f99f0b4a66446df1bf5b204d24cfcb659bf38ba27a4359b5711649ec2423c5e1247245eba2964679b6a1dbb85c992ae40b9b00c6935b02ff1b"
+
 export type ToK1ValidatorParameters = Omit<ModuleParameters, "address"> & {
   address?: ModuleParameters["address"]
 }
@@ -75,10 +78,7 @@ export const toK1Validator = (parameters: ToK1ValidatorParameters): Module => {
     initData,
     deInitData,
     moduleInitData,
-    getStubSignature: async () => {
-      const dynamicPart = address.substring(2).padEnd(40, "0")
-      return `0x0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000${dynamicPart}000000000000000000000000000000000000000000000000000000000000004181d4b4981670cb18f99f0b4a66446df1bf5b204d24cfcb659bf38ba27a4359b5711649ec2423c5e1247245eba2964679b6a1dbb85c992ae40b9b00c6935b02ff1b00000000000000000000000000000000000000000000000000000000000000` as Hex
-    },
+    getStubSignature: async () => DUMMY_SIGNATURE,
     signUserOpHash: async (userOpHash: Hex) => {
       const signature = await signer.signMessage({
         message: { raw: userOpHash as Hex }

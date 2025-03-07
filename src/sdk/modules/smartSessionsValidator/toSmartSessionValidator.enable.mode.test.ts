@@ -70,7 +70,7 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
   const index = 2n
 
   beforeAll(async () => {
-    network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
+    network = await toNetwork()
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl

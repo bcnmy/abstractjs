@@ -62,7 +62,6 @@ describe("modules.toModule", async () => {
           "initData": "0x",
           "type": "validator",
         },
-        "setData": [Function],
         "signMessage": [Function],
         "signUserOpHash": [Function],
         "signer": {

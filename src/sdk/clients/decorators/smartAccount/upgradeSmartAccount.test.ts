@@ -44,7 +44,7 @@ describe("decorators.smartAccount.upgradeSmartAccount", async () => {
   let newNexusAccount: NexusAccount
   let newNexusAccountAddress: Address
   beforeAll(async () => {
-    network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
+    network = await toNetwork()
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl
@@ -54,8 +54,8 @@ describe("decorators.smartAccount.upgradeSmartAccount", async () => {
     oldNexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      oldVersion: "0.0.33"
+      transport: http()
+      // oldVersion: "0.0.33"
     })
 
     oldNexusClient = createSmartAccountClient({

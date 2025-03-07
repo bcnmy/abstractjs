@@ -17,10 +17,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../../../constants"
 import type { CreateSessionDataParams } from "../Types"
 import {
   type SmartSessionModule,
@@ -57,9 +53,7 @@ describe("modules.smartSessions.decorators", async () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
-        validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+        transport: http()
       }),
       transport: http(bundlerUrl),
       mock: true
@@ -124,9 +118,7 @@ describe("modules.smartSessions.decorators", async () => {
       account: await toNexusAccount({
         chain,
         signer: sessionKeyAccount,
-        transport: http(),
-        validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+        transport: http()
       }),
       transport: http(bundlerUrl),
       mock: true

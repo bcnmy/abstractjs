@@ -10,12 +10,6 @@ import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
-import {
-  BICONOMY_EXPERIMENTAL_ATTESTER,
-  MEE_VALIDATOR_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
-} from "../constants"
-import { NEXUS_ACCOUNT_FACTORY } from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import {
   type MultichainSmartAccount,
@@ -84,11 +78,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     const nexus = await toNexusAccount({
       chain: baseSepolia,
       signer: eoaAccount,
-      transport: http(),
-      useK1Config: false,
-      validatorAddress: MEE_VALIDATOR_ADDRESS,
-      factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_EXPERIMENTAL_ATTESTER]
+      transport: http()
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()

@@ -71,8 +71,6 @@ export type ModuleParameters = {
   signer: Signer
   /** account */
   account?: ModularSmartAccount
-  /** Data for the module */
-  data?: Record<string, unknown>
   /** type of module */
   type?: ModuleType
 } & Partial<ModuleActions> &
@@ -81,6 +79,8 @@ export type ModuleParameters = {
 export type RequiredModuleParameters<extend extends object = object> = {
   /** Optional initialization data for the module. */
   initData: Hex
+  /** Optional initialization data for the module. Alias for initData. */
+  data: Hex
   /** Optional metadata for module initialization. */
   moduleInitData: ModuleMeta
   /** Optional data for de-initializing the module. */
@@ -104,22 +104,12 @@ export type BaseModule = Omit<ModuleParameters, "extend"> &
     signer: Signer
     /** Type of module. */
     type: ModuleType
-    /** Data to be set on the module */
-    setData: (r: Record<string, unknown>) => void
-    /** Get data from the module */
-    getData: () => Record<string, unknown>
   }
 
 export type Module<implementation extends ModuleParameters = ModuleParameters> =
   Assign<BaseModule, implementation["extend"]>
 
-export type Modularity = {
-  getModule: () => Module | undefined
-  setModule: (module: Module) => void
-}
-
-export type ModularSmartAccount =
-  SmartAccount<NexusSmartAccountImplementation> & Modularity
+export type ModularSmartAccount = SmartAccount<NexusSmartAccountImplementation>
 
 export type ModuleMeta = {
   address: Hex

@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem"
 import { base, baseSepolia } from "viem/chains"
 import {
+  MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY,
   NEXUS_BOOTSTRAP_ADDRESS,
   OWNABLE_EXECUTOR_ADDRESS,
@@ -113,6 +114,11 @@ export const TEST_CONTRACTS: Record<
     chainId: baseSepolia.id,
     name: "NexusAccountFactory",
     address: NEXUS_ACCOUNT_FACTORY
+  },
+  MeeValidator: {
+    chainId: baseSepolia.id,
+    name: "MeeValidator",
+    address: MEE_VALIDATOR_ADDRESS
   }
 }
 

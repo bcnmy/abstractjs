@@ -48,7 +48,7 @@ describe("erc7579.decorators.uninstallModule", async () => {
   let sessionsModule: Module
 
   beforeAll(async () => {
-    network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
+    network = await toNetwork()
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl

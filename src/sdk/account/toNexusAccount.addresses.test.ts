@@ -25,11 +25,7 @@ import {
 } from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
-  BICONOMY_EXPERIMENTAL_ATTESTER,
-  MEE_VALIDATOR_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY,
   RHINESTONE_ATTESTER_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
   TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
 } from "../constants"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
@@ -50,7 +46,7 @@ describe("nexus.account.addresses", async () => {
   let walletClient: WalletClient
 
   beforeAll(async () => {
-    network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
+    network = await toNetwork()
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl
@@ -67,9 +63,7 @@ describe("nexus.account.addresses", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -82,40 +76,6 @@ describe("nexus.account.addresses", async () => {
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
-  })
-
-  test("should check account address", async () => {
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
-    const counterfactualAddressFromHelper = await getK1NexusAddress({
-      publicClient: testClient as unknown as PublicClient,
-      signerAddress: eoaAccount.address,
-      index: 0n,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-      threshold: 1,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-    })
-    const gottenAddress = await nexusClient.account.getAddress()
-    expect(counterfactualAddressFromHelper).toBe(nexusAccountAddress)
-    expect(nexusAccount.address).toBe(nexusAccountAddress)
-    expect(nexusAccount.address).toBe(counterfactualAddressFromHelper)
-    expect(gottenAddress).toBe(nexusAccountAddress)
-  })
-
-  test("should check addresses after fund and deploy", async () => {
-    await fundAndDeployClients(testClient, [nexusClient])
-    const counterfactualAddressFromHelper = await getK1NexusAddress({
-      publicClient: testClient as unknown as PublicClient,
-      signerAddress: eoaAccount.address,
-      index: 0n,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-      threshold: 1,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-    })
-    const gottenAddress = await nexusClient.account.getAddress()
-    expect(counterfactualAddressFromHelper).toBe(nexusAccountAddress)
-    expect(nexusAccount.address).toBe(nexusAccountAddress)
-    expect(nexusAccount.address).toBe(counterfactualAddressFromHelper)
-    expect(gottenAddress).toBe(nexusAccountAddress)
   })
 
   test("should override account address", async () => {
@@ -175,14 +135,9 @@ describe("nexus.account.addresses", async () => {
     const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
 
     const meeAccount = await toNexusAccount({
-      useK1Config: false,
       signer: eoaAccount,
       chain: baseSepolia,
-      transport: http(),
-      validatorAddress: MEE_VALIDATOR_ADDRESS,
-      factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_EXPERIMENTAL_ATTESTER],
-      validatorInitData: eoaAccount.address
+      transport: http()
     })
 
     const meeAddress = await meeAccount.getAddress()

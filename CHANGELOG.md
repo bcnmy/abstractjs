@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.2.2
+
+### Patch Changes
+
+- Added Composability support
+
 ## 0.2.1
 
 ### Patch Changes
@@ -53,7 +59,7 @@
 
 - Nexus init using custom validator
   - BREAKING: `getMeeFactoryData` helper now renamed to `getDefaultFactoryData`
-  - BREAKING: `getMeeNexusAddress` helper now renamed to `getDefaultNexusAddress`
+  - BREAKING: `getMeeNexusAddress` helper now renamed to `getUniversalNexusAddress`
 - Moved useTestBundler datapoint to the bundler client instead of the account & renamed to 'mock'.
 - Use pimlico gasEstimates if string 'pimlico' is in the bundlerUrl
 - Added confirmations: 2 to waitForUserOperationReceipt in signOnChainQuote helper to avoid race condition

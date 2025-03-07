@@ -41,7 +41,7 @@ export const MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2: Hex =
 export const MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS: Hex =
   "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa"
 
-export const MEE_VALIDATOR_ADDRESS =
+export const MEE_VALIDATOR_ADDRESS: Hex =
   "0xFbCbF8314DE6DA57ea2Bc4710115F5271041CA50"
 
 export const BICONOMY_ATTESTER_ADDRESS: Hex =
@@ -57,13 +57,17 @@ export const NEXUS_ACCOUNT_FACTORY_UNTIL_0_2: Hex =
 export const BICONOMY_EXPERIMENTAL_ATTESTER =
   "0x531b827c1221ec7ce13266e8f5cb1ec6ae470be5"
 
+export const COMPOSABLE_EXECUTOR_ADDRESS: Hex =
+  "0x9716325540E7D53C28ffF32e2015f30f85476901"
+
 export const LATEST_DEFAULT_ADDRESSES: AddressConfig = {
   attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-  factoryAddress: MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
+  factoryAddress: NEXUS_ACCOUNT_FACTORY,
   bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-  validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
+  validatorAddress: MEE_VALIDATOR_ADDRESS,
   accountId: "biconomy.nexus.1.0.2",
-  implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS
+  implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS,
+  executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
 }
 export const EARLIEST_DEFAULT_ADDRESSES: AddressConfig = {
   attesters: [RHINESTONE_ATTESTER_ADDRESS],
@@ -71,7 +75,8 @@ export const EARLIEST_DEFAULT_ADDRESSES: AddressConfig = {
   bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
   validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
   accountId: "biconomy.nexus.1.0.0",
-  implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+  implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+  executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
 }
 
 export const DEFAULT_CONFIGURATIONS_BY_VERSION: Record<string, AddressConfig> =
@@ -82,7 +87,8 @@ export const DEFAULT_CONFIGURATIONS_BY_VERSION: Record<string, AddressConfig> =
       bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
       validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
       accountId: "biconomy.nexus.1.0.0",
-      implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+      implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
     },
     "0.0.34": {
       attesters: [
@@ -93,7 +99,8 @@ export const DEFAULT_CONFIGURATIONS_BY_VERSION: Record<string, AddressConfig> =
       bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
       validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
       accountId: "biconomy.nexus.1.0.0",
-      implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+      implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
     },
     "0.1": {
       attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
@@ -101,7 +108,8 @@ export const DEFAULT_CONFIGURATIONS_BY_VERSION: Record<string, AddressConfig> =
       bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
       validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
       accountId: "biconomy.nexus.1.0.0",
-      implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+      implementationAddress: DEFAULT_BICONOMY_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
     },
     "0.2": LATEST_DEFAULT_ADDRESSES
   }
