@@ -84,11 +84,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     const nexus = await toNexusAccount({
       chain: baseSepolia,
       signer: eoaAccount,
-      transport: http(),
-      useK1Config: false,
-      validatorAddress: MEE_VALIDATOR_ADDRESS,
-      factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_EXPERIMENTAL_ATTESTER]
+      transport: http()
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()

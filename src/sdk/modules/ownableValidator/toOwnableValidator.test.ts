@@ -70,9 +70,7 @@ describe("modules.ownables", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -110,79 +108,6 @@ describe("modules.ownables", async () => {
       })
     expect(installSuccess).toBe(true)
   })
-
-  testnetTest(
-    "should init a nexus account with ownable validator, without k1 config",
-    async ({ config: { account, accountTwo, chain, bundlerUrl } }) => {
-      if (!account || !accountTwo) throw new Error("Account not found")
-
-      const moduleInitArgs = {
-        threshold: 1,
-        owners: [account.address, accountTwo.address]
-      }
-
-      const { initData: validatorInitData } =
-        getOwnableValidator(moduleInitArgs)
-
-      const ownableNexusAccount_ = await toNexusAccount({
-        chain,
-        signer: account,
-        transport: http(),
-        useK1Config: false,
-        validatorInitData,
-        factoryAddress: NEXUS_ACCOUNT_FACTORY,
-        validatorAddress: OWNABLE_VALIDATOR_ADDRESS
-      })
-
-      const ownablesModule = toOwnableValidator({
-        account: ownableNexusAccount_,
-        signer: account,
-        moduleInitArgs
-      })
-
-      const ownableNexusClient_ = createSmartAccountClient({
-        account: ownableNexusAccount_,
-        transport: http(bundlerUrl)
-      }).extend(ownableActions(ownablesModule))
-
-      expect(ownableNexusAccount_.address).toBeDefined()
-      expect(ownableNexusAccount_.address).not.toBe(nexusAccount.address)
-
-      // Now simply use the module as normal...
-      // @ts-ignore
-      const withdrawalUserOp = await ownableNexusClient_.prepareUserOperation({
-        calls: [
-          {
-            to: accountTwo.address,
-            value: 1n
-          }
-        ]
-      })
-
-      // Get the hash of the user operation
-      // This hash will be signed by the required owners
-      const withdrawalUserOpHash =
-        // @ts-ignore
-        await ownableNexusClient_.account.getUserOpHash(withdrawalUserOp)
-
-      // Combine the signatures and set them on the user operation
-      // The order of signatures should match the order of owners in the module configuration
-      withdrawalUserOp.signature = await accountTwo.signMessage({
-        message: { raw: withdrawalUserOpHash }
-      })
-      // Send the user operation with the collected signatures
-      const userOpHash =
-        // @ts-ignore
-        await ownableNexusClient_.sendUserOperation(withdrawalUserOp)
-
-      // Wait for the user operation to be mined and check its success
-      const receipt = await ownableNexusClient_.waitForUserOperationReceipt({
-        hash: userOpHash
-      })
-
-      expect(receipt.success).toBe("true")
-    }
-  )
 
   test("should add accountTwo as owner", async () => {
     const hash = await ownableNexusClient.addOwner({
@@ -266,7 +191,7 @@ describe("modules.ownables", async () => {
   }, 90000)
 
   test("should require 2 signatures to send user operation", async () => {
-    expect(nexusClient.account.getModule().address).toBe(ownableModule.address)
+    expect(nexusClient.account.module.address).toBe(ownableModule.address)
 
     const userOp = await nexusClient.prepareUserOperation({
       calls: [

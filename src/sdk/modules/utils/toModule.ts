@@ -44,12 +44,6 @@ export function toModule(parameters: ModuleParameters): Module {
     ...rest
   } = parameters
 
-  let data_ = parameters.data ?? {}
-  const setData = (d: Record<string, unknown>) => {
-    data_ = d
-  }
-  const getData = () => data_
-
   return {
     ...parameters,
     initData,
@@ -58,9 +52,8 @@ export function toModule(parameters: ModuleParameters): Module {
     deInitData,
     accountAddress,
     initArgs,
-    setData,
-    getData,
     module: parameters.address,
+    data: initData,
     type,
     getStubSignature: async () => {
       const dynamicPart = parameters.address.substring(2).padEnd(40, "0")
