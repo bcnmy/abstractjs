@@ -68,7 +68,7 @@ export const toNetworks = async (
 }
 
 export const toNetwork = async (
-  networkType: TestFileNetworkType = "BESPOKE_ANVIL_NETWORK"
+  networkType: TestFileNetworkType = "BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA"
 ): Promise<NetworkConfig> => {
   const forkBaseSepolia =
     networkType === "BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA"

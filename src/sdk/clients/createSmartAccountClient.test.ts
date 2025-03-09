@@ -72,9 +72,7 @@ describe("nexus.client", async () => {
     const nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -279,17 +277,13 @@ describe("nexus.client", async () => {
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -316,9 +310,7 @@ describe("nexus.client", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const ethersNexusClient = createSmartAccountClient({

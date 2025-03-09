@@ -31,7 +31,7 @@ export function getVersion(): string {
   } catch (error) {
     // Fallback in case the package.json cannot be loaded
     console.warn("Could not determine SDK version from package.json")
-    return "unknown"
+    return "999.999.999"
   }
 }
 
@@ -196,6 +196,8 @@ export type AddressConfig = {
   accountId: `biconomy.nexus.${number}.${number}.${number}`
   /** The implementation address for the account */
   implementationAddress: Hex
+  /** The execution module address for the account */
+  executorAddress: Hex
 }
 /**
  * Returns the appropriate configuration based on the SDK version
@@ -203,9 +205,7 @@ export type AddressConfig = {
  * @returns The configuration containing attester and factory addresses
  * @throws Error if the version is not supported
  */
-export function getConfigFromVersion(
-  oldVersion: Required<NonNullable<ToNexusSmartAccountParameters["oldVersion"]>>
-): AddressConfig {
+export function getConfigFromVersion(oldVersion: string): AddressConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
   if (oldVersion in DEFAULT_CONFIGURATIONS_BY_VERSION) {
     return DEFAULT_CONFIGURATIONS_BY_VERSION[oldVersion]
