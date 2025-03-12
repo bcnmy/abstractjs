@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 0.3.0
+
+### Minor Changes
+
+- Change attester address for Mee users. Results in change in MEE users' addresses
+
 ## 0.2.1
 
 ### Patch Changes

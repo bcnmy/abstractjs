@@ -25,7 +25,6 @@ import {
 } from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
-  BICONOMY_EXPERIMENTAL_ATTESTER,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY,
   RHINESTONE_ATTESTER_ADDRESS,
@@ -181,7 +180,7 @@ describe("nexus.account.addresses", async () => {
       transport: http(),
       validatorAddress: MEE_VALIDATOR_ADDRESS,
       factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_EXPERIMENTAL_ATTESTER],
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
       validatorInitData: eoaAccount.address
     })
 

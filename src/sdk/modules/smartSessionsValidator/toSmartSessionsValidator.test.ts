@@ -172,6 +172,7 @@ describe("modules.smartSessions", async () => {
       }
     }
     const installUniversalPolicy = getUniversalActionPolicy(
+      // @ts-ignore
       toActionConfig(actionConfigData)
     )
 
