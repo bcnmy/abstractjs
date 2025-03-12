@@ -27,10 +27,9 @@ import {
 } from "../../clients/createBicoBundlerClient"
 import { parseModuleTypeId } from "../../clients/decorators/erc7579/supportsModule"
 import {
-  NEXUS_ACCOUNT_FACTORY,
+  K1_VALIDATOR_ADDRESS,
+  NEXUS_ACCOUNT_FACTORY_ADDRESS,
   OWNABLE_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
   getOwnableValidator,
   getOwnableValidatorSignature
 } from "../../constants"
@@ -70,9 +69,7 @@ describe("modules.ownables", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -130,7 +127,7 @@ describe("modules.ownables", async () => {
         transport: http(),
         useK1Config: false,
         validatorInitData,
-        factoryAddress: NEXUS_ACCOUNT_FACTORY,
+        factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
         validatorAddress: OWNABLE_VALIDATOR_ADDRESS
       })
 
@@ -383,8 +380,6 @@ describe("modules.ownables", async () => {
     expect(userOpSuccess).toBe(true)
     const [installedValidatorsAfter] =
       await nexusClient.getInstalledValidators()
-    expect(installedValidatorsAfter).toEqual([
-      TEST_ADDRESS_K1_VALIDATOR_ADDRESS
-    ])
+    expect(installedValidatorsAfter).toEqual([K1_VALIDATOR_ADDRESS])
   })
 })

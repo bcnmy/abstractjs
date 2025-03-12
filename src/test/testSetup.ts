@@ -1,6 +1,6 @@
-import { http, type Transport } from "viem"
+import { http, type Prettify, type Transport } from "viem"
 import { type Chain, base, optimism } from "viem/chains"
-import { inject, test } from "vitest"
+import { test } from "vitest"
 import {
   type FundedTestClients,
   type NetworkConfig,
@@ -9,6 +9,7 @@ import {
   initNetwork,
   toFundedTestClients
 } from "./testUtils"
+import { toNetwork as toEcosystemNetwork, toBundler as toEcosystemBundler, deployContracts as deployEcosystemContracts } from "@biconomy/ecosystem"
 
 const MAINNET_CHAINS_FOR_TESTING: Chain[] = [optimism, base]
 const MAINNET_TRANSPORTS_FOR_TESTING: Transport[] = [
@@ -24,7 +25,7 @@ export const localhostTest = test.extend<{
   config: NetworkConfigWithTestClients
 }>({
   // biome-ignore lint/correctness/noEmptyPattern: Needed in vitest :/
-  config: async ({}, use) => {
+  config: async ({ }, use) => {
     const testNetwork = await initAnvilNetwork()
     const fundedTestClients = await toFundedTestClients({
       chain: testNetwork.chain,
@@ -42,7 +43,7 @@ export const testnetTest = test.extend<{
   config: NetworkConfig
 }>({
   // biome-ignore lint/correctness/noEmptyPattern: Needed in vitest :/
-  config: async ({}, use) => {
+  config: async ({ }, use) => {
     const testNetwork = await toNetwork("TESTNET_FROM_ENV_VARS")
     await use(testNetwork)
   }
@@ -67,22 +68,37 @@ export const toNetworks = async (
   return await Promise.all(networkTypes.map((type) => toNetwork(type)))
 }
 
+type PrettifiedNetworkConfig = Prettify<NetworkConfig>
 export const toNetwork = async (
   networkType: TestFileNetworkType = "BESPOKE_ANVIL_NETWORK"
-): Promise<NetworkConfig> => {
-  const forkBaseSepolia =
-    networkType === "BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA"
-  const communalAnvil = networkType === "COMMUNAL_ANVIL_NETWORK"
-  const network = ["TESTNET_FROM_ENV_VARS", "MAINNET_FROM_ENV_VARS"].includes(
-    networkType
-  )
+): Promise<PrettifiedNetworkConfig> => {
 
-  return await (communalAnvil
-    ? // @ts-ignore
-      inject("settings")
-    : network
-      ? initNetwork(networkType)
-      : initAnvilNetwork(forkBaseSepolia))
+  switch (networkType) {
+    case "BESPOKE_ANVIL_NETWORK":
+    case "COMMUNAL_ANVIL_NETWORK": {
+      const network = await toEcosystemNetwork()
+      await deployEcosystemContracts(network)
+      const bundler = await toEcosystemBundler(network)
+
+      const result: PrettifiedNetworkConfig = {
+        ...network,
+        bundlerUrl: bundler.url,
+        bundlerPort: bundler.port
+      }
+
+      console.log(Object.keys(result))
+      return result
+    }
+    case "BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA": {
+      return await initAnvilNetwork(true)
+    }
+    case "TESTNET_FROM_ENV_VARS": {
+      return await initNetwork(networkType)
+    }
+    case "MAINNET_FROM_ENV_VARS": {
+      return await initNetwork(networkType)
+    }
+  }
 }
 
 export const paymasterTruthy = () => {

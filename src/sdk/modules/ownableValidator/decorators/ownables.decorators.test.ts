@@ -25,11 +25,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import {
-  OWNABLE_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../../../constants"
+import { OWNABLE_VALIDATOR_ADDRESS } from "../../../constants"
 import { toOwnableValidator } from "../toOwnableValidator"
 
 describe("modules.ownables.decorators", async () => {
@@ -62,9 +58,7 @@ describe("modules.ownables.decorators", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({

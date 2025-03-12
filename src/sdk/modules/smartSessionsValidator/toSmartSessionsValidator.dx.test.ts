@@ -8,7 +8,6 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../test/__contracts/abi/CounterAbi"
-import { testAddresses } from "../../../test/callDatas"
 import { toNetwork } from "../../../test/testSetup"
 import {
   fundAndDeployClients,
@@ -27,6 +26,7 @@ import { parse, stringify } from "./Helpers"
 import type { SessionData } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.dx", async () => {
   let network: NetworkConfig
@@ -125,7 +125,7 @@ describe("modules.smartSessions.dx", async () => {
           actionPoliciesInfo: [
             {
               abi: CounterAbi,
-              contractAddress: testAddresses.Counter
+              contractAddress: COUNTER_ADDRESS,
               // validUntil?: number
               // validAfter?: number
               // valueLimit?: bigint
@@ -138,7 +138,7 @@ describe("modules.smartSessions.dx", async () => {
     const sessionData: SessionData = {
       granter: usersNexusClient.account.address,
       sessionPublicKey,
-      description: `Permission to increment a counter for ${testAddresses.Counter}`,
+      description: `Permission to increment a counter for ${COUNTER_ADDRESS}`,
       moduleData
     }
 
@@ -178,12 +178,12 @@ describe("modules.smartSessions.dx", async () => {
       smartSessionUseActions(usePermissionsModule)
     )
     const byteCode = await testClient.getCode({
-      address: testAddresses.Counter
+      address: COUNTER_ADDRESS
     })
     const userOpHash = await useSmartSessionNexusClient.usePermission({
       calls: [
         {
-          to: testAddresses.Counter,
+          to: COUNTER_ADDRESS,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "decrementNumber"

@@ -14,7 +14,6 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../test/__contracts/abi/CounterAbi"
-import { testAddresses } from "../../../test/callDatas"
 import { toNetwork } from "../../../test/testSetup"
 import {
   type NetworkConfig,
@@ -29,7 +28,7 @@ import {
   createSmartAccountClient
 } from "../../clients/createBicoBundlerClient"
 import {
-  MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
+  K1_VALIDATOR_ADDRESS,
   OWNABLE_VALIDATOR_ADDRESS,
   SMART_SESSIONS_ADDRESS,
   type Session,
@@ -46,6 +45,7 @@ import { generateSalt, parse, stringify } from "./Helpers"
 import type { SessionData } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe.skip("modules.smartSessions.enable.mode.dx", async () => {
   let network: NetworkConfig
@@ -147,7 +147,7 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
       },
       actions: [
         {
-          actionTarget: testAddresses.Counter,
+          actionTarget: COUNTER_ADDRESS,
           actionTargetSelector: "0x273ea3e3", // incrementNumber
           actionPolicies: [getSudoPolicy()]
         }
@@ -166,7 +166,7 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
         sessions: [session],
         account: nexusAccount,
         clients: [publicClient],
-        enableValidatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS
+        enableValidatorAddress: K1_VALIDATOR_ADDRESS
       })
 
     const { permissionEnableHash, ...sessionDetails } =
@@ -265,7 +265,7 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
           actionPoliciesInfo: [
             {
               abi: CounterAbi,
-              contractAddress: testAddresses.Counter
+              contractAddress: COUNTER_ADDRESS
               // validUntil?: number
               // validAfter?: number
               // valueLimit?: bigint
@@ -278,7 +278,7 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
     const sessionData: SessionData = {
       granter: nexusClient.account.address,
       sessionPublicKey,
-      description: `Permission to increment a counter for ${testAddresses.Counter}`,
+      description: `Permission to increment a counter for ${COUNTER_ADDRESS}`,
       moduleData
     }
 
@@ -320,14 +320,14 @@ describe.skip("modules.smartSessions.enable.mode.dx", async () => {
       preVerificationGas: 100000000n,
       calls: [
         {
-          to: testAddresses.Counter,
+          to: COUNTER_ADDRESS,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "incrementNumber"
           })
         },
         {
-          to: testAddresses.Counter,
+          to: COUNTER_ADDRESS,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "decrementNumber"

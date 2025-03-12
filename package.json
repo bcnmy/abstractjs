@@ -1,12 +1,13 @@
 {
   "name": "@biconomy/abstractjs",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "author": "Biconomy",
   "repository": "github:bcnmy/abstractjs",
   "main": "./dist/_cjs/index.js",
   "module": "./dist/_esm/index.js",
   "access": "public",
   "devDependencies": {
+    "@biconomy/ecosystem": "file:../ecosystem",
     "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.28.1",
     "@commitlint/cli": "^19.7.1",
@@ -28,7 +29,7 @@
     "execa": "^9.5.2",
     "get-port": "^7.1.0",
     "gh-pages": "^6.3.0",
-    "nexus": "github:bcnmy/nexus#5cde333ae5e0eda308bc7f290c47c56993eb2101",
+    "nexus": "github:bcnmy/nexus#f6cae57d7b25e94edf85f518e7d56f3193e49b5e",
     "prool": "^0.0.23",
     "rimraf": "^6.0.1",
     "simple-git-hooks": "^2.11.1",

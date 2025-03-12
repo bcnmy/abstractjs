@@ -10,8 +10,6 @@ import {
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
 import { toNexusAccount } from "../../account/toNexusAccount"
 import { createSmartAccountClient } from "../../clients/createBicoBundlerClient"
-import { TEST_ADDRESS_K1_VALIDATOR_ADDRESS } from "../../constants"
-import { TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS } from "../../constants"
 import { ownableActions } from "./decorators"
 import { toOwnableValidator } from "./toOwnableValidator"
 
@@ -65,9 +63,7 @@ describe("modules.ownableValidator.dx", async () => {
     const nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const nexusClient = createSmartAccountClient({

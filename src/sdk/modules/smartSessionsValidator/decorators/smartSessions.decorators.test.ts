@@ -2,7 +2,6 @@ import { http, type Address, type Chain, type LocalAccount } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi/CounterAbi"
-import { testAddresses } from "../../../../test/callDatas"
 import { toNetwork } from "../../../../test/testSetup"
 import {
   type MasterClient,
@@ -17,16 +16,13 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../../../constants"
 import type { CreateSessionDataParams } from "../Types"
 import {
   type SmartSessionModule,
   toSmartSessionsValidator
 } from "../toSmartSessionsValidator"
 import { smartSessionCreateActions, smartSessionUseActions } from "./"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.decorators", async () => {
   let network: NetworkConfig
@@ -57,9 +53,7 @@ describe("modules.smartSessions.decorators", async () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
-        validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+        transport: http()
       }),
       transport: http(bundlerUrl),
       mock: true
@@ -74,7 +68,7 @@ describe("modules.smartSessions.decorators", async () => {
         actionPoliciesInfo: [
           {
             abi: CounterAbi,
-            contractAddress: testAddresses.Counter
+            contractAddress: COUNTER_ADDRESS
             // validUntil?: number
             // validAfter?: number
             // valueLimit?: bigint
@@ -124,9 +118,7 @@ describe("modules.smartSessions.decorators", async () => {
       account: await toNexusAccount({
         chain,
         signer: sessionKeyAccount,
-        transport: http(),
-        validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+        transport: http()
       }),
       transport: http(bundlerUrl),
       mock: true

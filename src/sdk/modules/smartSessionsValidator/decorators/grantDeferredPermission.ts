@@ -2,7 +2,7 @@ import type { Chain, Client, PublicClient, Transport } from "viem"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import {
-  MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
+  K1_VALIDATOR_ADDRESS,
   SmartSessionMode,
   getAccount,
   getEnableSessionDetails
@@ -109,7 +109,7 @@ export async function grantDeferredPermission<
     sessions: preparedPermission.sessions,
     account: nexusAccount,
     clients: [publicClient],
-    enableValidatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS
+    enableValidatorAddress: K1_VALIDATOR_ADDRESS
   })
 
   const { permissionEnableHash, ...sessionDetails } =

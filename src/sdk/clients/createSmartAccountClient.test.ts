@@ -24,7 +24,6 @@ import {
 } from "../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import { toNexusAccount } from "../account/toNexusAccount"
-import { ERROR_MESSAGES } from "../account/utils/Constants"
 import { Logger } from "../account/utils/Logger"
 import {
   type EthersWallet,
@@ -33,13 +32,10 @@ import {
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
 import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../constants"
-import {
   type NexusClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
+import { K1_VALIDATOR_ADDRESS } from "../constants"
 
 describe("nexus.client", async () => {
   let network: NetworkConfig
@@ -72,9 +68,7 @@ describe("nexus.client", async () => {
     const nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -146,7 +140,7 @@ describe("nexus.client", async () => {
       functionName: "incrementNumber"
     })
     const call = {
-      to: mockAddresses.Counter,
+      to: COUNTER_ADDRESS,
       data: encodedCall
     }
     const results = await Promise.all([
@@ -214,19 +208,19 @@ describe("nexus.client", async () => {
   test("should have correct fields", async () => {
     const chainId = 1
     const chain = getChain(chainId)
-    ;[
-      "blockExplorers",
-      "contracts",
-      "fees",
-      "formatters",
-      "id",
-      "name",
-      "nativeCurrency",
-      "rpcUrls",
-      "serializers"
-    ].every((field) => {
-      expect(chain).toHaveProperty(field)
-    })
+      ;[
+        "blockExplorers",
+        "contracts",
+        "fees",
+        "formatters",
+        "id",
+        "name",
+        "nativeCurrency",
+        "rpcUrls",
+        "serializers"
+      ].every((field) => {
+        expect(chain).toHaveProperty(field)
+      })
   })
 
   test("should throw an error, chain id not found", async () => {
@@ -245,7 +239,7 @@ describe("nexus.client", async () => {
       nexusClient.isModuleInstalled({
         module: {
           type: "validator",
-          address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+          address: K1_VALIDATOR_ADDRESS,
           initData: "0x"
         }
       }),
@@ -279,17 +273,13 @@ describe("nexus.client", async () => {
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -316,9 +306,7 @@ describe("nexus.client", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     const ethersNexusClient = createSmartAccountClient({

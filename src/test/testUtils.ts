@@ -15,30 +15,28 @@ import {
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress
+  zeroAddress,
 } from "viem"
 import { createBundlerClient } from "viem/account-abstraction"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { getChain, getCustomChain } from "../sdk/account/utils"
+import {
+  getChain,
+  getCustomChain
+} from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import {
   ENTRYPOINT_SIMULATIONS_ADDRESS,
-  ENTRY_POINT_ADDRESS
+  ENTRY_POINT_ADDRESS,
 } from "../sdk/constants"
-import {
-  ENTRY_POINT_SIMULATIONS_CREATECALL,
-  ENTRY_POINT_V07_CREATECALL,
-  TEST_CONTRACTS
-} from "./callDatas"
-
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
-import * as hardhatExec from "./executables"
 import type { TestFileNetworkType } from "./testSetup"
+
+
 config()
 
 const BASE_SEPOLIA_RPC_URL =
@@ -82,6 +80,48 @@ export const getTestAccount = (
 }
 
 const allInstances = new Map<number, AnvilInstance>()
+
+export const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms))
+
+export type DeployerParams = {
+  name?: string
+  chainId: number
+  address: Address
+}
+export const setByteCodeDynamic = async (
+  chain: Chain,
+  account: LocalAccount,
+  deployParams: Record<string, DeployerParams>
+) => {
+  const rpcUrl = chain.rpcUrls.default.http[0]
+  const testClient = createTestClient({
+    mode: "anvil",
+    transport: http(rpcUrl)
+  })
+
+  const deployParamsArray = Object.values(deployParams)
+
+  const bytecodes = (await Promise.all(
+    deployParamsArray.map(({ chainId, address }) => {
+      const fetchChain = getChain(chainId)
+      const publicClient = createPublicClient({
+        chain: fetchChain,
+        transport: http()
+      })
+      return publicClient.getCode({ address })
+    })
+  )) as Hex[]
+
+  await Promise.all(
+    deployParamsArray.map(({ address }, index) =>
+      testClient.setCode({
+        bytecode: bytecodes[index],
+        address
+      })
+    )
+  )
+}
 
 export const killAllNetworks = () =>
   killNetwork(Array.from(allInstances.keys()))
@@ -237,18 +277,12 @@ export const initDeployments = async (
   rpcPort: number,
   shouldForkBaseSepolia = false
 ) => {
-  await hardhatExec.init()
-  await hardhatExec.deploy(rpcPort)
 
   // Dynamic bytecode deployment of contracts using setCode:
   if (!shouldForkBaseSepolia) {
     // Hardcoded bytecode deployment of contracts using setCode:
     const chain = getTestChainFromPort(rpcPort)
     const account = getTestAccount()
-    const testClient = toTestClient(chain, account)
-
-    await setByteCodeHardcoded(testClient)
-    await setByteCodeDynamic(testClient, TEST_CONTRACTS)
   }
 }
 
@@ -298,8 +332,7 @@ export const nonZeroBalance = async (
   const balance = await getBalance(testClient, address, tokenAddress)
   if (balance > BigInt(0)) return
   throw new Error(
-    `Insufficient balance ${
-      tokenAddress ? `of token ${tokenAddress}` : "of native token"
+    `Insufficient balance ${tokenAddress ? `of token ${tokenAddress}` : "of native token"
     } during test setup of owner: ${address}`
   )
 }
@@ -312,16 +345,18 @@ export const toFundedTestClients = async ({
   const account = getTestAccount(2)
   const recipientAccount = getTestAccount(3)
 
+  console.log("chain.rpcUrls.default.http[0]", chain.rpcUrls.default.http[0])
+
   const walletClient = createWalletClient({
     account,
     chain,
-    transport: http()
+    transport: http(chain.rpcUrls.default.http[0])
   })
 
   const recipientWalletClient = createWalletClient({
     account: recipientAccount,
     chain,
-    transport: http()
+    transport: http(chain.rpcUrls.default.http[0])
   })
 
   const testClient = toTestClient(chain, getTestAccount())
@@ -400,7 +435,7 @@ export const safeTopUp = async (
 ) => {
   try {
     return await topUp(testClient, recipient, amount, token)
-  } catch (error) {}
+  } catch (error) { }
 }
 
 export const topUp = async (
@@ -413,8 +448,7 @@ export const topUp = async (
 
   if (balanceOfRecipient > amount) {
     Logger.log(
-      `balanceOfRecipient (${recipient}) already has enough ${
-        token ?? "native token"
+      `balanceOfRecipient (${recipient}) already has enough ${token ?? "native token"
       } (${balanceOfRecipient}) during safeTopUp`
     )
     return await Promise.resolve()
@@ -443,61 +477,3 @@ export const getBundlerUrl = (chainId: number) =>
 
 const getTestChainFromPort = (port: number): Chain =>
   getCustomChain(`Anvil-${port}`, port, `http://localhost:${port}`, "")
-
-const setByteCodeHardcoded = async (
-  testClient: MasterClient
-): Promise<void> => {
-  const DETERMINISTIC_DEPLOYER = "0x4e59b44847b379578588920ca78fbf26c0b4956c"
-
-  const entrypointSimulationHash = await testClient.sendTransaction({
-    to: DETERMINISTIC_DEPLOYER,
-    data: ENTRY_POINT_SIMULATIONS_CREATECALL,
-    gas: 15_000_000n
-  })
-
-  const entrypointHash = await testClient.sendTransaction({
-    to: DETERMINISTIC_DEPLOYER,
-    data: ENTRY_POINT_V07_CREATECALL,
-    gas: 15_000_000n
-  })
-
-  await Promise.all([
-    testClient.waitForTransactionReceipt({ hash: entrypointSimulationHash }),
-    testClient.waitForTransactionReceipt({ hash: entrypointHash })
-  ])
-}
-
-export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
-
-export type DeployerParams = {
-  name?: string
-  chainId: number
-  address: Address
-}
-export const setByteCodeDynamic = async (
-  testClient: MasterClient,
-  deployParams: Record<string, DeployerParams>
-) => {
-  const deployParamsArray = Object.values(deployParams)
-
-  const bytecodes = (await Promise.all(
-    deployParamsArray.map(({ chainId, address }) => {
-      const fetchChain = getChain(chainId)
-      const publicClient = createPublicClient({
-        chain: fetchChain,
-        transport: http()
-      })
-      return publicClient.getCode({ address })
-    })
-  )) as Hex[]
-
-  await Promise.all(
-    deployParamsArray.map(({ address }, index) =>
-      testClient.setCode({
-        bytecode: bytecodes[index],
-        address
-      })
-    )
-  )
-}

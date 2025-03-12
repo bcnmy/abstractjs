@@ -21,11 +21,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../clients/createBicoBundlerClient"
-import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../../constants"
 import { toK1Validator } from "./toK1Validator"
+import { K1_VALIDATOR_ADDRESS } from "../../constants"
 
 describe("modules.k1Validator", async () => {
   let network: NetworkConfig
@@ -55,9 +52,7 @@ describe("modules.k1Validator", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -103,7 +98,7 @@ describe("modules.k1Validator", async () => {
     const k1Validator = toK1Validator({
       signer: nexusClient.account.signer,
       accountAddress: nexusClient.account.address,
-      address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS
+      address: K1_VALIDATOR_ADDRESS
     })
     expect(k1Validator.signMessage).toBeDefined()
     expect(k1Validator.signUserOpHash).toBeDefined()
@@ -118,7 +113,7 @@ describe("modules.k1Validator", async () => {
     const isInstalledBefore = await nexusClient.isModuleInstalled({
       module: {
         type: "validator",
-        address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+        address: K1_VALIDATOR_ADDRESS,
         initData: encodePacked(["address"], [eoaAccount.address])
       }
     })
@@ -126,7 +121,7 @@ describe("modules.k1Validator", async () => {
     if (!isInstalledBefore) {
       const hash = await nexusClient.installModule({
         module: {
-          address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+          address: K1_VALIDATOR_ADDRESS,
           type: "validator",
           initData: encodePacked(["address"], [eoaAccount.address])
         }
@@ -141,7 +136,7 @@ describe("modules.k1Validator", async () => {
       await expect(
         nexusClient.uninstallModule({
           module: {
-            address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+            address: K1_VALIDATOR_ADDRESS,
             type: "validator",
             deInitData
           }
@@ -153,7 +148,7 @@ describe("modules.k1Validator", async () => {
       await expect(
         nexusClient.uninstallModule({
           module: {
-            address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+            address: K1_VALIDATOR_ADDRESS,
             type: "validator",
             deInitData
           }

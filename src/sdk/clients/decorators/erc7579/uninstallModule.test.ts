@@ -2,7 +2,6 @@ import { http, type Address, type Chain, encodeFunctionData } from "viem"
 import type { Hex, LocalAccount } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi"
-import { testAddresses } from "../../../../test/callDatas"
 import { toNetwork } from "../../../../test/testSetup"
 import {
   fundAndDeployClients,
@@ -30,6 +29,7 @@ import {
 } from "../../../modules/smartSessionsValidator/decorators"
 import { toSmartSessionsValidator } from "../../../modules/smartSessionsValidator/toSmartSessionsValidator"
 import type { Module } from "../../../modules/utils/Types"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("erc7579.decorators.uninstallModule", async () => {
   let network: NetworkConfig
@@ -117,7 +117,7 @@ describe("erc7579.decorators.uninstallModule", async () => {
           sessionPublicKey, // dappAccount address
           actionPoliciesInfo: [
             {
-              contractAddress: testAddresses.Counter, // counter address
+              contractAddress: COUNTER_ADDRESS, // counter address
               functionSelector: "0x273ea3e3" as Hex, // function selector for increment count,
               sudo: true
             }
@@ -161,7 +161,7 @@ describe("erc7579.decorators.uninstallModule", async () => {
     const userOpHash = await useableDappClient.usePermission({
       calls: [
         {
-          to: testAddresses.Counter,
+          to: COUNTER_ADDRESS,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "incrementNumber"

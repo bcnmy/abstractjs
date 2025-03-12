@@ -7,7 +7,6 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { testAddresses } from "../../../test/callDatas"
 import { toNetwork } from "../../../test/testSetup"
 import {
   fundAndDeployClients,
@@ -24,6 +23,7 @@ import {
 import type { Module } from "../utils/Types"
 import { smartSessionCreateActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.policies", async () => {
   let network: NetworkConfig
@@ -126,7 +126,7 @@ describe("modules.smartSessions.policies", async () => {
           chainIds: [BigInt(chain.id)],
           actionPoliciesInfo: [
             {
-              contractAddress: testAddresses.Counter,
+              contractAddress: COUNTER_ADDRESS,
               sudo: false, // covered in another test
               tokenLimits: [
                 {

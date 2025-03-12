@@ -12,8 +12,8 @@ import type { NetworkConfig } from "../../../test/testUtils"
 import { createSmartAccountClient } from "../../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+  K1_VALIDATOR_FACTORY_ADDRESS,
+  K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
   RHINESTONE_ATTESTER_ADDRESS
 } from "../../constants"
 import { BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1 } from "../../constants"
@@ -276,23 +276,17 @@ describe("utils.getVersion", () => {
     expect(account_v0_0_32.attesters[0]).toBe(RHINESTONE_ATTESTER_ADDRESS)
     expect(account_v0_0_32.attesters).toHaveLength(1)
 
-    expect(defaultAccount.factoryAddress).toBe(
-      MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-    )
-    expect(account_v0_2_1.factoryAddress).toBe(
-      MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-    )
-    expect(account_v0_2_0.factoryAddress).toBe(
-      MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-    )
+    expect(defaultAccount.factoryAddress).toBe(K1_VALIDATOR_FACTORY_ADDRESS)
+    expect(account_v0_2_1.factoryAddress).toBe(K1_VALIDATOR_FACTORY_ADDRESS)
+    expect(account_v0_2_0.factoryAddress).toBe(K1_VALIDATOR_FACTORY_ADDRESS)
     expect(account_v0_1_0.factoryAddress).toBe(
-      MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2
+      K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2
     )
     expect(account_v0_0_40.factoryAddress).toBe(
-      MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2
+      K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2
     )
     expect(account_v0_0_32.factoryAddress).toBe(
-      MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2
+      K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2
     )
   })
 })

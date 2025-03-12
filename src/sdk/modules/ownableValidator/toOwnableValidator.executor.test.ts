@@ -3,7 +3,6 @@ import {
   type Account,
   type Address,
   type Chain,
-  type Hex,
   type PublicClient,
   type WalletClient,
   encodePacked,
@@ -13,7 +12,6 @@ import {
 } from "viem"
 import { waitForTransactionReceipt } from "viem/actions"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { testAddresses } from "../../../test/callDatas"
 import { toNetwork } from "../../../test/testSetup"
 import {
   fundAndDeployClients,
@@ -29,10 +27,10 @@ import {
 } from "../../clients/createBicoBundlerClient"
 import { moduleActivator } from "../../clients/decorators/erc7579/moduleActivator"
 import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
   getAddOwnableExecutorOwnerAction,
-  getExecuteOnOwnedAccountAction
+  getExecuteOnOwnedAccountAction,
+  K1_VALIDATOR_ADDRESS,
+  OWNABLE_EXECUTOR_ADDRESS
 } from "../../constants"
 import { toK1Validator } from "../k1Validator/toK1Validator"
 import type { Module } from "../utils/Types"
@@ -66,9 +64,7 @@ describe("modules.ownableExecutor", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -83,7 +79,7 @@ describe("modules.ownableExecutor", async () => {
     const k1Module = toK1Validator({
       signer: eoaAccount,
       accountAddress: nexusClient.account.address,
-      address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS
+      address: K1_VALIDATOR_ADDRESS
     })
 
     nexusClient.extend(moduleActivator(k1Module))
@@ -97,7 +93,7 @@ describe("modules.ownableExecutor", async () => {
     const isInstalled = await nexusClient.isModuleInstalled({
       module: {
         type: "executor",
-        address: testAddresses.OwnableExecutor
+        address: OWNABLE_EXECUTOR_ADDRESS
       }
     })
     expect(isInstalled).toBe(false)
@@ -105,7 +101,7 @@ describe("modules.ownableExecutor", async () => {
     const userOpHash = await nexusClient.installModule({
       module: {
         type: "executor",
-        address: testAddresses.OwnableExecutor,
+        address: OWNABLE_EXECUTOR_ADDRESS,
         initData: encodePacked(["address"], [eoaAccount.address])
       }
     })
@@ -118,7 +114,7 @@ describe("modules.ownableExecutor", async () => {
     const isInstalledAfter = await nexusClient.isModuleInstalled({
       module: {
         type: "executor",
-        address: testAddresses.OwnableExecutor
+        address: OWNABLE_EXECUTOR_ADDRESS
       }
     })
     expect(isInstalledAfter).toBe(true)
@@ -137,7 +133,7 @@ describe("modules.ownableExecutor", async () => {
     const userOpHash = await nexusClient.sendTransaction({
       calls: [
         {
-          to: testAddresses.OwnableExecutor,
+          to: OWNABLE_EXECUTOR_ADDRESS,
           data: execution.callData,
           value: 0n
         }
@@ -146,7 +142,7 @@ describe("modules.ownableExecutor", async () => {
     expect(userOpHash).toBeDefined()
     const masterClient = nexusClient.account.client as MasterClient
     const owners = await masterClient.readContract({
-      address: testAddresses.OwnableExecutor,
+      address: OWNABLE_EXECUTOR_ADDRESS,
       abi: parseAbi([
         "function getOwners(address account) external view returns (address[])"
       ]),
@@ -171,7 +167,7 @@ describe("modules.ownableExecutor", async () => {
     const client = nexusClient.account.client as WalletClient
     const hash = await client.sendTransaction({
       account: recipient,
-      to: testAddresses.OwnableExecutor,
+      to: OWNABLE_EXECUTOR_ADDRESS,
       data: executeOnOwnedAccountExecution.callData,
       chain,
       value: 0n

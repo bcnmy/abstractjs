@@ -234,7 +234,7 @@ export const getTrustedAttesters = async ({
  * const actionPoliciesInfo = abiToPoliciesInfo({
  *   abi: CounterAbi,
  *   actionPolicyInfo: {
- *     contractAddress: testAddresses.Counter,
+ *     contractAddress: COUNTER_ADDRESS,
  *     sudo: false,
  *     tokenLimits: [],
  *     usageLimit: 1000n,

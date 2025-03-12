@@ -9,11 +9,9 @@ import {
   type WalletClient,
   concat,
   concatHex,
-  createPublicClient,
   createWalletClient,
   domainSeparator,
   encodeAbiParameters,
-  encodeFunctionData,
   encodePacked,
   getContract,
   hashMessage,
@@ -29,8 +27,7 @@ import {
 import type { UserOperation } from "viem/account-abstraction"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { MockSignatureValidatorAbi } from "../../test/__contracts/abi/MockSignatureValidatorAbi"
-import { testAddresses } from "../../test/callDatas"
-import { testnetTest, toNetwork } from "../../test/testSetup"
+import { toNetwork } from "../../test/testSetup"
 import {
   fundAndDeployClients,
   getTestAccount,
@@ -42,10 +39,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
@@ -59,7 +52,8 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
-
+import { K1_VALIDATOR_ADDRESS } from "../constants"
+import { MOCK_SIGNATURE_VALIDATOR, TOKEN_WITH_PERMIT } from "@biconomy/ecosystem"
 describe("nexus.account", async () => {
   let network: NetworkConfig
   let chain: Chain
@@ -81,6 +75,7 @@ describe("nexus.account", async () => {
     bundlerUrl = network.bundlerUrl
     eoaAccount = getTestAccount(0)
     userTwo = getTestAccount(1)
+
     testClient = toTestClient(chain, getTestAccount(5))
 
     walletClient = createWalletClient({
@@ -92,9 +87,7 @@ describe("nexus.account", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -168,7 +161,7 @@ describe("nexus.account", async () => {
 
   test("should verify signatures", async () => {
     const mockSigVerifierContract = getContract({
-      address: testAddresses.MockSignatureValidator,
+      address: MOCK_SIGNATURE_VALIDATOR,
       abi: MockSignatureValidatorAbi,
       client: testClient
     })
@@ -325,7 +318,7 @@ describe("nexus.account", async () => {
 
     const finalSignature = encodePacked(
       ["address", "bytes"],
-      [TEST_ADDRESS_K1_VALIDATOR_ADDRESS, signatureData]
+      [K1_VALIDATOR_ADDRESS, signatureData]
     )
 
     const contractResponse = await testClient.readContract({
@@ -344,7 +337,7 @@ describe("nexus.account", async () => {
     const appDomain = {
       chainId: chain.id,
       name: "TokenWithPermit",
-      verifyingContract: testAddresses.TokenWithPermit,
+      verifyingContract: TOKEN_WITH_PERMIT,
       version: "1"
     }
 
@@ -364,7 +357,7 @@ describe("nexus.account", async () => {
       )
     )
     const nonce = (await testClient.readContract({
-      address: testAddresses.TokenWithPermit,
+      address: TOKEN_WITH_PERMIT,
       abi: TokenWithPermitAbi,
       functionName: "nonces",
       args: [nexusAccountAddress]
@@ -413,7 +406,7 @@ describe("nexus.account", async () => {
     })
 
     const permitTokenResponse = await nexusClient.writeContract({
-      address: testAddresses.TokenWithPermit,
+      address: TOKEN_WITH_PERMIT,
       abi: TokenWithPermitAbi,
       functionName: "permitWith1271",
       chain: network.chain,
@@ -429,7 +422,7 @@ describe("nexus.account", async () => {
     await nexusClient.waitForTransactionReceipt({ hash: permitTokenResponse })
 
     const allowance = await testClient.readContract({
-      address: testAddresses.TokenWithPermit,
+      address: TOKEN_WITH_PERMIT,
       abi: TokenWithPermitAbi,
       functionName: "allowance",
       args: [nexusAccountAddress, nexusAccountAddress]

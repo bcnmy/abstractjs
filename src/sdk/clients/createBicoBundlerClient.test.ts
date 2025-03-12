@@ -16,10 +16,6 @@ import {
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../constants"
-import {
   type BicoBundlerClient,
   createBicoBundlerClient,
   createSmartAccountClient
@@ -48,9 +44,7 @@ describe("bico.bundler", async () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     bicoBundler = createBicoBundlerClient({
