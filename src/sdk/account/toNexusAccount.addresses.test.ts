@@ -25,8 +25,8 @@ import {
 } from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
+  LATEST_DEFAULT_ADDRESSES,
   MEE_VALIDATOR_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
@@ -173,9 +173,9 @@ describe("nexus.account.addresses", async () => {
       chain: baseSepolia,
       transport: http(),
       validatorAddress: MEE_VALIDATOR_ADDRESS,
-      factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
       attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-      validatorInitData: eoaAccount.address
+      validatorInitData: eoaAccount.address,
+      factoryAddress: LATEST_DEFAULT_ADDRESSES.factoryAddress
     })
 
     const meeAddress = await meeAccount.getAddress()

@@ -12,6 +12,7 @@ import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   BICONOMY_ATTESTER_ADDRESS,
+  LATEST_DEFAULT_ADDRESSES,
   MEE_VALIDATOR_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
@@ -87,8 +88,8 @@ describe("mee.toMultiChainNexusAccount", async () => {
       transport: http(),
       useK1Config: false,
       validatorAddress: MEE_VALIDATOR_ADDRESS,
-      factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS]
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+      factoryAddress: LATEST_DEFAULT_ADDRESSES.factoryAddress
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()
