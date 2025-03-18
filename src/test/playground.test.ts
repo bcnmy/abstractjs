@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Address,
@@ -38,7 +39,6 @@ import { toSmartSessionsValidator } from "../sdk/modules/smartSessionsValidator/
 import { CounterAbi } from "./__contracts/abi/CounterAbi"
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
@@ -58,9 +58,9 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   let paymasterParams:
     | undefined
     | {
-      paymaster: BicoPaymasterClient
-      paymasterContext: BiconomyPaymasterContext
-    }
+        paymaster: BicoPaymasterClient
+        paymasterContext: BiconomyPaymasterContext
+      }
 
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
@@ -85,11 +85,11 @@ describe.skipIf(!playgroundTrue())("playground", () => {
 
     paymasterParams = paymasterUrl
       ? {
-        paymaster: createBicoPaymasterClient({
-          transport: http(paymasterUrl)
-        }),
-        paymasterContext: biconomySponsoredPaymasterContext
-      }
+          paymaster: createBicoPaymasterClient({
+            transport: http(paymasterUrl)
+          }),
+          paymasterContext: biconomySponsoredPaymasterContext
+        }
       : undefined
   })
 

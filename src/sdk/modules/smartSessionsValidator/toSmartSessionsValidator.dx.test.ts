@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Address,
@@ -26,7 +27,6 @@ import { parse, stringify } from "./Helpers"
 import type { SessionData } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.dx", async () => {
   let network: NetworkConfig
@@ -125,7 +125,7 @@ describe("modules.smartSessions.dx", async () => {
           actionPoliciesInfo: [
             {
               abi: CounterAbi,
-              contractAddress: COUNTER_ADDRESS,
+              contractAddress: COUNTER_ADDRESS
               // validUntil?: number
               // validAfter?: number
               // valueLimit?: bigint

@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Account,
@@ -45,7 +46,6 @@ import { generateSalt, parse, stringify } from "./Helpers"
 import type { SessionData } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe.skip("modules.smartSessions.enable.mode.dx", async () => {
   let network: NetworkConfig

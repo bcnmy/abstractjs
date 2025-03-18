@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { http, type Address, type Chain, encodeFunctionData } from "viem"
 import type { Hex, LocalAccount } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
@@ -29,7 +30,6 @@ import {
 } from "../../../modules/smartSessionsValidator/decorators"
 import { toSmartSessionsValidator } from "../../../modules/smartSessionsValidator/toSmartSessionsValidator"
 import type { Module } from "../../../modules/utils/Types"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("erc7579.decorators.uninstallModule", async () => {
   let network: NetworkConfig

@@ -1,3 +1,4 @@
+import { MOCK_CALLEE } from "@biconomy/ecosystem"
 import { isSessionEnabled } from "@rhinestone/module-sdk"
 import {
   http,
@@ -36,7 +37,6 @@ import type { CreateSessionDataParams, Rule, SessionData } from "./Types"
 import { ParamCondition } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
-import { MOCK_CALLEE } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.uni.policy", async () => {
   let network: NetworkConfig

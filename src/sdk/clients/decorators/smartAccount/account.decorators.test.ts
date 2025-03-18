@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { http, type Account, type Address, type Chain, isHex } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi"
@@ -19,7 +20,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../createBicoBundlerClient"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("account.decorators", async () => {
   let network: NetworkConfig

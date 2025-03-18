@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Address,
@@ -23,7 +24,6 @@ import {
 import type { Module } from "../utils/Types"
 import { smartSessionCreateActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.policies", async () => {
   let network: NetworkConfig

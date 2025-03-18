@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { http, type Address, type Chain, type LocalAccount } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
@@ -22,7 +23,6 @@ import {
   toSmartSessionsValidator
 } from "../toSmartSessionsValidator"
 import { smartSessionCreateActions, smartSessionUseActions } from "./"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions.decorators", async () => {
   let network: NetworkConfig

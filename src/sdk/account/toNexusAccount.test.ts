@@ -1,3 +1,7 @@
+import {
+  MOCK_SIGNATURE_VALIDATOR,
+  TOKEN_WITH_PERMIT
+} from "@biconomy/ecosystem"
 import { getAddress, getBytes, hexlify } from "ethers"
 import {
   http,
@@ -39,6 +43,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
+import { K1_VALIDATOR_ADDRESS } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
@@ -52,8 +57,6 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
-import { K1_VALIDATOR_ADDRESS } from "../constants"
-import { MOCK_SIGNATURE_VALIDATOR, TOKEN_WITH_PERMIT } from "@biconomy/ecosystem"
 describe("nexus.account", async () => {
   let network: NetworkConfig
   let chain: Chain

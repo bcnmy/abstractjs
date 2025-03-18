@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { isSessionEnabled } from "@rhinestone/module-sdk"
 import { http, type Address, type Chain, type Hex } from "viem"
 import type { LocalAccount, PublicClient } from "viem"
@@ -29,7 +30,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 
 describe("nexus.session.client", async () => {
   let network: NetworkConfig

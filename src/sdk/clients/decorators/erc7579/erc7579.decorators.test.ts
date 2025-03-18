@@ -1,3 +1,4 @@
+import { MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
 import {
   http,
   type Account,
@@ -20,12 +21,11 @@ import {
   type NexusAccount,
   toNexusAccount
 } from "../../../account/toNexusAccount"
+import { K1_VALIDATOR_ADDRESS } from "../../../constants"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../../createBicoBundlerClient"
-import { K1_VALIDATOR_ADDRESS } from "../../../constants"
-import { MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
 
 describe("erc7579.decorators", async () => {
   let network: NetworkConfig
@@ -54,7 +54,7 @@ describe("erc7579.decorators", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({

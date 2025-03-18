@@ -1,3 +1,8 @@
+import {
+  deployContracts as deployEcosystemContracts,
+  toBundler as toEcosystemBundler,
+  toNetwork as toEcosystemNetwork
+} from "@biconomy/ecosystem"
 import { http, type Prettify, type Transport } from "viem"
 import { type Chain, base, optimism } from "viem/chains"
 import { test } from "vitest"
@@ -9,7 +14,6 @@ import {
   initNetwork,
   toFundedTestClients
 } from "./testUtils"
-import { toNetwork as toEcosystemNetwork, toBundler as toEcosystemBundler, deployContracts as deployEcosystemContracts } from "@biconomy/ecosystem"
 
 const MAINNET_CHAINS_FOR_TESTING: Chain[] = [optimism, base]
 const MAINNET_TRANSPORTS_FOR_TESTING: Transport[] = [
@@ -25,7 +29,7 @@ export const localhostTest = test.extend<{
   config: NetworkConfigWithTestClients
 }>({
   // biome-ignore lint/correctness/noEmptyPattern: Needed in vitest :/
-  config: async ({ }, use) => {
+  config: async ({}, use) => {
     const testNetwork = await initAnvilNetwork()
     const fundedTestClients = await toFundedTestClients({
       chain: testNetwork.chain,
@@ -43,7 +47,7 @@ export const testnetTest = test.extend<{
   config: NetworkConfig
 }>({
   // biome-ignore lint/correctness/noEmptyPattern: Needed in vitest :/
-  config: async ({ }, use) => {
+  config: async ({}, use) => {
     const testNetwork = await toNetwork("TESTNET_FROM_ENV_VARS")
     await use(testNetwork)
   }
@@ -72,7 +76,6 @@ type PrettifiedNetworkConfig = Prettify<NetworkConfig>
 export const toNetwork = async (
   networkType: TestFileNetworkType = "BESPOKE_ANVIL_NETWORK"
 ): Promise<PrettifiedNetworkConfig> => {
-
   switch (networkType) {
     case "BESPOKE_ANVIL_NETWORK":
     case "COMMUNAL_ANVIL_NETWORK": {

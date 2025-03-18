@@ -15,27 +15,23 @@ import {
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress,
+  zeroAddress
 } from "viem"
 import { createBundlerClient } from "viem/account-abstraction"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import {
-  getChain,
-  getCustomChain
-} from "../sdk/account/utils"
-import { Logger } from "../sdk/account/utils/Logger"
-import {
-  ENTRYPOINT_SIMULATIONS_ADDRESS,
-  ENTRY_POINT_ADDRESS,
-} from "../sdk/constants"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
+import { getChain, getCustomChain } from "../sdk/account/utils"
+import { Logger } from "../sdk/account/utils/Logger"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../sdk/clients/createBicoBundlerClient"
+import {
+  ENTRYPOINT_SIMULATIONS_ADDRESS,
+  ENTRY_POINT_ADDRESS
+} from "../sdk/constants"
 import type { AnyData } from "../sdk/modules/utils/Types"
 import type { TestFileNetworkType } from "./testSetup"
-
 
 config()
 
@@ -277,7 +273,6 @@ export const initDeployments = async (
   rpcPort: number,
   shouldForkBaseSepolia = false
 ) => {
-
   // Dynamic bytecode deployment of contracts using setCode:
   if (!shouldForkBaseSepolia) {
     // Hardcoded bytecode deployment of contracts using setCode:
@@ -332,7 +327,8 @@ export const nonZeroBalance = async (
   const balance = await getBalance(testClient, address, tokenAddress)
   if (balance > BigInt(0)) return
   throw new Error(
-    `Insufficient balance ${tokenAddress ? `of token ${tokenAddress}` : "of native token"
+    `Insufficient balance ${
+      tokenAddress ? `of token ${tokenAddress}` : "of native token"
     } during test setup of owner: ${address}`
   )
 }
@@ -435,7 +431,7 @@ export const safeTopUp = async (
 ) => {
   try {
     return await topUp(testClient, recipient, amount, token)
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export const topUp = async (
@@ -448,7 +444,8 @@ export const topUp = async (
 
   if (balanceOfRecipient > amount) {
     Logger.log(
-      `balanceOfRecipient (${recipient}) already has enough ${token ?? "native token"
+      `balanceOfRecipient (${recipient}) already has enough ${
+        token ?? "native token"
       } (${balanceOfRecipient}) during safeTopUp`
     )
     return await Promise.resolve()

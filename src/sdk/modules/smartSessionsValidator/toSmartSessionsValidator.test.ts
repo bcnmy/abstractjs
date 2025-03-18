@@ -1,4 +1,8 @@
 import {
+  COUNTER_ADDRESS,
+  UNIVERSAL_ACTION_POLICY_ADDRESS
+} from "@biconomy/ecosystem"
+import {
   http,
   type Address,
   type Chain,
@@ -24,7 +28,11 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../clients/createBicoBundlerClient"
-import { SMART_SESSIONS_ADDRESS, SmartSessionMode, getUniversalActionPolicy } from "../../constants"
+import {
+  SMART_SESSIONS_ADDRESS,
+  SmartSessionMode,
+  getUniversalActionPolicy
+} from "../../constants"
 import { parseReferenceValue } from "../utils/Helpers"
 import type { Module } from "../utils/Types"
 import { abiToPoliciesInfo, parse, stringify, toActionConfig } from "./Helpers"
@@ -32,7 +40,6 @@ import type { CreateSessionDataParams, SessionData } from "./Types"
 import { ParamCondition } from "./Types"
 import { smartSessionCreateActions, smartSessionUseActions } from "./decorators"
 import { toSmartSessionsValidator } from "./toSmartSessionsValidator"
-import { COUNTER_ADDRESS, UNIVERSAL_ACTION_POLICY_ADDRESS } from "@biconomy/ecosystem"
 
 describe("modules.smartSessions", async () => {
   let network: NetworkConfig
@@ -82,8 +89,8 @@ describe("modules.smartSessions", async () => {
 
   test.concurrent("should have smart account bytecode", async () => {
     const bytecodes = await Promise.all(
-      [SMART_SESSIONS_ADDRESS, UNIVERSAL_ACTION_POLICY_ADDRESS].map(
-        (address) => testClient.getCode({ address })
+      [SMART_SESSIONS_ADDRESS, UNIVERSAL_ACTION_POLICY_ADDRESS].map((address) =>
+        testClient.getCode({ address })
       )
     )
     expect(bytecodes.every((bytecode) => !!bytecode?.length)).toBeTruthy()
@@ -176,7 +183,9 @@ describe("modules.smartSessions", async () => {
       toActionConfig(actionConfigData)
     )
 
-    expect(installUniversalPolicy.policy).toEqual(UNIVERSAL_ACTION_POLICY_ADDRESS)
+    expect(installUniversalPolicy.policy).toEqual(
+      UNIVERSAL_ACTION_POLICY_ADDRESS
+    )
     expect(installUniversalPolicy.initData).toBeDefined()
   })
 

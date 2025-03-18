@@ -27,10 +27,10 @@ import {
 } from "../../clients/createBicoBundlerClient"
 import { moduleActivator } from "../../clients/decorators/erc7579/moduleActivator"
 import {
-  getAddOwnableExecutorOwnerAction,
-  getExecuteOnOwnedAccountAction,
   K1_VALIDATOR_ADDRESS,
-  OWNABLE_EXECUTOR_ADDRESS
+  OWNABLE_EXECUTOR_ADDRESS,
+  getAddOwnableExecutorOwnerAction,
+  getExecuteOnOwnedAccountAction
 } from "../../constants"
 import { toK1Validator } from "../k1Validator/toK1Validator"
 import type { Module } from "../utils/Types"

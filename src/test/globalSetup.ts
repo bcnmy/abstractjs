@@ -8,7 +8,7 @@ export const setup = async ({ provide }) => {
   provide("settings", { runPaidTests })
 }
 
-export const teardown = async () => { }
+export const teardown = async () => {}
 
 declare module "vitest" {
   export interface ProvidedContext {

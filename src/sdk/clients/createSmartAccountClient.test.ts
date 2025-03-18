@@ -31,11 +31,11 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
+import { K1_VALIDATOR_ADDRESS } from "../constants"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
-import { K1_VALIDATOR_ADDRESS } from "../constants"
 
 describe("nexus.client", async () => {
   let network: NetworkConfig
@@ -208,19 +208,19 @@ describe("nexus.client", async () => {
   test("should have correct fields", async () => {
     const chainId = 1
     const chain = getChain(chainId)
-      ;[
-        "blockExplorers",
-        "contracts",
-        "fees",
-        "formatters",
-        "id",
-        "name",
-        "nativeCurrency",
-        "rpcUrls",
-        "serializers"
-      ].every((field) => {
-        expect(chain).toHaveProperty(field)
-      })
+    ;[
+      "blockExplorers",
+      "contracts",
+      "fees",
+      "formatters",
+      "id",
+      "name",
+      "nativeCurrency",
+      "rpcUrls",
+      "serializers"
+    ].every((field) => {
+      expect(chain).toHaveProperty(field)
+    })
   })
 
   test("should throw an error, chain id not found", async () => {

@@ -21,8 +21,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../clients/createBicoBundlerClient"
-import { toK1Validator } from "./toK1Validator"
 import { K1_VALIDATOR_ADDRESS } from "../../constants"
+import { toK1Validator } from "./toK1Validator"
 
 describe("modules.k1Validator", async () => {
   let network: NetworkConfig

@@ -1,6 +1,6 @@
 import {
-  RHINESTONE_ATTESTER_ADDRESS,
-  GLOBAL_CONSTANTS
+  GLOBAL_CONSTANTS,
+  RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
 import { type Hex, toBytes, toHex } from "viem"
 import {
