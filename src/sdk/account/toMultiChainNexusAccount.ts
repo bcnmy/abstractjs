@@ -2,7 +2,6 @@ import type { Chain, Hex, Transport } from "viem"
 import type { Instruction } from "../clients/decorators/mee/getQuote"
 import {
   BICONOMY_ATTESTER_ADDRESS,
-  LATEST_DEFAULT_ADDRESSES,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
@@ -193,7 +192,7 @@ export async function toMultichainNexusAccount(
         transport: transports[i],
         validatorAddress: MEE_VALIDATOR_ADDRESS,
         attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-        factoryAddress: LATEST_DEFAULT_ADDRESSES.factoryAddress,
+        factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
         ...accountParameters,
         useK1Config: false
       })

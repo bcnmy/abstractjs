@@ -2,7 +2,7 @@ import {
   GLOBAL_CONSTANTS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
-import { type Hex, toBytes, toHex } from "viem"
+import type { Hex } from "viem"
 import {
   NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
@@ -67,36 +67,36 @@ export const EARLIEST_DEFAULT_ADDRESSES: AddressConfig = {
 }
 
 export const DEFAULT_CONFIGURATIONS_BY_VERSION: Record<string, AddressConfig> =
-  {
-    "0.0": {
-      attesters: [RHINESTONE_ATTESTER_ADDRESS],
-      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
-      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-      validatorAddress: K1_VALIDATOR_ADDRESS,
-      accountId: "biconomy.nexus.1.0.0",
-      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
-    },
-    "0.0.34": {
-      attesters: [
-        RHINESTONE_ATTESTER_ADDRESS,
-        BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1
-      ],
-      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
-      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-      validatorAddress: K1_VALIDATOR_ADDRESS,
-      accountId: "biconomy.nexus.1.0.0",
-      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
-    },
-    "0.1": {
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
-      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-      validatorAddress: K1_VALIDATOR_ADDRESS,
-      accountId: "biconomy.nexus.1.0.0",
-      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
-    },
-    "0.2": LATEST_DEFAULT_ADDRESSES
-  }
+{
+  "0.0": {
+    attesters: [RHINESTONE_ATTESTER_ADDRESS],
+    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+    validatorAddress: K1_VALIDATOR_ADDRESS,
+    accountId: "biconomy.nexus.1.0.0",
+    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+  },
+  "0.0.34": {
+    attesters: [
+      RHINESTONE_ATTESTER_ADDRESS,
+      BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1
+    ],
+    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+    validatorAddress: K1_VALIDATOR_ADDRESS,
+    accountId: "biconomy.nexus.1.0.0",
+    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+  },
+  "0.1": {
+    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+    validatorAddress: K1_VALIDATOR_ADDRESS,
+    accountId: "biconomy.nexus.1.0.0",
+    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2
+  },
+  "0.2": LATEST_DEFAULT_ADDRESSES
+}
 
 // Rhinestone constants
 export {

@@ -21,10 +21,6 @@ import {
 } from "../../../clients/createBicoBundlerClient"
 import { SmartSessionMode } from "../../../constants"
 import {
-  CreateSessionDataParams,
-  SessionData
-} from "../../../modules/smartSessionsValidator/Types"
-import {
   smartSessionCreateActions,
   smartSessionUseActions
 } from "../../../modules/smartSessionsValidator/decorators"

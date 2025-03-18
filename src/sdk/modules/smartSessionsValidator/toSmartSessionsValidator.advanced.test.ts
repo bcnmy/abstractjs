@@ -3,7 +3,6 @@ import {
   http,
   type Address,
   type Chain,
-  type Hex,
   type LocalAccount,
   encodeFunctionData
 } from "viem"
@@ -85,7 +84,7 @@ describe("modules.smartSessions.dx", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     usersNexusClient = createSmartAccountClient({
@@ -131,7 +130,7 @@ describe("modules.smartSessions.dx", async () => {
           actionPoliciesInfo: [
             {
               abi: CounterAbi,
-              contractAddress: COUNTER_ADDRESS,
+              contractAddress: COUNTER_ADDRESS as Address,
               sudo: true
               // validUntil?: number
               // validAfter?: number
@@ -181,7 +180,7 @@ describe("modules.smartSessions.dx", async () => {
       accountAddress: usersSessionData.granter,
       chain,
       signer: sessionKeyAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     const smartSessionNexusClient = createSmartAccountClient({
@@ -206,14 +205,14 @@ describe("modules.smartSessions.dx", async () => {
     const userOpHash = await useSmartSessionNexusClient.usePermission({
       calls: [
         {
-          to: COUNTER_ADDRESS,
+          to: COUNTER_ADDRESS as Address,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "incrementNumber"
           })
         },
         {
-          to: COUNTER_ADDRESS,
+          to: COUNTER_ADDRESS as Address,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "decrementNumber"

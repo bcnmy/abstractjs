@@ -61,7 +61,7 @@ describe("modules.smartSessions.sudo.policy", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
@@ -161,7 +161,7 @@ describe("modules.smartSessions.sudo.policy", async () => {
         accountAddress: usersSessionData.granter,
         chain,
         signer: sessionKeyAccount,
-        transport: http()
+        transport: http(network.rpcUrl)
       }),
       transport: http(bundlerUrl),
       mock: true

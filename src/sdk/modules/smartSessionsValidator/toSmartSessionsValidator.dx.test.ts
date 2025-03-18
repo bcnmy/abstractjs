@@ -55,7 +55,7 @@ describe("modules.smartSessions.dx", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
   })
 
@@ -125,7 +125,7 @@ describe("modules.smartSessions.dx", async () => {
           actionPoliciesInfo: [
             {
               abi: CounterAbi,
-              contractAddress: COUNTER_ADDRESS
+              contractAddress: COUNTER_ADDRESS as Address
               // validUntil?: number
               // validAfter?: number
               // valueLimit?: bigint
@@ -160,7 +160,7 @@ describe("modules.smartSessions.dx", async () => {
         chain,
         accountAddress: usersSessionData.granter,
         signer: sessionKeyAccount,
-        transport: http()
+        transport: http(network.rpcUrl)
       }),
       transport: http(bundlerUrl),
       mock: true
@@ -178,12 +178,12 @@ describe("modules.smartSessions.dx", async () => {
       smartSessionUseActions(usePermissionsModule)
     )
     const byteCode = await testClient.getCode({
-      address: COUNTER_ADDRESS
+      address: COUNTER_ADDRESS as Address
     })
     const userOpHash = await useSmartSessionNexusClient.usePermission({
       calls: [
         {
-          to: COUNTER_ADDRESS,
+          to: COUNTER_ADDRESS as Address,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "decrementNumber"

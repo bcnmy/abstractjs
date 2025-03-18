@@ -108,6 +108,7 @@ describe("account.decorators", async () => {
 
   test("should send a user operation using sendTransaction", async () => {
     const balanceBefore = await getBalance(testClient, recipientAddress)
+
     const hash = await nexusClient.sendTransaction({
       calls: [
         {

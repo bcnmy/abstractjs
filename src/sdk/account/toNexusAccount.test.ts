@@ -57,6 +57,7 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
+
 describe("nexus.account", async () => {
   let network: NetworkConfig
   let chain: Chain
@@ -164,7 +165,7 @@ describe("nexus.account", async () => {
 
   test("should verify signatures", async () => {
     const mockSigVerifierContract = getContract({
-      address: MOCK_SIGNATURE_VALIDATOR,
+      address: MOCK_SIGNATURE_VALIDATOR as Address,
       abi: MockSignatureValidatorAbi,
       client: testClient
     })
@@ -267,6 +268,8 @@ describe("nexus.account", async () => {
   })
 
   test("should test isValidSignature EIP712Sign to be valid with viem", async () => {
+    const nexusAccountAddress = await nexusAccount.getAddress()
+
     const message = {
       contents: keccak256(toBytes("test", { size: 32 }))
     }
@@ -340,7 +343,7 @@ describe("nexus.account", async () => {
     const appDomain = {
       chainId: chain.id,
       name: "TokenWithPermit",
-      verifyingContract: TOKEN_WITH_PERMIT,
+      verifyingContract: TOKEN_WITH_PERMIT as Address,
       version: "1"
     }
 
@@ -360,7 +363,7 @@ describe("nexus.account", async () => {
       )
     )
     const nonce = (await testClient.readContract({
-      address: TOKEN_WITH_PERMIT,
+      address: TOKEN_WITH_PERMIT as Address,
       abi: TokenWithPermitAbi,
       functionName: "nonces",
       args: [nexusAccountAddress]
@@ -409,7 +412,7 @@ describe("nexus.account", async () => {
     })
 
     const permitTokenResponse = await nexusClient.writeContract({
-      address: TOKEN_WITH_PERMIT,
+      address: TOKEN_WITH_PERMIT as Address,
       abi: TokenWithPermitAbi,
       functionName: "permitWith1271",
       chain: network.chain,
@@ -425,7 +428,7 @@ describe("nexus.account", async () => {
     await nexusClient.waitForTransactionReceipt({ hash: permitTokenResponse })
 
     const allowance = await testClient.readContract({
-      address: TOKEN_WITH_PERMIT,
+      address: TOKEN_WITH_PERMIT as Address,
       abi: TokenWithPermitAbi,
       functionName: "allowance",
       args: [nexusAccountAddress, nexusAccountAddress]

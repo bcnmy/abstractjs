@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { Wallet, ethers } from "ethers"
 import {
   http,
@@ -13,7 +14,6 @@ import type { UserOperationReceipt } from "viem/account-abstraction"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../test/__contracts/abi"
-import mockAddresses from "../../test/__contracts/mockAddresses"
 import { toNetwork } from "../../test/testSetup"
 import {
   getBalance,
@@ -107,8 +107,6 @@ describe("nexus.client", async () => {
 
       const isNowDeployed = await nexusClient.account.isDeployed()
       expect(isNowDeployed).toBe(true)
-
-      console.log("Smart account deployed successfully")
     } else {
       console.log("Smart account already deployed")
     }
@@ -140,7 +138,7 @@ describe("nexus.client", async () => {
       functionName: "incrementNumber"
     })
     const call = {
-      to: COUNTER_ADDRESS,
+      to: COUNTER_ADDRESS as Address,
       data: encodedCall
     }
     const results = await Promise.all([

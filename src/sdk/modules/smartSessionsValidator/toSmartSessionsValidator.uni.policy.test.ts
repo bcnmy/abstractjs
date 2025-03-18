@@ -69,7 +69,7 @@ describe("modules.smartSessions.uni.policy", async () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http()
+        transport: http(network.rpcUrl)
       }),
       transport: http(bundlerUrl),
       mock: true
@@ -91,7 +91,7 @@ describe("modules.smartSessions.uni.policy", async () => {
 
   test("should add balance to mock callee", async () => {
     const mockContract = getContract({
-      address: MOCK_CALLEE,
+      address: MOCK_CALLEE as Address,
       abi: MockCalleeAbi,
       client: testClient
     })
@@ -134,7 +134,7 @@ describe("modules.smartSessions.uni.policy", async () => {
     const isInstalledAfter = await nexusClient.isModuleInstalled({
       module: {
         type: "validator",
-        address: SMART_SESSIONS_ADDRESS
+        address: SMART_SESSIONS_ADDRESS as Address
       }
     })
     expect(isInstalledAfter).toBe(true)
@@ -206,7 +206,7 @@ describe("modules.smartSessions.uni.policy", async () => {
         sessionPublicKey,
         actionPoliciesInfo: [
           {
-            contractAddress: MOCK_CALLEE, // mock callee address
+            contractAddress: MOCK_CALLEE as Address, // mock callee address
             functionSelector: parsedFunctionSelector, // addBalance function selector
             rules
           }
@@ -269,7 +269,7 @@ describe("modules.smartSessions.uni.policy", async () => {
     expect(isEnabled).toBe(true)
 
     const mockContract = getContract({
-      address: MOCK_CALLEE,
+      address: MOCK_CALLEE as Address,
       abi: MockCalleeAbi,
       client: testClient
     })
@@ -296,7 +296,7 @@ describe("modules.smartSessions.uni.policy", async () => {
         accountAddress: parsedSessionData.granter,
         chain,
         signer: sessionKeyAccount,
-        transport: http()
+        transport: http(network.rpcUrl)
       }),
       transport: http(bundlerUrl),
       mock: true
@@ -315,7 +315,7 @@ describe("modules.smartSessions.uni.policy", async () => {
     const userOpHash = await useSmartSessionNexusClient.usePermission({
       calls: [
         {
-          to: MOCK_CALLEE,
+          to: MOCK_CALLEE as Address,
           data: encodeFunctionData({
             abi: MockCalleeAbi,
             functionName: "addBalance",
