@@ -15,7 +15,7 @@ import {
   MEE_VALIDATOR_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
-import { NEXUS_ACCOUNT_FACTORY } from "../constants"
+import { NEXUS_ACCOUNT_FACTORY_ADDRESS } from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import {
   type MultichainSmartAccount,
@@ -87,8 +87,8 @@ describe("mee.toMultiChainNexusAccount", async () => {
       transport: http(),
       useK1Config: false,
       validatorAddress: MEE_VALIDATOR_ADDRESS,
-      factoryAddress: NEXUS_ACCOUNT_FACTORY,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS]
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+      factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()

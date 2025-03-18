@@ -1,6 +1,11 @@
+import {
+  deployContracts as deployEcosystemContracts,
+  sleep,
+  toBundler as toEcosystemBundler,
+  toNetwork as toEcosystemNetwork
+} from "@biconomy/ecosystem"
 import { config } from "dotenv"
-import getPort from "get-port"
-import { type AnvilParameters, alto, anvil } from "prool/instances"
+import type { alto, anvil } from "prool/instances"
 import {
   http,
   type Account,
@@ -8,41 +13,24 @@ import {
   type Chain,
   type Hex,
   type LocalAccount,
-  createPublicClient,
   createTestClient,
-  createWalletClient,
   erc20Abi,
   parseAbi,
   publicActions,
   walletActions,
   zeroAddress
 } from "viem"
-import { createBundlerClient } from "viem/account-abstraction"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { getChain, getCustomChain } from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
-import {
-  ENTRYPOINT_SIMULATIONS_ADDRESS,
-  ENTRY_POINT_ADDRESS
-} from "../sdk/constants"
-import {
-  ENTRY_POINT_SIMULATIONS_CREATECALL,
-  ENTRY_POINT_V07_CREATECALL,
-  TEST_CONTRACTS
-} from "./callDatas"
-
-import { toNexusAccount } from "../sdk/account/toNexusAccount"
-import {
-  type NexusClient,
-  createSmartAccountClient
-} from "../sdk/clients/createBicoBundlerClient"
+import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
-import * as hardhatExec from "./executables"
 import type { TestFileNetworkType } from "./testSetup"
+
 config()
 
-const BASE_SEPOLIA_RPC_URL =
-  "https://virtual.base-sepolia.rpc.tenderly.co/a6f1df5f-ab4e-4ef7-a03b-4b1df81fdad4"
+export const BASE_SEPOLIA_RPC_URL =
+  "https://virtual.base-sepolia.rpc.tenderly.co/2f123f67-1a77-4d44-ba94-1c33b944a6e4"
 
 type AnvilInstance = ReturnType<typeof anvil>
 type BundlerInstance = ReturnType<typeof alto>
@@ -81,18 +69,32 @@ export const getTestAccount = (
   )
 }
 
-const allInstances = new Map<number, AnvilInstance>()
+// Declare a global variable to store excluded ports
+declare global {
+  var __ECOSYSTEM_INSTANCES__: Map<number, AnvilInstance>
+}
+
+// Initialize the global variable if it doesn't exist
+if (!global.__ECOSYSTEM_INSTANCES__) {
+  global.__ECOSYSTEM_INSTANCES__ = new Map<number, AnvilInstance>()
+}
+
+export type DeployerParams = {
+  name?: string
+  chainId: number
+  address: Address
+}
 
 export const killAllNetworks = () =>
-  killNetwork(Array.from(allInstances.keys()))
+  killNetwork(Array.from(global.__ECOSYSTEM_INSTANCES__.keys()))
 
 export const killNetwork = (ids: number[]) =>
   Promise.all(
     ids.map(async (id) => {
-      const instance = allInstances.get(id)
+      const instance = global.__ECOSYSTEM_INSTANCES__.get(id)
       if (instance) {
         await instance.stop()
-        allInstances.delete(id)
+        global.__ECOSYSTEM_INSTANCES__.delete(id)
       }
     })
   )
@@ -144,23 +146,31 @@ export const initNetwork = async (
   }
 }
 
-export const initAnvilNetwork = async (
-  shouldForkBaseSepolia = false
-): Promise<NetworkConfigWithBundler> => {
-  const configuredNetwork = await initAnvilPayload(shouldForkBaseSepolia)
-  const bundlerConfig = await initBundlerInstance({
-    rpcUrl: configuredNetwork.rpcUrl
-  })
-  await ensureBundlerIsReady(
-    bundlerConfig.bundlerUrl,
-    getTestChainFromPort(configuredNetwork.rpcPort)
-  )
-  allInstances.set(configuredNetwork.instance.port, configuredNetwork.instance)
-  allInstances.set(
-    bundlerConfig.bundlerInstance.port,
-    bundlerConfig.bundlerInstance
-  )
-  return { ...configuredNetwork, ...bundlerConfig }
+export const initEcosystem = async ({ forkUrl }: { forkUrl?: string } = {}) => {
+  const network = await toEcosystemNetwork({ forkUrl })
+  if (!forkUrl) {
+    await deployEcosystemContracts(network)
+  }
+  const bundler = await toEcosystemBundler(network)
+
+  global.__ECOSYSTEM_INSTANCES__.set(bundler.port, bundler.instance)
+  global.__ECOSYSTEM_INSTANCES__.set(network.rpcPort, network.instance)
+
+  const result = {
+    ...network,
+    chain: network.chain as Chain,
+    account: privateKeyToAccount(network.privateKey),
+    accountTwo: mnemonicToAccount(
+      "test test test test test test test test test test test junk",
+      {
+        addressIndex: 1
+      }
+    ),
+    bundlerInstance: bundler.instance,
+    bundlerUrl: bundler.url,
+    bundlerPort: bundler.port
+  }
+  return result
 }
 
 export type MasterClient = ReturnType<typeof toTestClient>
@@ -173,106 +183,6 @@ export const toTestClient = (chain: Chain, account: Account) =>
   })
     .extend(publicActions)
     .extend(walletActions)
-
-export const toBundlerInstance = async ({
-  rpcUrl,
-  bundlerPort
-}: {
-  rpcUrl: string
-  bundlerPort: number
-}): Promise<BundlerInstance> => {
-  const instance = alto({
-    entrypoints: [ENTRY_POINT_ADDRESS],
-    rpcUrl: rpcUrl,
-    utilityPrivateKey: pKey,
-    executorPrivateKeys: [pKey],
-    entrypointSimulationContract: ENTRYPOINT_SIMULATIONS_ADDRESS,
-    safeMode: false,
-    port: bundlerPort
-  })
-  await instance.start()
-  return instance
-}
-
-export const ensureBundlerIsReady = async (
-  bundlerUrl: string,
-  chain: Chain
-) => {
-  const bundler = await createBundlerClient({
-    chain,
-    transport: http(bundlerUrl)
-  })
-
-  while (true) {
-    try {
-      await bundler.getChainId()
-      return
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-    }
-  }
-}
-
-export const toConfiguredAnvil = async ({
-  rpcPort,
-  shouldForkBaseSepolia = false
-}: {
-  rpcPort: number
-  shouldForkBaseSepolia: boolean
-}): Promise<AnvilInstance> => {
-  const config: AnvilParameters = {
-    hardfork: "Cancun",
-    chainId: rpcPort,
-    port: rpcPort,
-    codeSizeLimit: 1000000000000,
-    forkUrl: shouldForkBaseSepolia ? BASE_SEPOLIA_RPC_URL : undefined
-  }
-  const instance = anvil(config)
-  await instance.start()
-  await initDeployments(rpcPort, shouldForkBaseSepolia)
-  return instance
-}
-
-export const initDeployments = async (
-  rpcPort: number,
-  shouldForkBaseSepolia = false
-) => {
-  await hardhatExec.init()
-  await hardhatExec.deploy(rpcPort)
-
-  // Dynamic bytecode deployment of contracts using setCode:
-  if (!shouldForkBaseSepolia) {
-    // Hardcoded bytecode deployment of contracts using setCode:
-    const chain = getTestChainFromPort(rpcPort)
-    const account = getTestAccount()
-    const testClient = toTestClient(chain, account)
-
-    await setByteCodeHardcoded(testClient)
-    await setByteCodeDynamic(testClient, TEST_CONTRACTS)
-  }
-}
-
-const portOptions = { exclude: [] as number[] }
-export const initAnvilPayload = async (
-  shouldForkBaseSepolia = false
-): Promise<AnvilDto> => {
-  const rpcPort = await getPort(portOptions)
-  portOptions.exclude.push(rpcPort)
-  const rpcUrl = `http://localhost:${rpcPort}`
-  const chain = getTestChainFromPort(rpcPort)
-  const instance = await toConfiguredAnvil({ rpcPort, shouldForkBaseSepolia })
-  return { rpcUrl, chain, instance, rpcPort }
-}
-
-export const initBundlerInstance = async ({
-  rpcUrl
-}: { rpcUrl: string }): Promise<BundlerDto> => {
-  const bundlerPort = await getPort(portOptions)
-  portOptions.exclude.push(bundlerPort)
-  const bundlerUrl = `http://localhost:${bundlerPort}`
-  const bundlerInstance = await toBundlerInstance({ rpcUrl, bundlerPort })
-  return { bundlerInstance, bundlerUrl, bundlerPort }
-}
 
 export const getBalance = async (
   testClient: AnyData,
@@ -304,60 +214,14 @@ export const nonZeroBalance = async (
   )
 }
 
-export type FundedTestClients = Awaited<ReturnType<typeof toFundedTestClients>>
-export const toFundedTestClients = async ({
-  chain,
-  bundlerUrl
-}: { chain: Chain; bundlerUrl: string }) => {
-  const account = getTestAccount(2)
-  const recipientAccount = getTestAccount(3)
-
-  const walletClient = createWalletClient({
-    account,
-    chain,
-    transport: http()
-  })
-
-  const recipientWalletClient = createWalletClient({
-    account: recipientAccount,
-    chain,
-    transport: http()
-  })
-
-  const testClient = toTestClient(chain, getTestAccount())
-
-  const nexus = createSmartAccountClient({
-    account: await toNexusAccount({
-      chain,
-      signer: account,
-      transport: http()
-    }),
-    transport: http(bundlerUrl),
-    mock: true
-  })
-
-  const smartAccountAddress = await nexus.account.getAddress()
-  await fundAndDeployClients(testClient, [nexus])
-
-  return {
-    account,
-    recipientAccount,
-    walletClient,
-    recipientWalletClient,
-    testClient,
-    nexus,
-    smartAccountAddress
-  }
-}
-
 export const fundAndDeployClients = async (
   testClient: MasterClient,
   nexusClients: NexusClient[]
 ) => {
   return await Promise.all(
-    nexusClients.map((nexusClient) =>
-      fundAndDeploySingleClient(testClient, nexusClient)
-    )
+    nexusClients.map(async (nexusClient) => {
+      await fundAndDeploySingleClient(testClient, nexusClient)
+    })
   )
 }
 
@@ -369,7 +233,7 @@ export const fundAndDeploySingleClient = async (
     const accountAddress = await nexusClient.account.getAddress()
     await topUp(testClient, accountAddress)
 
-    const hash = await nexusClient.sendTransaction({
+    const hash = await nexusClient.sendUserOperation({
       calls: [
         {
           to: zeroAddress,
@@ -377,14 +241,17 @@ export const fundAndDeploySingleClient = async (
         }
       ]
     })
-    const { status, transactionHash } =
-      await testClient.waitForTransactionReceipt({
-        hash
-      })
 
-    if (status !== "success") {
+    const {
+      success,
+      receipt: { transactionHash }
+    } = await nexusClient.waitForUserOperationReceipt({
+      hash
+    })
+    if (!success) {
       throw new Error("Failed to deploy smart account")
     }
+    await testClient.waitForTransactionReceipt({ hash: transactionHash })
     return transactionHash
   } catch (e) {
     console.error(`Error initializing smart account: ${e}`)
@@ -440,64 +307,3 @@ export const topUp = async (
 
 export const getBundlerUrl = (chainId: number) =>
   `https://bundler.biconomy.io/api/v3/${chainId}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14`
-
-const getTestChainFromPort = (port: number): Chain =>
-  getCustomChain(`Anvil-${port}`, port, `http://localhost:${port}`, "")
-
-const setByteCodeHardcoded = async (
-  testClient: MasterClient
-): Promise<void> => {
-  const DETERMINISTIC_DEPLOYER = "0x4e59b44847b379578588920ca78fbf26c0b4956c"
-
-  const entrypointSimulationHash = await testClient.sendTransaction({
-    to: DETERMINISTIC_DEPLOYER,
-    data: ENTRY_POINT_SIMULATIONS_CREATECALL,
-    gas: 15_000_000n
-  })
-
-  const entrypointHash = await testClient.sendTransaction({
-    to: DETERMINISTIC_DEPLOYER,
-    data: ENTRY_POINT_V07_CREATECALL,
-    gas: 15_000_000n
-  })
-
-  await Promise.all([
-    testClient.waitForTransactionReceipt({ hash: entrypointSimulationHash }),
-    testClient.waitForTransactionReceipt({ hash: entrypointHash })
-  ])
-}
-
-export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms))
-
-export type DeployerParams = {
-  name?: string
-  chainId: number
-  address: Address
-}
-export const setByteCodeDynamic = async (
-  testClient: MasterClient,
-  deployParams: Record<string, DeployerParams>
-) => {
-  const deployParamsArray = Object.values(deployParams)
-
-  const bytecodes = (await Promise.all(
-    deployParamsArray.map(({ chainId, address }) => {
-      const fetchChain = getChain(chainId)
-      const publicClient = createPublicClient({
-        chain: fetchChain,
-        transport: http()
-      })
-      return publicClient.getCode({ address })
-    })
-  )) as Hex[]
-
-  await Promise.all(
-    deployParamsArray.map(({ address }, index) =>
-      testClient.setCode({
-        bytecode: bytecodes[index],
-        address
-      })
-    )
-  )
-}

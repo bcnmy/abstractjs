@@ -18,7 +18,7 @@
 
 ### Minor Changes
 
-- Update MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS address, resulting in changed default addresses for users
+- Update K1_VALIDATOR_FACTORY_ADDRESS address, resulting in changed default addresses for users
 
 ## 0.1.1
 
@@ -59,7 +59,7 @@
 
 - Nexus init using custom validator
   - BREAKING: `getMeeFactoryData` helper now renamed to `getDefaultFactoryData`
-  - BREAKING: `getMeeNexusAddress` helper now renamed to `getDefaultNexusAddress`
+  - BREAKING: `getMeeNexusAddress` helper now renamed to `getUniversalNexusAddress`
 - Moved useTestBundler datapoint to the bundler client instead of the account & renamed to 'mock'.
 - Use pimlico gasEstimates if string 'pimlico' is in the bundlerUrl
 - Added confirmations: 2 to waitForUserOperationReceipt in signOnChainQuote helper to avoid race condition

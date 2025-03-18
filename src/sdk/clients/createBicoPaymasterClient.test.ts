@@ -10,7 +10,7 @@ import {
   parseUnits
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { paymasterTruthy, toNetworks } from "../../test/testSetup"
+import { paymasterTruthy, toNetwork } from "../../test/testSetup"
 import { getBalance, killNetwork } from "../../test/testUtils"
 import type { NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
@@ -49,7 +49,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     "0x7683022d84f726a96c4a6611cd31dbf5409c0ac9"
 
   beforeAll(async () => {
-    ;[network] = await toNetworks("TESTNET_FROM_ENV_VARS")
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl

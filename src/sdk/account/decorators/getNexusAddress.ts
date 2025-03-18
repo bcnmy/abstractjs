@@ -2,13 +2,13 @@ import { type Address, pad, toHex } from "viem"
 import type { PublicClient } from "viem"
 import {
   BICONOMY_ATTESTER_ADDRESS,
-  MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY,
+  K1_VALIDATOR_FACTORY_ADDRESS,
+  NEXUS_ACCOUNT_FACTORY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "../../constants"
 import { AccountFactoryAbi } from "../../constants/abi/AccountFactory"
 import { K1ValidatorFactoryAbi } from "../../constants/abi/K1ValidatorFactory"
-
+import { getVersion, isVersionOlder } from "../utils/getVersion"
 /**
  * Parameters for getting the K1 counterfactual address
  * @property publicClient - {@link PublicClient} The public client to use for the read contract
@@ -16,17 +16,17 @@ import { K1ValidatorFactoryAbi } from "../../constants/abi/K1ValidatorFactory"
  * @property index - Optional BigInt index for deterministic deployment (defaults to 0)
  * @property attesters - Optional array of {@link Address} attester addresses (defaults to [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS])
  * @property threshold - Optional number of required attesters (defaults to 1)
- * @property factoryAddress - Optional {@link Address} of the factory contract (defaults to MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS)
+ * @property factoryAddress - Optional {@link Address} of the factory contract (defaults to K1_VALIDATOR_FACTORY_ADDRESS)
  */
 export type K1CounterFactualAddressParams<
   ExtendedPublicClient extends PublicClient
 > = {
   publicClient: ExtendedPublicClient
   signerAddress: Address
-  index?: bigint
-  attesters?: Address[]
-  threshold?: number
-  factoryAddress?: Address
+  index: bigint
+  attesters: Address[]
+  threshold: number
+  factoryAddress: Address
 }
 
 /**
@@ -62,7 +62,7 @@ export const getK1NexusAddress = async <
     index = 0n,
     attesters = [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
     threshold = 1,
-    factoryAddress = MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+    factoryAddress = K1_VALIDATOR_FACTORY_ADDRESS
   } = params
 
   return await publicClient.readContract({
@@ -79,19 +79,19 @@ export const getK1NexusAddress = async <
  * @property signerAddress - {@link Address} The address of the EOA signer
  * @property index - Optional BigInt index for deterministic deployment (defaults to 0)
  */
-export type DefaultCounterFactualAddressParams<
+export type GetUniversalAddressParams<
   ExtendedPublicClient extends PublicClient
 > = {
-  factoryAddress?: Address
+  factoryAddress: Address
   publicClient: ExtendedPublicClient
-  signerAddress: Address
-  index?: bigint
+  initData: Address
+  index: bigint
 }
 
 /**
  * Gets the counterfactual address for a MEE Nexus account
  *
- * @param params - {@link DefaultCounterFactualAddressParams} Configuration for address computation
+ * @param params - {@link GetUniversalAddressParams} Configuration for address computation
  * @param params.publicClient - The public client to use for the read contract
  * @param params.signerAddress - The address of the EOA signer
  * @param params.index - Optional account index (defaults to 0)
@@ -99,27 +99,43 @@ export type DefaultCounterFactualAddressParams<
  * @returns Promise resolving to the {@link Address} of the counterfactual account
  *
  * @example
- * const accountAddress = await getDefaultNexusAddress({
+ * const accountAddress = await getUniversalNexusAddress({
  *   publicClient: viemPublicClient,
- *   signerAddress: "0x123...",
+ *   initData: "0x123...",
  *   index: BigInt(0)
  * });
  */
-export const getDefaultNexusAddress = async (
-  params: DefaultCounterFactualAddressParams<PublicClient>
+export const getUniversalNexusAddress = async (
+  params: GetUniversalAddressParams<PublicClient>
 ): Promise<Address> => {
   const {
     publicClient,
-    signerAddress,
-    factoryAddress = NEXUS_ACCOUNT_FACTORY,
+    initData,
+    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
     index = 0n
   } = params
 
   const salt = pad(toHex(index), { size: 32 })
+
   return await publicClient.readContract({
     address: factoryAddress,
     abi: AccountFactoryAbi,
     functionName: "computeAccountAddress",
-    args: [signerAddress, salt]
+    args: [initData, salt]
   })
+}
+
+export type GetNexusAddressParams<ExtendedPublicClient extends PublicClient> = {
+  useK1Config: boolean
+} & K1CounterFactualAddressParams<ExtendedPublicClient> &
+  GetUniversalAddressParams<ExtendedPublicClient>
+
+export const getNexusAddress = async (
+  params: GetNexusAddressParams<PublicClient>
+): Promise<Address> => {
+  const { useK1Config, ...parameters } = params
+  if (isVersionOlder(getVersion(), "0.2.2") && useK1Config) {
+    return getK1NexusAddress(parameters)
+  }
+  return getUniversalNexusAddress(parameters)
 }

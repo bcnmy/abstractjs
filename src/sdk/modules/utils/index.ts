@@ -1,4 +1,4 @@
 export * from "./Types"
-export * from "./toModule"
+export * from "../validators/toValidator"
 export * from "./Helpers"
 export * from "./Uid"

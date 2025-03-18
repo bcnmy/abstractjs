@@ -1,8 +1,8 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { http, type Address, type Chain, encodeFunctionData } from "viem"
 import type { Hex, LocalAccount } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi"
-import { testAddresses } from "../../../../test/callDatas"
 import { toNetwork } from "../../../../test/testSetup"
 import {
   fundAndDeployClients,
@@ -20,16 +20,12 @@ import {
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
 import { SmartSessionMode } from "../../../constants"
-import {
-  CreateSessionDataParams,
-  SessionData
-} from "../../../modules/smartSessionsValidator/Types"
+import type { Module } from "../../../modules/utils/Types"
 import {
   smartSessionCreateActions,
   smartSessionUseActions
-} from "../../../modules/smartSessionsValidator/decorators"
-import { toSmartSessionsValidator } from "../../../modules/smartSessionsValidator/toSmartSessionsValidator"
-import type { Module } from "../../../modules/utils/Types"
+} from "../../../modules/validators/smartSessionsValidator/decorators"
+import { toSmartSessionsValidator } from "../../../modules/validators/smartSessionsValidator/toSmartSessionsValidator"
 
 describe("erc7579.decorators.uninstallModule", async () => {
   let network: NetworkConfig
@@ -48,7 +44,7 @@ describe("erc7579.decorators.uninstallModule", async () => {
   let sessionsModule: Module
 
   beforeAll(async () => {
-    network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
+    network = await toNetwork()
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl
@@ -117,7 +113,7 @@ describe("erc7579.decorators.uninstallModule", async () => {
           sessionPublicKey, // dappAccount address
           actionPoliciesInfo: [
             {
-              contractAddress: testAddresses.Counter, // counter address
+              contractAddress: COUNTER_ADDRESS, // counter address
               functionSelector: "0x273ea3e3" as Hex, // function selector for increment count,
               sudo: true
             }
@@ -161,7 +157,7 @@ describe("erc7579.decorators.uninstallModule", async () => {
     const userOpHash = await useableDappClient.usePermission({
       calls: [
         {
-          to: testAddresses.Counter,
+          to: COUNTER_ADDRESS,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "incrementNumber"

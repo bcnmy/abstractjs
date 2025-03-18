@@ -18,11 +18,8 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import {
-  MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-  testnetMcUSDC
-} from "../constants"
-import { MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS } from "../constants"
+import { K1_VALIDATOR_ADDRESS, testnetMcUSDC } from "../constants"
+import { K1_VALIDATOR_FACTORY_ADDRESS } from "../constants"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
@@ -108,8 +105,8 @@ describe.each(COMPETITORS)(
         chain,
         transport: http(),
         // You can omit this outside of a testing context
-        validatorAddress: MAINNET_ADDRESS_K1_VALIDATOR_ADDRESS,
-        factoryAddress: MAINNET_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+        validatorAddress: K1_VALIDATOR_ADDRESS,
+        factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS
       })
 
       nexusAccountAddress = await nexusAccount.getCounterFactualAddress()

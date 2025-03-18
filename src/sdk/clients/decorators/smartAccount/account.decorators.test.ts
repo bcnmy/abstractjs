@@ -1,7 +1,7 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { http, type Account, type Address, type Chain, isHex } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi"
-import { mockAddresses } from "../../../../test/__contracts/mockAddresses"
 import { toNetwork } from "../../../../test/testSetup"
 import {
   type MasterClient,
@@ -16,10 +16,6 @@ import {
   type NexusAccount,
   toNexusAccount
 } from "../../../account/toNexusAccount"
-import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../../../constants"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -52,9 +48,7 @@ describe("account.decorators", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http()
     })
 
     nexusClient = createSmartAccountClient({
@@ -114,6 +108,7 @@ describe("account.decorators", async () => {
 
   test("should send a user operation using sendTransaction", async () => {
     const balanceBefore = await getBalance(testClient, recipientAddress)
+
     const hash = await nexusClient.sendTransaction({
       calls: [
         {
@@ -132,21 +127,21 @@ describe("account.decorators", async () => {
     const counterValueBefore = await testClient.readContract({
       abi: CounterAbi,
       functionName: "getNumber",
-      address: mockAddresses.Counter
+      address: COUNTER_ADDRESS
     })
 
     expect(counterValueBefore).toBe(0n)
     const hash = await nexusClient.writeContract({
       abi: CounterAbi,
       functionName: "incrementNumber",
-      address: mockAddresses.Counter,
+      address: COUNTER_ADDRESS,
       chain
     })
     const { status } = await nexusClient.waitForTransactionReceipt({ hash })
     const counterValueAfter = await testClient.readContract({
       abi: CounterAbi,
       functionName: "getNumber",
-      address: mockAddresses.Counter
+      address: COUNTER_ADDRESS
     })
 
     expect(status).toBe("success")

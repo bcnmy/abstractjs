@@ -1,3 +1,4 @@
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Address,
@@ -11,7 +12,6 @@ import {
   encodeFunctionData,
   parseEther
 } from "viem"
-import { PaymasterClient } from "viem/account-abstraction"
 import { beforeAll, describe, expect, test } from "vitest"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
@@ -29,14 +29,13 @@ import { SmartSessionMode } from "../sdk/constants"
 import type {
   CreateSessionDataParams,
   SessionData
-} from "../sdk/modules/smartSessionsValidator/Types"
+} from "../sdk/modules/validators/smartSessionsValidator/Types"
 import {
   smartSessionCreateActions,
   smartSessionUseActions
-} from "../sdk/modules/smartSessionsValidator/decorators"
-import { toSmartSessionsValidator } from "../sdk/modules/smartSessionsValidator/toSmartSessionsValidator"
+} from "../sdk/modules/validators/smartSessionsValidator/decorators"
+import { toSmartSessionsValidator } from "../sdk/modules/validators/smartSessionsValidator/toSmartSessionsValidator"
 import { CounterAbi } from "./__contracts/abi/CounterAbi"
-import { testAddresses } from "./callDatas"
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
 
@@ -214,7 +213,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         sessionPublicKey: eoaAccount.address, // session key signer
         actionPoliciesInfo: [
           {
-            contractAddress: testAddresses.Counter, // counter address
+            contractAddress: COUNTER_ADDRESS, // counter address
             functionSelector: "0x273ea3e3" as Hex // function selector for increment count
           }
         ]
@@ -273,7 +272,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     const userOpHash = await useSmartSessionNexusClient.usePermission({
       calls: [
         {
-          to: testAddresses.Counter,
+          to: COUNTER_ADDRESS,
           data: encodeFunctionData({
             abi: CounterAbi,
             functionName: "incrementNumber"

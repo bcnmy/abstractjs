@@ -1,3 +1,4 @@
+import { MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
 import {
   http,
   type Account,
@@ -7,7 +8,6 @@ import {
   isHex
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import mockAddresses from "../../../../test/__contracts/mockAddresses"
 import { toNetwork } from "../../../../test/testSetup"
 import {
   type MasterClient,
@@ -21,10 +21,7 @@ import {
   type NexusAccount,
   toNexusAccount
 } from "../../../account/toNexusAccount"
-import {
-  TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-  TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
-} from "../../../constants"
+import { K1_VALIDATOR_ADDRESS } from "../../../constants"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -57,9 +54,7 @@ describe("erc7579.decorators", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
-      validatorAddress: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
-      factoryAddress: TEST_ADDRESS_K1_VALIDATOR_FACTORY_ADDRESS
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
@@ -95,14 +90,14 @@ describe("erc7579.decorators", async () => {
       nexusClient.isModuleInstalled({
         module: {
           type: "validator",
-          address: TEST_ADDRESS_K1_VALIDATOR_ADDRESS,
+          address: K1_VALIDATOR_ADDRESS,
           initData: "0x"
         }
       })
     ])
 
     expect(installedExecutors[0].length).toBeTypeOf("number")
-    expect(installedValidators[0]).toEqual([TEST_ADDRESS_K1_VALIDATOR_ADDRESS])
+    expect(installedValidators[0]).toEqual([K1_VALIDATOR_ADDRESS])
     expect(isHex(activeHook)).toBe(true)
     expect(fallbackSelector.length).toBeTypeOf("number")
     expect(supportsValidator).toBe(true)
@@ -114,7 +109,7 @@ describe("erc7579.decorators", async () => {
     const hash = await nexusClient.installModule({
       module: {
         type: "validator",
-        address: mockAddresses.MockValidator,
+        address: MOCK_K1_VALIDATOR,
         initData: encodePacked(["address"], [eoaAccount.address])
       }
     })
@@ -127,7 +122,7 @@ describe("erc7579.decorators", async () => {
     const hash = await nexusClient.uninstallModule({
       module: {
         type: "validator",
-        address: mockAddresses.MockValidator,
+        address: MOCK_K1_VALIDATOR,
         initData: encodePacked(["address"], [eoaAccount.address])
       }
     })
@@ -140,7 +135,7 @@ describe("erc7579.decorators", async () => {
     const hash = await nexusClient.installModule({
       module: {
         type: "validator",
-        address: mockAddresses.MockValidator,
+        address: MOCK_K1_VALIDATOR,
         initData: encodePacked(["address"], [eoaAccount.address])
       }
     })
