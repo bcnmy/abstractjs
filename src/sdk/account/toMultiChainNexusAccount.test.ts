@@ -86,7 +86,6 @@ describe("mee.toMultiChainNexusAccount", async () => {
       signer: eoaAccount,
       transport: http(),
       useK1Config: false,
-      validatorAddress: MEE_VALIDATOR_ADDRESS,
       attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
       factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS
     })

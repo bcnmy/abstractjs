@@ -128,7 +128,7 @@ export type ToNexusSmartAccountParameters = {
   registryAddress?: Address
   /** Optional factory address */
   factoryAddress?: Address
-  /** Use K1 setup */
+  /** @deprecated */
   useK1Config?: boolean
 } & Prettify<
   Pick<

@@ -6,7 +6,6 @@ import {
   parseAbi,
   toHex
 } from "viem"
-import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { getVersion, isVersionOlder } from "../utils/getVersion"
 
 /**
@@ -83,47 +82,6 @@ export type ModuleConfig = {
   data: Hex
 }
 
-export type GetFactoryInitDataParams = {
-  /** Array of validator modules with their initialization data */
-  validators: Array<ModuleConfig>
-  /** Array of executor modules with their initialization data */
-  executors: Array<ModuleConfig>
-  /** Hook module with its initialization data */
-  hook: ModuleConfig
-  /** Array of fallback modules with their initialization data */
-  fallbacks: Array<ModuleConfig>
-  /** Array of attester addresses for account verification */
-  attesters: Address[]
-  /** Minimum number of attesters required for validation */
-  attesterThreshold: number
-  /** Optional registry contract address */
-  registryAddress: Address
-}
-
-export const getFactoryInitData = ({
-  validators,
-  executors,
-  hook,
-  fallbacks,
-  attesters,
-  attesterThreshold,
-  registryAddress
-}: GetFactoryInitDataParams): Hex => {
-  return encodeFunctionData({
-    abi: NexusBootstrapAbi,
-    functionName: "initNexus",
-    args: [
-      validators,
-      executors,
-      hook,
-      fallbacks,
-      registryAddress,
-      attesters,
-      attesterThreshold
-    ]
-  })
-}
-
 export type GetFactoryDataParams = {
   // Deprecated field for older versions of the SDK. Useful until version 0.2.2
   useK1Config: boolean
@@ -131,8 +89,6 @@ export type GetFactoryDataParams = {
   GetUniversalFactoryDataParams
 
 export const getFactoryData = (params: GetFactoryDataParams): Hex => {
-  console.log("getFactoryData", { params })
-
   const {
     initData,
     index,
@@ -151,8 +107,5 @@ export const getFactoryData = (params: GetFactoryDataParams): Hex => {
     })
   }
 
-  return getUniversalFactoryData({
-    index,
-    initData
-  })
+  return getUniversalFactoryData({ index, initData })
 }

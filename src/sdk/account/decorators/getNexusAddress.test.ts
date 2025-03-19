@@ -51,7 +51,6 @@ describe("account.decorators.getNexusAddress.local", () => {
     })
 
     nexusAccountAddress = await nexusAccount.getAddress()
-    console.log({ nexusAccountAddress })
     await topUp(testClient, nexusAccountAddress)
   })
 
@@ -66,7 +65,6 @@ describe("account.decorators.getNexusAddress.local", () => {
     })
 
     const tx = await nexusClient.waitForUserOperationReceipt({ hash })
-    console.log({ tx })
   })
 })
 
@@ -97,8 +95,6 @@ describe("account.decorators.getNexusAddress.testnet", () => {
       transport: http(network.rpcUrl),
       signer: eoaAccount
     })
-
-    console.log({ nexusAccountAddress: await account.getAddress() })
 
     const nexusClient = createBicoBundlerClient({
       account,
