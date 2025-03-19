@@ -1,10 +1,12 @@
 import type { Chain, Client, Hash, Transport } from "viem"
-import type { ModularSmartAccount, Module } from "../../utils/Types"
+import type {
+  ModularSmartAccount,
+  Module
+} from "../../../../modules/utils/Types"
 import type {
   GrantPermissionResponse,
   PreparePermissionResponse
 } from "../Types"
-import type { SmartSessionModule } from "../toSmartSessionsValidator"
 import {
   type GrantDeferredPermissionParameters,
   grantDeferredPermission
@@ -103,13 +105,10 @@ export function smartSessionCreateActions(_: Module) {
  * @param smartSessionsModule - The smart sessions module to be set on the client's account.
  * @returns A function that takes a client and returns SmartSessionUseActions.
  */
-export function smartSessionUseActions(
-  smartSessionsModule: SmartSessionModule
-) {
+export function smartSessionUseActions() {
   return <TModularSmartAccount extends ModularSmartAccount | undefined>(
     client: Client<Transport, Chain | undefined, TModularSmartAccount>
   ): SmartSessionUseActions<TModularSmartAccount> => {
-    client?.account?.setModule(smartSessionsModule)
     return {
       usePermission: (args) => usePermission(client, args)
     }

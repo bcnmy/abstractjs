@@ -73,48 +73,48 @@ export const EARLIEST_DEFAULT_ADDRESSES: AddressConfig = {
 }
 
 export const DEFAULT_CONFIGURATIONS_BY_VERSION: Record<string, AddressConfig> =
-{
-  "0.0": {
-    attesters: [RHINESTONE_ATTESTER_ADDRESS],
-    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
-    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-    validatorAddress: K1_VALIDATOR_ADDRESS,
-    accountId: "biconomy.nexus.1.0.0",
-    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
-    executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
-  },
-  "0.0.34": {
-    attesters: [
-      RHINESTONE_ATTESTER_ADDRESS,
-      BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1
-    ],
-    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
-    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-    validatorAddress: K1_VALIDATOR_ADDRESS,
-    accountId: "biconomy.nexus.1.0.0",
-    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
-    executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
-  },
-  "0.1": {
-    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
-    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-    validatorAddress: K1_VALIDATOR_ADDRESS,
-    accountId: "biconomy.nexus.1.0.0",
-    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
-    executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
-  },
-  "0.3": {
-    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-    factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS,
-    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
-    validatorAddress: K1_VALIDATOR_ADDRESS,
-    accountId: "biconomy.nexus.1.0.2",
-    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS,
-    executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
-  },
-  "0.4": LATEST_DEFAULT_ADDRESSES
-}
+  {
+    "0.0": {
+      attesters: [RHINESTONE_ATTESTER_ADDRESS],
+      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+      validatorAddress: K1_VALIDATOR_ADDRESS,
+      accountId: "biconomy.nexus.1.0.0",
+      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
+    },
+    "0.0.34": {
+      attesters: [
+        RHINESTONE_ATTESTER_ADDRESS,
+        BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1
+      ],
+      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+      validatorAddress: K1_VALIDATOR_ADDRESS,
+      accountId: "biconomy.nexus.1.0.0",
+      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
+    },
+    "0.1": {
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS_UNTIL_0_2,
+      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+      validatorAddress: K1_VALIDATOR_ADDRESS,
+      accountId: "biconomy.nexus.1.0.0",
+      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
+    },
+    "0.3": {
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+      factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS,
+      bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+      validatorAddress: K1_VALIDATOR_ADDRESS,
+      accountId: "biconomy.nexus.1.0.2",
+      implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS,
+      executorAddress: COMPOSABLE_EXECUTOR_ADDRESS
+    },
+    "0.4": LATEST_DEFAULT_ADDRESSES
+  }
 
 // Rhinestone constants
 export {

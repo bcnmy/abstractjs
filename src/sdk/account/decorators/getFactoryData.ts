@@ -131,8 +131,7 @@ export type GetFactoryDataParams = {
   GetUniversalFactoryDataParams
 
 export const getFactoryData = (params: GetFactoryDataParams): Hex => {
-
-  console.log('getFactoryData', { params })
+  console.log("getFactoryData", { params })
 
   const {
     initData,

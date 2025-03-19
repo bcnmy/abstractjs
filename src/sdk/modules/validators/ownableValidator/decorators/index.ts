@@ -1,6 +1,6 @@
 import type { Address, Chain, Client, Hash, Hex, Transport } from "viem"
-import type { Call } from "../../../account/utils/Types"
-import type { ModularSmartAccount, Module } from "../../utils/Types"
+import type { Call } from "../../../../account/utils/Types"
+import type { ModularSmartAccount } from "../../../../modules/utils/Types"
 import { type AddOwnerParameters, addOwner } from "./addOwner"
 import { getAddOwnerTx } from "./getAddOwnerTx"
 import { type GetOwnersParameters, getOwners } from "./getOwners"
@@ -49,11 +49,10 @@ export type OwnableActions<
   ) => Promise<number>
 }
 
-export function ownableActions(ownableModule: Module) {
+export function ownableActions() {
   return <TModularSmartAccount extends ModularSmartAccount | undefined>(
     client: Client<Transport, Chain | undefined, TModularSmartAccount>
   ): OwnableActions<TModularSmartAccount> => {
-    client?.account?.setModule(ownableModule)
     return {
       getThreshold: (args) => {
         return getThreshold(client, args)

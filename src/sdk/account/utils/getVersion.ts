@@ -4,7 +4,6 @@ import {
   EARLIEST_DEFAULT_ADDRESSES,
   LATEST_DEFAULT_ADDRESSES
 } from "../../constants"
-import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 
 /**
  * Retrieves the current version of the SDK from package.json

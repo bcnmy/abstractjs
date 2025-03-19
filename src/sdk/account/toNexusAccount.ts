@@ -50,16 +50,13 @@ import {
   REGISTRY_ADDRESS
 } from "../constants"
 // Constants
-import {
-  EntrypointAbi,
-  NexusBootstrapAbi
-} from "../constants/abi"
+import { EntrypointAbi, NexusBootstrapAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
 import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type { Module } from "../modules/utils/Types"
 import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
-import { getFactoryData, getFactoryInitData } from "./decorators/getFactoryData"
+import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -80,12 +77,11 @@ import {
 } from "./utils/Utils"
 import { formatModules } from "./utils/formatModules"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
-import { getNexusAddress } from "./decorators/getNexusAddress"
 
 /**
  * Base module configuration type
  */
-export type BaseModule = {
+export type MinimalModuleConfig = {
   module: Address
   data: Hex
 }
@@ -93,7 +89,9 @@ export type BaseModule = {
 /**
  * Generic module configuration type that can be extended with additional properties
  */
-export type ModuleConfig<T extends BaseModule = BaseModule> = T
+export type GenericModuleConfig<
+  T extends MinimalModuleConfig = MinimalModuleConfig
+> = T
 
 /**
  * Parameters for creating a Nexus Smart Account
@@ -121,11 +119,11 @@ export type ToNexusSmartAccountParameters = {
   /** Optional validator modules configuration */
   validators?: Array<Module>
   /** Optional executor modules configuration */
-  executors?: Array<ModuleConfig>
+  executors?: Array<GenericModuleConfig>
   /** Optional hook module configuration */
-  hook?: ModuleConfig
+  hook?: GenericModuleConfig
   /** Optional fallback modules configuration */
-  fallbacks?: Array<ModuleConfig>
+  fallbacks?: Array<GenericModuleConfig>
   /** Optional registry address */
   registryAddress?: Address
   /** Optional factory address */

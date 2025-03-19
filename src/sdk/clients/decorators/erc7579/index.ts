@@ -28,7 +28,6 @@ import {
   type IsModuleInstalledParameters,
   isModuleInstalled
 } from "./isModuleInstalled.js"
-import { moduleActivator } from "./moduleActivator"
 import {
   type SupportsExecutionModeParameters,
   supportsExecutionMode
@@ -111,8 +110,7 @@ export {
   getInstalledExecutors,
   getActiveHook,
   getFallbackBySelector,
-  getPreviousModule,
-  moduleActivator
+  getPreviousModule
 }
 
 export function erc7579Actions() {

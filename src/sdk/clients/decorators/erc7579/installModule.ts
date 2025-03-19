@@ -113,9 +113,9 @@ export async function installModule<
   if (addressEquals(address, SMART_SESSIONS_ADDRESS)) {
     const nexusAccount = account as NexusAccount
 
-    if (nexusAccount?.validatorAddress) {
+    if (nexusAccount?.module.address) {
       calls.push({
-        to: nexusAccount.validatorAddress,
+        to: nexusAccount.module.address,
         value: BigInt(0),
         data: encodeFunctionData({
           abi: [

@@ -21,10 +21,7 @@ import {
   RHINESTONE_ATTESTER_ADDRESS
 } from "../../constants"
 import type { NexusAccount } from "../toNexusAccount"
-import {
-  getFactoryData,
-  getK1FactoryData,
-} from "./getFactoryData"
+import { getFactoryData, getK1FactoryData } from "./getFactoryData"
 
 describe("nexus.account.getFactoryData", async () => {
   let network: NetworkConfig
@@ -42,7 +39,7 @@ describe("nexus.account.getFactoryData", async () => {
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-      ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     chain = network.chain
     bundlerUrl = network.bundlerUrl

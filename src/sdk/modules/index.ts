@@ -1,4 +1,4 @@
-export * from "./k1Validator"
-export * from "./ownableValidator"
-export * from "./smartSessionsValidator"
+export * from "./validators/k1Validator"
+export * from "./validators/ownableValidator"
+export * from "./validators/smartSessionsValidator"
 export * from "./utils"

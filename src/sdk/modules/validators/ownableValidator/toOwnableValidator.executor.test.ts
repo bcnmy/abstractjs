@@ -28,7 +28,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import { moduleActivator } from "../../../clients/decorators/erc7579/moduleActivator"
 import {
   K1_VALIDATOR_ADDRESS,
   OWNABLE_EXECUTOR_ADDRESS,
@@ -84,8 +83,6 @@ describe("modules.ownableExecutor", async () => {
       accountAddress: nexusClient.account.address,
       address: K1_VALIDATOR_ADDRESS
     })
-
-    nexusClient.extend(moduleActivator(k1Module))
   })
 
   afterAll(async () => {
