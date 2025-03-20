@@ -1,13 +1,13 @@
 {
   "name": "@biconomy/abstractjs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Biconomy",
   "repository": "github:bcnmy/abstractjs",
   "main": "./dist/_cjs/index.js",
   "module": "./dist/_esm/index.js",
   "access": "public",
   "devDependencies": {
-    "@biconomy/ecosystem": "^0.1.6",
+    "@biconomy/ecosystem": "0.2.1",
     "@biomejs/biome": "1.9.4",
     "@changesets/cli": "^2.28.1",
     "@commitlint/cli": "^19.7.1",
@@ -37,6 +37,7 @@
     "tsc-alias": "^1.8.11",
     "tslib": "^2.8.1",
     "typedoc": "^0.27.9",
+    "vitest": "^3.0.7",
     "viem": "^2.23.6",
     "yargs": "^17.7.2"
   },
@@ -129,8 +130,5 @@
   },
   "type": "module",
   "types": "./dist/_types/index.d.ts",
-  "typings": "./dist/_types/index.d.ts",
-  "dependencies": {
-    "vitest": "^3.0.7"
-  }
+  "typings": "./dist/_types/index.d.ts"
 }
