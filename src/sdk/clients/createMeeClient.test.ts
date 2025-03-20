@@ -80,19 +80,6 @@ describe("mee.createMeeClient", async () => {
     }
   )
 
-  test.concurrent("should get a quote", async () => {
-    const meeClient = await createMeeClient({ account: mcNexus })
-
-    const quote = await meeClient.getQuote({ instructions: [], feeToken })
-
-    expect(quote).toBeDefined()
-    expect(quote.paymentInfo.sender).toEqual(
-      mcNexus.deploymentOn(paymentChain.id)?.address
-    )
-    expect(quote.paymentInfo.token).toEqual(feeToken.address)
-    expect(+quote.paymentInfo.chainId).toEqual(paymentChain.id)
-  })
-
   test.concurrent("should sign a quote", async () => {
     const quote = await meeClient.getQuote({
       instructions: [

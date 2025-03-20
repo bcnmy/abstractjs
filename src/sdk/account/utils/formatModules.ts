@@ -1,5 +1,4 @@
 import type { Address, Hex } from "viem"
-import type { Module } from "../../modules/utils/Types"
 
 /**
  * Formats modules to ensure they have the correct structure for the contract
@@ -7,9 +6,10 @@ import type { Module } from "../../modules/utils/Types"
  * @returns Formatted modules with module and data properties
  */
 export const formatModules = (
-  modules: Array<Module | { module: Address; data?: Hex; initData?: Hex }>
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  modules: any[]
 ): Array<{ module: Address; data: Hex }> =>
   modules.map((mod) => ({
-    module: mod.module,
-    data: mod.data || mod.initData || "0x"
+    module: mod.module || mod.address,
+    data: mod.initData || mod.data
   }))

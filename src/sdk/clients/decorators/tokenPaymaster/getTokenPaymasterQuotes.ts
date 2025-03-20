@@ -1,6 +1,7 @@
 import type { Account, Address, Chain, Client, Transport } from "viem"
 import type { UserOperation } from "viem/account-abstraction"
 import type { AnyData } from "../../../modules"
+import { PREFIXES } from "../../../modules/validators/meeValidator/toMeeValidator"
 
 export type BicoTokenPaymasterRpcSchema = [
   {
@@ -137,7 +138,8 @@ export const getTokenPaymasterQuotes = async (
         paymasterPostOpGasLimit:
           userOp.paymasterPostOpGasLimit?.toString() ?? "0",
         paymasterVerificationGasLimit:
-          userOp.paymasterVerificationGasLimit?.toString() ?? "0"
+          userOp.paymasterVerificationGasLimit?.toString() ?? "0",
+        signature: PREFIXES.EIP_4337
       },
       {
         mode: "ERC20",

@@ -126,8 +126,5 @@ export async function grantPermission<
     account
   })
 
-  return {
-    userOpHash,
-    ...preparedPermission
-  }
+  return { userOpHash, ...preparedPermission }
 }

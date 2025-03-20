@@ -1,4 +1,4 @@
-import { MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
+import { MEE_VALIDATOR_ADDRESS, MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
 import {
   http,
   type Account,
@@ -90,14 +90,14 @@ describe("erc7579.decorators", async () => {
       nexusClient.isModuleInstalled({
         module: {
           type: "validator",
-          address: K1_VALIDATOR_ADDRESS,
+          address: MEE_VALIDATOR_ADDRESS,
           initData: "0x"
         }
       })
     ])
 
     expect(installedExecutors[0].length).toBeTypeOf("number")
-    expect(installedValidators[0]).toEqual([K1_VALIDATOR_ADDRESS])
+    expect(installedValidators[0]).toEqual([MEE_VALIDATOR_ADDRESS])
     expect(isHex(activeHook)).toBe(true)
     expect(fallbackSelector.length).toBeTypeOf("number")
     expect(supportsValidator).toBe(true)

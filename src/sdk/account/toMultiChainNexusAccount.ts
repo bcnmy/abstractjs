@@ -1,10 +1,5 @@
 import type { Chain, Hex, Transport } from "viem"
 import type { Instruction } from "../clients/decorators/mee/getQuote"
-import {
-  BICONOMY_ATTESTER_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
-} from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
   type ToNexusSmartAccountParameters,
@@ -189,10 +184,7 @@ export async function toMultichainNexusAccount(
         chain,
         signer: unresolvedSigner,
         transport: transports[i],
-        attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-        factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
-        ...accountParameters,
-        useK1Config: false
+        ...accountParameters
       })
     )
   )

@@ -265,7 +265,7 @@ export const getAccountMeta = async (
 
     if (domain !== "0x") {
       const decoded = decodeFunctionResult({
-        abi: [...EIP1271Abi],
+        abi: EIP1271Abi,
         functionName: "eip712Domain",
         data: domain
       })

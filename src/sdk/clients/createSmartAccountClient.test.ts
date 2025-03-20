@@ -31,7 +31,7 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
-import { K1_VALIDATOR_ADDRESS } from "../constants"
+import { K1_VALIDATOR_ADDRESS, MEE_VALIDATOR_ADDRESS } from "../constants"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -237,7 +237,7 @@ describe("nexus.client", async () => {
       nexusClient.isModuleInstalled({
         module: {
           type: "validator",
-          address: K1_VALIDATOR_ADDRESS,
+          address: MEE_VALIDATOR_ADDRESS,
           initData: "0x"
         }
       }),

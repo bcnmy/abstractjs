@@ -1,8 +1,5 @@
 import type { Chain, Client, Hash, Transport } from "viem"
-import type {
-  ModularSmartAccount,
-  Module
-} from "../../../../modules/utils/Types"
+import type { ModularSmartAccount } from "../../../../modules/utils/Types"
 import type {
   GrantPermissionResponse,
   PreparePermissionResponse
@@ -87,7 +84,7 @@ export type SmartSessionUseActions<
  * @param _ - Unused parameter (placeholder for potential future use).
  * @returns A function that takes a client and returns SmartSessionCreateActions.
  */
-export function smartSessionCreateActions(_: Module) {
+export function smartSessionCreateActions() {
   return <TModularSmartAccount extends ModularSmartAccount | undefined>(
     client: Client<Transport, Chain | undefined, TModularSmartAccount>
   ): SmartSessionCreateActions<TModularSmartAccount> => {

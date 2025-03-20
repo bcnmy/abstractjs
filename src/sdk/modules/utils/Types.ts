@@ -1,6 +1,7 @@
 import type { Address, Assign, Chain, Hex, SignableMessage } from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
 import type { NexusSmartAccountImplementation } from "../../account/toNexusAccount"
+import type { Validator } from "../validators/smartSessions/toSmartSessionsValidator"
 import type { Signer } from "./../../account/utils/toSigner"
 
 export type SignerData = {
@@ -109,7 +110,12 @@ export type BaseModule = Omit<ModuleParameters, "extend"> &
 export type Module<implementation extends ModuleParameters = ModuleParameters> =
   Assign<BaseModule, implementation["extend"]>
 
-export type ModularSmartAccount = SmartAccount<NexusSmartAccountImplementation>
+export type Modularity = {
+  getModule: () => Validator
+  setModule: (module: Validator) => void
+}
+export type ModularSmartAccount =
+  SmartAccount<NexusSmartAccountImplementation> & Modularity
 
 export type ModuleMeta = {
   address: Hex

@@ -184,9 +184,7 @@ export const getPermissionAction = async ({
       }
     }
 
-    const permissionId = getPermissionId({
-      session
-    })
+    const permissionId = getPermissionId({ session })
 
     // push permissionId to the array
     permissionIds.push(permissionId)

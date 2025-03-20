@@ -103,7 +103,7 @@ export const parseModule = <
 >(
   client: Client<Transport, chain, TModularSmartAccount>
 ): AnyData => {
-  const activeModule = client?.account?.module
+  const activeModule = client?.account?.getModule()
   if (!activeModule) {
     throw new Error(ERROR_MESSAGES.MODULE_NOT_ACTIVATED)
   }

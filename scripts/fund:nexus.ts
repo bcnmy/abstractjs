@@ -2,9 +2,6 @@ import dotenv from "dotenv"
 import {
   http,
   type Address,
-  type Chain,
-  type Hex,
-  type Transport,
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
@@ -15,240 +12,248 @@ import {
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { base, optimism } from "viem/chains"
-import { toMultichainNexusAccount, toNexusAccount } from "../src/sdk/account"
+import { toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 
 dotenv.config()
 
-type EnvVars = {
-  MAINNET_CHAIN_ID: number
-  PRIVATE_KEY: Hex
-  TESTNET_CHAIN_ID: number
-}
-const NATIVE_TOKEN_AMOUNT = parseEther("0.001")
-const USDC_TOKEN_AMOUNT = parseUnits("1", 6)
-const index = 0n
+// Configuration
+const NATIVE_TOKEN_AMOUNT = parseEther("0.0005")
+const USDC_TOKEN_AMOUNT = parseUnits("3", 6)
+const ACCOUNT_INDEX = 0n
 
 async function main() {
-  const { MAINNET_CHAIN_ID, PRIVATE_KEY, TESTNET_CHAIN_ID } = getEnvVars()
-  const mainnetUsdc = mcUSDC.addressOn(+MAINNET_CHAIN_ID)
-  const chain = getChain(MAINNET_CHAIN_ID)
-  const testnetChain = getChain(TESTNET_CHAIN_ID)
+  // Get chain IDs from command line arguments
+  const chainIds = process.argv
+    .slice(2)
+    .map((arg) => Number.parseInt(arg))
+    .filter((id) => !Number.isNaN(id))
+
+  if (chainIds.length === 0) {
+    console.error(
+      "Please provide at least one chain ID as a command line argument"
+    )
+    console.error("Example: bun run fund:nexus 10 420 84531")
+    process.exit(1)
+  }
+
+  // Get environment variables
+  const { PRIVATE_KEY } = getEnvVars()
   const account = privateKeyToAccount(PRIVATE_KEY)
 
-  // Check balances
   console.log("\n=== Master Account ===")
   console.log(`Address: ${account.address}`)
-  const [masterNativeBalance, masterUsdcBalance] = await getBalances(
-    { chainId: MAINNET_CHAIN_ID, tokenAddress: mainnetUsdc },
-    account.address
-  )
 
-  console.log(`Network: ${chain.name}`)
-  console.log(`Native Token Balance: ${formatEther(masterNativeBalance)} ETH`)
-  console.log(`USDC Balance: ${formatUnits(masterUsdcBalance, 6)} USDC`)
-
-  if (masterNativeBalance < NATIVE_TOKEN_AMOUNT) {
-    throw new Error("Native token balance is less than 0.001 ETH")
-  }
-  if (masterUsdcBalance < USDC_TOKEN_AMOUNT) {
-    throw new Error("USDC balance is less than 1 USDC")
-  }
-
-  console.log("\n=== MEE Nexus Account ===")
-  const chains = [optimism, base]
-  const transports: Transport[] = [http(), http()]
-
-  const mcNexus = await toMultichainNexusAccount({
-    signer: account,
-    chains,
-    transports,
-    index
-  })
-
-  const mcNexusAddress = await mcNexus
-    .deploymentOn(optimism.id, true)
-    .getAddress()
-
-  console.log(`Address: ${mcNexusAddress}`)
-  console.log(`Network: ${optimism.name}`)
-
-  const [meeNexusNativeBalance, usdcNexusBalance] = await getBalances(
-    { chainId: MAINNET_CHAIN_ID, tokenAddress: mainnetUsdc },
-    mcNexusAddress
-  )
-
-  console.log(`Native Token Balance: ${formatEther(meeNexusNativeBalance)} ETH`)
-  console.log(`USDC Balance: ${formatUnits(usdcNexusBalance, 6)} USDC`)
-
-  const masterClient = createWalletClient({
-    account,
-    transport: http(),
-    chain: optimism
-  }).extend(publicActions)
-
-  if (meeNexusNativeBalance >= NATIVE_TOKEN_AMOUNT) {
-    console.log(
-      `MEE Nexus (${mcNexusAddress}) Native Token Balance already funded`
-    )
-  } else {
-    const nativeTx = await masterClient.sendTransaction({
-      to: mcNexusAddress,
-      value: NATIVE_TOKEN_AMOUNT
-    })
-
-    const nativeTxReceipt = await masterClient.waitForTransactionReceipt({
-      hash: nativeTx
-    })
-    console.log("Native Transaction:", nativeTxReceipt.transactionHash)
-  }
-
-  if (usdcNexusBalance >= USDC_TOKEN_AMOUNT) {
-    console.log(`MEE Nexus (${mcNexusAddress}) USDC Balance already funded`)
-  } else {
-    const usdcTx = await masterClient.sendTransaction({
-      to: mainnetUsdc,
-      data: encodeFunctionData({
-        abi: TokenWithPermitAbi,
-        functionName: "transfer",
-        args: [mcNexusAddress, USDC_TOKEN_AMOUNT]
-      })
-    })
-
-    const usdcTxReceipt = await masterClient.waitForTransactionReceipt({
-      hash: usdcTx
-    })
-    console.log("USDC Transaction:", usdcTxReceipt.transactionHash)
-  }
-
-  console.log("\n=== Vanilla Nexus Account ===")
-  const testnetClient = createWalletClient({
-    account,
-    transport: http(),
-    chain: testnetChain
-  }).extend(publicActions)
-
-  const vanillaNexus = await toNexusAccount({
-    chain: testnetChain,
-    signer: account,
-    transport: http(),
-    index
-  })
-
-  const vanillaNexusAddress = await vanillaNexus.getAddress()
-  const testnetUsdc = testnetMcUSDC.addressOn(TESTNET_CHAIN_ID)
-
-  console.log(`Address: ${vanillaNexusAddress}`)
-  console.log(`Network: ${testnetChain.name}`)
-
-  console.log(
-    "Vanilla Nexus Address:",
-    vanillaNexusAddress,
-    "on testnet chain",
-    testnetChain.name
-  )
-
-  const [vanillaNexusNativeBalance, vanillaNexusUsdcBalance] =
-    await getBalances(
-      {
-        chainId: TESTNET_CHAIN_ID,
-        tokenAddress: testnetUsdc
-      },
-      vanillaNexusAddress
-    )
-
-  console.log(
-    `Native Token Balance: ${formatEther(vanillaNexusNativeBalance)} ETH`
-  )
-  console.log(`USDC Balance: ${formatUnits(vanillaNexusUsdcBalance, 6)} USDC`)
-
-  if (vanillaNexusNativeBalance >= NATIVE_TOKEN_AMOUNT) {
-    console.log(
-      `Vanilla Nexus Native Token Balance already funded on testnet chain ${testnetChain.name}`
-    )
-  } else {
-    const nativeTx = await testnetClient.sendTransaction({
-      to: vanillaNexusAddress,
-      value: NATIVE_TOKEN_AMOUNT
-    })
-    const vanillaNexusUsdcTxReceipt =
-      await testnetClient.waitForTransactionReceipt({
-        hash: nativeTx
-      })
-    console.log(
-      `Vanilla Nexus USDC Transaction on testnet chain ${testnetChain.name}:`,
-      vanillaNexusUsdcTxReceipt.transactionHash
-    )
-  }
-
-  if (vanillaNexusUsdcBalance >= USDC_TOKEN_AMOUNT) {
-    console.log(
-      `Vanilla Nexus USDC Balance already funded on testnet chain ${testnetChain.name}`
-    )
-  } else {
-    const vanillaNexusUsdcTx = await testnetClient.sendTransaction({
-      to: testnetUsdc,
-      data: encodeFunctionData({
-        abi: TokenWithPermitAbi,
-        functionName: "transfer",
-        args: [vanillaNexusAddress, USDC_TOKEN_AMOUNT]
-      })
-    })
-    const vanillaNexusUsdcTxReceipt =
-      await testnetClient.waitForTransactionReceipt({
-        hash: vanillaNexusUsdcTx
-      })
-    console.log(
-      "Vanilla Nexus USDC Transaction:",
-      vanillaNexusUsdcTxReceipt.transactionHash
-    )
+  // Process each chain ID
+  for (const chainId of chainIds) {
+    await processChain(chainId, account)
   }
 }
 
+async function processChain(
+  chainId: number,
+  account: ReturnType<typeof privateKeyToAccount>
+) {
+  try {
+    const chain = getChain(chainId)
+    console.log(`\n=== Processing Chain: ${chain.name} (${chainId}) ===`)
+
+    // Determine if this is a testnet or mainnet
+    const isTestnet = isTestnetChain(chainId)
+
+    // Get the appropriate USDC address
+    const usdcAddress = isTestnet
+      ? testnetMcUSDC.addressOn(chainId)
+      : mcUSDC.addressOn(chainId)
+
+    if (!usdcAddress) {
+      console.warn(
+        `No USDC token address found for chain ${chainId}. Skipping USDC funding.`
+      )
+    }
+
+    // Check master account balances
+    const [masterNativeBalance, masterUsdcBalance] = await getBalances(
+      { chainId, tokenAddress: usdcAddress },
+      account.address
+    )
+
+    console.log(
+      `Master Native Token Balance: ${formatEther(masterNativeBalance)} ETH`
+    )
+    if (usdcAddress) {
+      console.log(
+        `Master USDC Balance: ${formatUnits(masterUsdcBalance, 6)} USDC`
+      )
+    }
+
+    // Create the Nexus account for this chain
+    const nexus = await toNexusAccount({
+      chain,
+      signer: account,
+      transport: http(),
+      index: ACCOUNT_INDEX
+    })
+
+    const nexusAddress = await nexus.getAddress()
+    console.log(`Nexus Account Address: ${nexusAddress}`)
+
+    // Check Nexus account balances
+    const [nexusNativeBalance, nexusUsdcBalance] = await getBalances(
+      { chainId, tokenAddress: usdcAddress },
+      nexusAddress
+    )
+
+    console.log(
+      `Nexus Native Token Balance: ${formatEther(nexusNativeBalance)} ETH`
+    )
+    if (usdcAddress) {
+      console.log(
+        `Nexus USDC Balance: ${formatUnits(nexusUsdcBalance, 6)} USDC`
+      )
+    }
+
+    // Create wallet client for this chain
+    const walletClient = createWalletClient({
+      account,
+      transport: http(),
+      chain
+    }).extend(publicActions)
+
+    // Fund with native token if needed
+    if (nexusNativeBalance < NATIVE_TOKEN_AMOUNT) {
+      if (masterNativeBalance < NATIVE_TOKEN_AMOUNT) {
+        console.warn(
+          `Insufficient master account balance to fund native token on ${chain.name}`
+        )
+      } else {
+        console.log(
+          `Funding Nexus account with native token on ${chain.name}...`
+        )
+        const nativeTx = await walletClient.sendTransaction({
+          to: nexusAddress,
+          value: NATIVE_TOKEN_AMOUNT
+        })
+
+        const nativeTxReceipt = await walletClient.waitForTransactionReceipt({
+          hash: nativeTx
+        })
+        console.log(`Native Transaction: ${nativeTxReceipt.transactionHash}`)
+      }
+    } else {
+      console.log(
+        `Nexus account already has sufficient native token on ${chain.name}`
+      )
+    }
+
+    // Fund with USDC if needed
+    if (usdcAddress && nexusUsdcBalance < USDC_TOKEN_AMOUNT) {
+      if (masterUsdcBalance < USDC_TOKEN_AMOUNT) {
+        console.warn(
+          `Insufficient master account USDC balance on ${chain.name}`
+        )
+      } else {
+        console.log(`Funding Nexus account with USDC on ${chain.name}...`)
+        const usdcTx = await walletClient.sendTransaction({
+          to: usdcAddress,
+          data: encodeFunctionData({
+            abi: TokenWithPermitAbi,
+            functionName: "transfer",
+            args: [nexusAddress, USDC_TOKEN_AMOUNT]
+          })
+        })
+
+        const usdcTxReceipt = await walletClient.waitForTransactionReceipt({
+          hash: usdcTx
+        })
+        console.log(`USDC Transaction: ${usdcTxReceipt.transactionHash}`)
+      }
+    } else if (usdcAddress) {
+      console.log(`Nexus account already has sufficient USDC on ${chain.name}`)
+    }
+
+    console.log(`\n✅ Completed processing for ${chain.name} (${chainId})`)
+  } catch (error) {
+    console.error(`❌ Error processing chain ${chainId}:`, error)
+  }
+}
+
+/**
+ * Checks if a chain ID belongs to a testnet
+ */
+function isTestnetChain(chainId: number): boolean {
+  // List of common testnet chain IDs
+  const testnetChains = [
+    5, // Goerli
+    420, // Optimism Goerli
+    80001, // Polygon Mumbai
+    84531, // Base Goerli
+    84532, // Base Sepolia
+    421613, // Arbitrum Goerli
+    421614, // Arbitrum Sepolia
+    11155111 // Sepolia
+  ]
+  return testnetChains.includes(chainId)
+}
+
+/**
+ * Get token balances for an address on a specific chain
+ */
 const getBalances = async (
-  envVars: {
+  params: {
     chainId: number
     tokenAddress: Address
   },
   address: Address
 ): Promise<[bigint, bigint]> => {
-  const chain = getChain(envVars.chainId)
+  const chain = getChain(params.chainId)
   const publicClient = createPublicClient({ transport: http(), chain })
-  return await Promise.all([
-    publicClient.getBalance({
-      address: address
-    }),
-    publicClient.readContract({
-      address: envVars.tokenAddress,
-      abi: TokenWithPermitAbi,
-      functionName: "balanceOf",
-      args: [address]
-    })
-  ])
+
+  // Get native token balance
+  const nativeBalance = await publicClient.getBalance({
+    address: address
+  })
+
+  // Get USDC balance if token address is available
+  let tokenBalance = 0n
+  if (params.tokenAddress) {
+    try {
+      tokenBalance = await publicClient.readContract({
+        address: params.tokenAddress,
+        abi: TokenWithPermitAbi,
+        functionName: "balanceOf",
+        args: [address]
+      })
+    } catch (error) {
+      console.warn(
+        `Failed to get token balance for ${params.tokenAddress} on chain ${params.chainId}`
+      )
+    }
+  }
+
+  return [nativeBalance, tokenBalance]
 }
 
-const getEnvVars = (): EnvVars => {
-  const MAINNET_CHAIN_ID = process.env.MAINNET_CHAIN_ID
+/**
+ * Get environment variables
+ */
+const getEnvVars = () => {
   const PRIVATE_KEY = process.env.PRIVATE_KEY
-  const TESTNET_CHAIN_ID = process.env.TESTNET_CHAIN_ID
-  if (!MAINNET_CHAIN_ID || !PRIVATE_KEY || !TESTNET_CHAIN_ID) {
-    throw new Error(
-      "MAINNET_CHAIN_ID or PRIVATE_KEY or TESTNET_CHAIN_ID is not set"
-    )
+  if (!PRIVATE_KEY) {
+    throw new Error("PRIVATE_KEY is not set in environment variables")
   }
   return {
-    MAINNET_CHAIN_ID: Number(MAINNET_CHAIN_ID),
-    PRIVATE_KEY: `0x${PRIVATE_KEY}`,
-    TESTNET_CHAIN_ID: Number(TESTNET_CHAIN_ID)
+    PRIVATE_KEY: (PRIVATE_KEY.startsWith("0x")
+      ? PRIVATE_KEY
+      : `0x${PRIVATE_KEY}`) as `0x${string}`
   }
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error)
+    console.error("Fatal error:", error)
     process.exit(1)
   })

@@ -26,7 +26,6 @@ import {
   encodePacked,
   getContract,
   keccak256,
-  pad,
   parseAbi,
   parseAbiParameters,
   publicActions,
@@ -44,19 +43,19 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 
-import {
-  ENTRY_POINT_ADDRESS,
-  LATEST_DEFAULT_ADDRESSES,
-  REGISTRY_ADDRESS
-} from "../constants"
+import { ENTRY_POINT_ADDRESS, LATEST_DEFAULT_ADDRESSES } from "../constants"
 // Constants
-import { EntrypointAbi, NexusBootstrapAbi } from "../constants/abi"
+import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
 import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import type { Module } from "../modules/utils/Types"
 import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
-import { getNexusAddress } from "./decorators/getNexusAddress"
+import type { Validator } from "../modules/validators/smartSessions/toSmartSessionsValidator"
+import {
+  getInitData,
+  getUniversalFactoryData
+} from "./decorators/getFactoryData"
+import { getUniversalNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -117,7 +116,7 @@ export type ToNexusSmartAccountParameters = {
   /** Optional attestors threshold for the account */
   attesterThreshold?: number
   /** Optional validator modules configuration */
-  validators?: Array<Module>
+  validators?: Array<Validator>
   /** Optional executor modules configuration */
   executors?: Array<GenericModuleConfig>
   /** Optional hook module configuration */
@@ -128,8 +127,6 @@ export type ToNexusSmartAccountParameters = {
   registryAddress?: Address
   /** Optional factory address */
   factoryAddress?: Address
-  /** @deprecated */
-  useK1Config?: boolean
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -195,8 +192,11 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     /** The blockchain network */
     chain: Chain
 
-    /** The active module */
-    module: Module
+    /** Get the active module */
+    getModule: () => Validator
+
+    /** Set the active module */
+    setModule: (validationModule: Validator) => void
   }
 >
 
@@ -227,16 +227,15 @@ export const toNexusAccount = async (
     index = 0n,
     key = "nexus account",
     name = "Nexus Account",
-    attesterThreshold = 1,
-    attesters = LATEST_DEFAULT_ADDRESSES.attesters,
-    registryAddress = REGISTRY_ADDRESS,
+    attesterThreshold = 0,
+    attesters = [],
+    registryAddress = zeroAddress,
     validators: customValidators,
     executors: customExecutors,
     hook: customHook,
     fallbacks: customFallbacks,
     factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
-    accountAddress: accountAddress_,
-    useK1Config = true
+    accountAddress: accountAddress_
   } = parameters
 
   // @ts-ignore
@@ -248,7 +247,6 @@ export const toNexusAccount = async (
     key,
     name
   }).extend(publicActions)
-  const signerAddress = signer.address
   const publicClient = createPublicClient({ chain, transport })
 
   const entryPointContract = getContract({
@@ -262,7 +260,7 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   const validators = customValidators || [toMeeValidator({ signer })]
-  const [module] = validators
+  let [module] = validators
 
   // Prepare executor modules
   const executors = customExecutors || [toComposableExecutor()]
@@ -273,48 +271,27 @@ export const toNexusAccount = async (
   // Prepare fallback modules
   const fallbacks = customFallbacks || [toComposableFallback()]
 
-  // Format modules to ensure they have the correct structure (module and data properties)
+  // Generate the initialization data for the account using the initNexus function
+  const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
+
   const formattedValidators = formatModules(validators)
   const formattedExecutors = formatModules(executors)
   const formattedHook = formatModules([hook])[0]
   const formattedFallbacks = formatModules(fallbacks)
 
-  // Generate the salt for deterministic deployment
-  const salt = pad(toHex(index), { size: 32 })
-
-  // Generate the initialization data for the account using the initNexus function
-  const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
-
-  const bootstrapInitData = encodeFunctionData({
-    abi: NexusBootstrapAbi,
-    functionName: "initNexus",
-    args: [
-      formattedValidators,
-      formattedExecutors,
-      formattedHook,
-      formattedFallbacks,
-      registryAddress,
-      attesters,
-      attesterThreshold
-    ]
+  const initData = getInitData({
+    validators: formattedValidators,
+    executors: formattedExecutors,
+    hook: formattedHook,
+    fallbacks: formattedFallbacks,
+    registryAddress,
+    attesters,
+    attesterThreshold,
+    bootStrapAddress
   })
-
-  const initData = encodeAbiParameters(
-    [
-      { name: "bootstrap", type: "address" },
-      { name: "initData", type: "bytes" }
-    ],
-    [bootStrapAddress, bootstrapInitData]
-  )
 
   // Generate the factory data with the bootstrap address and init data
-  const factoryData = encodeFunctionData({
-    abi: parseAbi([
-      "function createAccount(bytes initData, bytes32 salt) external returns (address)"
-    ]),
-    functionName: "createAccount",
-    args: [initData, salt]
-  })
+  const factoryData = getUniversalFactoryData({ initData, index })
 
   /**
    * @description Gets the init code for the account
@@ -331,15 +308,11 @@ export const toNexusAccount = async (
   const getCounterFactualAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = await getNexusAddress({
+    const addressFromFactory = await getUniversalNexusAddress({
       factoryAddress,
       index,
       initData,
-      useK1Config,
-      publicClient,
-      signerAddress,
-      attesters,
-      threshold: attesterThreshold
+      publicClient
     })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
@@ -579,6 +552,15 @@ export const toNexusAccount = async (
     return signature
   }
 
+  /**
+   * @description Changes the active module for the account
+   * @param module - The new module to set as active
+   * @returns void
+   */
+  const setModule = (validationModule: Validator) => {
+    module = validationModule
+  }
+
   return toSmartAccount({
     client: walletClient,
     entryPoint: {
@@ -634,11 +616,12 @@ export const toNexusAccount = async (
       factoryAddress,
       registryAddress,
       signer,
-      module,
       walletClient,
       publicClient,
       attesters,
-      chain
+      chain,
+      setModule,
+      getModule: () => module
     }
   })
 }

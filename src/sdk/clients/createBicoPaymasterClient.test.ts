@@ -156,9 +156,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     })
     const nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      paymaster: createBicoPaymasterClient({
-        transport: http(paymasterUrl)
-      }),
+      paymaster: createBicoPaymasterClient({ transport: http(paymasterUrl) }),
       paymasterContext,
       transport: http(bundlerUrl)
     })
@@ -247,6 +245,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
         }
       ]
     })
+
     const quote = await paymaster.getTokenPaymasterQuotes({ userOp, tokenList })
     expect(quote.mode).toBe("ERC20")
     expect(quote.paymasterAddress).toBe(BICONOMY_TOKEN_PAYMASTER)
@@ -333,9 +332,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
 
     const nexusClient = createSmartAccountClient({
       account: nexusAccount,
-      paymaster: createBicoPaymasterClient({
-        transport: http(paymasterUrl)
-      }),
+      paymaster: createBicoPaymasterClient({ transport: http(paymasterUrl) }),
       paymasterContext,
       transport: http(bundlerUrl)
     })
