@@ -309,7 +309,7 @@ describe("modules.smartSessions.uni.policy", async () => {
     })
 
     const useSmartSessionNexusClient = smartSessionNexusClient.extend(
-      smartSessionUseActions(usePermissionsModule)
+      smartSessionUseActions()
     )
 
     const userOpHash = await useSmartSessionNexusClient.usePermission({

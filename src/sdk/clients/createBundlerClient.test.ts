@@ -103,10 +103,7 @@ describe.each(COMPETITORS)(
       nexusAccount = await toNexusAccount({
         signer: account,
         chain,
-        transport: http(),
-        // You can omit this outside of a testing context
-        validatorAddress: K1_VALIDATOR_ADDRESS,
-        factoryAddress: K1_VALIDATOR_FACTORY_ADDRESS
+        transport: http()
       })
 
       nexusAccountAddress = await nexusAccount.getCounterFactualAddress()

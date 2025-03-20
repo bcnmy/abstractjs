@@ -206,9 +206,7 @@ describe("nexus.session.client", async () => {
       moduleData: sessionData.moduleData
     })
 
-    const useSmartSessionNexusClient = smartSessionNexusClient.extend(
-      smartSessionUseActions(usePermissionsModule)
-    )
+    const useSmartSessionNexusClient = smartSessionNexusClient.extend(smartSessionUseActions())
 
     const userOpHash = await useSmartSessionNexusClient.usePermission({
       calls: [
@@ -262,9 +260,7 @@ describe("nexus.session.client", async () => {
       mock: true
     })
 
-    const useSmartSessionNexusClient = smartSessionNexusClient.extend(
-      smartSessionUseActions(usePermissionsModule)
-    )
+    const useSmartSessionNexusClient = smartSessionNexusClient.extend(smartSessionUseActions())
 
     const isEnabled = await isSessionEnabled({
       client: testClient as unknown as PublicClient,

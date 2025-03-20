@@ -26,7 +26,6 @@ import {
   encodePacked,
   getContract,
   keccak256,
-  pad,
   parseAbi,
   parseAbiParameters,
   publicActions,
@@ -50,13 +49,13 @@ import {
   REGISTRY_ADDRESS
 } from "../constants"
 // Constants
-import { EntrypointAbi, NexusBootstrapAbi } from "../constants/abi"
+import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
 import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type { Module } from "../modules/utils/Types"
 import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
-import { getNexusAddress } from "./decorators/getNexusAddress"
+import { getUniversalNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -77,6 +76,7 @@ import {
 } from "./utils/Utils"
 import { formatModules } from "./utils/formatModules"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
+import { getInitData, getUniversalFactoryData } from "./decorators/getFactoryData"
 
 /**
  * Base module configuration type
@@ -236,7 +236,6 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
     accountAddress: accountAddress_,
-    useK1Config = true
   } = parameters
 
   // @ts-ignore
@@ -248,7 +247,6 @@ export const toNexusAccount = async (
     key,
     name
   }).extend(publicActions)
-  const signerAddress = signer.address
   const publicClient = createPublicClient({ chain, transport })
 
   const entryPointContract = getContract({
@@ -273,48 +271,22 @@ export const toNexusAccount = async (
   // Prepare fallback modules
   const fallbacks = customFallbacks || [toComposableFallback()]
 
-  // Format modules to ensure they have the correct structure (module and data properties)
-  const formattedValidators = formatModules(validators)
-  const formattedExecutors = formatModules(executors)
-  const formattedHook = formatModules([hook])[0]
-  const formattedFallbacks = formatModules(fallbacks)
-
-  // Generate the salt for deterministic deployment
-  const salt = pad(toHex(index), { size: 32 })
-
   // Generate the initialization data for the account using the initNexus function
   const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
 
-  const bootstrapInitData = encodeFunctionData({
-    abi: NexusBootstrapAbi,
-    functionName: "initNexus",
-    args: [
-      formattedValidators,
-      formattedExecutors,
-      formattedHook,
-      formattedFallbacks,
-      registryAddress,
-      attesters,
-      attesterThreshold
-    ]
+  const initData = getInitData({
+    validators: formatModules(validators),
+    executors: formatModules(executors),
+    hook: formatModules([hook])[0],
+    fallbacks: formatModules(fallbacks),
+    registryAddress,
+    attesters,
+    attesterThreshold,
+    bootStrapAddress
   })
-
-  const initData = encodeAbiParameters(
-    [
-      { name: "bootstrap", type: "address" },
-      { name: "initData", type: "bytes" }
-    ],
-    [bootStrapAddress, bootstrapInitData]
-  )
 
   // Generate the factory data with the bootstrap address and init data
-  const factoryData = encodeFunctionData({
-    abi: parseAbi([
-      "function createAccount(bytes initData, bytes32 salt) external returns (address)"
-    ]),
-    functionName: "createAccount",
-    args: [initData, salt]
-  })
+  const factoryData = getUniversalFactoryData({ initData, index })
 
   /**
    * @description Gets the init code for the account
@@ -331,15 +303,11 @@ export const toNexusAccount = async (
   const getCounterFactualAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = await getNexusAddress({
+    const addressFromFactory = await getUniversalNexusAddress({
       factoryAddress,
       index,
       initData,
-      useK1Config,
       publicClient,
-      signerAddress,
-      attesters,
-      threshold: attesterThreshold
     })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
