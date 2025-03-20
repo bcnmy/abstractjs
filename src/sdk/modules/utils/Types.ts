@@ -1,4 +1,4 @@
-import type { Address, Assign, Chain, Hex, SignableMessage } from "viem"
+import type { Address, Chain, Hex, SignableMessage } from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
 import type { NexusSmartAccountImplementation } from "../../account/toNexusAccount"
 import type { Signer } from "./../../account/utils/toSigner"
@@ -105,9 +105,6 @@ export type BaseModule = Omit<ModuleParameters, "extend"> &
     /** Type of module. */
     type: ModuleType
   }
-
-export type Module<implementation extends ModuleParameters = ModuleParameters> =
-  Assign<BaseModule, implementation["extend"]>
 
 export type ModularSmartAccount = SmartAccount<NexusSmartAccountImplementation>
 

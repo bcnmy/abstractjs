@@ -42,6 +42,8 @@ describe("mee.createMeeClient", async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
     ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
+    console.log({ paymentChain, targetChain })
+
     eoaAccount = network.account!
 
     feeToken = {

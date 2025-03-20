@@ -1,13 +1,14 @@
 import type { Address, Hex } from "viem"
-import type { Module } from "../../modules/utils/Types"
-
+import type { GenericModuleConfig } from "../toNexusAccount"
 /**
  * Formats modules to ensure they have the correct structure for the contract
  * @param modules Array of modules to format
  * @returns Formatted modules with module and data properties
  */
 export const formatModules = (
-  modules: Array<Module | { module: Address; data?: Hex; initData?: Hex }>
+  modules: Array<
+    GenericModuleConfig | { module: Address; data?: Hex; initData?: Hex }
+  >
 ): Array<{ module: Address; data: Hex }> =>
   modules.map((mod) => ({
     module: mod.module,

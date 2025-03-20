@@ -53,8 +53,12 @@ import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
 import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import type { Module } from "../modules/utils/Types"
 import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
+import type { Validator } from "../modules/validators/types"
+import {
+  getInitData,
+  getUniversalFactoryData
+} from "./decorators/getFactoryData"
 import { getUniversalNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
@@ -76,7 +80,6 @@ import {
 } from "./utils/Utils"
 import { formatModules } from "./utils/formatModules"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
-import { getInitData, getUniversalFactoryData } from "./decorators/getFactoryData"
 
 /**
  * Base module configuration type
@@ -117,7 +120,7 @@ export type ToNexusSmartAccountParameters = {
   /** Optional attestors threshold for the account */
   attesterThreshold?: number
   /** Optional validator modules configuration */
-  validators?: Array<Module>
+  validators?: Array<Validator>
   /** Optional executor modules configuration */
   executors?: Array<GenericModuleConfig>
   /** Optional hook module configuration */
@@ -128,8 +131,6 @@ export type ToNexusSmartAccountParameters = {
   registryAddress?: Address
   /** Optional factory address */
   factoryAddress?: Address
-  /** @deprecated */
-  useK1Config?: boolean
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -196,7 +197,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     chain: Chain
 
     /** The active module */
-    module: Module
+    module: Validator
   }
 >
 
@@ -235,7 +236,7 @@ export const toNexusAccount = async (
     hook: customHook,
     fallbacks: customFallbacks,
     factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
-    accountAddress: accountAddress_,
+    accountAddress: accountAddress_
   } = parameters
 
   // @ts-ignore
@@ -307,7 +308,7 @@ export const toNexusAccount = async (
       factoryAddress,
       index,
       initData,
-      publicClient,
+      publicClient
     })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {

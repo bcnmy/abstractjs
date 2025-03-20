@@ -190,9 +190,7 @@ export async function toMultichainNexusAccount(
         signer: unresolvedSigner,
         transport: transports[i],
         attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-        factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
-        ...accountParameters,
-        useK1Config: false
+        ...accountParameters
       })
     )
   )

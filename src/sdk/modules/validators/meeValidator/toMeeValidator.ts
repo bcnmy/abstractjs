@@ -1,24 +1,31 @@
-import { type Hex, concatHex } from "viem"
+import {
+  type Hex,
+  type RequiredBy,
+  type SignableMessage,
+  concatHex
+} from "viem"
 import { MEE_VALIDATOR_ADDRESS } from "../../../constants"
 
-import type { Module, ModuleParameters } from "../../../modules/utils/Types"
+import type { Signer } from "../../../account/utils/toSigner"
 import { toValidator } from "../../../modules/validators/toValidator"
 import { DUMMY_SIGNATURE } from "../k1Validator"
+import type { ValidatorParameters } from "../types"
 
-export const toMeeValidator = (
-  parameters: Omit<ModuleParameters, "address">
-): Module =>
+export type MeeValidatorParameters = RequiredBy<ValidatorParameters, "signer">
+export const toMeeValidator = ({ signer }: { signer: Signer }) =>
   toValidator({
-    ...parameters,
-    address: MEE_VALIDATOR_ADDRESS,
-    type: "validator",
-    data: parameters.signer.address,
-    deInitData: "0x",
+    signer: signer,
+    module: MEE_VALIDATOR_ADDRESS,
+    initData: signer.address,
     getStubSignature: async () => concatHex(["0xff", DUMMY_SIGNATURE]),
     signUserOpHash: async (userOpHash: Hex) => {
-      const signature = await parameters.signer.signMessage({
-        message: { raw: userOpHash as Hex }
+      const signature = await signer.signMessage({
+        message: { raw: userOpHash }
       })
+      return concatHex(["0xff", signature])
+    },
+    signMessage: async (message: SignableMessage) => {
+      const signature = await signer.signMessage({ message })
       return concatHex(["0xff", signature])
     }
   })

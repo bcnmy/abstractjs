@@ -53,10 +53,8 @@ describe("modules.toValidator", async () => {
         "data": "0x",
         "deInitData": "0x",
         "getStubSignature": [Function],
-        "initArgs": {},
         "initData": "0x",
-        "module": "0x0000000000000000000000000000000000000000",
-        "moduleInitArgs": "0x",
+        "module": undefined,
         "moduleInitData": {
           "address": "0x0000000000000000000000000000000000000000",
           "initData": "0x",

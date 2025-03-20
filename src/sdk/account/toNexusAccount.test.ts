@@ -85,25 +85,26 @@ describe("nexus.account", async () => {
     walletClient = createWalletClient({
       account: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
-      mock: true,
       account: nexusAccount,
-      transport: http(bundlerUrl)
+      transport: http(bundlerUrl),
+      mock: true
     })
 
     nexusAccount = nexusClient.account
     nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
     await fundAndDeployClients(testClient, [nexusClient])
   })
+
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
@@ -274,7 +275,7 @@ describe("nexus.account", async () => {
       contents: keccak256(toBytes("test", { size: 32 }))
     }
     const domainSeparator = await testClient.readContract({
-      address: await nexusAccount.getAddress(),
+      address: nexusAccountAddress,
       abi: parseAbi([
         "function DOMAIN_SEPARATOR() external view returns (bytes32)"
       ]),
@@ -339,106 +340,7 @@ describe("nexus.account", async () => {
     expect(contractResponse).toBe(eip1271MagicValue)
   })
 
-  test.skip("should sign using signTypedData SDK method", async () => {
-    const appDomain = {
-      chainId: chain.id,
-      name: "TokenWithPermit",
-      verifyingContract: TOKEN_WITH_PERMIT as Address,
-      version: "1"
-    }
-
-    const primaryType = "Contents"
-    const types = {
-      Contents: [
-        {
-          name: "stuff",
-          type: "bytes32"
-        }
-      ]
-    }
-
-    const permitTypehash = keccak256(
-      toBytes(
-        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-      )
-    )
-    const nonce = (await testClient.readContract({
-      address: TOKEN_WITH_PERMIT as Address,
-      abi: TokenWithPermitAbi,
-      functionName: "nonces",
-      args: [nexusAccountAddress]
-    })) as bigint
-
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600) // 1 hour from now
-
-    const message = {
-      stuff: keccak256(
-        encodeAbiParameters(
-          parseAbiParameters(
-            "bytes32, address, address, uint256, uint256, uint256"
-          ),
-          [
-            permitTypehash,
-            nexusAccountAddress,
-            nexusAccountAddress,
-            parseEther("2"),
-            nonce,
-            deadline
-          ]
-        )
-      )
-    }
-
-    const appDomainSeparator = domainSeparator({ domain: appDomain })
-
-    const contentsHash = keccak256(
-      concat(["0x1901", appDomainSeparator, message.stuff])
-    )
-
-    const finalSignature = await nexusClient.signTypedData({
-      domain: appDomain,
-      primaryType,
-      types,
-      message
-    })
-
-    const nexusResponse = await testClient.readContract({
-      address: nexusAccountAddress,
-      abi: parseAbi([
-        "function isValidSignature(bytes32,bytes) external view returns (bytes4)"
-      ]),
-      functionName: "isValidSignature",
-      args: [contentsHash, finalSignature]
-    })
-
-    const permitTokenResponse = await nexusClient.writeContract({
-      address: TOKEN_WITH_PERMIT as Address,
-      abi: TokenWithPermitAbi,
-      functionName: "permitWith1271",
-      chain: network.chain,
-      args: [
-        nexusAccountAddress,
-        nexusAccountAddress,
-        parseEther("2"),
-        deadline,
-        finalSignature
-      ]
-    })
-
-    await nexusClient.waitForTransactionReceipt({ hash: permitTokenResponse })
-
-    const allowance = await testClient.readContract({
-      address: TOKEN_WITH_PERMIT as Address,
-      abi: TokenWithPermitAbi,
-      functionName: "allowance",
-      args: [nexusAccountAddress, nexusAccountAddress]
-    })
-
-    expect(allowance).toEqual(parseEther("2"))
-    expect(nexusResponse).toEqual("0x1626ba7e")
-  })
-
-  test.skip("check that ethers makeNonceKey creates the same key as the SDK", async () => {
+  test("check that ethers makeNonceKey creates the same key as the SDK", async () => {
     function makeNonceKey(
       vMode: BytesLike,
       validator: Hex,

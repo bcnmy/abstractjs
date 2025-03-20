@@ -10,7 +10,6 @@ import {
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import type { GenericModuleConfig } from "../toNexusAccount"
 
-
 export type GetUniversalFactoryDataParams = {
   /** Hex string of the validator init data */
   initData: Hex
@@ -49,22 +48,26 @@ export type GetInitDataParams = {
   bootStrapAddress: Address
 }
 
-export const getInitData = (params: GetInitDataParams): Hex => encodeAbiParameters(
-  [
-    { name: "bootstrap", type: "address" },
-    { name: "initData", type: "bytes" }
-  ],
-  [params.bootStrapAddress, encodeFunctionData({
-    abi: NexusBootstrapAbi,
-    functionName: "initNexus",
-    args: [
-      params.validators,
-      params.executors,
-      params.hook,
-      params.fallbacks,
-      params.registryAddress,
-      params.attesters,
-      params.attesterThreshold
+export const getInitData = (params: GetInitDataParams): Hex =>
+  encodeAbiParameters(
+    [
+      { name: "bootstrap", type: "address" },
+      { name: "initData", type: "bytes" }
+    ],
+    [
+      params.bootStrapAddress,
+      encodeFunctionData({
+        abi: NexusBootstrapAbi,
+        functionName: "initNexus",
+        args: [
+          params.validators,
+          params.executors,
+          params.hook,
+          params.fallbacks,
+          params.registryAddress,
+          params.attesters,
+          params.attesterThreshold
+        ]
+      })
     ]
-  })]
-)
+  )

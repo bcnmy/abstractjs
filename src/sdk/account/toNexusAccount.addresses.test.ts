@@ -2,10 +2,13 @@ import {
   http,
   type Address,
   type Chain,
+  type Hex,
   type LocalAccount,
   type PublicClient,
   type WalletClient,
   createWalletClient,
+  encodeAbiParameters,
+  encodeFunctionData,
   isHex
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
@@ -20,10 +23,18 @@ import {
 } from "../clients/createBicoBundlerClient"
 import {
   BICONOMY_ATTESTER_ADDRESS,
+  K1_VALIDATOR_FACTORY_ADDRESS,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY_ADDRESS,
+  NEXUS_BOOTSTRAP_ADDRESS,
+  NexusBootstrapAbi,
+  REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "../constants"
+import { toComposableExecutor } from "../modules/toComposableExecutor"
+import { toComposableFallback } from "../modules/toComposableFallback"
+import { toEmptyHook } from "../modules/toEmptyHook"
+import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 
 describe("nexus.account.addresses", async () => {
@@ -39,6 +50,7 @@ describe("nexus.account.addresses", async () => {
   let nexusClient: NexusClient
   let nexusAccount: NexusAccount
   let walletClient: WalletClient
+  let initData: Hex
 
   beforeAll(async () => {
     network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
@@ -67,8 +79,47 @@ describe("nexus.account.addresses", async () => {
       mock: true
     })
 
+    // Prepare validator modules
+    const validators = [toMeeValidator({ signer: eoaAccount })]
+    // Prepare executor modules
+    const executors = [toComposableExecutor()]
+    // Prepare hook module
+    const hook = toEmptyHook()
+    // Prepare fallback modules
+    const fallbacks = [toComposableFallback()]
+    // Format modules to ensure they have the correct structure (module and data properties)
+    const formattedValidators = formatModules(validators)
+    const formattedExecutors = formatModules(executors)
+    const formattedHook = formatModules([hook])[0]
+    const formattedFallbacks = formatModules(fallbacks)
+
+    initData = encodeAbiParameters(
+      [
+        { name: "bootstrap", type: "address" },
+        { name: "initData", type: "bytes" }
+      ],
+      [
+        NEXUS_BOOTSTRAP_ADDRESS,
+        encodeFunctionData({
+          abi: NexusBootstrapAbi,
+          functionName: "initNexus",
+          args: [
+            formattedValidators,
+            formattedExecutors,
+            formattedHook,
+            formattedFallbacks,
+            REGISTRY_ADDRESS,
+            [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+            1
+          ]
+        })
+      ]
+    )
+
     nexusAccountAddress = await nexusAccount.getAddress()
+    console.log({ nexusAccountAddress })
   })
+
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })

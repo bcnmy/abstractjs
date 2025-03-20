@@ -242,11 +242,13 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
       calls: [
         {
           to: recipientAddress,
-          value: 1n,
-          data: "0x"
+          value: 1n
         }
       ]
     })
+
+    console.log({ userOp })
+
     const quote = await paymaster.getTokenPaymasterQuotes({ userOp, tokenList })
     expect(quote.mode).toBe("ERC20")
     expect(quote.paymasterAddress).toBe(BICONOMY_TOKEN_PAYMASTER)
