@@ -68,6 +68,11 @@ export async function debugUserOperation<
     if (!account_ && !parameters.sender) throw new AccountNotFoundError()
     const account = account_ ? parseAccount(account_) : undefined
 
+    // const request = {
+    //   ...DUMMY_SIMULATION_GAS,
+    //   ...parameters
+    // }
+
     const request = account
       ? await getAction(
           client,

@@ -1,119 +1,197 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
-import { http, type Chain, type Hex, type LocalAccount, parseEther } from "viem"
+import {
+  COUNTER_ADDRESS,
+  MEE_VALIDATOR_ADDRESS,
+  OWNABLE_VALIDATOR_ADDRESS,
+  SMART_SESSION_ADDRESS
+} from "@biconomy/ecosystem"
+import {
+  http,
+  type Chain,
+  type Hex,
+  type LocalAccount,
+  type PublicClient,
+  concatHex,
+  createPublicClient
+} from "viem"
+import { prepareUserOperation } from "viem/account-abstraction"
+import { privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../test/testSetup"
-import { getTestAccount, killNetwork, toTestClient } from "../test/testUtils"
-import type { MasterClient, NetworkConfig } from "../test/testUtils"
+import { killNetwork } from "../test/testUtils"
+import type { NetworkConfig } from "../test/testUtils"
 import { toNexusAccount } from "./account/toNexusAccount"
-import { createSmartAccountClient } from "./clients/createBicoBundlerClient"
-import { SmartSessionMode } from "./constants"
-import { type SessionData, parse, stringify } from "./modules"
+import {
+  type NexusClient,
+  createSmartAccountClient
+} from "./clients/createBicoBundlerClient"
+import { debugUserOperation } from "./clients/decorators/smartAccount/debugUserOperation"
+import {
+  type Session,
+  SmartSessionMode,
+  encodeSmartSessionSignature,
+  encodeValidationData,
+  getAccount,
+  getEnableSessionDetails,
+  getOwnableValidatorMockSignature,
+  getSmartSessionsValidator,
+  getSudoPolicy
+} from "./constants"
+import {
+  type ModularSmartAccount,
+  type SessionData,
+  generateSalt,
+  parse,
+  stringify
+} from "./modules"
+import { PREFIXES } from "./modules/validators/meeValidator/toMeeValidator"
 import { toSmartSessionsValidator } from "./modules/validators/smartSessions/toSmartSessionsValidator"
 import {
   smartSessionCreateActions,
   smartSessionUseActions
 } from "./modules/validators/smartSessionsValidator/decorators"
 
-describe.skip("smartSessions", async () => {
+describe("smartSessions.joe", async () => {
   let network: NetworkConfig
   let chain: Chain
   let bundlerUrl: string
-  let testClient: MasterClient
+  let publicClient: PublicClient
   let eoaAccount: LocalAccount
   let dappAccount: LocalAccount
+  let nexusAccount: ModularSmartAccount
+  let nexusClient: NexusClient
+  const index = 1n
 
   beforeAll(async () => {
-    network = await toNetwork("BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA")
-
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
     chain = network.chain
     bundlerUrl = network.bundlerUrl
-    eoaAccount = getTestAccount(0)
-    dappAccount = getTestAccount(1)
+    eoaAccount = network.account!
+    dappAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY_TWO}`)
+    publicClient = createPublicClient({ chain, transport: http() })
 
-    testClient = toTestClient(chain, getTestAccount(5))
+    nexusAccount = await toNexusAccount({
+      signer: eoaAccount,
+      chain,
+      transport: http(network.rpcUrl),
+      index
+    })
+    nexusClient = createSmartAccountClient({
+      account: nexusAccount,
+      transport: http(bundlerUrl)
+    })
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
   test("should demo a basic smart session usage", async () => {
-    const nexusAccount = await toNexusAccount({
-      signer: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
+    const isDeployed = await nexusAccount.isDeployed()
+    console.log({ isDeployed })
 
-    await testClient.setBalance({
-      address: nexusAccount.address,
-      value: parseEther("1")
-    })
-
-    const nexusClient = createSmartAccountClient({
-      account: nexusAccount,
-      transport: http(bundlerUrl),
-      mock: true
-    })
-
-    const hash = await nexusClient.installModule({
-      module: toSmartSessionsValidator({ signer: eoaAccount })
-    })
-    const result = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(result.success).toBe(true)
-    const sessionClient = nexusClient.extend(smartSessionCreateActions())
-
-    const sessionPayload = await sessionClient.grantPermission({
-      sessionRequestedInfo: [
-        {
-          sessionPublicKey: dappAccount.address, // session key signer
-          actionPoliciesInfo: [
-            {
-              contractAddress: COUNTER_ADDRESS, // counter address
-              functionSelector: "0x273ea3e3" as Hex, // function selector for increment count,
-              sudo: true
-            }
-          ]
-        }
-      ]
-    })
-
-    const sessionData: SessionData = {
-      granter: nexusAccount.address,
-      sessionPublicKey: dappAccount.address,
-      moduleData: { ...sessionPayload, mode: SmartSessionMode.USE }
+    if (!isDeployed) {
+      const hash = await nexusClient.installModule({
+        module: getSmartSessionsValidator({ useRegistry: false })
+      })
+      const result = await nexusClient.waitForUserOperationReceipt({ hash })
+      expect(result.success).toBe("true")
     }
 
-    const nugget = stringify(sessionData)
-    const parsedNugget = parse(nugget)
+    const session: Session = {
+      sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
+      permitERC4337Paymaster: false,
+      sessionValidatorInitData: encodeValidationData({
+        threshold: 1,
+        owners: [dappAccount.address]
+      }),
+      salt: generateSalt(),
+      userOpPolicies: [],
+      erc7739Policies: {
+        allowedERC7739Content: [],
+        erc1271Policies: []
+      },
+      actions: [
+        {
+          actionTarget: COUNTER_ADDRESS,
+          actionTargetSelector: "0x273ea3e3", // incrementNumber
+          actionPolicies: [getSudoPolicy()]
+        }
+      ],
+      chainId: BigInt(chain.id)
+    }
 
-    const dappNexusAccount = await toNexusAccount({
-      accountAddress: parsedNugget.granter,
-      signer: dappAccount,
-      chain,
-      transport: http(network.rpcUrl)
+    const nexusAccountForRhinestone = getAccount({
+      address: await nexusAccount.getAddress(),
+      type: "nexus"
     })
 
-    const dappNexusClient = createSmartAccountClient({
-      account: dappNexusAccount,
-      transport: http(bundlerUrl),
-      mock: true
-    })
+    console.log({ session, nexusAccountForRhinestone })
 
-    const dappSessionClient = dappNexusClient.extend(smartSessionUseActions())
-
-    dappNexusAccount.setModule(
-      toSmartSessionsValidator({
-        signer: dappAccount,
-        moduleData: parsedNugget.moduleData
+    const sessionDetailsWithPermissionEnableHash =
+      await getEnableSessionDetails({
+        enableMode: SmartSessionMode.UNSAFE_ENABLE,
+        sessions: [session],
+        account: nexusAccountForRhinestone,
+        clients: [publicClient],
+        enableValidatorAddress: MEE_VALIDATOR_ADDRESS
       })
+
+    const { permissionEnableHash, ...sessionDetails } =
+      sessionDetailsWithPermissionEnableHash
+
+    if (!sessionDetails.enableSessionData?.enableSession.permissionEnableSig) {
+      throw new Error("enableSessionData is undefined")
+    }
+
+    const rawPermissionEnableSig = await eoaAccount.signMessage({
+      message: { raw: permissionEnableHash }
+    })
+    const meePackedSig = concatHex([PREFIXES.EIP_4337, rawPermissionEnableSig])
+
+    sessionDetails.enableSessionData.enableSession.permissionEnableSig =
+      meePackedSig
+    console.log(
+      "sessionDetails.enableSessionData.enableSession.permissionEnableSig",
+      sessionDetails.enableSessionData.enableSession.permissionEnableSig
     )
 
-    const useHash = await dappSessionClient.sendUserOperation({
-      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }]
+    const calls = [
+      {
+        to: session.actions[0].actionTarget,
+        data: session.actions[0].actionTargetSelector
+      }
+    ]
+
+    sessionDetails.signature = getOwnableValidatorMockSignature({
+      threshold: 1
     })
 
-    const resultTwo = await dappNexusClient.waitForUserOperationReceipt({
-      hash: useHash
+    const regularSig = encodeSmartSessionSignature(sessionDetails)
+
+    const userOperation = await debugUserOperation(nexusClient, {
+      verificationGasLimit: 10000000n,
+      callGasLimit: 10000000n,
+      preVerificationGas: 100000000n,
+      account: nexusAccount,
+      calls,
+      signature: regularSig,
+      nonce: await nexusAccount.getNonce({
+        // @ts-ignore
+        moduleAddress: SMART_SESSION_ADDRESS
+      })
     })
-    expect(resultTwo.success).toBe(true)
+
+    const userOpHashToSign = nexusClient.account.getUserOpHash(userOperation)
+
+    sessionDetails.signature = await dappAccount.signMessage({
+      message: { raw: userOpHashToSign }
+    })
+    userOperation.signature = encodeSmartSessionSignature(sessionDetails)
+
+    const userOpHash = await nexusClient.sendUserOperation(userOperation)
+    const receipt = await nexusClient.waitForUserOperationReceipt({
+      hash: userOpHash
+    })
+
+    console.log({ receipt })
   })
 })
