@@ -15,7 +15,7 @@ import {
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { base, optimism } from "viem/chains"
+import { base, baseSepolia, optimism, optimismSepolia } from "viem/chains"
 import { toMultichainNexusAccount, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
@@ -34,11 +34,10 @@ const index = 0n
 
 async function main() {
   const { MAINNET_CHAIN_ID, PRIVATE_KEY, TESTNET_CHAIN_ID } = getEnvVars()
-  const mainnetUsdc = mcUSDC.addressOn(+MAINNET_CHAIN_ID)
+  const mainnetUsdc = testnetMcUSDC.addressOn(+MAINNET_CHAIN_ID)
   const chain = getChain(MAINNET_CHAIN_ID)
   const testnetChain = getChain(TESTNET_CHAIN_ID)
   const account = privateKeyToAccount(PRIVATE_KEY)
-
   // Check balances
   console.log("\n=== Master Account ===")
   console.log(`Address: ${account.address}`)
@@ -59,22 +58,18 @@ async function main() {
   }
 
   console.log("\n=== MEE Nexus Account ===")
-  const chains = [optimism, base]
-  const transports: Transport[] = [http(), http()]
 
   const mcNexus = await toMultichainNexusAccount({
     signer: account,
-    chains,
-    transports,
+    chains: [chain],
+    transports: [http()],
     index
   })
 
-  const mcNexusAddress = await mcNexus
-    .deploymentOn(optimism.id, true)
-    .getAddress()
+  const mcNexusAddress = await mcNexus.deploymentOn(chain.id, true).getAddress()
 
   console.log(`Address: ${mcNexusAddress}`)
-  console.log(`Network: ${optimism.name}`)
+  console.log(`Network: ${chain.name}`)
 
   const [meeNexusNativeBalance, usdcNexusBalance] = await getBalances(
     { chainId: MAINNET_CHAIN_ID, tokenAddress: mainnetUsdc },
@@ -87,7 +82,7 @@ async function main() {
   const masterClient = createWalletClient({
     account,
     transport: http(),
-    chain: optimism
+    chain
   }).extend(publicActions)
 
   if (meeNexusNativeBalance >= NATIVE_TOKEN_AMOUNT) {
@@ -122,89 +117,6 @@ async function main() {
       hash: usdcTx
     })
     console.log("USDC Transaction:", usdcTxReceipt.transactionHash)
-  }
-
-  console.log("\n=== Vanilla Nexus Account ===")
-  const testnetClient = createWalletClient({
-    account,
-    transport: http(),
-    chain: testnetChain
-  }).extend(publicActions)
-
-  const vanillaNexus = await toNexusAccount({
-    chain: testnetChain,
-    signer: account,
-    transport: http(),
-    index
-  })
-
-  const vanillaNexusAddress = await vanillaNexus.getAddress()
-  const testnetUsdc = testnetMcUSDC.addressOn(TESTNET_CHAIN_ID)
-
-  console.log(`Address: ${vanillaNexusAddress}`)
-  console.log(`Network: ${testnetChain.name}`)
-
-  console.log(
-    "Vanilla Nexus Address:",
-    vanillaNexusAddress,
-    "on testnet chain",
-    testnetChain.name
-  )
-
-  const [vanillaNexusNativeBalance, vanillaNexusUsdcBalance] =
-    await getBalances(
-      {
-        chainId: TESTNET_CHAIN_ID,
-        tokenAddress: testnetUsdc
-      },
-      vanillaNexusAddress
-    )
-
-  console.log(
-    `Native Token Balance: ${formatEther(vanillaNexusNativeBalance)} ETH`
-  )
-  console.log(`USDC Balance: ${formatUnits(vanillaNexusUsdcBalance, 6)} USDC`)
-
-  if (vanillaNexusNativeBalance >= NATIVE_TOKEN_AMOUNT) {
-    console.log(
-      `Vanilla Nexus Native Token Balance already funded on testnet chain ${testnetChain.name}`
-    )
-  } else {
-    const nativeTx = await testnetClient.sendTransaction({
-      to: vanillaNexusAddress,
-      value: NATIVE_TOKEN_AMOUNT
-    })
-    const vanillaNexusUsdcTxReceipt =
-      await testnetClient.waitForTransactionReceipt({
-        hash: nativeTx
-      })
-    console.log(
-      `Vanilla Nexus USDC Transaction on testnet chain ${testnetChain.name}:`,
-      vanillaNexusUsdcTxReceipt.transactionHash
-    )
-  }
-
-  if (vanillaNexusUsdcBalance >= USDC_TOKEN_AMOUNT) {
-    console.log(
-      `Vanilla Nexus USDC Balance already funded on testnet chain ${testnetChain.name}`
-    )
-  } else {
-    const vanillaNexusUsdcTx = await testnetClient.sendTransaction({
-      to: testnetUsdc,
-      data: encodeFunctionData({
-        abi: TokenWithPermitAbi,
-        functionName: "transfer",
-        args: [vanillaNexusAddress, USDC_TOKEN_AMOUNT]
-      })
-    })
-    const vanillaNexusUsdcTxReceipt =
-      await testnetClient.waitForTransactionReceipt({
-        hash: vanillaNexusUsdcTx
-      })
-    console.log(
-      "Vanilla Nexus USDC Transaction:",
-      vanillaNexusUsdcTxReceipt.transactionHash
-    )
   }
 }
 

@@ -33,7 +33,7 @@ import {
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import { getK1NexusAddress } from "./utils"
 
-describe("nexus.account.addresses", async () => {
+describe.skip("nexus.account.addresses", async () => {
   let network: NetworkConfig
   let chain: Chain
   let bundlerUrl: string

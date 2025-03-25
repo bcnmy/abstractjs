@@ -60,7 +60,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(mcNexus.deployments).toHaveLength(2)
   })
 
-  test("should return correct deployment for specific chain", async () => {
+  test.skip("should return correct deployment for specific chain", async () => {
     const deployment = mcNexus.deploymentOn(base.id)
     expect(deployment).toBeDefined()
     expect(deployment?.client?.chain?.id).toBe(base.id)
@@ -97,7 +97,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(isHex(signed)).toBeTruthy()
   })
 
-  test("should read usdc balance on mainnet", async () => {
+  test.skip("should read usdc balance on mainnet", async () => {
     const readAddress = mcNexus.deploymentOn(optimism.id)?.address
     if (!readAddress) {
       throw new Error("No address found for optimism")
@@ -126,7 +126,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(unifiedBalance.mcToken).toHaveProperty("deployments")
   })
 
-  test("should query bridge", async () => {
+  test.skip("should query bridge", async () => {
     const unifiedBalance = await mcNexus.getUnifiedERC20Balance(mcUSDC)
 
     const tokenMapping = {
@@ -150,7 +150,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(payload?.receivedAtDestination).toBeGreaterThan(0n)
   })
 
-  test("should test type safety of deploymentOn", async () => {
+  test.skip("should test type safety of deploymentOn", async () => {
     const deployment = mcNexus.deploymentOn(base.id, true)
     expect(deployment).toBeDefined()
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()

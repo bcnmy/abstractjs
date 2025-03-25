@@ -7,7 +7,8 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 /**
  * Default URL for the MEE node service
  */
-const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io"
+const DEFAULT_MEE_NODE_URL =
+  process.env.ACORN_NODE_URL || "https://mee-node.biconomy.io" //"https://mee-node.biconomy.io"
 
 /**
  * Parameters for creating a Mee client
