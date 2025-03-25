@@ -7,13 +7,10 @@ import {
 import {
   http,
   type Chain,
-  type Hex,
   type LocalAccount,
   type PublicClient,
-  concatHex,
   createPublicClient
 } from "viem"
-import { prepareUserOperation } from "viem/account-abstraction"
 import { privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../test/testSetup"
@@ -36,19 +33,7 @@ import {
   getSmartSessionsValidator,
   getSudoPolicy
 } from "./constants"
-import {
-  type ModularSmartAccount,
-  type SessionData,
-  generateSalt,
-  parse,
-  stringify
-} from "./modules"
-import { PREFIXES } from "./modules/validators/meeValidator/toMeeValidator"
-import { toSmartSessionsValidator } from "./modules/validators/smartSessions/toSmartSessionsValidator"
-import {
-  smartSessionCreateActions,
-  smartSessionUseActions
-} from "./modules/validators/smartSessionsValidator/decorators"
+import { type ModularSmartAccount, generateSalt } from "./modules"
 
 describe("smartSessions.joe", async () => {
   let network: NetworkConfig
@@ -59,7 +44,7 @@ describe("smartSessions.joe", async () => {
   let dappAccount: LocalAccount
   let nexusAccount: ModularSmartAccount
   let nexusClient: NexusClient
-  const index = 1n
+  const index = 0n
 
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
@@ -145,14 +130,9 @@ describe("smartSessions.joe", async () => {
     const rawPermissionEnableSig = await eoaAccount.signMessage({
       message: { raw: permissionEnableHash }
     })
-    const meePackedSig = concatHex([PREFIXES.EIP_4337, rawPermissionEnableSig])
 
     sessionDetails.enableSessionData.enableSession.permissionEnableSig =
-      meePackedSig
-    console.log(
-      "sessionDetails.enableSessionData.enableSession.permissionEnableSig",
-      sessionDetails.enableSessionData.enableSession.permissionEnableSig
-    )
+      rawPermissionEnableSig
 
     const calls = [
       {
@@ -164,7 +144,6 @@ describe("smartSessions.joe", async () => {
     sessionDetails.signature = getOwnableValidatorMockSignature({
       threshold: 1
     })
-
     const regularSig = encodeSmartSessionSignature(sessionDetails)
 
     const userOperation = await debugUserOperation(nexusClient, {

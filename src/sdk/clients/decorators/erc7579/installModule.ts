@@ -108,8 +108,6 @@ export async function installModule<
   if (addressEquals(address, SMART_SESSIONS_ADDRESS)) {
     const nexusAccount = account as NexusAccount
 
-    console.log(nexusAccount?.getModule().address)
-
     if (nexusAccount?.getModule().address) {
       calls.push({
         to: nexusAccount.getModule().address,

@@ -7,8 +7,8 @@ import {
 import type { Address, Hex, Prettify, SignableMessage } from "viem"
 import type { Signer } from "../../../account/utils/toSigner"
 import { sanitizeSignature } from "../../utils/Helpers"
-import { DUMMY_SIGNATURE } from "../k1Validator"
-import type { UsePermissionModuleData } from "../smartSessionsValidator/Types"
+import { DUMMY_SIGNATURE } from "./Helpers"
+import type { UsePermissionModuleData } from "./Types"
 
 export type SmartSessionsValidatorParameters = {
   moduleData?: UsePermissionModuleData
@@ -21,8 +21,8 @@ export const toSmartSessionsValidator = (
   const { moduleData, signer } = parameters ?? {}
 
   return toValidator({
-    signer,
     ...getSmartSessionsValidator({ useRegistry: false }),
+    signer,
     type: "validator",
     getStubSignature: async () => {
       if (!moduleData) {

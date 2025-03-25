@@ -27,8 +27,10 @@ import type {
   ResolvedActionPolicyInfo,
   Rule
 } from "./Types"
-import { ONE_YEAR_FROM_NOW_IN_SECONDS } from "./decorators/preparePermission"
 export const MAX_RULES = 16
+export const ONE_YEAR_FROM_NOW_IN_SECONDS = 31536000
+export const DUMMY_SIGNATURE: Hex =
+  "0x81d4b4981670cb18f99f0b4a66446df1bf5b204d24cfcb659bf38ba27a4359b5711649ec2423c5e1247245eba2964679b6a1dbb85c992ae40b9b00c6935b02ff1b"
 
 /**
  * Generates a random salt as a hexadecimal string.

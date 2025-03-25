@@ -1,7 +1,7 @@
 import type { Hex, SignableMessage } from "viem"
 import { sanitizeSignature } from "../../modules/utils/Helpers.js"
 import type { Module, ModuleParameters } from "../../modules/utils/Types.js"
-import { DUMMY_SIGNATURE } from "./k1Validator/toK1Validator"
+import { DUMMY_SIGNATURE } from "./smartSessions/Helpers.js"
 
 export function toValidator(parameters: ModuleParameters): Module {
   const {

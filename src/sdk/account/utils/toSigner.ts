@@ -19,7 +19,12 @@ import { getAction } from "viem/utils"
 import type { AnyData } from "../../modules/utils/Types"
 import type { EthersWallet } from "./Utils"
 
-export type EthereumProvider = { request(...args: AnyData): Promise<AnyData> }
+export interface BaseProvider {
+  request(...args: AnyData): Promise<AnyData>
+}
+// Generic type that extends the base provider
+export type EthereumProvider<T extends BaseProvider = BaseProvider> = T &
+  BaseProvider
 
 /** Represents a local account that can sign transactions and messages */
 export type Signer = LocalAccount

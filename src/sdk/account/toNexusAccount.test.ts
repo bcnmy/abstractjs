@@ -43,7 +43,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import { K1_VALIDATOR_ADDRESS, MEE_VALIDATOR_ADDRESS } from "../constants"
+import { MEE_VALIDATOR_ADDRESS } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {

@@ -1,7 +1,7 @@
 import type { Address, Assign, Chain, Hex, SignableMessage } from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
 import type { NexusSmartAccountImplementation } from "../../account/toNexusAccount"
-import type { Validator } from "../validators/smartSessions/toSmartSessionsValidator"
+import type { Validator } from "../validators/smartSessions/toSmartSessionsModule"
 import type { Signer } from "./../../account/utils/toSigner"
 
 export type SignerData = {
