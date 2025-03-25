@@ -22,14 +22,14 @@ ACORN_NODE_URL=http://localhost:3000
 ```
 Private key here is the owner of the test smart account. It will also be used to fund the test smart account with test ETH and test USDC.
 
-2. run the following command to fund your test smart account:
+3. run the following command to fund your test smart account:
 
 ```bash
 $ bun run fund:nexus
 ```
 This command will try sending 0.001 ETH and 1 USDC to your test smart account, on baseSepolia. If you don't have enought balance on your private key, you can get some USDC from circle faucet [here](https://faucet.circle.com/).
 
-3. run the following command to run the MEE node tests:
+4. run the following command to run the MEE node tests:
 
 ```bash
 $ bun run test:watch -t=mee
