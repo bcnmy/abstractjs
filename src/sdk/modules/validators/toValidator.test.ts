@@ -34,34 +34,21 @@ describe("modules.toValidator", async () => {
 
   test.concurrent("should create a generic module", async () => {
     const validatorModule = toValidator({
-      accountAddress: eoaAccount.address,
       address: "0x0000000000000000000000000000000000000000",
       initData: "0x",
       deInitData: "0x",
       signer: eoaAccount,
-      moduleInitData: {
-        address: "0x0000000000000000000000000000000000000000",
-        type: "validator",
-        initData: "0x"
-      }
+      module: "0x0000000000000000000000000000000000000000"
     })
 
     expect(validatorModule).toMatchInlineSnapshot(`
       {
-        "accountAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "address": "0x0000000000000000000000000000000000000000",
         "data": "0x",
         "deInitData": "0x",
         "getStubSignature": [Function],
-        "initArgs": {},
         "initData": "0x",
         "module": "0x0000000000000000000000000000000000000000",
-        "moduleInitArgs": "0x",
-        "moduleInitData": {
-          "address": "0x0000000000000000000000000000000000000000",
-          "initData": "0x",
-          "type": "validator",
-        },
         "signMessage": [Function],
         "signUserOpHash": [Function],
         "signer": {

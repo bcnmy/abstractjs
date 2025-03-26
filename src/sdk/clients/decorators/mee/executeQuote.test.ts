@@ -1,5 +1,5 @@
 import type { Chain, Hex, LocalAccount, Transport } from "viem"
-import { base, optimism } from "viem/chains"
+import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -33,8 +33,8 @@ describe("mee.executeQuote", () => {
 
     eoaAccount = network.account!
     feeToken = {
-      address: mcUSDC.addressOn(optimism.id),
-      chainId: optimism.id
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
     }
 
     mcNexus = await toMultichainNexusAccount({
@@ -56,7 +56,7 @@ describe("mee.executeQuote", () => {
             value: 0n
           }
         ],
-        chainId: base.id
+        chainId: targetChain.id
       }
     ]
 

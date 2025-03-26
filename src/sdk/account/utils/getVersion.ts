@@ -30,7 +30,7 @@ export function getVersion(): string {
   } catch (error) {
     // Fallback in case the package.json cannot be loaded
     console.warn("Could not determine SDK version from package.json")
-    return "999.999.999"
+    return "unknown"
   }
 }
 

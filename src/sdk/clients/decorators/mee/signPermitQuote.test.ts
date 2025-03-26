@@ -135,7 +135,7 @@ describe("mee.signPermitQuote", () => {
       const sender = mcNexus.signer.address
 
       const quote = await getQuote(meeClient, {
-        path: "v1/quote-permit",
+        path: "quote-permit",
         eoa: sender,
         instructions: [
           mcNexus.build({

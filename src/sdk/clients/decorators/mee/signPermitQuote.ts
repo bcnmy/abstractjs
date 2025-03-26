@@ -55,11 +55,13 @@ export type SignPermitQuoteParams = {
  */
 export type SignPermitQuotePayload = GetQuotePayload & {
   /**
-   * The signature of the quote, prefixed with '0x02' and concatenated with
+   * The signature of the quote, prefixed with '0x177eee02' and concatenated with
    * the encoded permit parameters and signature components
    */
   signature: Hex
 }
+
+const PERMIT_PREFIX = "0x177eee02"
 
 /**
  * Signs a permit quote using EIP-2612 permit signatures. This enables gasless
@@ -171,10 +173,7 @@ export const signPermitQuote = async (
     ]
   )
 
-  return {
-    ...quote,
-    signature: concatHex(["0x02", encodedSignature])
-  }
+  return { ...quote, signature: concatHex([PERMIT_PREFIX, encodedSignature]) }
 }
 
 export default signPermitQuote

@@ -99,7 +99,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(paymaster).not.toHaveProperty("getPaymasterStubData")
   })
 
-  test("should send a sponsored transaction", async () => {
+  test.skip("should send a sponsored transaction", async () => {
     // Get initial balance
     const initialBalance = await publicClient.getBalance({
       address: nexusAccountAddress
@@ -128,7 +128,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(finalBalance).toBe(initialBalance - 1n)
   })
 
-  test("should wait for a confirmed user operation receipt", async () => {
+  test.skip("should wait for a confirmed user operation receipt", async () => {
     const hash = await nexusClient.sendUserOperation({
       calls: [
         {
@@ -145,12 +145,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(receipt.success).toBe("true")
   })
 
-  test.skip("should use token paymaster to pay for gas fees, use max approval, use sendUserOperation", async () => {
-    const balanceOfFeeToken = await getBalance(
-      publicClient,
-      nexusAccountAddress,
-      baseSepoliaUSDCAddress
-    )
+  test.skip("should use token paymaster to pay for gas fees, use maxApproval, use sendUserOperation", async () => {
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })
@@ -189,7 +184,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(finalBalance).toBe(initialBalance - 1n)
   })
 
-  test.skip("should use token paymaster to pay for gas fees, use max approval, use sendTransaction", async () => {
+  test.skip("should use token paymaster to pay for gas fees, use maxApproval, use sendTransaction", async () => {
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })

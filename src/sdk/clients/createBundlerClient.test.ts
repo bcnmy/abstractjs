@@ -72,6 +72,17 @@ describe("nexus.interoperability with 'MeeNode'", () => {
   })
 
   test("should send a transaction through the MeeNode", async () => {
+    const usdcBalance = await createPublicClient({
+      chain: baseSepolia,
+      transport: http()
+    }).getBalance({
+      address: mcNexus.addressOn(baseSepolia.id, true)
+    })
+
+    if (usdcBalance === 0n) {
+      throw new Error("Insufficient balance")
+    }
+
     const { hash } = await meeClient.execute({
       instructions: [
         {
@@ -149,9 +160,7 @@ describe.each(COMPETITORS)(
 
       // Send user operation
       const userOp = await bundlerClient.prepareUserOperation({ calls })
-
       const userOpHash = await bundlerClient.sendUserOperation(userOp)
-
       const userOpReceipt = await bundlerClient.waitForUserOperationReceipt({
         hash: userOpHash
       })

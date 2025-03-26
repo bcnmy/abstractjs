@@ -4,5 +4,5 @@ import { LATEST_DEFAULT_ADDRESSES } from "../constants"
 
 export const toComposableFallback = (): ModuleConfig => ({
   module: LATEST_DEFAULT_ADDRESSES.executorAddress,
-  data: "0x7192a24800" as Hex
+  data: "0xea5a6d9100" as Hex
 })

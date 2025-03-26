@@ -5,7 +5,7 @@ import type { Address, Hex } from "viem"
  * @param modules Array of modules to format
  * @returns Formatted modules with module and data properties
  */
-export const formatModules = (
+export const toInstallData = (
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   modules: any[]
 ): Array<{ module: Address; data: Hex }> =>

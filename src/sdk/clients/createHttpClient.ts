@@ -57,7 +57,8 @@ export const createHttpClient = (url: Url): HttpClient => {
     const { path, method = "POST", body, params } = requesParams
 
     const urlParams = params ? `?${new URLSearchParams(params)}` : ""
-    const result = await fetch(`${url}/${path}${urlParams}`, {
+    const fullPath = `${url}/${path}${urlParams}`
+    const result = await fetch(fullPath, {
       method,
       headers: {
         "Content-Type": "application/json"
@@ -66,12 +67,9 @@ export const createHttpClient = (url: Url): HttpClient => {
     })
 
     const json = (await result.json()) as AnyData
-
     if (!result.ok) {
-      console.log({ json })
-      throw new Error(parseErrorMessage(json ?? result.statusText))
+      throw new Error(parseErrorMessage(json ?? result?.statusText ?? result))
     }
-
     return json as T
   }
 

@@ -20,6 +20,8 @@ export type SignOnChainQuoteParams = {
   confirmations?: number
 }
 
+const ON_CHAIN_PREFIX = "0x177eee01"
+
 /**
  * Signs a fusion quote with a tx send client side.
  *
@@ -66,7 +68,7 @@ export const signOnChainQuote = async (
   await walletClient.waitForTransactionReceipt({ hash, confirmations })
 
   const signature = concatHex([
-    "0x01",
+    ON_CHAIN_PREFIX,
     encodeAbiParameters(
       [{ type: "bytes32" }, { type: "uint256" }],
       [hash, BigInt(chain.id)]

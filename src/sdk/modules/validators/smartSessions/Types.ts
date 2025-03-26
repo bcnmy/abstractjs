@@ -39,19 +39,11 @@ export type PreparePermissionResponse = {
   sessions: Session[]
 }
 
-/**
- * Represents the response for creating sessions.
- */
-export type GrantPermissionResponse = {
-  /** The hash of the user operation. */
-  userOpHash: Hex
-} & PreparePermissionResponse
-
+export type ModeId = keyof typeof SmartSessionMode
 /**
  * Represents the possible modes for a smart session.
  */
-export type SmartSessionModeType =
-  (typeof SmartSessionMode)[keyof typeof SmartSessionMode]
+export type SmartSessionModeType = (typeof SmartSessionMode)[ModeId]
 
 /**
  * Represents the data structure for using a session module.

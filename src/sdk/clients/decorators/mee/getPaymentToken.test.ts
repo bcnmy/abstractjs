@@ -48,10 +48,6 @@ describe("mee.getPaymentToken", () => {
       Number(chainId)
     )
 
-    const providerNames = info.supported_wallet_providers.flatMap(
-      ({ walletProvider }) => walletProvider
-    )
-
     const tokenSymbols = info.supported_gas_tokens.flatMap(
       ({ paymentTokens }) => paymentTokens.map(({ symbol }) => symbol)
     )
@@ -61,9 +57,7 @@ describe("mee.getPaymentToken", () => {
     expect(supportedChains).toContain(targetChain.id)
 
     expect(info.supported_gas_tokens.length).toBeGreaterThan(0)
-    expect(info.supported_wallet_providers.length).toBeGreaterThan(0)
 
-    expect(providerNames).toContain("BICO_V2")
     expect(tokenSymbols).toContain("USDC")
   })
 

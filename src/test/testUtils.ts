@@ -1,11 +1,4 @@
-import {
-  configureContracts as configureEcosystemContracts,
-  deployContracts as deployEcosystemContracts,
-  fundAccounts as fundEcosystemAccounts,
-  toBundler as toEcosystemBundler,
-  toNetwork as toEcosystemNetwork,
-  validateConfiguration as validateEcosystemConfiguration
-} from "@biconomy/ecosystem"
+import { toEcosystem } from "@biconomy/ecosystem"
 import { config } from "dotenv"
 import type { alto, anvil } from "prool/instances"
 import {
@@ -149,14 +142,9 @@ export const initNetwork = async (
 }
 
 export const initEcosystem = async ({ forkUrl }: { forkUrl?: string } = {}) => {
-  const network = await toEcosystemNetwork({ forkUrl })
-  if (!forkUrl) {
-    await fundEcosystemAccounts(network)
-    await deployEcosystemContracts(network)
-    await configureEcosystemContracts(network)
-    await validateEcosystemConfiguration(network)
-  }
-  const bundler = await toEcosystemBundler(network)
+  const {
+    infras: [{ network, bundler }]
+  } = await toEcosystem({ forkUrl })
 
   global.__ECOSYSTEM_INSTANCES__.set(bundler.port, bundler.instance)
   global.__ECOSYSTEM_INSTANCES__.set(network.rpcPort, network.instance)

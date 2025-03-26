@@ -49,8 +49,8 @@ import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
 import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
-import type { Validator } from "../modules/validators/smartSessions/toSmartSessionsValidator"
+import { toMeeModule } from "../modules/validators/mee/toMeeModule"
+import type { Validator } from "../modules/validators/toValidator"
 import {
   getInitData,
   getUniversalFactoryData
@@ -74,7 +74,7 @@ import {
   isNullOrUndefined,
   typeToString
 } from "./utils/Utils"
-import { formatModules } from "./utils/formatModules"
+import { toInstallData } from "./utils/toInstallData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 
 /**
@@ -259,7 +259,7 @@ export const toNexusAccount = async (
   })
 
   // Prepare validator modules
-  const validators = customValidators || [toMeeValidator({ signer })]
+  const validators = customValidators || [toMeeModule({ signer })]
   let [module] = validators
 
   // Prepare executor modules
@@ -274,10 +274,10 @@ export const toNexusAccount = async (
   // Generate the initialization data for the account using the initNexus function
   const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
 
-  const formattedValidators = formatModules(validators)
-  const formattedExecutors = formatModules(executors)
-  const formattedHook = formatModules([hook])[0]
-  const formattedFallbacks = formatModules(fallbacks)
+  const formattedValidators = toInstallData(validators)
+  const formattedExecutors = toInstallData(executors)
+  const formattedHook = toInstallData([hook])[0]
+  const formattedFallbacks = toInstallData(fallbacks)
 
   const initData = getInitData({
     validators: formattedValidators,
