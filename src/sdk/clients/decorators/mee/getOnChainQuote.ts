@@ -93,7 +93,7 @@ export const getOnChainQuote = async (
   })
 
   const quote = await getQuote(client, {
-    path: "v1/quote-permit", // Use different endpoint for onchain quotes
+    path: "quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     ...rest

@@ -64,7 +64,7 @@ export const executeSignedQuote = async (
   params: ExecuteSignedQuoteParams
 ): Promise<ExecuteSignedQuotePayload> =>
   client.request<ExecuteSignedQuotePayload>({
-    path: "v1/exec",
+    path: "exec",
     body: params.signedQuote
   })
 

@@ -90,7 +90,7 @@ export const getPermitQuote = async (
   })
 
   const quote = await getQuote(client, {
-    path: "v1/quote-permit", // Use different endpoint for permit enabled tokens
+    path: "quote-permit", // Use different endpoint for permit enabled tokens
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     ...rest

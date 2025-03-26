@@ -191,12 +191,6 @@ describe("nexus.client", async () => {
     expect(estimatedGas.preVerificationGas).toBeTruthy()
   }, 30000)
 
-  test.skip("should create a smart account with paymaster with an api key", async () => {
-    const paymaster = nexusClient.paymaster
-    expect(paymaster).not.toBeNull()
-    expect(paymaster).not.toBeUndefined()
-  })
-
   test("should return chain object for chain id 1", async () => {
     const chainId = 1
     const chain = getChain(chainId)

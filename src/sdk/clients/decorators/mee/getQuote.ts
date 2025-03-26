@@ -102,8 +102,8 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   account?: MultichainSmartAccount
   /**
-   * Path to the quote endpoint. Defaults to "v1/quote"
-   * @example "v1/quote"
+   * Path to the quote endpoint. Defaults to "/quote"
+   * @example "/quote"
    */
   path?: string
   /**
@@ -267,7 +267,7 @@ export const getQuote = async (
     account: account_ = client.account,
     instructions,
     feeToken,
-    path = "v1/quote",
+    path = "/quote",
     eoa
   } = parameters
 

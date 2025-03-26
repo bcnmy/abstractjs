@@ -61,6 +61,8 @@ export type SignPermitQuotePayload = GetQuotePayload & {
   signature: Hex
 }
 
+const ON_CHAIN_PREFIX = "0x177eee02"
+
 /**
  * Signs a permit quote using EIP-2612 permit signatures. This enables gasless
  * approvals for ERC20 tokens that implement the permit extension.
@@ -171,10 +173,7 @@ export const signPermitQuote = async (
     ]
   )
 
-  return {
-    ...quote,
-    signature: concatHex(["0x02", encodedSignature])
-  }
+  return { ...quote, signature: concatHex([ON_CHAIN_PREFIX, encodedSignature]) }
 }
 
 export default signPermitQuote

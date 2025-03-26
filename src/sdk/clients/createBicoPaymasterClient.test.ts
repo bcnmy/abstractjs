@@ -145,19 +145,13 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(receipt.success).toBe("true")
   })
 
-  test.skip("should use token paymaster to pay for gas fees, use max approval, use sendUserOperation", async () => {
-    const balanceOfFeeToken = await getBalance(
-      publicClient,
-      nexusAccountAddress,
-      baseSepoliaUSDCAddress
-    )
-    const paymasterContext = toBiconomyTokenPaymasterContext({
-      feeTokenAddress: baseSepoliaUSDCAddress
-    })
+  test("should use token paymaster to pay for gas fees, use max approval, use sendUserOperation", async () => {
     const nexusClient = createSmartAccountClient({
       account: nexusAccount,
       paymaster: createBicoPaymasterClient({ transport: http(paymasterUrl) }),
-      paymasterContext,
+      paymasterContext: toBiconomyTokenPaymasterContext({
+        feeTokenAddress: baseSepoliaUSDCAddress
+      }),
       transport: http(bundlerUrl)
     })
 
@@ -189,7 +183,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(finalBalance).toBe(initialBalance - 1n)
   })
 
-  test.skip("should use token paymaster to pay for gas fees, use max approval, use sendTransaction", async () => {
+  test("should use token paymaster to pay for gas fees, use max approval, use sendTransaction", async () => {
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })
@@ -260,7 +254,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     expect(quote.feeQuotes[0].exchangeRate).toBeGreaterThan(0)
   })
 
-  test.skip("should use token paymaster to pay for gas fees, use custom approval with token paymaster quotes", async () => {
+  test("should use token paymaster to pay for gas fees, use custom approval with token paymaster quotes", async () => {
     const paymasterContext = toBiconomyTokenPaymasterContext({
       feeTokenAddress: baseSepoliaUSDCAddress
     })

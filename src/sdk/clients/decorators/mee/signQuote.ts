@@ -31,6 +31,8 @@ export type SignQuotePayload = GetQuotePayload & {
   signature: Hex
 }
 
+const DEFAULT_PREFIX = "0x177eee00"
+
 /**
  * Signs a quote using the provided account's signer or the client's default account.
  * The signature is required for executing the quote through the MEE service.
@@ -64,7 +66,7 @@ export const signQuote = async (
 
   return {
     ...quote,
-    signature: concatHex(["0x00", signedMessage])
+    signature: concatHex([DEFAULT_PREFIX, signedMessage])
   }
 }
 
