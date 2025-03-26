@@ -85,7 +85,6 @@ describe("utils.toSigner", () => {
     const signedMessage = await nexusSigner.signMessage({
       message: "Hello World"
     })
-    console.log({ signedMessage })
     expect(signedMessage).toBeDefined()
     expect(typeof signedMessage).toBe("string")
   })

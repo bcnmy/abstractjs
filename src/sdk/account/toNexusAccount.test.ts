@@ -346,7 +346,6 @@ describe("nexus.account", async () => {
       verifyingContract: TOKEN_WITH_PERMIT as Address,
       version: "1"
     }
-
     const primaryType = "Contents"
     const types = {
       Contents: [

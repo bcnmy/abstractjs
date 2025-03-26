@@ -72,7 +72,7 @@ export const getSupertransactionReceipt = async (
 
   const explorerResponse =
     await client.request<GetSupertransactionReceiptPayload>({
-      path: `v1/explorer/${params.hash}`,
+      path: `explorer/${params.hash}`,
       method: "GET"
     })
 

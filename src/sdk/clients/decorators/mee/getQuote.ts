@@ -267,7 +267,7 @@ export const getQuote = async (
     account: account_ = client.account,
     instructions,
     feeToken,
-    path = "/quote",
+    path = "quote",
     eoa
   } = parameters
 

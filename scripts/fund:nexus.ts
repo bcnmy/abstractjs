@@ -195,7 +195,7 @@ function isTestnetChain(chainId: number): boolean {
     421614, // Arbitrum Sepolia
     11155111 // Sepolia
   ]
-  return testnetChains.includes(chainId)
+  return testnetChains.includes(Number(chainId))
 }
 
 /**
