@@ -56,7 +56,7 @@ describe("mee.executeQuote", () => {
             value: 0n
           }
         ],
-        chainId: paymentChain.id
+        chainId: targetChain.id
       }
     ]
 

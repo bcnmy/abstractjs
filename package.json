@@ -38,6 +38,7 @@
     "tslib": "^2.8.1",
     "typedoc": "^0.27.9",
     "viem": "^2.23.6",
+    "vitest": "^3.0.7",
     "yargs": "^17.7.2"
   },
   "peerDependencies": {
@@ -129,8 +130,5 @@
   },
   "type": "module",
   "types": "./dist/_types/index.d.ts",
-  "typings": "./dist/_types/index.d.ts",
-  "dependencies": {
-    "vitest": "^3.0.7"
-  }
+  "typings": "./dist/_types/index.d.ts"
 }
