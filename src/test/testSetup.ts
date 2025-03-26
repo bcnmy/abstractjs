@@ -90,3 +90,5 @@ export const getTestChainConfig = (
   }
   throw new Error("Unsupported chain")
 }
+
+export type { NetworkConfig }

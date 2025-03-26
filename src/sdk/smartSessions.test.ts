@@ -30,7 +30,7 @@ import {
   getAccount,
   getEnableSessionDetails,
   getOwnableValidatorMockSignature,
-  getSmartSessionsValidator,
+  getSmartSessionsModule,
   getSudoPolicy
 } from "./constants"
 import { type ModularSmartAccount, generateSalt } from "./modules"
@@ -75,7 +75,7 @@ describe("smartSessions.joe", async () => {
 
     if (!isDeployed) {
       const hash = await nexusClient.installModule({
-        module: getSmartSessionsValidator({ useRegistry: false })
+        module: getSmartSessionsModule({ useRegistry: false })
       })
       const result = await nexusClient.waitForUserOperationReceipt({ hash })
       expect(result.success).toBe("true")

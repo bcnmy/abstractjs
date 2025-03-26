@@ -7,20 +7,30 @@ import {
   getEnableSessionDetails,
   getOwnableValidatorMockSignature
 } from "@rhinestone/module-sdk"
-import type { Address, Chain, Client, PublicClient, Transport } from "viem"
+import type {
+  Address,
+  Chain,
+  Client,
+  Prettify,
+  PublicClient,
+  RequiredBy,
+  Transport
+} from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import { MEE_VALIDATOR_ADDRESS } from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt, stringify } from "../Helpers"
 
+export type RequiredSessionParams = RequiredBy<Partial<Session>, "actions">
+
 export type GrantPermissionParameters<
   TModularSmartAccount extends ModularSmartAccount | undefined
-> = {
-  /** Granter Address */
-  redeemer: Address
-  /** Actions */
-  actions: Session["actions"]
-} & { account?: TModularSmartAccount }
+> = Prettify<
+  RequiredSessionParams & {
+    /** Granter Address */
+    redeemer: Address
+  } & { account?: TModularSmartAccount }
+>
 
 export type GrantPermissionResponse = string
 
@@ -33,7 +43,8 @@ export async function grantPermission<
   const {
     account: nexusAccount = nexusClient.account,
     redeemer,
-    actions
+    actions,
+    ...sessionWithOutActions
   } = parameters
   const chainId = nexusAccount?.client.chain?.id
   const publicClient = nexusAccount?.client as PublicClient
@@ -65,7 +76,8 @@ export async function grantPermission<
     userOpPolicies: [],
     erc7739Policies: { allowedERC7739Content: [], erc1271Policies: [] },
     actions,
-    chainId: BigInt(chainId)
+    chainId: BigInt(chainId),
+    ...sessionWithOutActions
   }
 
   const nexusAccountForRhinestone = getAccount({

@@ -49,8 +49,8 @@ import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
 import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import { toMeeValidator } from "../modules/validators/meeValidator/toMeeValidator"
-import type { Validator } from "../modules/validators/smartSessions/toSmartSessionsModule"
+import { toMeeModule } from "../modules/validators/mee/toMeeModule"
+import type { Validator } from "../modules/validators/toValidator"
 import {
   getInitData,
   getUniversalFactoryData
@@ -259,7 +259,7 @@ export const toNexusAccount = async (
   })
 
   // Prepare validator modules
-  const validators = customValidators || [toMeeValidator({ signer })]
+  const validators = customValidators || [toMeeModule({ signer })]
   let [module] = validators
 
   // Prepare executor modules

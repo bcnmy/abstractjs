@@ -3,7 +3,7 @@ import { sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import { getAddOwnableValidatorOwnerAction } from "../../../../constants"
-import type { ModularSmartAccount } from "../../../../modules/utils/Types"
+import type { ModularSmartAccount } from "../../../utils/Types"
 
 /**
  * Parameters for adding an owner to a smart account.
@@ -59,11 +59,11 @@ export async function addOwner<
   }
 
   const account = parseAccount(account_) as ModularSmartAccount
-  const publicClient = account.client
+  const publicClient = account.client as PublicClient
 
   const action = await getAddOwnableValidatorOwnerAction({
     account: { address: account.address, deployedOnChains: [], type: "nexus" },
-    client: publicClient as PublicClient,
+    client: publicClient,
     owner
   })
 

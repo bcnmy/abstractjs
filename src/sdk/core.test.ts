@@ -16,7 +16,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./clients/createBicoBundlerClient"
-import { toSmartSessionsValidator } from "./modules/validators/smartSessions/toSmartSessionsValidator"
+import { toSmartSessionsModule } from "./modules/validators/smartSessions/toSmartSessionsModule"
 
 describe("core", async () => {
   let network: NetworkConfig
@@ -91,7 +91,7 @@ describe("core", async () => {
 
   test("should install smart sessions validator", async () => {
     const hash = await nexusClient.installModule({
-      module: toSmartSessionsValidator({ signer: eoaAccount })
+      module: toSmartSessionsModule({ signer: eoaAccount })
     })
     const receipt = await nexusClient.waitForUserOperationReceipt({ hash })
     expect(receipt.success).toBe(true)

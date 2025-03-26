@@ -3,7 +3,7 @@ import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import { getRemoveOwnableValidatorOwnerAction } from "../../../../constants"
-import type { ModularSmartAccount } from "../../../../modules/utils/Types"
+import type { ModularSmartAccount } from "../../../utils/Types"
 
 /**
  * Parameters for removing an owner from a smart account.

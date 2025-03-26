@@ -1,15 +1,24 @@
 import {
   SMART_SESSIONS_ADDRESS,
-  type Session,
   SmartSessionMode,
   encodeSmartSessionSignature,
   type getEnableSessionDetails
 } from "@rhinestone/module-sdk"
-import type { Hash, Prettify, PublicClient } from "viem"
+import type {
+  Chain,
+  Client,
+  Hash,
+  Prettify,
+  PublicClient,
+  Transport
+} from "viem"
+import {
+  prepareUserOperation,
+  sendUserOperation
+} from "viem/account-abstraction"
 import type { Call } from "../../../../account/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
-import type { NexusClient } from "../../../../clients/createBicoBundlerClient"
-import type { ModularSmartAccount } from "../../../utils/Types"
+import type { AnyData, ModularSmartAccount } from "../../../utils/Types"
 import { parse } from "../Helpers"
 
 export type UsePermissionParameters<
@@ -19,10 +28,8 @@ export type UsePermissionParameters<
   calls: Call[]
   /** Data string returned from grantPermission. Could be stored in local storage or a database. */
   sessionDetails: string
-  /** Actions */
-  actions: Session["actions"]
-  /** Mode. ENABLE the first time, or USE the second time. */
-  mode: "ENABLE" | "USE"
+  /** Mode. ENABLE the first time, or USE when > 1 time. */
+  mode: "ENABLE_AND_USE" | "USE"
   /** Verification gas limit. */
   verificationGasLimit?: bigint
   /** Call gas limit. */
@@ -49,7 +56,7 @@ export type SessionDetails = Prettify<
 export async function usePermission<
   TModularSmartAccount extends ModularSmartAccount | undefined
 >(
-  nexusClient: NexusClient,
+  nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
   parameters: UsePermissionParameters<TModularSmartAccount>
 ): Promise<Hash> {
   const {
@@ -64,15 +71,13 @@ export async function usePermission<
   const publicClient = nexusAccount?.client as PublicClient
   const signer = nexusAccount?.signer
   const mode =
-    mode_ === "ENABLE" ? SmartSessionMode.UNSAFE_ENABLE : SmartSessionMode.USE
+    mode_ === "ENABLE_AND_USE"
+      ? SmartSessionMode.UNSAFE_ENABLE
+      : SmartSessionMode.USE
   const sessionDetails = {
     ...parse(stringifiedSessionDetails),
     mode
   } as SessionDetails
-  // @ts-ignore
-  const nonce =
-    nonce_ ??
-    (await nexusAccount.getNonce({ moduleAddress: SMART_SESSIONS_ADDRESS }))
 
   if (!chainId) {
     throw new Error("Chain ID is not set")
@@ -92,15 +97,20 @@ export async function usePermission<
     throw new Error("Session data is not set")
   }
 
-  const userOperation = await nexusClient.prepareUserOperation({
+  const nonce =
+    nonce_ ??
+    // @ts-ignore
+    (await nexusAccount.getNonce({ moduleAddress: SMART_SESSIONS_ADDRESS }))
+
+  const userOperation = (await prepareUserOperation(nexusClient, {
     ...rest,
     signature: encodeSmartSessionSignature(sessionDetails),
     nonce
-  })
+  } as AnyData)) as AnyData
   const userOpHashToSign = nexusAccount.getUserOpHash(userOperation)
   sessionDetails.signature = await signer.signMessage({
     message: { raw: userOpHashToSign }
   })
   userOperation.signature = encodeSmartSessionSignature(sessionDetails)
-  return await nexusClient.sendUserOperation(userOperation)
+  return await sendUserOperation(nexusClient, userOperation)
 }

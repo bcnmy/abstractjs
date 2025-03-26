@@ -1,5 +1,4 @@
-import type { Hash } from "viem"
-import type { NexusClient } from "../../../../clients/createBicoBundlerClient"
+import type { Chain, Client, Hash, Transport } from "viem"
 import type { ModularSmartAccount } from "../../../../modules/utils/Types"
 import {
   type GrantPermissionParameters,
@@ -46,13 +45,11 @@ export type SmartSessionActions<
  */
 export function smartSessionActions() {
   return <TModularSmartAccount extends ModularSmartAccount | undefined>(
-    client: NexusClient
-  ): SmartSessionActions<TModularSmartAccount> => {
-    return {
-      usePermission: (args) => usePermission(client, args),
-      grantPermission: (args) => grantPermission(client, args)
-    }
-  }
+    client: Client<Transport, Chain | undefined, TModularSmartAccount>
+  ): SmartSessionActions<TModularSmartAccount> => ({
+    usePermission: (args) => usePermission(client, args),
+    grantPermission: (args) => grantPermission(client, args)
+  })
 }
 
 export * from "./grantPermission"
