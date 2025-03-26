@@ -144,7 +144,7 @@ describe("mee.createMeeClient", async () => {
   })
 
   test.runIf(runPaidTests)(
-    "should get a quote, then execute it with executeQuote higglidy",
+    "should get a quote, then execute it with executeQuote correctly",
     async () => {
       // Get a quote for executing all instructions
       // This will calculate the total cost in the specified payment token
