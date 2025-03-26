@@ -108,7 +108,7 @@ describe("nexus.account", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test.skip("should check isValidSignature PersonalSign is valid", async () => {
+  test("should check isValidSignature PersonalSign is valid", async () => {
     const meta = await getAccountMeta(testClient, nexusAccountAddress)
 
     const data = hashMessage("0x1234")
@@ -163,7 +163,7 @@ describe("nexus.account", async () => {
     expect(viemResponse).toBe(true)
   })
 
-  test.skip("should verify signatures", async () => {
+  test("should verify signatures", async () => {
     const mockSigVerifierContract = getContract({
       address: MOCK_SIGNATURE_VALIDATOR as Address,
       abi: MockSignatureValidatorAbi,
@@ -201,7 +201,7 @@ describe("nexus.account", async () => {
     expect(isValidEthSigned).toBe(true)
   })
 
-  test.skip("should have 4337 account actions", async () => {
+  test("should have 4337 account actions", async () => {
     const [
       isDeployed,
       counterfactualAddress,
@@ -267,7 +267,7 @@ describe("nexus.account", async () => {
     expect(entryPointVersion).toBe("0.7")
   })
 
-  test.skip("should test isValidSignature EIP712Sign to be valid with viem", async () => {
+  test("should test isValidSignature EIP712Sign to be valid with viem", async () => {
     const nexusAccountAddress = await nexusAccount.getAddress()
 
     const message = {
@@ -339,7 +339,7 @@ describe("nexus.account", async () => {
     expect(contractResponse).toBe(eip1271MagicValue)
   })
 
-  test.skip("should sign using signTypedData SDK method", async () => {
+  test("should sign using signTypedData SDK method", async () => {
     const appDomain = {
       chainId: chain.id,
       name: "TokenWithPermit",
@@ -438,7 +438,7 @@ describe("nexus.account", async () => {
     expect(nexusResponse).toEqual("0x1626ba7e")
   })
 
-  test.skip("check that ethers makeNonceKey creates the same key as the SDK", async () => {
+  test("check that ethers makeNonceKey creates the same key as the SDK", async () => {
     function makeNonceKey(
       vMode: BytesLike,
       validator: Hex,

@@ -1,8 +1,4 @@
-import {
-  configureContracts as configureEcosystemContracts,
-  deployContracts as deployEcosystemContracts,
-  toEcosystem
-} from "@biconomy/ecosystem"
+import { toEcosystem } from "@biconomy/ecosystem"
 import { config } from "dotenv"
 import type { alto, anvil } from "prool/instances"
 import {

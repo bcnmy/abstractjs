@@ -1,8 +1,19 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
-import { http, type Address, type Chain, Hex, type LocalAccount } from "viem"
+import {
+  COUNTER_ADDRESS,
+  type Ecosystem,
+  type Infra,
+  toClients,
+  toEcosystem
+} from "@biconomy/ecosystem"
+import {
+  http,
+  type Address,
+  type Chain,
+  Hex,
+  type LocalAccount,
+  parseEther
+} from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testSetup"
 import { getTestAccount, killNetwork } from "../../../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../../../account"
 import {
@@ -13,7 +24,8 @@ import { ownableActions } from "./decorators"
 import { toOwnableModule } from "./toOwnableModule"
 
 describe("modules.toOwnableModule", () => {
-  let network: NetworkConfig
+  let ecosystem: Ecosystem
+  let infra: Infra
   let chain: Chain
   let bundlerUrl: string
 
@@ -22,14 +34,17 @@ describe("modules.toOwnableModule", () => {
   let nexusClient: NexusClient
   let nexusAccountAddress: Address
   let nexusAccount: NexusAccount
+  let sessionDetails: string
 
   beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
-
-    chain = network.chain
-    bundlerUrl = network.bundlerUrl
+    ecosystem = await toEcosystem()
+    infra = ecosystem.infras[0]
+    chain = infra.network.chain
+    bundlerUrl = infra.bundler.url
     eoaAccount = getTestAccount(0)
     redeemerAccount = getTestAccount(1)
+
+    const { testClient } = await toClients(infra.network)
 
     const ownablesModule = toOwnableModule({
       signer: eoaAccount,
@@ -46,12 +61,18 @@ describe("modules.toOwnableModule", () => {
 
     nexusClient = createSmartAccountClient({
       bundlerUrl,
-      account: nexusAccount
+      account: nexusAccount,
+      mock: true
     })
     nexusAccountAddress = await nexusAccount.getAddress()
+    await testClient.setBalance({
+      address: nexusAccountAddress,
+      value: parseEther("100")
+    })
   })
+
   afterAll(async () => {
-    await killNetwork([network.rpcPort, network.bundlerPort])
+    await killNetwork([infra.network.rpcPort, infra.bundler.port])
   })
 
   test("demo an ownable account", async () => {
@@ -79,6 +100,6 @@ describe("modules.toOwnableModule", () => {
       throw new Error("Multi sign failed")
     }
 
-    expect(receipt.success).toBe("true")
+    expect(receipt.success).toBe(true)
   })
 })

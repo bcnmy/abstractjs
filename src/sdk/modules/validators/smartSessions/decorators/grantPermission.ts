@@ -46,7 +46,7 @@ export async function grantPermission<
     actions,
     ...sessionWithOutActions
   } = parameters
-  const chainId = nexusAccount?.client.chain?.id
+  const chainId = nexusAccount?.client?.chain?.id
   const publicClient = nexusAccount?.client as PublicClient
   const signer = nexusAccount?.signer
 
