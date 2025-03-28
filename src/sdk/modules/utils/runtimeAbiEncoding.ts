@@ -19,7 +19,6 @@ import {
   type AbiParameter,
   type AbiParameterToPrimitiveType,
   BaseError,
-  ByteArray,
   type Hex,
   IntegerOutOfRangeError,
   InvalidAbiEncodingTypeError,
