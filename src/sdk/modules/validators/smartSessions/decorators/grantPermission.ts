@@ -1,5 +1,8 @@
 import {
+  type ActionData,
+  type ERC7739Data,
   OWNABLE_VALIDATOR_ADDRESS,
+  type PolicyData,
   type Session,
   SmartSessionMode,
   encodeValidationData,
@@ -11,6 +14,7 @@ import type {
   Address,
   Chain,
   Client,
+  Hex,
   Prettify,
   PublicClient,
   RequiredBy,
@@ -21,7 +25,28 @@ import { MEE_VALIDATOR_ADDRESS } from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt, stringify } from "../Helpers"
 
-export type RequiredSessionParams = RequiredBy<Partial<Session>, "actions">
+export type PrettifiedSession = {
+  // The optional address of the validator that will be used to validate the session. Default is the ownable validator.
+  sessionValidator?: Address
+  // The optional init data for the validator. Default is the ownable validator. Can be constructed using the encodeValidationData function.
+  sessionValidatorInitData?: Hex
+  // The optional salt for a unique session.
+  salt?: Hex
+  // Whether the session will use a paymaster.
+  permitERC4337Paymaster?: boolean
+  // The actions that will be performed by the session.
+  actions: ActionData[]
+  // The chain ID of the session. Can be omitted if the account is deployed on multiple chains.
+  chainId?: bigint
+  // The user op policies that will be used by the session. These apply to the user operation as a whole.
+  userOpPolicies?: PolicyData[]
+  // The erc7739 policies that will be used by the session.
+  erc7739Policies?: ERC7739Data
+}
+export type RequiredSessionParams = RequiredBy<
+  Partial<PrettifiedSession>,
+  "actions"
+>
 
 export type GrantPermissionParameters<
   TModularSmartAccount extends ModularSmartAccount | undefined
@@ -32,6 +57,7 @@ export type GrantPermissionParameters<
   } & { account?: TModularSmartAccount }
 >
 
+// The session details in stringified format.
 export type GrantPermissionResponse = string
 
 export async function grantPermission<
@@ -39,18 +65,17 @@ export async function grantPermission<
 >(
   nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
   parameters: GrantPermissionParameters<TModularSmartAccount>
-): Promise<string> {
+): Promise<GrantPermissionResponse> {
   const {
     account: nexusAccount = nexusClient.account,
     redeemer,
-    actions,
-    ...sessionWithOutActions
+    chainId: bigChainId,
+    ...session_
   } = parameters
-  const chainId = nexusAccount?.client?.chain?.id
   const publicClient = nexusAccount?.client as PublicClient
   const signer = nexusAccount?.signer
-
-  if (!chainId) {
+  const chainIdFromAccount = nexusAccount?.client?.chain?.id
+  if (!chainIdFromAccount) {
     throw new Error("Chain ID is not set")
   }
   if (!nexusAccount) {
@@ -75,9 +100,8 @@ export async function grantPermission<
     salt: generateSalt(),
     userOpPolicies: [],
     erc7739Policies: { allowedERC7739Content: [], erc1271Policies: [] },
-    actions,
-    chainId: BigInt(chainId),
-    ...sessionWithOutActions
+    chainId: bigChainId ?? BigInt(chainIdFromAccount),
+    ...session_
   }
 
   const nexusAccountForRhinestone = getAccount({
@@ -101,6 +125,7 @@ export async function grantPermission<
   }
   sessionDetails.enableSessionData.enableSession.permissionEnableSig =
     await signer.signMessage({ message: { raw: permissionEnableHash } })
+
   sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
   return stringify(sessionDetails)
 }
