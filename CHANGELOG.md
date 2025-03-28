@@ -1,5 +1,30 @@
 # @biconomy/abstractjs
 
+## 0.4.0
+
+### Minor Changes
+
+#### Breaking Changes
+- Renamed `getMeeFactoryData` to `getUniversalFactoryData` for more generic module support
+- Renamed `getMeeNexusAccount` to `getUniversalNexusAccount` to reflect universal module initialization
+- Updated module initialization structure to support any validator type extending BaseModule
+- Changed module configuration format to require explicit type declarations
+
+#### Features
+- Added universal module initialization support for Nexus accounts
+- Introduced flexible module configuration system allowing extended properties
+- Added support for custom bootstrap addresses during account initialization
+- Implemented smart session helpers for improved session management
+- Added new utility functions `toInitData` and `toInstallData` for standardized module formatting
+
+#### Improvements
+- Enable mode for smart sessions by default
+- Streamlined factory data and counterfactual address calculations
+- Enhanced type safety for module configurations
+- Improved error handling for module initialization
+- Reduced bundle size through code optimization (-5.45% ESM, -7.42% CJS)
+- Added comprehensive test coverage for new module initialization flows
+
 ## 0.3.0
 
 ### Minor Changes

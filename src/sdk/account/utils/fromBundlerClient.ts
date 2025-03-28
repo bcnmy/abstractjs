@@ -5,7 +5,6 @@ import type { Chain } from "viem"
 import type { Account } from "viem"
 import type { BundlerClient, SmartAccount } from "viem/account-abstraction"
 import type { NexusClient } from "../../clients/createBicoBundlerClient"
-import type { AnyData } from "../../modules"
 import type { NexusAccount } from "../toNexusAccount"
 import type { Signer } from "./toSigner"
 

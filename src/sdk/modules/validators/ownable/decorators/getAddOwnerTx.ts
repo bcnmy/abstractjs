@@ -6,7 +6,7 @@ import {
   getAccount,
   getAddOwnableValidatorOwnerAction
 } from "../../../../constants"
-import type { ModularSmartAccount } from "../../../utils/Types"
+import type { AnyData, ModularSmartAccount } from "../../../utils/Types"
 
 /**
  * Parameters for getting the transaction to add an owner to a smart account.
@@ -76,4 +76,11 @@ export async function getAddOwnerTx<
     value: BigInt(action.value.toString()),
     data: action.callData
   }
+}
+
+export const toAddOwnerCalls = async (
+  account: ModularSmartAccount,
+  parameters: GetAddOwnerTxParameters<ModularSmartAccount | undefined>
+): Promise<Call[]> => {
+  return [await getAddOwnerTx({} as AnyData, { ...parameters, account })]
 }

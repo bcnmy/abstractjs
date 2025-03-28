@@ -5,14 +5,6 @@ import {
   type GrantPermissionResponse,
   grantPermission
 } from "./grantPermission"
-import { toDisableActionPoliciesCalls } from "./toDisableActionPoliciesCalls"
-import { toDisableERC1271PoliciesCalls } from "./toDisableERC1271PoliciesCalls"
-import { toDisableUserOpPoliciesCalls } from "./toDisableUserOpPoliciesCalls"
-import { toEnableActionPoliciesCalls } from "./toEnableActionPoliciesCalls"
-import { toEnableERC1271PoliciesCalls } from "./toEnableERC1271PoliciesCalls"
-import { toEnableSessionsAction } from "./toEnableSessionsCalls"
-import { toEnableUserOpPoliciesCalls } from "./toEnableUserOpPoliciesCalls"
-import { toRemoveSessionCalls } from "./toRemoveSessionCalls"
 import { type UsePermissionParameters, usePermission } from "./usePermission"
 
 /**
@@ -59,17 +51,3 @@ export function smartSessionActions() {
     grantPermission: (args) => grantPermission(client, args)
   })
 }
-
-export * from "./grantPermission"
-export * from "./usePermission"
-
-export const smartSessionCalls = {
-  toDisableUserOpPoliciesCalls,
-  toEnableERC1271PoliciesCalls,
-  toEnableActionPoliciesCalls,
-  toDisableActionPoliciesCalls,
-  toDisableERC1271PoliciesCalls,
-  toEnableUserOpPoliciesCalls,
-  toEnableSessionsAction,
-  toRemoveSessionCalls
-} as const

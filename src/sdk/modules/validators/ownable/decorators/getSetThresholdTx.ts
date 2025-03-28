@@ -4,6 +4,7 @@ import { parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import type { Call } from "../../../../account/utils/Types"
 import { getSetOwnableValidatorThresholdAction } from "../../../../constants"
+import type { AnyData, ModularSmartAccount } from "../../../utils/Types"
 
 /**
  * Parameters for generating a transaction to set the threshold for a smart account.
@@ -58,9 +59,7 @@ export async function getSetThresholdTx<
 
   if (!account) throw new Error("Account not found")
 
-  const action = getSetOwnableValidatorThresholdAction({
-    threshold
-  })
+  const action = getSetOwnableValidatorThresholdAction({ threshold })
 
   if (!("callData" in action)) {
     throw new Error("Error getting set threshold actions")
@@ -71,4 +70,11 @@ export async function getSetThresholdTx<
     value: BigInt(action.value.toString()),
     data: action.callData
   }
+}
+
+export const toSetThresholdCalls = async (
+  account: ModularSmartAccount,
+  parameters: GetSetThresholdTxParameters<ModularSmartAccount | undefined>
+): Promise<Call[]> => {
+  return [await getSetThresholdTx({} as AnyData, { ...parameters, account })]
 }

@@ -43,6 +43,7 @@ export type PrettifiedSession = {
   // The erc7739 policies that will be used by the session.
   erc7739Policies?: ERC7739Data
 }
+
 export type RequiredSessionParams = RequiredBy<
   Partial<PrettifiedSession>,
   "actions"

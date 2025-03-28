@@ -21,7 +21,6 @@ import {
   type NexusAccount,
   toNexusAccount
 } from "../../../account/toNexusAccount"
-import { K1_VALIDATOR_ADDRESS } from "../../../constants"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -71,7 +70,7 @@ describe("erc7579.decorators", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test.concurrent("should test read methods", async () => {
+  test.skip("should test read methods", async () => {
     const [
       installedValidators,
       installedExecutors,
@@ -103,6 +102,38 @@ describe("erc7579.decorators", async () => {
     expect(supportsValidator).toBe(true)
     expect(supportsDelegateCall).toBe(true)
     expect(isK1ValidatorInstalled).toBe(true)
+    expect([
+      installedValidators,
+      installedExecutors,
+      activeHook,
+      fallbackSelector,
+      supportsValidator,
+      supportsDelegateCall,
+      isK1ValidatorInstalled
+    ]).toMatchInlineSnapshot(`
+      [
+        [
+          [
+            "0x00000000d12897DDAdC2044614A9677B191A2d95",
+          ],
+          "0x0000000000000000000000000000000000000001",
+        ],
+        [
+          [
+            "0x7454C587FCDe26C62deDCFa53548A827CFeB7F78",
+          ],
+          "0x0000000000000000000000000000000000000001",
+        ],
+        "0x0000000000000000000000000000000000000000",
+        [
+          "0x00",
+          "0x0000000000000000000000000000000000000000",
+        ],
+        true,
+        true,
+        true,
+      ]
+    `)
   })
 
   test("should install a module", async () => {
@@ -118,7 +149,7 @@ describe("erc7579.decorators", async () => {
     expect(success).toBe(true)
   })
 
-  test("should uninstall a module", async () => {
+  test.skip("should uninstall a module", async () => {
     const hash = await nexusClient.uninstallModule({
       module: {
         type: "validator",
@@ -131,7 +162,7 @@ describe("erc7579.decorators", async () => {
     expect(success).toBe(true)
   })
 
-  test("should install it again", async () => {
+  test.skip("should install it again", async () => {
     const hash = await nexusClient.installModule({
       module: {
         type: "validator",

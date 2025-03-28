@@ -2,6 +2,8 @@ import {
   type Chain,
   type Client,
   ContractFunctionExecutionError,
+  type Hex,
+  type ReadContractParameters,
   type Transport,
   decodeFunctionResult,
   encodeFunctionData,
@@ -11,7 +13,10 @@ import type { SmartAccount } from "viem/account-abstraction"
 import { call, readContract } from "viem/actions"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import type { ModuleMeta } from "../../../modules/utils/Types"
+import type {
+  ModularSmartAccount,
+  ModuleMeta
+} from "../../../modules/utils/Types"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type IsModuleInstalledParameters<
@@ -19,6 +24,33 @@ export type IsModuleInstalledParameters<
 > = { account?: TSmartAccount } & {
   module: ModuleMeta
 }
+
+const abi = [
+  {
+    name: "isModuleInstalled",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      {
+        type: "uint256",
+        name: "moduleTypeId"
+      },
+      {
+        type: "address",
+        name: "module"
+      },
+      {
+        type: "bytes",
+        name: "additionalContext"
+      }
+    ],
+    outputs: [
+      {
+        type: "bool"
+      }
+    ]
+  }
+] as const
 
 /**
  * Checks if a specific module is installed on a given smart account.
@@ -58,48 +90,22 @@ export async function isModuleInstalled<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as ModularSmartAccount
 
   const publicClient = account.client
 
-  const abi = [
-    {
-      name: "isModuleInstalled",
-      type: "function",
-      stateMutability: "view",
-      inputs: [
-        {
-          type: "uint256",
-          name: "moduleTypeId"
-        },
-        {
-          type: "address",
-          name: "module"
-        },
-        {
-          type: "bytes",
-          name: "additionalContext"
-        }
-      ],
-      outputs: [
-        {
-          type: "bool"
-        }
-      ]
-    }
-  ] as const
+  const [isModuleEnabledRead] = await toIsModuleInstalledReads(account, {
+    address,
+    initData,
+    type
+  })
 
   try {
     return (await getAction(
       publicClient,
       readContract,
       "readContract"
-    )({
-      abi,
-      functionName: "isModuleInstalled",
-      args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"],
-      address: account.address
-    })) as unknown as Promise<boolean>
+    )(isModuleEnabledRead)) as unknown as Promise<boolean>
   } catch (error) {
     if (error instanceof ContractFunctionExecutionError) {
       const { factory, factoryData } = await account.getFactoryArgs()
@@ -132,4 +138,25 @@ export async function isModuleInstalled<
 
     throw error
   }
+}
+
+export const toIsModuleInstalledReads = async (
+  account: ModularSmartAccount,
+  { address, initData, type }: ModuleMeta
+): Promise<
+  ReadContractParameters<
+    typeof abi,
+    "isModuleInstalled",
+    [bigint, `0x${string}`, Hex]
+  >[]
+> => [
+  {
+    abi,
+    functionName: "isModuleInstalled",
+    args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"],
+    address: account.address
+  }
+]
+export const erc7579Reads = {
+  toIsModuleInstalledReads
 }

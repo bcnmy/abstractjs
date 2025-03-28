@@ -74,7 +74,7 @@ import {
   isNullOrUndefined,
   typeToString
 } from "./utils/Utils"
-import { toInstallData } from "./utils/toInstallData"
+import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 
 /**
@@ -274,16 +274,11 @@ export const toNexusAccount = async (
   // Generate the initialization data for the account using the initNexus function
   const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
 
-  const formattedValidators = toInstallData(validators)
-  const formattedExecutors = toInstallData(executors)
-  const formattedHook = toInstallData([hook])[0]
-  const formattedFallbacks = toInstallData(fallbacks)
-
   const initData = getInitData({
-    validators: formattedValidators,
-    executors: formattedExecutors,
-    hook: formattedHook,
-    fallbacks: formattedFallbacks,
+    validators: validators.map(toInitData),
+    executors: executors.map(toInitData),
+    hook: toInitData(hook),
+    fallbacks: fallbacks.map(toInitData),
     registryAddress,
     attesters,
     attesterThreshold,

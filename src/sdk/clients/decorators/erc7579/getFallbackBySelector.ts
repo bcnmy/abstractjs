@@ -1,15 +1,49 @@
-import type { Chain, Client, Hex, Transport } from "viem"
+import type {
+  Chain,
+  Client,
+  Hex,
+  ReadContractParameters,
+  Transport
+} from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
 import { readContract } from "viem/actions"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import { GENERIC_FALLBACK_SELECTOR } from "../../../account/utils/Constants"
+import type { ModularSmartAccount } from "../../../modules/utils/Types"
 
 export type GetFallbackBySelectorParameters<
   TSmartAccount extends SmartAccount | undefined
 > = { account?: TSmartAccount } & Partial<{
   selector?: Hex
 }>
+
+const abi = [
+  {
+    inputs: [
+      {
+        internalType: "bytes4",
+        name: "selector",
+        type: "bytes4"
+      }
+    ],
+    name: "getFallbackHandlerBySelector",
+    outputs: [
+      {
+        internalType: "CallType",
+        name: "",
+        type: "bytes1"
+      },
+      {
+        internalType: "address",
+        name: "",
+        type: "address"
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  }
+]
 
 /**
  * Retrieves the fallback handler for a given selector in a smart account.
@@ -44,43 +78,31 @@ export async function getFallbackBySelector<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
-
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
   const publicClient = account.client
+
+  const [getFallbackBySelectorRead] = await toGetFallbackBySelectorReads(
+    account,
+    selector
+  )
 
   return getAction(
     publicClient,
     readContract,
     "readContract"
-  )({
+  )(getFallbackBySelectorRead) as Promise<[Hex, Hex]>
+}
+
+export const toGetFallbackBySelectorReads = async (
+  account: ModularSmartAccount,
+  selector: Hex
+): Promise<
+  ReadContractParameters<typeof abi, "getFallbackHandlerBySelector", [Hex]>[]
+> => [
+  {
     address: account.address,
-    abi: [
-      {
-        inputs: [
-          {
-            internalType: "bytes4",
-            name: "selector",
-            type: "bytes4"
-          }
-        ],
-        name: "getFallbackHandlerBySelector",
-        outputs: [
-          {
-            internalType: "CallType",
-            name: "",
-            type: "bytes1"
-          },
-          {
-            internalType: "address",
-            name: "",
-            type: "address"
-          }
-        ],
-        stateMutability: "view",
-        type: "function"
-      }
-    ],
+    abi,
     functionName: "getFallbackHandlerBySelector",
     args: [selector]
-  }) as Promise<[Hex, Hex]>
-}
+  }
+]

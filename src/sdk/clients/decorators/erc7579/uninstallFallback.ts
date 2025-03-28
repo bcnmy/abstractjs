@@ -10,7 +10,11 @@ import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import type { ModuleMeta } from "../../../modules/utils/Types"
+import type { Call } from "../../../account/utils/Types"
+import type {
+  ModularSmartAccount,
+  ModuleMeta
+} from "../../../modules/utils/Types"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type UninstallFallbackParameters<
@@ -53,7 +57,7 @@ export async function uninstallFallback<
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
-    module: { address, initData, type }
+    module
   } = parameters
 
   if (!account_) {
@@ -62,48 +66,54 @@ export async function uninstallFallback<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as ModularSmartAccount
+  const calls = await toUninstallFallbackCalls(account, module)
 
   return getAction(
     client,
     sendUserOperation,
     "sendUserOperation"
   )({
-    calls: [
-      {
-        to: account.address,
-        value: BigInt(0),
-        data: encodeFunctionData({
-          abi: [
-            {
-              name: "uninstallFallback",
-              type: "function",
-              stateMutability: "nonpayable",
-              inputs: [
-                {
-                  type: "uint256",
-                  name: "moduleTypeId"
-                },
-                {
-                  type: "address",
-                  name: "module"
-                },
-                {
-                  type: "bytes",
-                  name: "deInitData"
-                }
-              ],
-              outputs: []
-            }
-          ],
-          functionName: "uninstallFallback",
-          args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"]
-        })
-      }
-    ],
+    calls,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
     account: account
   })
 }
+
+export const toUninstallFallbackCalls = async (
+  account: ModularSmartAccount,
+  { address, initData, type }: ModuleMeta
+): Promise<Call[]> => [
+  {
+    to: account.address,
+    value: BigInt(0),
+    data: encodeFunctionData({
+      abi: [
+        {
+          name: "uninstallFallback",
+          type: "function",
+          stateMutability: "nonpayable",
+          inputs: [
+            {
+              type: "uint256",
+              name: "moduleTypeId"
+            },
+            {
+              type: "address",
+              name: "module"
+            },
+            {
+              type: "bytes",
+              name: "deInitData"
+            }
+          ],
+          outputs: []
+        }
+      ],
+      functionName: "uninstallFallback",
+      args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"]
+    })
+  }
+]

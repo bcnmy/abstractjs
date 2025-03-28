@@ -7,16 +7,16 @@ import { erc7579Calls } from "../../../clients/decorators/erc7579"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
 import { ownableCalls } from "../../../modules/validators/ownable/decorators"
-import { smartSessionCalls } from "../../../modules/validators/smartSessions/decorators"
+import { smartSessionCalls } from "../../../modules/validators/smartSessions"
 
-export const globalCalls = {
+export const GLOBAL_COMPOSABLE_CALLS = {
   ...erc7579Calls,
   ...smartAccountCalls,
-  ...smartSessionCalls,
-  ...ownableCalls
+  ...ownableCalls,
+  ...smartSessionCalls
 } as const
 
-export type MethodKeys = keyof typeof globalCalls
+export type MethodKeys = keyof typeof GLOBAL_COMPOSABLE_CALLS
 // biome-ignore lint/complexity/noBannedTypes: Later inference will be used
 type ArgumentTypes<F extends Function> = F extends (
   account: ModularSmartAccount,
@@ -33,7 +33,7 @@ export type BuildMultichainInstructionsParameters = {
     }
   | {
       type: MethodKeys
-      parameters: ArgumentTypes<(typeof globalCalls)[MethodKeys]>
+      parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[MethodKeys]>
     }
 >
 
@@ -54,7 +54,7 @@ export const buildMultichainInstructions = async (
       if (calls_) {
         callsPerChain = calls_ as AbstractCall[]
       } else if (type) {
-        callsPerChain = (await globalCalls[type](
+        callsPerChain = (await GLOBAL_COMPOSABLE_CALLS[type](
           account,
           parametersForType as AnyData
         )) as AbstractCall[]

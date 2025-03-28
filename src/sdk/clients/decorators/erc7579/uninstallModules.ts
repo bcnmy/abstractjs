@@ -1,17 +1,13 @@
-import {
-  type Chain,
-  type Client,
-  type Hex,
-  type Transport,
-  encodeFunctionData,
-  getAddress
-} from "viem"
+import type { Chain, Client, Hex, Transport } from "viem"
 import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import type { ModuleMeta } from "../../../modules/utils/Types"
-import { parseModuleTypeId } from "./supportsModule"
+import type {
+  ModularSmartAccount,
+  ModuleMeta
+} from "../../../modules/utils/Types"
+import { toUninstallModuleCalls } from "./uninstallModule"
 
 export type UninstallModulesParameters<
   TSmartAccount extends SmartAccount | undefined
@@ -61,43 +57,19 @@ export async function uninstallModules<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
+  const calls = (
+    await Promise.all(
+      modules.flatMap((module) => toUninstallModuleCalls(account, module))
+    )
+  ).flat()
 
   return getAction(
     client,
     sendUserOperation,
     "sendUserOperation"
   )({
-    calls: modules.map(({ type, address, initData }) => ({
-      to: account.address,
-      value: BigInt(0),
-      data: encodeFunctionData({
-        abi: [
-          {
-            name: "uninstallModule",
-            type: "function",
-            stateMutability: "nonpayable",
-            inputs: [
-              {
-                type: "uint256",
-                name: "moduleTypeId"
-              },
-              {
-                type: "address",
-                name: "module"
-              },
-              {
-                type: "bytes",
-                name: "deInitData"
-              }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: "uninstallModule",
-        args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"]
-      })
-    })),
+    calls,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,

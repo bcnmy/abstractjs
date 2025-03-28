@@ -1,5 +1,5 @@
 import type { Chain, Client, Hex, PublicClient, Transport } from "viem"
-import type { ModularSmartAccount } from "../../../utils/Types"
+import type { AnyData, ModularSmartAccount } from "../../../utils/Types"
 
 import { parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
@@ -67,4 +67,11 @@ export async function getRemoveOwnerTx<
     value: BigInt(action.value.toString()),
     data: action.callData
   }
+}
+
+export const toRemoveOwnerCalls = async (
+  account: ModularSmartAccount,
+  parameters: GetRemoveOwnerTxParameters<ModularSmartAccount | undefined>
+): Promise<Call[]> => {
+  return [await getRemoveOwnerTx({} as AnyData, { ...parameters, account })]
 }

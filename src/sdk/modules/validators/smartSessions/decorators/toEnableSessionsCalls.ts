@@ -2,7 +2,7 @@ import { type Session, getEnableSessionsAction } from "@rhinestone/module-sdk"
 import type { Call } from "../../../../account/utils/Types"
 import type { ModularSmartAccount } from "../../../utils/Types"
 
-export const toEnableSessionsAction = async (
+export const toEnableSessionsCalls = async (
   _: ModularSmartAccount,
   parameters: { sessions: Session[] }
 ): Promise<Call[]> => {
