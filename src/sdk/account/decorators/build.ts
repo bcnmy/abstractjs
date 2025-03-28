@@ -7,6 +7,9 @@ import {
 import buildBatch, {
   type BuildBatchParameters
 } from "./instructions/buildBatch"
+import buildComposable, {
+  type BuildComposableParameters
+} from "./instructions/buildComposable"
 import {
   type BuildDefaultParameters,
   buildDefaultInstructions
@@ -108,6 +111,16 @@ export type BuildBatchInstruction = {
 }
 
 /**
+ * Build action which is used to build instructions for a composable call
+ * @property type - Literal "composable" to identify the action type
+ * @property data - {@link BuildComposableParameters} The parameters for the composable action
+ */
+export type BuildComposableInstruction = {
+  type: "composable"
+  data: BuildComposableParameters
+}
+
+/**
  * Union type of all possible build instruction types
  */
 export type BuildInstructionTypes =
@@ -118,6 +131,7 @@ export type BuildInstructionTypes =
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
+  | BuildComposableInstruction
 /**
  * Builds transaction instructions based on the provided action type and parameters
  *
@@ -168,6 +182,9 @@ export const build = async (
     }
     case "default": {
       return buildDefaultInstructions(baseParams, data)
+    }
+    case "composable": {
+      return buildComposable(baseParams, data)
     }
     case "transferFrom": {
       return buildTransferFrom(baseParams, data)

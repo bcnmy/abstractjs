@@ -4,7 +4,14 @@ import type {
   Instruction,
   Trigger
 } from "../../../clients/decorators/mee"
+import type { AnyData } from "../../../modules/utils/Types"
+import { isComposableCallRequired } from "../../../modules/utils/composabilityCalls"
+import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
+import {
+  type BuildComposableParameters,
+  buildComposableCall
+} from "./buildComposable"
 
 /**
  * Parameters for building an approval instruction
@@ -72,14 +79,46 @@ export const buildApprove = async (
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
 
-  const triggerCall: AbstractCall = {
-    to: tokenAddress,
-    data: encodeFunctionData({
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [spender, amount]
-    }),
-    ...(gasLimit ? { gasLimit } : {})
+  const abi = erc20Abi
+  const functionSig = "approve"
+  const args: readonly [`0x${string}`, bigint] = [spender, amount]
+
+  const functionContext = getFunctionContextFromAbi(functionSig, abi)
+
+  // Check for the runtime arguments and detect the need for composable call
+  const isComposableCall = isComposableCallRequired(
+    functionContext,
+    args as unknown as Array<AnyData>
+  )
+
+  let triggerCall: AbstractCall
+
+  // If the composable call is detected ? The call needs to composed with runtime encoding
+  if (isComposableCall) {
+    const composableCallParams: BuildComposableParameters = {
+      to: tokenAddress,
+      params: {
+        type: functionSig,
+        data: {
+          args: args as unknown as Array<AnyData>
+        }
+      },
+      abi,
+      chainId,
+      gasLimit
+    }
+
+    triggerCall = await buildComposableCall(baseParams, composableCallParams)
+  } else {
+    triggerCall = {
+      to: tokenAddress,
+      data: encodeFunctionData({
+        abi,
+        functionName: functionSig,
+        args
+      }),
+      ...(gasLimit ? { gasLimit } : {})
+    }
   }
 
   return [
