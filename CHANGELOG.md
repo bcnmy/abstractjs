@@ -5,13 +5,15 @@
 ### Minor Changes
 
 #### Breaking Changes
-- Renamed `getMeeFactoryData` to `getUniversalFactoryData` for more generic module support
-- Renamed `getMeeNexusAccount` to `getUniversalNexusAccount` to reflect universal module initialization
+- Added composability module by default resulting in a change of address for all users of latest SDK
+- Renamed `getDefaultFactoryData` to `getFactoryData` for more generic module support
+- Renamed `getDefaultNexusAddress` to `getlNexusAccount` to reflect universal module initialization
 - Updated module initialization structure to support any validator type extending BaseModule
 - Changed module configuration format to require explicit type declarations
 
 #### Features
 - Added universal module initialization support for Nexus accounts
+- Same account for both mee and 4337 flows
 - Introduced flexible module configuration system allowing extended properties
 - Added support for custom bootstrap addresses during account initialization
 - Implemented smart session helpers for improved session management
@@ -84,7 +86,7 @@
 
 - Nexus init using custom validator
   - BREAKING: `getMeeFactoryData` helper now renamed to `getDefaultFactoryData`
-  - BREAKING: `getMeeNexusAddress` helper now renamed to `getUniversalNexusAddress`
+  - BREAKING: `getMeeNexusAddress` helper now renamed to `getNexusAddress`
 - Moved useTestBundler datapoint to the bundler client instead of the account & renamed to 'mock'.
 - Use pimlico gasEstimates if string 'pimlico' is in the bundlerUrl
 - Added confirmations: 2 to waitForUserOperationReceipt in signOnChainQuote helper to avoid race condition

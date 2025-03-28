@@ -51,11 +51,8 @@ import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import { toMeeModule } from "../modules/validators/mee/toMeeModule"
 import type { Validator } from "../modules/validators/toValidator"
-import {
-  getInitData,
-  getUniversalFactoryData
-} from "./decorators/getFactoryData"
-import { getUniversalNexusAddress } from "./decorators/getNexusAddress"
+import { getFactoryData, getInitData } from "./decorators/getFactoryData"
+import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -286,7 +283,7 @@ export const toNexusAccount = async (
   })
 
   // Generate the factory data with the bootstrap address and init data
-  const factoryData = getUniversalFactoryData({ initData, index })
+  const factoryData = getFactoryData({ initData, index })
 
   /**
    * @description Gets the init code for the account
@@ -303,7 +300,7 @@ export const toNexusAccount = async (
   const getCounterFactualAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = await getUniversalNexusAddress({
+    const addressFromFactory = await getNexusAddress({
       factoryAddress,
       index,
       initData,

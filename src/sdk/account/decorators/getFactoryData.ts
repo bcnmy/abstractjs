@@ -10,17 +10,17 @@ import {
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import type { GenericModuleConfig } from "../toNexusAccount"
 
-export type GetUniversalFactoryDataParams = {
+export type GetFactoryDataParams = {
   /** Hex string of the validator init data */
   initData: Hex
   /** Account index for deterministic deployment */
   index: bigint
 }
 
-export const getUniversalFactoryData = ({
+export const getFactoryData = ({
   initData,
   index
-}: GetUniversalFactoryDataParams): Hex => {
+}: GetFactoryDataParams): Hex => {
   const salt = pad(toHex(index), { size: 32 })
 
   return encodeFunctionData({
