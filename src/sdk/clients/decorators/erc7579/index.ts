@@ -1,44 +1,63 @@
 import type { Chain, Client, Hash, Hex, Transport } from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
-import type { ModuleType } from "../../../modules/utils/Types.js"
+import type { Call } from "../../../account"
+import type { AnyData, ModuleType } from "../../../modules/utils/Types.js"
 import { accountId } from "./accountId.js"
-import { type GetActiveHookParameters, getActiveHook } from "./getActiveHook.js"
+import {
+  type GetActiveHookParameters,
+  getActiveHook,
+  toGetActiveHookReads
+} from "./getActiveHook.js"
 import {
   type GetFallbackBySelectorParameters,
-  getFallbackBySelector
+  getFallbackBySelector,
+  toGetFallbackBySelectorReads
 } from "./getFallbackBySelector.js"
 import {
   type GetInstalledExecutorsParameters,
-  getInstalledExecutors
+  getInstalledExecutors,
+  toGetInstalledExecutorsReads
 } from "./getInstalledExecutors.js"
 import {
   type GetInstalledValidatorsParameters,
-  getInstalledValidators
+  getInstalledValidators,
+  toGetInstalledValidatorsReads
 } from "./getInstalledValidators.js"
 import {
   type GetPreviousModuleParameters,
   getPreviousModule
 } from "./getPreviousModule.js"
-import { type InstallModuleParameters, installModule } from "./installModule.js"
+import {
+  type InstallModuleParameters,
+  installModule,
+  toInstallModuleCalls,
+  toInstallWithSafeSenderCalls,
+  toSafeSenderCalls
+} from "./installModule.js"
 import {
   type InstallModulesParameters,
   installModules
 } from "./installModules.js"
 import {
   type IsModuleInstalledParameters,
-  isModuleInstalled
+  isModuleInstalled,
+  toIsModuleInstalledReads
 } from "./isModuleInstalled.js"
 import {
   type SupportsExecutionModeParameters,
-  supportsExecutionMode
+  supportsExecutionMode,
+  toSupportsExecutionModeReads
 } from "./supportsExecutionMode.js"
 import type { CallType, ExecutionMode } from "./supportsExecutionMode.js"
 import {
   type SupportsModuleParameters,
-  supportsModule
+  supportsModule,
+  toSupportsModuleReads
 } from "./supportsModule.js"
+import { toUninstallFallbackCalls } from "./uninstallFallback.js"
 import {
   type UninstallModuleParameters,
+  toUninstallModuleCalls,
   uninstallModule
 } from "./uninstallModule.js"
 import {
@@ -132,3 +151,26 @@ export function erc7579Actions() {
     getPreviousModule: (args) => getPreviousModule(client, args)
   })
 }
+
+export type CallFn = (...args: AnyData[]) => Promise<Call[]>
+export type ReadFn = (...args: AnyData[]) => Promise<any>
+export type CallDictionary = Record<string, CallFn>
+export type ReadDictionary = Record<string, ReadFn>
+
+export const erc7579Calls = {
+  toInstallModuleCalls,
+  toUninstallModuleCalls,
+  toInstallWithSafeSenderCalls,
+  toSafeSenderCalls,
+  toUninstallFallbackCalls
+} as const
+
+export const erc7579Reads = {
+  toIsModuleInstalledReads,
+  toGetActiveHookReads,
+  toGetFallbackBySelectorReads,
+  toGetInstalledExecutorsReads,
+  toGetInstalledValidatorsReads,
+  toSupportsExecutionModeReads,
+  toSupportsModuleReads
+} as const

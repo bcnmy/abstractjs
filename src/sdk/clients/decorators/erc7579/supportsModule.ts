@@ -2,6 +2,7 @@ import {
   type Chain,
   type Client,
   ContractFunctionExecutionError,
+  type ReadContractParameters,
   type Transport,
   decodeFunctionResult,
   encodeFunctionData
@@ -11,13 +12,35 @@ import { call, readContract } from "viem/actions"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import type { ModuleType } from "../../../modules/utils/Types"
+import type {
+  ModularSmartAccount,
+  ModuleType
+} from "../../../modules/utils/Types"
 
 export type SupportsModuleParameters<
   TSmartAccount extends SmartAccount | undefined
 > = { account?: TSmartAccount } & {
   type: ModuleType
 }
+
+const abi = [
+  {
+    name: "supportsModule",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      {
+        type: "uint256",
+        name: "moduleTypeId"
+      }
+    ],
+    outputs: [
+      {
+        type: "bool"
+      }
+    ]
+  }
+] as const
 
 /**
  * Parses a module type to its corresponding ID.
@@ -37,7 +60,7 @@ export function parseModuleTypeId(type: ModuleType): bigint {
     case "hook":
       return BigInt(4)
     default:
-      throw new Error("Invalid module type")
+      throw new Error(`Invalid module type: ${type}`)
   }
 }
 
@@ -71,40 +94,18 @@ export async function supportsModule<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
 
   const publicClient = account.client
 
-  const abi = [
-    {
-      name: "supportsModule",
-      type: "function",
-      stateMutability: "view",
-      inputs: [
-        {
-          type: "uint256",
-          name: "moduleTypeId"
-        }
-      ],
-      outputs: [
-        {
-          type: "bool"
-        }
-      ]
-    }
-  ] as const
+  const [supportsModuleRead] = await toSupportsModuleReads(account, args)
 
   try {
     return await getAction(
       publicClient,
       readContract,
       "readContract"
-    )({
-      abi,
-      functionName: "supportsModule",
-      args: [parseModuleTypeId(args.type)],
-      address: account.address
-    })
+    )(supportsModuleRead)
   } catch (error) {
     if (error instanceof ContractFunctionExecutionError) {
       const { factory, factoryData } = await account.getFactoryArgs()
@@ -138,3 +139,19 @@ export async function supportsModule<
     throw error
   }
 }
+
+export const toSupportsModuleReads = async <
+  TSmartAccount extends SmartAccount | undefined
+>(
+  account: ModularSmartAccount,
+  { type }: SupportsModuleParameters<TSmartAccount>
+): Promise<
+  ReadContractParameters<typeof abi, "supportsModule", [bigint]>[]
+> => [
+  {
+    abi,
+    functionName: "supportsModule",
+    args: [parseModuleTypeId(type)],
+    address: account.address
+  }
+]

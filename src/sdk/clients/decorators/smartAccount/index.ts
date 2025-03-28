@@ -18,6 +18,7 @@ import type {
   UserOperation
 } from "viem/account-abstraction"
 import type { AnyData } from "../../../modules/utils/Types"
+import type { CallDictionary } from "../erc7579"
 import {
   type DebugUserOperationReturnType,
   debugUserOperation
@@ -37,6 +38,7 @@ import { signMessage } from "./signMessage"
 import { signTypedData } from "./signTypedData"
 import {
   type UpgradeSmartAccountParameters,
+  toUpgradeSmartAccountCalls,
   upgradeSmartAccount
 } from "./upgradeSmartAccount"
 import { waitForTransactionReceipt } from "./waitForTransactionReceipt"
@@ -431,3 +433,7 @@ export function smartAccountActions() {
     upgradeSmartAccount: (args) => upgradeSmartAccount(client, args)
   })
 }
+
+export const smartAccountCalls = {
+  toUpgradeSmartAccountCalls
+} as CallDictionary

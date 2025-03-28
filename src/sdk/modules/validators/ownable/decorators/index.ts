@@ -2,15 +2,17 @@ import type { Address, Chain, Client, Hash, Hex, Transport } from "viem"
 import type { Call } from "../../../../account/utils/Types"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { type AddOwnerParameters, addOwner } from "./addOwner"
-import { getAddOwnerTx } from "./getAddOwnerTx"
+import { getAddOwnerTx, toAddOwnerCalls } from "./getAddOwnerTx"
 import { type GetOwnersParameters, getOwners } from "./getOwners"
 import {
   type GetRemoveOwnerTxParameters,
-  getRemoveOwnerTx
+  getRemoveOwnerTx,
+  toRemoveOwnerCalls
 } from "./getRemoveOwnerTx"
 import {
   type GetSetThresholdTxParameters,
-  getSetThresholdTx
+  getSetThresholdTx,
+  toSetThresholdCalls
 } from "./getSetThresholdTx"
 import { type GetThresholdParameters, getThreshold } from "./getThreshold"
 import { type MultiSignParameters, multiSign } from "./multiSign"
@@ -21,6 +23,7 @@ import {
 } from "./prepareForMultiSign"
 import { type RemoveOwnerParameters, removeOwner } from "./removeOwner"
 import { type SetThresholdParameters, setThreshold } from "./setThreshold"
+
 export type OwnableActions<
   TModularSmartAccount extends ModularSmartAccount | undefined
 > = {
@@ -90,3 +93,14 @@ export function ownableActions() {
     }
   }
 }
+
+export const ownableCalls = {
+  toAddOwnerCalls,
+  toSetThresholdCalls,
+  toRemoveOwnerCalls
+} as const
+
+export const ownableReads = {
+  toGetOwnersReads: getOwners,
+  toGetThresholdReads: getThreshold
+} as const

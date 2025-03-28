@@ -1,7 +1,6 @@
 import type { Address, Hex, Prettify, SignableMessage } from "viem"
 import { DUMMY_SIGNATURE } from ".."
 import type { Signer } from "../../account"
-import { sanitizeSignature } from "../utils"
 
 export type GenericValidatorConfig<
   T extends ValidatorRequiredConfig = ValidatorRequiredConfig
@@ -76,7 +75,7 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     signUserOpHash: async (userOpHash: Hex) =>
       await signer.signMessage({ message: { raw: userOpHash } }),
     signMessage: async (message: SignableMessage) =>
-      sanitizeSignature(await signer.signMessage({ message })),
+      await signer.signMessage({ message }),
     ...rest
   }
 }
