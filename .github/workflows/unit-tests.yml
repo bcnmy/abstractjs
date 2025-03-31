@@ -41,4 +41,5 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
           TESTNET_CHAIN_ID: 84532
           MAINNET_CHAIN_ID: 10
+          RUN_PAID_TESTS: false
           CI: true 
