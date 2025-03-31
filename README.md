@@ -1,4 +1,8 @@
-[![Biconomy](https://img.shields.io/badge/Made_with_%F0%9F%8D%8A_by-Biconomy-ff4e17?style=flat)](https://biconomy.io) [![License MIT](https://img.shields.io/badge/License-MIT-blue?&style=flat)](./LICENSE) [![codecov](https://codecov.io/github/bcnmy/abstractjs/graph/badge.svg?token=DTdIR5aBDA)](https://codecov.io/github/bcnmy/abstractjs) [![install size](https://packagephobia.com/badge?p=@biconomy/abstractjs)](https://packagephobia.com/result?p=@biconomy/abstractjs)
+[![Biconomy](https://img.shields.io/badge/Made_with_%F0%9F%8D%8A_by-Biconomy-ff4e17?style=flat)](https://biconomy.io)
+[![Build](https://github.com/bcnmy/abstractjs/actions/workflows/build.yml/badge.svg)](https://github.com/bcnmy/abstractjs/actions)
+[![License MIT](https://img.shields.io/badge/License-MIT-blue?&style=flat)](./LICENSE) 
+[![codecov](https://codecov.io/github/bcnmy/abstractjs/graph/badge.svg?token=DTdIR5aBDA)](https://codecov.io/github/bcnmy/abstractjs) 
+[![install size](https://packagephobia.com/badge?p=@biconomy/abstractjs)](https://packagephobia.com/result?p=@biconomy/abstractjs)
 
 # abstractjs 🚀
 
