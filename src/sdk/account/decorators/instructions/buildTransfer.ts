@@ -1,14 +1,13 @@
 import { type Address, encodeFunctionData } from "viem"
-import type {
-  AbstractCall,
-  Instruction,
-  Trigger
-} from "../../../clients/decorators/mee"
+import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import { isComposableCallRequired } from "../../../modules/utils/composabilityCalls"
-import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams } from "../build"
+import {
+  type RuntimeValue,
+  getFunctionContextFromAbi
+} from "../../../modules/utils/runtimeAbiEncoding"
+import type { BaseInstructionsParams, TokenParams } from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -17,7 +16,7 @@ import {
 /**
  * Parameters for building a transfer instruction
  */
-export type BuildTransferParameters = Trigger & {
+export type BuildTransferParameters = TokenParams & {
   /**
    * Gas limit for the transfer transaction. Required when using the standard
    * transfer function instead of permit.
@@ -81,7 +80,10 @@ export const buildTransfer = async (
 
   const abi = TokenWithPermitAbi
   const functionSig = "transfer"
-  const args: readonly [`0x${string}`, bigint] = [recipient, amount]
+  const args: readonly [`0x${string}`, bigint | RuntimeValue] = [
+    recipient,
+    amount
+  ]
 
   const functionContext = getFunctionContextFromAbi(functionSig, abi)
 
@@ -115,7 +117,7 @@ export const buildTransfer = async (
       data: encodeFunctionData({
         abi,
         functionName: functionSig,
-        args
+        args: args as [`0x${string}`, bigint]
       }),
       ...(gasLimit ? { gasLimit } : {})
     }

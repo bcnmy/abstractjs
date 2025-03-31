@@ -1,13 +1,12 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
-import type {
-  AbstractCall,
-  Instruction,
-  Trigger
-} from "../../../clients/decorators/mee"
+import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import type { AnyData } from "../../../modules/utils/Types"
 import { isComposableCallRequired } from "../../../modules/utils/composabilityCalls"
-import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams } from "../build"
+import {
+  type RuntimeValue,
+  getFunctionContextFromAbi
+} from "../../../modules/utils/runtimeAbiEncoding"
+import type { BaseInstructionsParams, TokenParams } from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -16,7 +15,7 @@ import {
 /**
  * Parameters for building an approval instruction
  */
-export type BuildApproveParameters = Trigger & {
+export type BuildApproveParameters = TokenParams & {
   /**
    * Gas limit for the approval transaction. Required when using the standard
    * approve function instead of permit.
@@ -81,7 +80,10 @@ export const buildApprove = async (
 
   const abi = erc20Abi
   const functionSig = "approve"
-  const args: readonly [`0x${string}`, bigint] = [spender, amount]
+  const args: readonly [`0x${string}`, bigint | RuntimeValue] = [
+    spender,
+    amount
+  ]
 
   const functionContext = getFunctionContextFromAbi(functionSig, abi)
 
@@ -115,7 +117,7 @@ export const buildApprove = async (
       data: encodeFunctionData({
         abi,
         functionName: functionSig,
-        args
+        args: args as [`0x${string}`, bigint]
       }),
       ...(gasLimit ? { gasLimit } : {})
     }

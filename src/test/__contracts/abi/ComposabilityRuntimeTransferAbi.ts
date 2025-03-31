@@ -4,182 +4,182 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
       {
         internalType: "address",
         name: "recipient",
-        type: "address",
+        type: "address"
       },
       {
         internalType: "uint256",
         name: "amount",
-        type: "uint256",
-      },
+        type: "uint256"
+      }
     ],
     name: "transferFunds",
     outputs: [
       {
         internalType: "bool",
         name: "",
-        type: "bool",
-      },
+        type: "bool"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "function",
+    type: "function"
   },
   {
     inputs: [
       {
         internalType: "bytes",
         name: "",
-        type: "bytes",
+        type: "bytes"
       },
       {
         internalType: "address[]",
         name: "addresses",
-        type: "address[]",
+        type: "address[]"
       },
       {
         internalType: "uint256",
         name: "amount",
-        type: "uint256",
-      },
+        type: "uint256"
+      }
     ],
     name: "transferFundsWithBytes",
     outputs: [
       {
         internalType: "bool",
         name: "",
-        type: "bool",
-      },
+        type: "bool"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "function",
+    type: "function"
   },
   {
     inputs: [
       {
         internalType: "address",
         name: "",
-        type: "address",
+        type: "address"
       },
       {
         internalType: "address[]",
         name: "addresses",
-        type: "address[]",
+        type: "address[]"
       },
       {
         internalType: "uint256",
         name: "amount",
-        type: "uint256",
-      },
+        type: "uint256"
+      }
     ],
     name: "transferFundsWithDynamicArray",
     outputs: [
       {
         internalType: "bool",
         name: "",
-        type: "bool",
-      },
+        type: "bool"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "function",
+    type: "function"
   },
   {
     inputs: [
       {
         internalType: "address[]",
         name: "addresses",
-        type: "address[]",
+        type: "address[]"
       },
       {
         internalType: "uint256[]",
         name: "amounts",
-        type: "uint256[]",
-      },
+        type: "uint256[]"
+      }
     ],
     name: "transferFundsWithRuntimeParamInsideArray",
     outputs: [
       {
         internalType: "bool",
         name: "",
-        type: "bool",
-      },
+        type: "bool"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "function",
+    type: "function"
   },
   {
     inputs: [
       {
         internalType: "string",
         name: "",
-        type: "string",
+        type: "string"
       },
       {
         internalType: "address[]",
         name: "addresses",
-        type: "address[]",
+        type: "address[]"
       },
       {
         internalType: "uint256",
         name: "amount",
-        type: "uint256",
-      },
+        type: "uint256"
+      }
     ],
     name: "transferFundsWithString",
     outputs: [
       {
         internalType: "bool",
         name: "",
-        type: "bool",
-      },
+        type: "bool"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "function",
+    type: "function"
   },
   {
     inputs: [
       {
         internalType: "address",
         name: "selfContractAddress",
-        type: "address",
+        type: "address"
       },
       {
         components: [
           {
             internalType: "address",
             name: "recipient",
-            type: "address",
+            type: "address"
           },
           {
             internalType: "uint256",
             name: "amount",
-            type: "uint256",
-          },
+            type: "uint256"
+          }
         ],
         internalType: "struct RuntimeTransfer.Payload",
         name: "payload",
-        type: "tuple",
-      },
+        type: "tuple"
+      }
     ],
     name: "transferFundsWithStruct",
     outputs: [
       {
         internalType: "bool",
         name: "",
-        type: "bool",
-      },
+        type: "bool"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "function",
+    type: "function"
   },
   {
     inputs: [
       {
         internalType: "address",
         name: "tokenAddress",
-        type: "address",
-      },
+        type: "address"
+      }
     ],
     stateMutability: "nonpayable",
-    type: "constructor",
+    type: "constructor"
   },
   {
     inputs: [],
@@ -188,10 +188,10 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
       {
         internalType: "contract IERC20",
         name: "",
-        type: "address",
-      },
+        type: "address"
+      }
     ],
     stateMutability: "view",
-    type: "function",
-  },
-];
+    type: "function"
+  }
+]

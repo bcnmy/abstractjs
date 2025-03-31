@@ -1,4 +1,6 @@
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type { RuntimeValue } from "../../modules"
 import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import {
   type BuildApproveParameters,
@@ -29,6 +31,28 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
+
+/**
+ * Parameters for a token builders
+ */
+export type TokenParams = {
+  /**
+   * The address of the token to use on the relevant chain
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+   */
+  tokenAddress: Address
+  /**
+   * The chainId to use
+   * @example 1 // Ethereum Mainnet
+   */
+  chainId: number
+  /**
+   * Amount of the token to use, in the token's smallest unit
+   * @example 1000000n // 1 USDC (6 decimals)
+   * @example { isRuntime: true, inputParams: [], outputParams: [] }
+   */
+  amount: bigint | RuntimeValue
+}
 
 /**
  * Base parameters for building instructions

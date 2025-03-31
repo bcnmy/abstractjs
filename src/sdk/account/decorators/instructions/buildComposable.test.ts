@@ -1,34 +1,37 @@
 import {
-  Abi,
+  http,
+  type Abi,
   type Address,
   type Chain,
   type LocalAccount,
   erc20Abi,
   fromBytes,
-  http,
   parseUnits,
   toBytes,
 } from "viem";
+import { baseSepolia } from "viem/chains";
 import { beforeAll, describe, expect, it } from "vitest";
+import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi";
+import { toNetwork } from "../../../../test/testSetup";
 import type { NetworkConfig } from "../../../../test/testUtils";
 import {
   type MeeClient,
   createMeeClient,
 } from "../../../clients/createMeeClient";
 import type { Instruction } from "../../../clients/decorators/mee/getQuote";
+import {
+  UniswapSwapRouterAbi,
+  testnetMcUniswapSwapRouter,
+} from "../../../constants";
 import { testnetMcUSDC } from "../../../constants/tokens";
 import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules";
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount,
 } from "../../toMultiChainNexusAccount";
-import buildComposable from "./buildComposable";
-import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi";
-import { baseSepolia } from "viem/chains";
-import { getMeeScanLink } from "../../utils/explorer";
-import { toNetwork } from "../../../../test/testSetup";
-import { testnetMcUniswapSwapRouter, UniswapSwapRouterAbi } from "../../../constants";
 import { getMultichainContract } from "../../utils";
+import { getMeeScanLink } from "../../utils/explorer";
+import buildComposable from "./buildComposable";
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig;
@@ -494,7 +497,7 @@ describe("mee.buildComposable", () => {
         ["0x232fb0469e5fc7f8f5a04eddbcc11f677143f715", chain.id], // Fusion
       ],
     });
-    
+
     const inToken = testnetMcUSDC;
     const outToken = fusionToken;
 
@@ -516,7 +519,11 @@ describe("mee.buildComposable", () => {
           data: {
             args: [
               testnetMcUniswapSwapRouter.addressOn(chain.id),
-              runtimeERC20BalanceOf(mcNexus.addressOn(chain.id, true), inToken, chain.id),
+              runtimeERC20BalanceOf(
+                mcNexus.addressOn(chain.id, true),
+                inToken,
+                chain.id
+              ),
             ],
           },
         },
@@ -538,7 +545,11 @@ describe("mee.buildComposable", () => {
                 tokenOut: outToken.addressOn(chain.id),
                 fee: 3000,
                 recipient: eoaAccount.address,
-                amountIn: runtimeERC20BalanceOf(mcNexus.addressOn(chain.id, true), inToken, chain.id),
+                amountIn: runtimeERC20BalanceOf(
+                  mcNexus.addressOn(chain.id, true),
+                  inToken,
+                  chain.id
+                ),
                 amountOutMinimum: BigInt(1),
                 sqrtPriceLimitX96: BigInt(0),
               },
@@ -578,17 +589,70 @@ describe("mee.buildComposable", () => {
     );
   });
 
-  // it("should execute composable transaction for approval and transferFrom builders", async () => {
-  //   const amount = parseUnits("0.2", 6);
+  it("should execute composable transaction for approval and transferFrom builders", async () => {
+    const amount = parseUnits("0.2", 6);
 
-  //   const approval = mcNexus.build({
-  //     type: "approve",
-  //     data: {
-  //       amount: runtimeERC20BalanceOf(mcNexus.addressOn(chain.id, true), testnetMcUSDC, chain.id),
-  //       chainId: chain.id,
-  //       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-  //       spender: mcNexus.addressOn(chain.id, true)
-  //     }
-  //   })
-  // });
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amount,
+    };
+
+    const approval = await mcNexus.build({
+      type: "approve",
+      data: {
+        amount: runtimeERC20BalanceOf(
+          mcNexus.addressOn(chain.id, true),
+          testnetMcUSDC,
+          chain.id
+        ),
+        chainId: chain.id,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        spender: mcNexus.addressOn(chain.id, true),
+      },
+    });
+
+    const transfer = await mcNexus.build({
+      type: "transferFrom",
+      data: {
+        chainId: chain.id,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: runtimeERC20BalanceOf(
+          mcNexus.addressOn(chain.id, true),
+          testnetMcUSDC,
+          chain.id
+        ),
+        sender: mcNexus.addressOn(chain.id, true),
+        recipient: eoaAccount.address,
+      },
+    });
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [...approval, ...transfer],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id),
+        },
+      }),
+    });
+
+    console.log(
+      "Link for composable transaction for approval and transferFrom builders: ",
+      getMeeScanLink(hash)
+    );
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+    });
+
+    const execResult = receipt.receipts.map(
+      (receipt) => receipt.status === "fulfilled"
+    );
+
+    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
+      execResult.toString()
+    );
+  });
 });

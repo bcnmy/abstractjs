@@ -1,13 +1,12 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
-import type {
-  AbstractCall,
-  Instruction,
-  Trigger
-} from "../../../clients/decorators/mee"
+import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import type { AnyData } from "../../../modules/utils/Types"
 import { isComposableCallRequired } from "../../../modules/utils/composabilityCalls"
-import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams } from "../build"
+import {
+  type RuntimeValue,
+  getFunctionContextFromAbi
+} from "../../../modules/utils/runtimeAbiEncoding"
+import type { BaseInstructionsParams, TokenParams } from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -16,7 +15,7 @@ import {
 /**
  * Parameters for building a transferFrom instruction
  */
-export type BuildTransferFromParameters = Trigger & {
+export type BuildTransferFromParameters = TokenParams & {
   /**
    * Gas limit for the transferFrom transaction. Required when using the standard
    * transferFrom function instead of permit.
@@ -88,7 +87,7 @@ export const buildTransferFrom = async (
 
   const abi = erc20Abi
   const functionSig = "transferFrom"
-  const args: readonly [`0x${string}`, `0x${string}`, bigint] = [
+  const args: readonly [`0x${string}`, `0x${string}`, bigint | RuntimeValue] = [
     sender,
     recipient,
     amount
@@ -126,7 +125,7 @@ export const buildTransferFrom = async (
       data: encodeFunctionData({
         abi,
         functionName: functionSig,
-        args
+        args: args as [`0x${string}`, `0x${string}`, bigint]
       }),
       ...(gasLimit ? { gasLimit } : {})
     }
