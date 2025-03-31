@@ -50,7 +50,7 @@ const calls = [
   }
 ]
 
-describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
+describe.skipIf(!runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
