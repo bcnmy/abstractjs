@@ -2,6 +2,7 @@ import type { Chain, Client, Hex, Transport } from "viem"
 import { sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
+import type { Call } from "../../../../account/utils/Types"
 import { getSetOwnableValidatorThresholdAction } from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
 
@@ -63,8 +64,7 @@ export async function setThreshold<
     account: account_ = client.account,
     maxFeePerGas,
     maxPriorityFeePerGas,
-    nonce,
-    threshold
+    nonce
   } = parameters
 
   if (!account_) {
@@ -75,23 +75,34 @@ export async function setThreshold<
 
   const account = parseAccount(account_) as ModularSmartAccount
 
-  const action = getSetOwnableValidatorThresholdAction({ threshold })
+  const calls = await toSetThresholdCalls(account, parameters)
 
   return getAction(
     client,
     sendUserOperation,
     "sendUserOperation"
   )({
-    calls: [
-      {
-        to: action.target,
-        value: BigInt(action.value.toString()),
-        data: action.callData
-      }
-    ],
+    calls,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
     account
   })
+}
+
+export const toSetThresholdCalls = async (
+  _: ModularSmartAccount,
+  parameters: SetThresholdParameters<ModularSmartAccount | undefined>
+): Promise<Call[]> => {
+  const action = getSetOwnableValidatorThresholdAction({
+    threshold: parameters.threshold
+  })
+
+  return [
+    {
+      to: action.target,
+      value: BigInt(action.value.toString()),
+      data: action.callData
+    }
+  ]
 }

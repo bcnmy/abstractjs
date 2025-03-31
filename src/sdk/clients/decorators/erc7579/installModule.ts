@@ -12,11 +12,17 @@ import {
   sendUserOperation
 } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
-import type { NexusAccount } from "../../../account/toNexusAccount"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
+import type { Call } from "../../../account/utils/Types"
 import { addressEquals } from "../../../account/utils/Utils"
-import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import type { ModuleMeta } from "../../../modules/utils/Types"
+import {
+  MEE_VALIDATOR_ADDRESS,
+  SMART_SESSIONS_ADDRESS
+} from "../../../constants"
+import type {
+  ModularSmartAccount,
+  ModuleMeta
+} from "../../../modules/utils/Types"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type InstallModuleParameters<
@@ -70,69 +76,13 @@ export async function installModule<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
 
-  const calls = [
-    {
-      to: account.address,
-      value: BigInt(0),
-      data: encodeFunctionData({
-        abi: [
-          {
-            name: "installModule",
-            type: "function",
-            stateMutability: "nonpayable",
-            inputs: [
-              {
-                type: "uint256",
-                name: "moduleTypeId"
-              },
-              {
-                type: "address",
-                name: "module"
-              },
-              {
-                type: "bytes",
-                name: "initData"
-              }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: "installModule",
-        args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"]
-      })
-    }
-  ]
-
-  if (addressEquals(address, SMART_SESSIONS_ADDRESS)) {
-    const nexusAccount = account as NexusAccount
-
-    if (nexusAccount?.getModule().address) {
-      calls.push({
-        to: nexusAccount.getModule().address,
-        value: BigInt(0),
-        data: encodeFunctionData({
-          abi: [
-            {
-              name: "addSafeSender",
-              type: "function",
-              stateMutability: "nonpayable",
-              inputs: [
-                {
-                  type: "address",
-                  name: "sender"
-                }
-              ],
-              outputs: []
-            }
-          ],
-          functionName: "addSafeSender",
-          args: [address]
-        })
-      })
-    }
-  }
+  const calls = await toInstallWithSafeSenderCalls(account, {
+    address,
+    initData,
+    type
+  })
 
   const sendUserOperationParams = {
     calls,
@@ -149,3 +99,73 @@ export async function installModule<
     "sendUserOperation"
   )(sendUserOperationParams)
 }
+
+export const toSafeSenderCalls = async (
+  __: ModularSmartAccount,
+  { address }: ModuleMeta
+): Promise<Call[]> =>
+  addressEquals(address, SMART_SESSIONS_ADDRESS)
+    ? [
+        {
+          to: MEE_VALIDATOR_ADDRESS,
+          value: BigInt(0),
+          data: encodeFunctionData({
+            abi: [
+              {
+                name: "addSafeSender",
+                type: "function",
+                stateMutability: "nonpayable",
+                inputs: [{ type: "address", name: "sender" }],
+                outputs: []
+              }
+            ],
+            functionName: "addSafeSender",
+            args: [address]
+          })
+        }
+      ]
+    : []
+
+export const toInstallModuleCalls = async (
+  account: ModularSmartAccount,
+  { address, initData, type }: ModuleMeta
+): Promise<Call[]> => [
+  {
+    to: account.address,
+    value: BigInt(0),
+    data: encodeFunctionData({
+      abi: [
+        {
+          name: "installModule",
+          type: "function",
+          stateMutability: "nonpayable",
+          inputs: [
+            {
+              type: "uint256",
+              name: "moduleTypeId"
+            },
+            {
+              type: "address",
+              name: "module"
+            },
+            {
+              type: "bytes",
+              name: "initData"
+            }
+          ],
+          outputs: []
+        }
+      ],
+      functionName: "installModule",
+      args: [parseModuleTypeId(type), getAddress(address), initData ?? "0x"]
+    })
+  }
+]
+
+export const toInstallWithSafeSenderCalls = async (
+  account: ModularSmartAccount,
+  { address, initData, type }: ModuleMeta
+): Promise<Call[]> => [
+  ...(await toInstallModuleCalls(account, { address, initData, type })),
+  ...(await toSafeSenderCalls(account, { address, type }))
+]

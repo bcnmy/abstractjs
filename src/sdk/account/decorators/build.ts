@@ -21,6 +21,10 @@ import {
   buildIntent
 } from "./instructions/buildIntent"
 import {
+  type BuildMultichainInstructionsParameters,
+  buildMultichainInstructions
+} from "./instructions/buildMultichainInstructions"
+import {
   type BuildTransferParameters,
   buildTransfer
 } from "./instructions/buildTransfer"
@@ -145,6 +149,16 @@ export type BuildComposableInstruction = {
 }
 
 /**
+ * Build action which is used to build instructions for uninstalling modules
+ * @property type - Literal "buildMultichainInstructions" to identify the action type
+ * @property data - {@link BuildMultichainInstructionParameters} The parameters for the uninstall modules action
+ */
+export type BuildMultichainInstructionInstruction = {
+  type: "multichain"
+  data: BuildMultichainInstructionsParameters
+}
+
+/**
  * Union type of all possible build instruction types
  */
 export type BuildInstructionTypes =
@@ -156,6 +170,7 @@ export type BuildInstructionTypes =
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
   | BuildComposableInstruction
+  | BuildMultichainInstructionInstruction
 /**
  * Builds transaction instructions based on the provided action type and parameters
  *
@@ -224,6 +239,9 @@ export const build = async (
     }
     case "batch": {
       return buildBatch(baseParams, data)
+    }
+    case "multichain": {
+      return buildMultichainInstructions(baseParams, data)
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

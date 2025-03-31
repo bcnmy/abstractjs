@@ -1,5 +1,32 @@
 # @biconomy/abstractjs
 
+## 0.4.0
+
+### Minor Changes
+
+#### Breaking Changes
+- Added composability module by default resulting in a change of address for all users of latest SDK
+- Renamed `getDefaultFactoryData` to `getFactoryData` for more generic module support
+- Renamed `getDefaultNexusAddress` to `getlNexusAccount` to reflect universal module initialization
+- Updated module initialization structure to support any validator type extending BaseModule
+- Changed module configuration format to require explicit type declarations
+
+#### Features
+- Added universal module initialization support for Nexus accounts
+- Same account for both mee and 4337 flows
+- Introduced flexible module configuration system allowing extended properties
+- Added support for custom bootstrap addresses during account initialization
+- Implemented smart session helpers for improved session management
+- Added new utility functions `toInitData` and `toInstallData` for standardized module formatting
+
+#### Improvements
+- Enable mode for smart sessions by default
+- Streamlined factory data and counterfactual address calculations
+- Enhanced type safety for module configurations
+- Improved error handling for module initialization
+- Reduced bundle size through code optimization (-5.45% ESM, -7.42% CJS)
+- Added comprehensive test coverage for new module initialization flows
+
 ## 0.3.0
 
 ### Minor Changes
@@ -59,7 +86,7 @@
 
 - Nexus init using custom validator
   - BREAKING: `getMeeFactoryData` helper now renamed to `getDefaultFactoryData`
-  - BREAKING: `getMeeNexusAddress` helper now renamed to `getUniversalNexusAddress`
+  - BREAKING: `getMeeNexusAddress` helper now renamed to `getNexusAddress`
 - Moved useTestBundler datapoint to the bundler client instead of the account & renamed to 'mock'.
 - Use pimlico gasEstimates if string 'pimlico' is in the bundlerUrl
 - Added confirmations: 2 to waitForUserOperationReceipt in signOnChainQuote helper to avoid race condition

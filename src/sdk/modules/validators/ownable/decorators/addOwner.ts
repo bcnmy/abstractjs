@@ -2,6 +2,7 @@ import type { Chain, Client, Hex, PublicClient, Transport } from "viem"
 import { sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
+import type { Call } from "../../../../account/utils/Types"
 import { getAddOwnableValidatorOwnerAction } from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
 
@@ -48,8 +49,7 @@ export async function addOwner<
     account: account_ = client.account,
     maxFeePerGas,
     maxPriorityFeePerGas,
-    nonce,
-    owner
+    nonce
   } = parameters
 
   if (!account_) {
@@ -59,33 +59,40 @@ export async function addOwner<
   }
 
   const account = parseAccount(account_) as ModularSmartAccount
-  const publicClient = account.client as PublicClient
-
-  const action = await getAddOwnableValidatorOwnerAction({
-    account: { address: account.address, deployedOnChains: [], type: "nexus" },
-    client: publicClient,
-    owner
-  })
-
-  if (!("callData" in action)) {
-    throw new Error("Error getting add owner action")
-  }
+  const calls = await toAddOwnerCalls(account, parameters)
 
   return getAction(
     client,
     sendUserOperation,
     "sendUserOperation"
   )({
-    calls: [
-      {
-        to: action.target,
-        value: BigInt(action.value.toString()),
-        data: action.callData
-      }
-    ],
+    calls,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
     account
   })
+}
+
+export const toAddOwnerCalls = async (
+  account: ModularSmartAccount,
+  parameters: AddOwnerParameters<ModularSmartAccount | undefined>
+): Promise<Call[]> => {
+  const action = await getAddOwnableValidatorOwnerAction({
+    account: { address: account.address, deployedOnChains: [], type: "nexus" },
+    client: account.client as PublicClient,
+    owner: parameters.owner
+  })
+
+  if (!("callData" in action)) {
+    throw new Error("Error getting add owner action")
+  }
+
+  return [
+    {
+      to: action.target,
+      value: BigInt(action.value.toString()),
+      data: action.callData
+    }
+  ]
 }

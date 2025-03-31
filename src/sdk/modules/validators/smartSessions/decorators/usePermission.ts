@@ -74,6 +74,7 @@ export async function usePermission<
     mode_ === "ENABLE_AND_USE"
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
+
   const sessionDetails = {
     ...parse(stringifiedSessionDetails),
     mode
@@ -107,6 +108,7 @@ export async function usePermission<
     signature: encodeSmartSessionSignature(sessionDetails),
     nonce
   } as AnyData)) as AnyData
+
   const userOpHashToSign = nexusAccount.getUserOpHash(userOperation)
   sessionDetails.signature = await signer.signMessage({
     message: { raw: userOpHashToSign }

@@ -1,12 +1,35 @@
-import type { Chain, Client, Hex, Transport } from "viem"
+import type {
+  Chain,
+  Client,
+  Hex,
+  ReadContractParameters,
+  Transport
+} from "viem"
 import type { SmartAccount } from "viem/account-abstraction"
 import { readContract } from "viem/actions"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
+import type { ModularSmartAccount } from "../../../modules/utils/Types"
 
 export type GetActiveHookParameters<
   TSmartAccount extends SmartAccount | undefined
 > = { account?: TSmartAccount }
+
+const abi = [
+  {
+    inputs: [],
+    name: "getActiveHook",
+    outputs: [
+      {
+        internalType: "address",
+        name: "hook",
+        type: "address"
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  }
+]
 
 /**
  * Retrieves the active hook for a given smart account.
@@ -36,31 +59,25 @@ export async function getActiveHook<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
 
   const publicClient = account.client
+
+  const [getActiveHookRead] = await toGetActiveHookReads(account)
 
   return getAction(
     publicClient,
     readContract,
     "readContract"
-  )({
-    address: account.address,
-    abi: [
-      {
-        inputs: [],
-        name: "getActiveHook",
-        outputs: [
-          {
-            internalType: "address",
-            name: "hook",
-            type: "address"
-          }
-        ],
-        stateMutability: "view",
-        type: "function"
-      }
-    ],
-    functionName: "getActiveHook"
-  }) as Promise<Hex>
+  )(getActiveHookRead) as Promise<Hex>
 }
+
+export const toGetActiveHookReads = async (
+  account: ModularSmartAccount
+): Promise<ReadContractParameters<typeof abi, "getActiveHook", []>[]> => [
+  {
+    address: account.address,
+    abi,
+    functionName: "getActiveHook"
+  }
+]

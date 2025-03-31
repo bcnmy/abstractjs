@@ -70,26 +70,6 @@ export function parseReferenceValue(referenceValue: AnyReferenceValue): Hex {
 }
 
 /**
- * Sanitizes an ECDSA signature by ensuring the 'v' value is either 27 or 28.
- * Also ensures the signature has a '0x' prefix.
- *
- * @param signature - The hex signature to sanitize
- * @returns A properly formatted signature with correct 'v' value
- */
-export function sanitizeSignature(signature: Hex): Hex {
-  let signature_ = signature
-  const potentiallyIncorrectV = Number.parseInt(signature_.slice(-2), 16)
-  if (![27, 28].includes(potentiallyIncorrectV)) {
-    const correctV = potentiallyIncorrectV + 27
-    signature_ = signature_.slice(0, -2) + correctV.toString(16)
-  }
-  if (signature.slice(0, 2) !== "0x") {
-    signature_ = `0x${signature_}`
-  }
-  return signature_ as Hex
-}
-
-/**
  * Extracts and validates the active module from a client's account.
  *
  * @param client - The viem Client instance with an optional modular smart account

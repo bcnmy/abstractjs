@@ -29,13 +29,13 @@ export type GetUniversalAddressParams<
  * @returns Promise resolving to the {@link Address} of the counterfactual account
  *
  * @example
- * const accountAddress = await getUniversalNexusAddress({
+ * const accountAddress = await getNexusAddress({
  *   publicClient: viemPublicClient,
  *   initData: "0x123...",
  *   index: BigInt(0)
  * });
  */
-export const getUniversalNexusAddress = async (
+export const getNexusAddress = async (
   params: GetUniversalAddressParams<PublicClient>
 ): Promise<Address> => {
   const {

@@ -3,6 +3,7 @@ import {
   type Client,
   ContractFunctionExecutionError,
   type Hex,
+  type ReadContractParameters,
   type Transport,
   decodeFunctionResult,
   encodeFunctionData,
@@ -15,8 +16,28 @@ import { call, readContract } from "viem/actions"
 import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
+import type { ModularSmartAccount } from "../../../modules/utils/Types"
 
 export type CallType = "call" | "delegatecall" | "batchcall"
+
+const abi = [
+  {
+    name: "supportsExecutionMode",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      {
+        type: "bytes32",
+        name: "encodedMode"
+      }
+    ],
+    outputs: [
+      {
+        type: "bool"
+      }
+    ]
+  }
+] as const
 
 export type ExecutionMode<callType extends CallType> = {
   type: callType
@@ -104,47 +125,19 @@ export async function supportsExecutionMode<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
-
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
   const publicClient = account.client
-
-  const encodedMode = encodeExecutionMode({
-    type,
-    revertOnError,
-    selector,
-    data
-  })
-
-  const abi = [
-    {
-      name: "supportsExecutionMode",
-      type: "function",
-      stateMutability: "view",
-      inputs: [
-        {
-          type: "bytes32",
-          name: "encodedMode"
-        }
-      ],
-      outputs: [
-        {
-          type: "bool"
-        }
-      ]
-    }
-  ] as const
+  const [supportsExecutionModeRead] = await toSupportsExecutionModeReads(
+    account,
+    { type, revertOnError, selector, data }
+  )
 
   try {
     return await getAction(
       publicClient,
       readContract,
       "readContract"
-    )({
-      abi,
-      functionName: "supportsExecutionMode",
-      args: [encodedMode],
-      address: account.address
-    })
+    )(supportsExecutionModeRead)
   } catch (error) {
     if (error instanceof ContractFunctionExecutionError) {
       const { factory, factoryData } = await account.getFactoryArgs()
@@ -160,7 +153,14 @@ export async function supportsExecutionMode<
         data: encodeFunctionData({
           abi,
           functionName: "supportsExecutionMode",
-          args: [encodedMode]
+          args: [
+            encodeExecutionMode({
+              type,
+              revertOnError,
+              selector,
+              data
+            })
+          ]
         })
       })
 
@@ -178,3 +178,17 @@ export async function supportsExecutionMode<
     throw error
   }
 }
+
+export const toSupportsExecutionModeReads = async (
+  account: ModularSmartAccount,
+  { type, revertOnError, selector, data }: ExecutionMode<CallType>
+): Promise<
+  ReadContractParameters<typeof abi, "supportsExecutionMode", [Hex]>[]
+> => [
+  {
+    abi,
+    functionName: "supportsExecutionMode",
+    args: [encodeExecutionMode({ type, revertOnError, selector, data })],
+    address: account.address
+  }
+]

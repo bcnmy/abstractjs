@@ -51,11 +51,8 @@ import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import { toMeeModule } from "../modules/validators/mee/toMeeModule"
 import type { Validator } from "../modules/validators/toValidator"
-import {
-  getInitData,
-  getUniversalFactoryData
-} from "./decorators/getFactoryData"
-import { getUniversalNexusAddress } from "./decorators/getNexusAddress"
+import { getFactoryData, getInitData } from "./decorators/getFactoryData"
+import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -74,7 +71,7 @@ import {
   isNullOrUndefined,
   typeToString
 } from "./utils/Utils"
-import { toInstallData } from "./utils/toInstallData"
+import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 
 /**
@@ -274,16 +271,11 @@ export const toNexusAccount = async (
   // Generate the initialization data for the account using the initNexus function
   const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
 
-  const formattedValidators = toInstallData(validators)
-  const formattedExecutors = toInstallData(executors)
-  const formattedHook = toInstallData([hook])[0]
-  const formattedFallbacks = toInstallData(fallbacks)
-
   const initData = getInitData({
-    validators: formattedValidators,
-    executors: formattedExecutors,
-    hook: formattedHook,
-    fallbacks: formattedFallbacks,
+    validators: validators.map(toInitData),
+    executors: executors.map(toInitData),
+    hook: toInitData(hook),
+    fallbacks: fallbacks.map(toInitData),
     registryAddress,
     attesters,
     attesterThreshold,
@@ -291,7 +283,7 @@ export const toNexusAccount = async (
   })
 
   // Generate the factory data with the bootstrap address and init data
-  const factoryData = getUniversalFactoryData({ initData, index })
+  const factoryData = getFactoryData({ initData, index })
 
   /**
    * @description Gets the init code for the account
@@ -308,7 +300,7 @@ export const toNexusAccount = async (
   const getCounterFactualAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = await getUniversalNexusAddress({
+    const addressFromFactory = await getNexusAddress({
       factoryAddress,
       index,
       initData,

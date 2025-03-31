@@ -53,8 +53,7 @@ describe("mee.buildComposable", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http()],
-      signer: eoaAccount,
-      index: BigInt(1)
+      signer: eoaAccount
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -152,6 +151,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -220,6 +221,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -286,6 +289,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -352,6 +357,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -418,6 +425,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -485,6 +494,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -584,6 +595,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )
@@ -651,6 +664,8 @@ describe("mee.buildComposable", () => {
       (receipt) => receipt.status === "fulfilled"
     )
 
+    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
+    // operation as well. This will be 100% reliable when the MEE node changes the status handling
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
     )

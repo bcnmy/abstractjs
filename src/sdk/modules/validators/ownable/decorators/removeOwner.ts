@@ -1,8 +1,12 @@
 import type { Chain, Client, Hex, PublicClient, Transport } from "viem"
-import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
+import { sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
-import { getRemoveOwnableValidatorOwnerAction } from "../../../../constants"
+import type { Call } from "../../../../account/utils/Types"
+import {
+  getAccount,
+  getRemoveOwnableValidatorOwnerAction
+} from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
 
 /**
@@ -69,34 +73,40 @@ export async function removeOwner<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
-  const publicClient = account.client
+  const account = parseAccount(account_) as ModularSmartAccount
+  const calls = await toRemoveOwnerCalls(account, { owner })
+  return getAction(
+    client,
+    sendUserOperation,
+    "sendUserOperation"
+  )({
+    calls,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+    nonce,
+    account
+  })
+}
 
+export const toRemoveOwnerCalls = async (
+  account: ModularSmartAccount,
+  parameters: RemoveOwnerParameters<ModularSmartAccount | undefined>
+): Promise<Call[]> => {
   const action = await getRemoveOwnableValidatorOwnerAction({
-    account: { address: account.address, deployedOnChains: [], type: "nexus" },
-    client: publicClient as PublicClient,
-    owner
+    account: getAccount({ address: account.address, type: "nexus" }),
+    client: account.client as PublicClient,
+    owner: parameters.owner
   })
 
   if (!("callData" in action)) {
     throw new Error("Error getting remove owner action")
   }
 
-  return getAction(
-    client,
-    sendUserOperation,
-    "sendUserOperation"
-  )({
-    calls: [
-      {
-        to: action.target,
-        value: BigInt(action.value.toString()),
-        data: action.callData
-      }
-    ],
-    maxFeePerGas,
-    maxPriorityFeePerGas,
-    nonce,
-    account
-  })
+  return [
+    {
+      to: action.target,
+      value: BigInt(action.value.toString()),
+      data: action.callData
+    }
+  ]
 }

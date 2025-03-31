@@ -9,7 +9,7 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
@@ -18,13 +18,15 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import { K1_VALIDATOR_ADDRESS, testnetMcUSDC } from "../constants"
-import { K1_VALIDATOR_FACTORY_ADDRESS } from "../constants"
+import { testnetMcUSDC } from "../constants"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
+
+// @ts-ignore
+const { runPaidTests } = inject("settings")
 
 const COMPETITORS = [
   {
@@ -48,7 +50,7 @@ const calls = [
   }
 ]
 
-describe("nexus.interoperability with 'MeeNode'", () => {
+describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

@@ -13,8 +13,10 @@ import {
   sendUserOperation
 } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
+import type { Call } from "../../../account"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import { LATEST_DEFAULT_ADDRESSES } from "../../../constants"
+import type { ModularSmartAccount } from "../../../modules"
 
 export type UpgradeSmartAccountParameters<
   TSmartAccount extends SmartAccount | undefined
@@ -69,37 +71,12 @@ export async function upgradeSmartAccount<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as ModularSmartAccount
 
-  const calls = [
-    {
-      to: account.address,
-      value: BigInt(0),
-      data: encodeFunctionData({
-        abi: [
-          {
-            name: "upgradeToAndCall",
-            type: "function",
-            stateMutability: "payable",
-            inputs: [
-              {
-                type: "address",
-                name: "newImplementation"
-              },
-              {
-                type: "bytes",
-                name: "data"
-              }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: "upgradeToAndCall",
-        args: [getAddress(implementationAddress), initData]
-      })
-    }
-  ]
-
+  const calls = await toUpgradeSmartAccountCalls(account, {
+    implementationAddress,
+    initData
+  })
   const sendUserOperationParams = {
     calls,
     maxFeePerGas,
@@ -115,3 +92,38 @@ export async function upgradeSmartAccount<
     "sendUserOperation"
   )(sendUserOperationParams)
 }
+
+export const toUpgradeSmartAccountCalls = async (
+  account: ModularSmartAccount,
+  {
+    implementationAddress,
+    initData
+  }: { implementationAddress: Hex; initData: Hex }
+): Promise<Call[]> => [
+  {
+    to: account.address,
+    value: BigInt(0),
+    data: encodeFunctionData({
+      abi: [
+        {
+          name: "upgradeToAndCall",
+          type: "function",
+          stateMutability: "payable",
+          inputs: [
+            {
+              type: "address",
+              name: "newImplementation"
+            },
+            {
+              type: "bytes",
+              name: "data"
+            }
+          ],
+          outputs: []
+        }
+      ],
+      functionName: "upgradeToAndCall",
+      args: [getAddress(implementationAddress), initData]
+    })
+  }
+]

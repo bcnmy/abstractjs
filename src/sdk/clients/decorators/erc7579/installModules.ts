@@ -1,17 +1,12 @@
-import {
-  type Address,
-  type Chain,
-  type Client,
-  type Hex,
-  type Transport,
-  encodeFunctionData,
-  getAddress
-} from "viem"
+import type { Address, Chain, Client, Hex, Transport } from "viem"
 import { type SmartAccount, sendUserOperation } from "viem/account-abstraction"
 import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import type { ModuleType } from "../../../modules/utils/Types"
-import { parseModuleTypeId } from "./supportsModule"
+import type {
+  ModularSmartAccount,
+  ModuleType
+} from "../../../modules/utils/Types"
+import { toInstallWithSafeSenderCalls } from "./installModule"
 
 export type InstallModulesParameters<
   TSmartAccount extends SmartAccount | undefined
@@ -65,45 +60,22 @@ export async function installModules<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as unknown as ModularSmartAccount
+  const calls = (
+    await Promise.all(
+      modules.flatMap((module) => toInstallWithSafeSenderCalls(account, module))
+    )
+  ).flat()
+
   return getAction(
     client,
     sendUserOperation,
     "sendUserOperation"
   )({
-    calls: modules.map(({ type, address, data }) => ({
-      to: account.address,
-      value: BigInt(0),
-      data: encodeFunctionData({
-        abi: [
-          {
-            name: "installModule",
-            type: "function",
-            stateMutability: "nonpayable",
-            inputs: [
-              {
-                type: "uint256",
-                name: "moduleTypeId"
-              },
-              {
-                type: "address",
-                name: "module"
-              },
-              {
-                type: "bytes",
-                name: "initData"
-              }
-            ],
-            outputs: []
-          }
-        ],
-        functionName: "installModule",
-        args: [parseModuleTypeId(type), getAddress(address), data]
-      })
-    })),
+    calls,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
-    account: account
+    account
   })
 }

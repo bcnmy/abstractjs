@@ -12,7 +12,11 @@ import { getAction } from "viem/utils"
 import { parseAccount } from "viem/utils"
 import { getInstalledValidators, getPreviousModule } from "."
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import type { ModuleMeta } from "../../../modules/utils/Types"
+import type { Call } from "../../../account/utils/Types"
+import type {
+  ModularSmartAccount,
+  ModuleMeta
+} from "../../../modules/utils/Types"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type UninstallModuleParameters<
@@ -64,7 +68,7 @@ export async function uninstallModule<
     })
   }
 
-  const account = parseAccount(account_) as SmartAccount
+  const account = parseAccount(account_) as ModularSmartAccount
   const [installedValidators] = await getInstalledValidators(client)
 
   const prevModule = await getPreviousModule(client, {
@@ -84,46 +88,57 @@ export async function uninstallModule<
     [prevModule, initData ?? "0x"]
   )
 
+  const calls = await toUninstallModuleCalls(account, {
+    address,
+    deInitData,
+    type
+  })
+
   return getAction(
     client,
     sendUserOperation,
     "sendUserOperation"
   )({
-    calls: [
-      {
-        to: account.address,
-        value: BigInt(0),
-        data: encodeFunctionData({
-          abi: [
-            {
-              name: "uninstallModule",
-              type: "function",
-              stateMutability: "nonpayable",
-              inputs: [
-                {
-                  type: "uint256",
-                  name: "moduleTypeId"
-                },
-                {
-                  type: "address",
-                  name: "module"
-                },
-                {
-                  type: "bytes",
-                  name: "deInitData"
-                }
-              ],
-              outputs: []
-            }
-          ],
-          functionName: "uninstallModule",
-          args: [parseModuleTypeId(type), getAddress(address), deInitData]
-        })
-      }
-    ],
+    calls,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
     account
   })
 }
+
+export const toUninstallModuleCalls = async (
+  account: ModularSmartAccount,
+  { address, deInitData = "0x", type }: ModuleMeta
+): Promise<Call[]> => [
+  {
+    to: account.address,
+    value: BigInt(0),
+    data: encodeFunctionData({
+      abi: [
+        {
+          name: "uninstallModule",
+          type: "function",
+          stateMutability: "nonpayable",
+          inputs: [
+            {
+              type: "uint256",
+              name: "moduleTypeId"
+            },
+            {
+              type: "address",
+              name: "module"
+            },
+            {
+              type: "bytes",
+              name: "deInitData"
+            }
+          ],
+          outputs: []
+        }
+      ],
+      functionName: "uninstallModule",
+      args: [parseModuleTypeId(type), getAddress(address), deInitData]
+    })
+  }
+]
