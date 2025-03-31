@@ -7,62 +7,62 @@ import {
   erc20Abi,
   fromBytes,
   parseUnits,
-  toBytes,
-} from "viem";
-import { baseSepolia } from "viem/chains";
-import { beforeAll, describe, expect, it } from "vitest";
-import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi";
-import { toNetwork } from "../../../../test/testSetup";
-import type { NetworkConfig } from "../../../../test/testUtils";
+  toBytes
+} from "viem"
+import { baseSepolia } from "viem/chains"
+import { beforeAll, describe, expect, it } from "vitest"
+import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
+import { toNetwork } from "../../../../test/testSetup"
+import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MeeClient,
-  createMeeClient,
-} from "../../../clients/createMeeClient";
-import type { Instruction } from "../../../clients/decorators/mee/getQuote";
+  createMeeClient
+} from "../../../clients/createMeeClient"
+import type { Instruction } from "../../../clients/decorators/mee/getQuote"
 import {
   UniswapSwapRouterAbi,
-  testnetMcUniswapSwapRouter,
-} from "../../../constants";
-import { testnetMcUSDC } from "../../../constants/tokens";
-import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules";
+  testnetMcUniswapSwapRouter
+} from "../../../constants"
+import { testnetMcUSDC } from "../../../constants/tokens"
+import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules"
 import {
   type MultichainSmartAccount,
-  toMultichainNexusAccount,
-} from "../../toMultiChainNexusAccount";
-import { getMultichainContract } from "../../utils";
-import { getMeeScanLink } from "../../utils/explorer";
-import buildComposable from "./buildComposable";
+  toMultichainNexusAccount
+} from "../../toMultiChainNexusAccount"
+import { getMultichainContract } from "../../utils"
+import { getMeeScanLink } from "../../utils/explorer"
+import buildComposable from "./buildComposable"
 
 describe("mee.buildComposable", () => {
-  let network: NetworkConfig;
-  let eoaAccount: LocalAccount;
+  let network: NetworkConfig
+  let eoaAccount: LocalAccount
 
-  let mcNexus: MultichainSmartAccount;
-  let meeClient: MeeClient;
+  let mcNexus: MultichainSmartAccount
+  let meeClient: MeeClient
 
-  let tokenAddress: Address;
-  let runtimeTransferAddress: Address;
-  let chain: Chain;
+  let tokenAddress: Address
+  let runtimeTransferAddress: Address
+  let chain: Chain
 
   beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS");
-    eoaAccount = network.account!;
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    eoaAccount = network.account!
 
-    chain = baseSepolia;
+    chain = baseSepolia
 
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http()],
       signer: eoaAccount,
-      index: BigInt(1),
-    });
+      index: BigInt(1)
+    })
 
-    meeClient = await createMeeClient({ account: mcNexus });
-    tokenAddress = testnetMcUSDC.addressOn(chain.id);
+    meeClient = await createMeeClient({ account: mcNexus })
+    tokenAddress = testnetMcUSDC.addressOn(chain.id)
 
     // Mock testing contract for composability testing
-    runtimeTransferAddress = "0xb46e85b8Bd24D1dca043811D5b8B18b2a8c5F95D";
-  });
+    runtimeTransferAddress = "0xb46e85b8Bd24D1dca043811D5b8B18b2a8c5F95D"
+  })
 
   it("should highlight building composable instructions", async () => {
     const instructions: Instruction[] = await buildComposable(
@@ -81,29 +81,29 @@ describe("mee.buildComposable", () => {
                 testnetMcUSDC,
                 chain.id,
                 [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-              ),
-            ],
-          },
+              )
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
-    expect(instructions.length).toBeGreaterThan(0);
-  });
+    expect(instructions.length).toBeGreaterThan(0)
+  })
 
   it("should execute composable transaction for static args", async () => {
-    const amountToSupply = parseUnits("0.1", 6);
+    const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amountToSupply,
-    };
+      amount: amountToSupply
+    }
 
     const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply],
-    });
+      args: [runtimeTransferAddress, amountToSupply]
+    })
 
     const instructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -120,13 +120,13 @@ describe("mee.buildComposable", () => {
                 testnetMcUSDC,
                 chain.id,
                 [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-              ),
-            ],
-          },
+              )
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -134,41 +134,41 @@ describe("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for static args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for struct args", async () => {
-    const amountToSupply = parseUnits("0.1", 6);
+    const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amountToSupply,
-    };
+      amount: amountToSupply
+    }
 
     const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply],
-    });
+      args: [runtimeTransferAddress, amountToSupply]
+    })
 
     const instructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -187,14 +187,14 @@ describe("mee.buildComposable", () => {
                   testnetMcUSDC,
                   chain.id,
                   [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-                ),
-              },
-            ],
-          },
+                )
+              }
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -202,41 +202,41 @@ describe("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for struct args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for dynamic array args", async () => {
-    const amountToSupply = parseUnits("0.1", 6);
+    const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amountToSupply,
-    };
+      amount: amountToSupply
+    }
 
     const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply],
-    });
+      args: [runtimeTransferAddress, amountToSupply]
+    })
 
     const instructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -254,13 +254,13 @@ describe("mee.buildComposable", () => {
                 testnetMcUSDC,
                 chain.id,
                 [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              ),
-            ],
-          },
+              )
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -268,41 +268,41 @@ describe("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for dynamic array args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for string args", async () => {
-    const amountToSupply = parseUnits("0.1", 6);
+    const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amountToSupply,
-    };
+      amount: amountToSupply
+    }
 
     const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply],
-    });
+      args: [runtimeTransferAddress, amountToSupply]
+    })
 
     const instructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -320,13 +320,13 @@ describe("mee.buildComposable", () => {
                 testnetMcUSDC,
                 chain.id,
                 [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              ),
-            ],
-          },
+              )
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -334,41 +334,41 @@ describe("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for string args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for bytes args", async () => {
-    const amountToSupply = parseUnits("0.1", 6);
+    const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amountToSupply,
-    };
+      amount: amountToSupply
+    }
 
     const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply],
-    });
+      args: [runtimeTransferAddress, amountToSupply]
+    })
 
     const instructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -386,13 +386,13 @@ describe("mee.buildComposable", () => {
                 testnetMcUSDC,
                 chain.id,
                 [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              ),
-            ],
-          },
+              )
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -400,41 +400,41 @@ describe("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for bytes args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
-    const amountToSupply = parseUnits("0.1", 6);
+    const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amountToSupply,
-    };
+      amount: amountToSupply
+    }
 
     const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply],
-    });
+      args: [runtimeTransferAddress, amountToSupply]
+    })
 
     const instructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -452,14 +452,14 @@ describe("mee.buildComposable", () => {
                   testnetMcUSDC,
                   chain.id,
                   [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-                ),
-              ],
-            ],
-          },
+                )
+              ]
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -467,47 +467,47 @@ describe("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for runtime arg inside dynamic array args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for uniswap args", async () => {
     const fusionToken = getMultichainContract<typeof erc20Abi>({
       abi: erc20Abi,
       deployments: [
-        ["0x232fb0469e5fc7f8f5a04eddbcc11f677143f715", chain.id], // Fusion
-      ],
-    });
+        ["0x232fb0469e5fc7f8f5a04eddbcc11f677143f715", chain.id] // Fusion
+      ]
+    })
 
-    const inToken = testnetMcUSDC;
-    const outToken = fusionToken;
+    const inToken = testnetMcUSDC
+    const outToken = fusionToken
 
-    const amount = parseUnits("0.2", 6);
+    const amount = parseUnits("0.2", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: inToken.addressOn(chain.id),
-      amount: amount,
-    };
+      amount: amount
+    }
 
     const approveInstructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -523,13 +523,13 @@ describe("mee.buildComposable", () => {
                 mcNexus.addressOn(chain.id, true),
                 inToken,
                 chain.id
-              ),
-            ],
-          },
+              )
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const swapInstructions: Instruction[] = await buildComposable(
       { account: mcNexus },
@@ -551,14 +551,14 @@ describe("mee.buildComposable", () => {
                   chain.id
                 ),
                 amountOutMinimum: BigInt(1),
-                sqrtPriceLimitX96: BigInt(0),
-              },
-            ],
-          },
+                sqrtPriceLimitX96: BigInt(0)
+              }
+            ]
+          }
         },
-        chainId: chain.id,
+        chainId: chain.id
       }
-    );
+    )
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -566,37 +566,37 @@ describe("mee.buildComposable", () => {
         instructions: [...approveInstructions, ...swapInstructions],
         feeToken: {
           chainId: chain.id,
-          address: inToken.addressOn(chain.id),
-        },
-      }),
-    });
+          address: inToken.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for uniswap args: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
+    )
+  })
 
   it("should execute composable transaction for approval and transferFrom builders", async () => {
-    const amount = parseUnits("0.2", 6);
+    const amount = parseUnits("0.2", 6)
 
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
-      amount: amount,
-    };
+      amount: amount
+    }
 
     const approval = await mcNexus.build({
       type: "approve",
@@ -608,9 +608,9 @@ describe("mee.buildComposable", () => {
         ),
         chainId: chain.id,
         tokenAddress: testnetMcUSDC.addressOn(chain.id),
-        spender: mcNexus.addressOn(chain.id, true),
-      },
-    });
+        spender: mcNexus.addressOn(chain.id, true)
+      }
+    })
 
     const transfer = await mcNexus.build({
       type: "transferFrom",
@@ -623,9 +623,9 @@ describe("mee.buildComposable", () => {
           chain.id
         ),
         sender: mcNexus.addressOn(chain.id, true),
-        recipient: eoaAccount.address,
-      },
-    });
+        recipient: eoaAccount.address
+      }
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -633,26 +633,26 @@ describe("mee.buildComposable", () => {
         instructions: [...approval, ...transfer],
         feeToken: {
           chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id),
-        },
-      }),
-    });
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
 
     console.log(
       "Link for composable transaction for approval and transferFrom builders: ",
       getMeeScanLink(hash)
-    );
+    )
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-    });
+      hash
+    })
 
     const execResult = receipt.receipts.map(
       (receipt) => receipt.status === "fulfilled"
-    );
+    )
 
     expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
       execResult.toString()
-    );
-  });
-});
+    )
+  })
+})
