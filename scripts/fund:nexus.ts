@@ -99,7 +99,7 @@ async function processChain(
       chain,
       signer: account,
       transport: http(),
-      index: accountIndex,
+      index: accountIndex
     })
 
     const nexusAddress = await nexus.getAddress()
