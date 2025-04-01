@@ -104,3 +104,16 @@ export const ownableReads = {
   toGetOwnersReads: getOwners,
   toGetThresholdReads: getThreshold
 } as const
+
+export {
+  prepareForMultiSign,
+  multiSign,
+  addOwner,
+  removeOwner,
+  setThreshold,
+  getOwners,
+  getThreshold,
+  getAddOwnerTx,
+  getRemoveOwnerTx,
+  getSetThresholdTx
+}

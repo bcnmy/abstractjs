@@ -51,3 +51,5 @@ export function smartSessionActions() {
     grantPermission: (args) => grantPermission(client, args)
   })
 }
+
+export { usePermission, grantPermission }
