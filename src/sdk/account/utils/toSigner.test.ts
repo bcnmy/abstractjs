@@ -4,6 +4,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
 import { type NetworkConfig, killNetwork, pKey } from "../../../test/testUtils"
+import type { AnyData } from "../../modules"
 import { type EthersWallet, addressEquals } from "./Utils"
 import { toSigner } from "./toSigner"
 
@@ -80,7 +81,7 @@ describe("utils.toSigner", () => {
   it("should work with ethers JsonRpcSigner", async () => {
     const provider = new JsonRpcProvider(network.rpcUrl)
     const signer = await provider.getSigner()
-    const nexusSigner = await toSigner({ signer: signer as any })
+    const nexusSigner = await toSigner({ signer: signer as AnyData })
     expect(nexusSigner.address).toBe(await signer.getAddress())
     const signedMessage = await nexusSigner.signMessage({
       message: "Hello World"

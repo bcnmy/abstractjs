@@ -50,7 +50,7 @@ const calls = [
   }
 ]
 
-describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
+describe.skipIf(!runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -103,7 +103,7 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
   })
 })
 
-describe.each(COMPETITORS)(
+describe.skipIf(!runPaidTests).each(COMPETITORS)(
   "nexus.interoperability with $name bundler",
   async ({ bundlerUrl, chain, mock }) => {
     const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY as Hex}`)

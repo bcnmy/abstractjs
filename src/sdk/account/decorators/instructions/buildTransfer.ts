@@ -1,16 +1,22 @@
 import { type Address, encodeFunctionData } from "viem"
-import type {
-  AbstractCall,
-  Instruction,
-  Trigger
-} from "../../../clients/decorators/mee"
+import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
-import type { BaseInstructionsParams } from "../build"
+import type { AnyData } from "../../../modules/utils/Types"
+import { isComposableCallRequired } from "../../../modules/utils/composabilityCalls"
+import {
+  type RuntimeValue,
+  getFunctionContextFromAbi
+} from "../../../modules/utils/runtimeAbiEncoding"
+import type { BaseInstructionsParams, TokenParams } from "../build"
+import {
+  type BuildComposableParameters,
+  buildComposableCall
+} from "./buildComposable"
 
 /**
  * Parameters for building a transfer instruction
  */
-export type BuildTransferParameters = Trigger & {
+export type BuildTransferParameters = TokenParams & {
   /**
    * Gas limit for the transfer transaction. Required when using the standard
    * transfer function instead of permit.
@@ -72,14 +78,49 @@ export const buildTransfer = async (
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, recipient } = parameters
 
-  const triggerCall: AbstractCall = {
-    to: tokenAddress,
-    data: encodeFunctionData({
-      abi: TokenWithPermitAbi,
-      functionName: "transfer",
-      args: [recipient, amount]
-    }),
-    ...(gasLimit ? { gasLimit } : {})
+  const abi = TokenWithPermitAbi
+  const functionSig = "transfer"
+  const args: readonly [`0x${string}`, bigint | RuntimeValue] = [
+    recipient,
+    amount
+  ]
+
+  const functionContext = getFunctionContextFromAbi(functionSig, abi)
+
+  // Check for the runtime arguments and detect the need for composable call
+  const isComposableCall = isComposableCallRequired(
+    functionContext,
+    args as unknown as Array<AnyData>
+  )
+
+  let triggerCall: AbstractCall
+
+  // If the composable call is detected ? The call needs to composed with runtime encoding
+  if (isComposableCall) {
+    const composableCallParams: BuildComposableParameters = {
+      to: tokenAddress,
+      params: {
+        type: functionSig,
+        data: {
+          args: args as unknown as Array<AnyData>
+        }
+      },
+      abi,
+      chainId,
+      gasLimit
+    }
+
+    triggerCall = await buildComposableCall(baseParams, composableCallParams)
+  } else {
+    triggerCall = {
+      to: tokenAddress,
+      data: encodeFunctionData({
+        abi,
+        functionName: functionSig,
+        args: args as [`0x${string}`, bigint]
+      }),
+      ...(gasLimit ? { gasLimit } : {})
+    }
   }
 
   return [

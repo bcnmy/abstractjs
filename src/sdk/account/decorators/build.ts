@@ -1,4 +1,6 @@
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type { RuntimeValue } from "../../modules"
 import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import {
   type BuildApproveParameters,
@@ -7,6 +9,9 @@ import {
 import buildBatch, {
   type BuildBatchParameters
 } from "./instructions/buildBatch"
+import buildComposable, {
+  type BuildComposableParameters
+} from "./instructions/buildComposable"
 import {
   type BuildDefaultParameters,
   buildDefaultInstructions
@@ -30,6 +35,28 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
+
+/**
+ * Parameters for a token builders
+ */
+export type TokenParams = {
+  /**
+   * The address of the token to use on the relevant chain
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+   */
+  tokenAddress: Address
+  /**
+   * The chainId to use
+   * @example 1 // Ethereum Mainnet
+   */
+  chainId: number
+  /**
+   * Amount of the token to use, in the token's smallest unit
+   * @example 1000000n // 1 USDC (6 decimals)
+   * @example { isRuntime: true, inputParams: [], outputParams: [] }
+   */
+  amount: bigint | RuntimeValue
+}
 
 /**
  * Base parameters for building instructions
@@ -112,6 +139,16 @@ export type BuildBatchInstruction = {
 }
 
 /**
+ * Build action which is used to build instructions for a composable call
+ * @property type - Literal "composable" to identify the action type
+ * @property data - {@link BuildComposableParameters} The parameters for the composable action
+ */
+export type BuildComposableInstruction = {
+  type: "composable"
+  data: BuildComposableParameters
+}
+
+/**
  * Build action which is used to build instructions for uninstalling modules
  * @property type - Literal "buildMultichainInstructions" to identify the action type
  * @property data - {@link BuildMultichainInstructionParameters} The parameters for the uninstall modules action
@@ -132,6 +169,7 @@ export type BuildInstructionTypes =
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
+  | BuildComposableInstruction
   | BuildMultichainInstructionInstruction
 /**
  * Builds transaction instructions based on the provided action type and parameters
@@ -183,6 +221,9 @@ export const build = async (
     }
     case "default": {
       return buildDefaultInstructions(baseParams, data)
+    }
+    case "composable": {
+      return buildComposable(baseParams, data)
     }
     case "transferFrom": {
       return buildTransferFrom(baseParams, data)

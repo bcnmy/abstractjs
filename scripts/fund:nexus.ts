@@ -23,6 +23,7 @@ dotenv.config()
 const NATIVE_TOKEN_AMOUNT = parseEther("0.0005")
 const USDC_TOKEN_AMOUNT = parseUnits("3", 6)
 const ACCOUNT_INDEX = 0n
+const ACCOUNT_INDEX_ONE = 1n
 
 async function main() {
   // Get chain IDs from command line arguments
@@ -48,13 +49,17 @@ async function main() {
 
   // Process each chain ID
   for (const chainId of chainIds) {
-    await processChain(chainId, account)
+    // Two account will be available from now. For collision issues in tests, use a fallback account with index one
+    // Default: Index zero will be used for most of the tests
+    await processChain(chainId, account, ACCOUNT_INDEX)
+    await processChain(chainId, account, ACCOUNT_INDEX_ONE)
   }
 }
 
 async function processChain(
   chainId: number,
-  account: ReturnType<typeof privateKeyToAccount>
+  account: ReturnType<typeof privateKeyToAccount>,
+  accountIndex: bigint
 ) {
   try {
     const chain = getChain(chainId)
@@ -94,7 +99,7 @@ async function processChain(
       chain,
       signer: account,
       transport: http(),
-      index: ACCOUNT_INDEX
+      index: accountIndex,
     })
 
     const nexusAddress = await nexus.getAddress()
