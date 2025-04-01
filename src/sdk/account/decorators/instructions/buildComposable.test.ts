@@ -53,7 +53,8 @@ describe("mee.buildComposable", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http()],
-      signer: eoaAccount
+      signer: eoaAccount,
+      index: 1n // Added based on the suggestion by Joe to prevent the collision with nonce
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
