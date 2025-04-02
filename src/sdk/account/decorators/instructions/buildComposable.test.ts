@@ -70,21 +70,16 @@ describe("mee.buildComposable", () => {
       {
         to: tokenAddress,
         abi: erc20Abi,
-        params: {
-          type: "transferFrom",
-          data: {
-            args: [
-              eoaAccount.address,
-              mcNexus.addressOn(chain.id, true),
-              runtimeERC20BalanceOf(
-                eoaAccount.address,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-              )
-            ]
-          }
-        },
+        functionName: "transferFrom",
+        args: [
+          eoaAccount.address,
+          mcNexus.addressOn(chain.id, true),
+          runtimeERC20BalanceOf({
+            targetAddress: eoaAccount.address,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -110,20 +105,15 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFunds",
-          data: {
-            args: [
-              eoaAccount.address,
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-              )
-            ]
-          }
-        },
+        functionName: "transferFunds",
+        args: [
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -177,23 +167,18 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithStruct",
-          data: {
-            args: [
-              runtimeTransferAddress,
-              {
-                recipient: eoaAccount.address,
-                amount: runtimeERC20BalanceOf(
-                  runtimeTransferAddress,
-                  testnetMcUSDC,
-                  chain.id,
-                  [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-                )
-              }
-            ]
+        functionName: "transferFundsWithStruct",
+        args: [
+          runtimeTransferAddress,
+          {
+            recipient: eoaAccount.address,
+            amount: runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+            })
           }
-        },
+        ],
         chainId: chain.id
       }
     )
@@ -247,21 +232,16 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithDynamicArray",
-          data: {
-            args: [
-              runtimeTransferAddress,
-              [runtimeTransferAddress, eoaAccount.address],
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              )
-            ]
-          }
-        },
+        functionName: "transferFundsWithDynamicArray",
+        args: [
+          runtimeTransferAddress,
+          [runtimeTransferAddress, eoaAccount.address],
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -315,21 +295,16 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithString",
-          data: {
-            args: [
-              "random_string_this_doesnt_matter",
-              [runtimeTransferAddress, eoaAccount.address],
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              )
-            ]
-          }
-        },
+        functionName: "transferFundsWithString",
+        args: [
+          "random_string_this_doesnt_matter",
+          [runtimeTransferAddress, eoaAccount.address],
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -383,21 +358,16 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithBytes",
-          data: {
-            args: [
-              fromBytes(toBytes("random_string_this_doesnt_matter"), "hex"),
-              [runtimeTransferAddress, eoaAccount.address],
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              )
-            ]
-          }
-        },
+        functionName: "transferFundsWithBytes",
+        args: [
+          fromBytes(toBytes("random_string_this_doesnt_matter"), "hex"),
+          [runtimeTransferAddress, eoaAccount.address],
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -451,22 +421,17 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithRuntimeParamInsideArray",
-          data: {
-            args: [
-              [runtimeTransferAddress, eoaAccount.address],
-              [
-                runtimeERC20BalanceOf(
-                  runtimeTransferAddress,
-                  testnetMcUSDC,
-                  chain.id,
-                  [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-                )
-              ]
-            ]
-          }
-        },
+        functionName: "transferFundsWithRuntimeParamInsideArray",
+        args: [
+          [runtimeTransferAddress, eoaAccount.address],
+          [
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+            })
+          ]
+        ],
         chainId: chain.id
       }
     )
@@ -525,20 +490,15 @@ describe("mee.buildComposable", () => {
       { account: mcNexus },
       {
         to: inToken.addressOn(chain.id),
-        abi: erc20Abi as Abi,
-        params: {
-          type: "approve",
-          data: {
-            args: [
-              testnetMcUniswapSwapRouter.addressOn(chain.id),
-              runtimeERC20BalanceOf(
-                mcNexus.addressOn(chain.id, true),
-                inToken,
-                chain.id
-              )
-            ]
-          }
-        },
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [
+          testnetMcUniswapSwapRouter.addressOn(chain.id),
+          runtimeERC20BalanceOf({
+            targetAddress: mcNexus.addressOn(chain.id, true),
+            tokenAddress: inToken.addressOn(chain.id)
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -547,27 +507,22 @@ describe("mee.buildComposable", () => {
       { account: mcNexus },
       {
         to: testnetMcUniswapSwapRouter.addressOn(chain.id),
-        abi: UniswapSwapRouterAbi as Abi,
-        params: {
-          type: "exactInputSingle",
-          data: {
-            args: [
-              {
-                tokenIn: inToken.addressOn(chain.id),
-                tokenOut: outToken.addressOn(chain.id),
-                fee: 3000,
-                recipient: eoaAccount.address,
-                amountIn: runtimeERC20BalanceOf(
-                  mcNexus.addressOn(chain.id, true),
-                  inToken,
-                  chain.id
-                ),
-                amountOutMinimum: BigInt(1),
-                sqrtPriceLimitX96: BigInt(0)
-              }
-            ]
+        abi: UniswapSwapRouterAbi,
+        functionName: "exactInputSingle",
+        args: [
+          {
+            tokenIn: inToken.addressOn(chain.id),
+            tokenOut: outToken.addressOn(chain.id),
+            fee: 3000,
+            recipient: eoaAccount.address,
+            amountIn: runtimeERC20BalanceOf({
+              targetAddress: mcNexus.addressOn(chain.id, true),
+              tokenAddress: inToken.addressOn(chain.id)
+            }),
+            amountOutMinimum: BigInt(1),
+            sqrtPriceLimitX96: BigInt(0)
           }
-        },
+        ],
         chainId: chain.id
       }
     )
@@ -615,11 +570,10 @@ describe("mee.buildComposable", () => {
     const approval = await mcNexus.build({
       type: "approve",
       data: {
-        amount: runtimeERC20BalanceOf(
-          mcNexus.addressOn(chain.id, true),
-          testnetMcUSDC,
-          chain.id
-        ),
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true),
+          tokenAddress: testnetMcUSDC.addressOn(chain.id)
+        }),
         chainId: chain.id,
         tokenAddress: testnetMcUSDC.addressOn(chain.id),
         spender: mcNexus.addressOn(chain.id, true)
@@ -631,11 +585,10 @@ describe("mee.buildComposable", () => {
       data: {
         chainId: chain.id,
         tokenAddress: testnetMcUSDC.addressOn(chain.id),
-        amount: runtimeERC20BalanceOf(
-          mcNexus.addressOn(chain.id, true),
-          testnetMcUSDC,
-          chain.id
-        ),
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true),
+          tokenAddress: testnetMcUSDC.addressOn(chain.id)
+        }),
         sender: mcNexus.addressOn(chain.id, true),
         recipient: eoaAccount.address
       }

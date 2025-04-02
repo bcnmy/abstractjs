@@ -1,4 +1,4 @@
-import { type Abi, encodeFunctionData, isAddress } from "viem"
+import { type Abi, Address, encodeFunctionData, isAddress } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import { COMPOSABILITY_MODULE_ABI } from "../../../constants/abi/ComposabilityAbi"
 import type { AnyData } from "../../../modules/utils/Types"
@@ -37,13 +37,9 @@ import type { BaseInstructionsParams } from "../build"
  * Parameters for building a composable instruction
  */
 export type BuildComposableParameters = {
-  to: `0x${string}`
-  params: {
-    type: string
-    data: {
-      args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function whihc can be handled later
-    }
-  }
+  to: Address
+  functionName: string
+  args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function whihc can be handled later
   abi: Abi
   chainId: number
   value?: bigint
@@ -55,9 +51,9 @@ export const buildComposableCall = async (
   parameters: BuildComposableParameters
 ): Promise<AbstractCall> => {
   const { account } = baseParams
-  const { to, value, gasLimit, params, abi, chainId } = parameters
+  const { to, value, gasLimit, functionName, args, abi, chainId } = parameters
 
-  if (!params || !params.data || !params.type || !params.data.args) {
+  if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
   }
 
@@ -75,18 +71,16 @@ export const buildComposableCall = async (
     throw new Error("Invalid smart account address")
   }
 
-  const args = params.data.args as Array<AnyData>
-
   if (args.length <= 0) {
     throw new Error(
       "Composable call is not required for a instruction which has zero args"
     )
   }
 
-  const functionContext = getFunctionContextFromAbi(params.type as string, abi)
+  const functionContext = getFunctionContextFromAbi(functionName, abi)
 
   if (functionContext?.inputs?.length !== args?.length) {
-    throw new Error(`Invalid arguments for the ${params.type} function`)
+    throw new Error(`Invalid arguments for the ${functionName} function`)
   }
 
   // Check for the runtime arguments and detect the need for composable call
@@ -138,10 +132,8 @@ export const buildComposableCall = async (
  * @param baseParams.currentInstructions - Optional array of existing instructions to append to
  * @param parameters - Parameters for generate composable instruction
  * @param parameters.to - Address of the target contract address
- * @param parameters.params - Parameters of composable transaction call
- * @param parameters.type - Function signature of the composable transaction call
- * @param parameters.data - Function data of the composable transaction call
- * @param parameters.data.args - Function arguments of the composable transaction call
+ * @param parameters.functionName - Function signature of the composable transaction call
+ * @param parameters.args - Function arguments of the composable transaction call
  * @param parameters.abi - ABI of the contract where the composable transaction call is being generated from
  * @param parameters.chainId - Chain where the composable transaction will be executed
  * @param [parameters.gasLimit] - Optional gas limit
@@ -155,24 +147,20 @@ export const buildComposableCall = async (
  *   { account: myMultichainAccount },
  *   {
  *     to: targetContractAddress,
- *     params: {
- *       type: 'exactInputSingle',
- *       data: {
- *         args: [
- *           {
- *             tokenIn: inToken.addressOn(baseSepolia.id),
- *             tokenOut: outToken.addressOn(baseSepolia.id),
- *             fee: 3000,
- *             recipient: recipient,
- *             deadline: BigInt(Math.floor(Date.now() / 1000) + 900),
- *             amountIn: runtimeERC20BalanceOf(recipient, testnetMcUSDC, baseSepolia.id),
- *             amountOutMinimum: BigInt(1),
- *             sqrtPriceLimitX96: BigInt(0),
- *           },
- *         ]
- *       }
- *     },
- *     toChain: baseSepolia,
+ *     functionName: 'exactInputSingle',
+ *     args: [
+ *        {
+ *          tokenIn: inToken.addressOn(baseSepolia.id),
+ *          tokenOut: outToken.addressOn(baseSepolia.id),
+ *          fee: 3000,
+ *          recipient: recipient,
+ *          deadline: BigInt(Math.floor(Date.now() / 1000) + 900),
+ *          amountIn: runtimeERC20BalanceOf({ targetAddress: recipient, tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id), constraints: [] }),
+ *          amountOutMinimum: BigInt(1),
+ *          sqrtPriceLimitX96: BigInt(0),
+ *        },
+ *     ]
+ *     chainId: baseSepolia.id,
  *     abi: UniswapSwapRouterAbi
  *   }
  * )
