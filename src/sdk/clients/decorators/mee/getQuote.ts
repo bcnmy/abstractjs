@@ -276,14 +276,14 @@ export const getQuote = async (
 
   const validFeeToken =
     validPaymentAccount &&
-    client.info.supported_gas_tokens
+    client.info.supportedGasTokens
       .map(({ chainId }) => +chainId)
       .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
-      client.info.supported_chains
+      client.info.supportedChains
         .map(({ chainId }) => +chainId)
         .includes(userOp.chainId)
   )
