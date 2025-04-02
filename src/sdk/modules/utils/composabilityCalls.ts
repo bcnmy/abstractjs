@@ -1,12 +1,10 @@
 import {
-  type Abi,
   type Address,
   type Hex,
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi
 } from "viem"
-import type { MultichainContract } from "../../account/utils/getMultichainContract"
 import type { AnyData } from "../../modules/utils/Types"
 import {
   type FunctionContext,
