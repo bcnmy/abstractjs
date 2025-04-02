@@ -53,6 +53,7 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   const supportedChains = info.supported_chains.map(({ chainId }) =>
     Number(chainId)
   )
+  console.log("supportedChains", supportedChains)
   const supported = account.deployments.every(({ chain }) =>
     supportedChains.includes(chain.id)
   )
