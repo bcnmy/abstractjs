@@ -24,8 +24,7 @@ import type { TestFileNetworkType } from "./testSetup"
 
 config()
 
-export const BASE_SEPOLIA_RPC_URL =
-  "https://virtual.base-sepolia.rpc.tenderly.co/2f123f67-1a77-4d44-ba94-1c33b944a6e4"
+export const BASE_SEPOLIA_RPC_URL = "https://virtual.base-sepolia.rpc.tenderly.co/3c4d2e0f-2d96-457e-bbfe-02c5b60c0cf1"
 
 type AnvilInstance = ReturnType<typeof anvil>
 type BundlerInstance = ReturnType<typeof alto>
@@ -201,8 +200,7 @@ export const nonZeroBalance = async (
   const balance = await getBalance(testClient, address, tokenAddress)
   if (balance > BigInt(0)) return
   throw new Error(
-    `Insufficient balance ${
-      tokenAddress ? `of token ${tokenAddress}` : "of native token"
+    `Insufficient balance ${tokenAddress ? `of token ${tokenAddress}` : "of native token"
     } during test setup of owner: ${address}`
   )
 }
@@ -260,7 +258,7 @@ export const safeTopUp = async (
 ) => {
   try {
     return await topUp(testClient, recipient, amount, token)
-  } catch (error) {}
+  } catch (error) { }
 }
 
 export const topUp = async (
@@ -273,8 +271,7 @@ export const topUp = async (
 
   if (balanceOfRecipient > amount) {
     Logger.log(
-      `balanceOfRecipient (${recipient}) already has enough ${
-        token ?? "native token"
+      `balanceOfRecipient (${recipient}) already has enough ${token ?? "native token"
       } (${balanceOfRecipient}) during safeTopUp`
     )
     return await Promise.resolve()

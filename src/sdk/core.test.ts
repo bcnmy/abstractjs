@@ -90,9 +90,7 @@ describe("core", async () => {
   })
 
   test("should install smart sessions validator", async () => {
-    const hash = await nexusClient.installModule({
-      module: toSmartSessionsModule({ signer: eoaAccount })
-    })
+    const hash = await nexusClient.installModule({ module: toSmartSessionsModule({ signer: eoaAccount }) })
     const receipt = await nexusClient.waitForUserOperationReceipt({ hash })
     expect(receipt.success).toBe(true)
   })
