@@ -1,4 +1,4 @@
-import { type Abi, Address, encodeFunctionData, isAddress } from "viem"
+import { type Abi, type Address, encodeFunctionData, isAddress } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import { COMPOSABILITY_MODULE_ABI } from "../../../constants/abi/ComposabilityAbi"
 import type { AnyData } from "../../../modules/utils/Types"

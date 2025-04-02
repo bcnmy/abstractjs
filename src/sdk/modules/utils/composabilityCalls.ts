@@ -1,6 +1,6 @@
 import {
   type Abi,
-  Address,
+  type Address,
   type Hex,
   encodeAbiParameters,
   encodeFunctionData,
