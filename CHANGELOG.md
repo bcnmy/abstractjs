@@ -1,6 +1,6 @@
 # @biconomy/abstractjs
 
-## 0.4.0
+## 1.0.0
 
 ### Minor Changes
 
@@ -26,6 +26,7 @@
 - Improved error handling for module initialization
 - Reduced bundle size through code optimization (-5.45% ESM, -7.42% CJS)
 - Added comprehensive test coverage for new module initialization flows
+- Improved status reporting for userOps
 
 ## 0.3.0
 
