@@ -8,7 +8,7 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
  * Default URL for the MEE node service
  */
 const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
-
+const DEFAULT_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 /**
  * Parameters for creating a Mee client
  */
@@ -19,6 +19,8 @@ export type CreateMeeClientParams = {
   pollingInterval?: number
   /** Account to use for the Mee client */
   account: MultichainSmartAccount
+  /** Auth key for the Mee client */
+  apiKey?: string
 }
 
 export type BaseMeeClient = Prettify<
@@ -39,8 +41,13 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   contracts are still being audited, and the multichain tokens exported from 
   this package are yet to be verified.
 -------------------------------------------------------------------------------`)
-  const { url = DEFAULT_MEE_NODE_URL, pollingInterval = 1000, account } = params
-  const httpClient = createHttpClient(url)
+  const {
+    url = DEFAULT_MEE_NODE_URL,
+    pollingInterval = 1000,
+    account,
+    apiKey = DEFAULT_API_KEY
+  } = params
+  const httpClient = createHttpClient(url, apiKey)
   const info = await getInfo(httpClient)
   const baseMeeClient = Object.assign(httpClient, {
     pollingInterval,

@@ -50,7 +50,7 @@ const calls = [
   }
 ]
 
-describe.skipIf(!runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
+describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -98,12 +98,13 @@ describe.skipIf(!runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
       }
     })
 
-    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-    expect(receipt.transactionStatus).toBe("SUCCESS")
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 })
 
-describe.skipIf(!runPaidTests).each(COMPETITORS)(
+describe.runIf(runPaidTests).each(COMPETITORS)(
   "nexus.interoperability with $name bundler",
   async ({ bundlerUrl, chain, mock }) => {
     const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY as Hex}`)

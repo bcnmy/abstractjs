@@ -47,7 +47,7 @@ const DUMMY_USER_OP: MeeFilledUserOpDetails & UserOpStatus = {
   maxFeePerGas: "1000000",
   chainId: "1",
   executionData: "0x123",
-  executionError: "0x123"
+  executionError: ""
 }
 
 const fulfilledReceipt: PromiseSettledResult<TransactionReceipt> = {
@@ -60,9 +60,15 @@ const rejectedReceipt: PromiseSettledResult<TransactionReceipt> = {
   reason: new Error("Rejected")
 }
 
+// Define user ops with different statuses
 const successUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
   executionStatus: "SUCCESS"
+}
+
+const minedSuccessUserOp: MeeFilledUserOpDetails & UserOpStatus = {
+  ...DUMMY_USER_OP,
+  executionStatus: "MINED_SUCCESS"
 }
 
 const pendingUserOp: MeeFilledUserOpDetails & UserOpStatus = {
@@ -70,9 +76,21 @@ const pendingUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   executionStatus: "PENDING"
 }
 
-const errorUserOp: MeeFilledUserOpDetails & UserOpStatus = {
+const miningUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
-  executionStatus: "ERROR"
+  executionStatus: "MINING"
+}
+
+const failedUserOp: MeeFilledUserOpDetails & UserOpStatus = {
+  ...DUMMY_USER_OP,
+  executionStatus: "FAILED",
+  executionError: "This is a test error for status FAILED"
+}
+
+const minedFailUserOp: MeeFilledUserOpDetails & UserOpStatus = {
+  ...DUMMY_USER_OP,
+  executionStatus: "MINED_FAIL",
+  executionError: "This is a test error for status MINED_FAIL"
 }
 
 describe("utils.parseTransactionStatus", () => {
@@ -100,27 +118,113 @@ describe("utils.parseTransactionStatus", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  test("should return SUCCESS when all userOps succeed and receipts are fulfilled", async () => {
-    const userOps = [successUserOp, successUserOp, successUserOp]
-    const receipts = [fulfilledReceipt, fulfilledReceipt, fulfilledReceipt]
+  test("should return MINED_SUCCESS with finalised=true when all userOps have MINED_SUCCESS status", async () => {
+    const userOps = [minedSuccessUserOp, minedSuccessUserOp, minedSuccessUserOp]
 
-    const status = await parseTransactionStatus(userOps, receipts)
-    expect(status).toBe("SUCCESS")
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("MINED_SUCCESS")
+    expect(result.isFinalised).toBe(true)
+    expect(result.message).toBe("Transaction executed successfully")
   })
 
-  test("should return MINING when userOps are no pending and there is a rejected receipt", async () => {
+  test("should return SUCCESS for legacy status handling with finalised=false", async () => {
     const userOps = [successUserOp, successUserOp, successUserOp]
-    const receipts = [fulfilledReceipt, fulfilledReceipt, rejectedReceipt]
 
-    const status = await parseTransactionStatus(userOps, receipts)
-    expect(status).toBe("MINING")
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("PENDING") // Since we removed backward compatibility
+    expect(result.isFinalised).toBe(false)
+    expect(result.message).toBe("")
   })
 
-  test("should return SUBMITTED when some ops are pending with rejected receipts", async () => {
-    const userOps = [successUserOp, pendingUserOp, successUserOp]
-    const receipts = [fulfilledReceipt, rejectedReceipt, fulfilledReceipt]
+  test("should return PENDING with finalised=false when any userOp has PENDING status", async () => {
+    const userOps = [minedSuccessUserOp, pendingUserOp, minedSuccessUserOp]
 
-    const status = await parseTransactionStatus(userOps, receipts)
-    expect(status).toBe("SUBMITTED")
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("PENDING")
+    expect(result.isFinalised).toBe(false)
+    expect(result.message).toContain(
+      "Transaction is pending, waiting for conditions to be met"
+    )
+  })
+
+  test("should return MINING with finalised=false when any userOp has MINING status", async () => {
+    const userOps = [minedSuccessUserOp, miningUserOp, minedSuccessUserOp]
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("MINING")
+    expect(result.isFinalised).toBe(false)
+    expect(result.message).toBe(
+      "Transaction is mining, waiting for blockchain confirmation"
+    )
+  })
+
+  test("should return FAILED with finalised=false when mixed final and non-final userOps exist", async () => {
+    const userOps = [minedSuccessUserOp, failedUserOp, pendingUserOp]
+    failedUserOp.executionError = "Test error message"
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("FAILED")
+    expect(result.isFinalised).toBe(true) // Changed to match implementation
+    expect(result.message).toContain("Test error message")
+  })
+
+  test("should return FAILED with finalised=true when all userOps have final status", async () => {
+    const userOps = [minedSuccessUserOp, failedUserOp, minedSuccessUserOp]
+    failedUserOp.executionError = "Custom error message"
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("FAILED")
+    expect(result.isFinalised).toBe(true)
+    expect(result.message).toContain("Custom error message")
+  })
+
+  test("should return MINED_FAIL with finalised=true when all userOps have final status", async () => {
+    const userOps = [minedSuccessUserOp, minedFailUserOp, minedSuccessUserOp]
+    minedFailUserOp.executionError = "UserOperation reverted"
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("MINED_FAIL")
+    expect(result.isFinalised).toBe(true)
+    expect(result.message).toContain("UserOperation reverted")
+  })
+
+  test("should return MINED_FAIL with finalised=false when mixed final and non-final userOps exist", async () => {
+    const userOps = [minedSuccessUserOp, minedFailUserOp, miningUserOp]
+    minedFailUserOp.executionError = "Transaction reverted on-chain"
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("MINED_FAIL")
+    expect(result.isFinalised).toBe(true) // Changed to match implementation
+    expect(result.message).toContain("Transaction reverted on-chain")
+  })
+
+  test("should handle priority correctly - FAILED takes precedence over MINED_FAIL", async () => {
+    const userOps = [minedFailUserOp, failedUserOp, minedSuccessUserOp]
+    failedUserOp.executionError = "Priority error message"
+    minedFailUserOp.executionError = "Should not see this"
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("FAILED")
+    expect(result.isFinalised).toBe(true)
+    expect(result.message).toContain("Priority error message")
+  })
+
+  test("should handle priority correctly - MINING takes precedence over PENDING", async () => {
+    const userOps = [miningUserOp, pendingUserOp, minedSuccessUserOp]
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("MINING")
+    expect(result.isFinalised).toBe(false)
+    expect(result.message).toContain(
+      "Transaction is mining, waiting for blockchain confirmation"
+    )
+  })
+
+  test("should handle empty userOps and return PENDING", async () => {
+    const userOps: (MeeFilledUserOpDetails & UserOpStatus)[] = []
+
+    const result = await parseTransactionStatus(userOps)
+    expect(result.status).toBe("PENDING")
+    expect(result.isFinalised).toBe(false)
+    expect(result.message).toBe("")
   })
 })

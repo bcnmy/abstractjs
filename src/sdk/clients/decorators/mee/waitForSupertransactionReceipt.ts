@@ -1,7 +1,8 @@
+import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
-  type GetSupertransactionReceiptPayload
+  type GetSupertransactionReceiptPayloadWithReceipts
 } from "./getSupertransactionReceipt"
 
 export const DEFAULT_POLLING_INTERVAL = 1000
@@ -14,9 +15,10 @@ export type WaitForSupertransactionReceiptParams =
 
 /**
  * Response payload containing the supertransaction receipt details
+ * This always includes receipts since we're waiting for them
  */
 export type WaitForSupertransactionReceiptPayload =
-  GetSupertransactionReceiptPayload
+  GetSupertransactionReceiptPayloadWithReceipts
 
 /**
  * Waits for a supertransaction receipt to be available. This function polls the MEE service
@@ -26,7 +28,7 @@ export type WaitForSupertransactionReceiptPayload =
  * @param params - Parameters for retrieving the receipt
  * @param params.hash - The supertransaction hash to wait for
  *
- * @returns Promise resolving to the supertransaction receipt
+ * @returns Promise resolving to the supertransaction receipt with blockchain receipts
  *
  * @example
  * ```typescript
@@ -55,15 +57,37 @@ export const waitForSupertransactionReceipt = async (
 ): Promise<WaitForSupertransactionReceiptPayload> => {
   const pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
 
-  const explorerResponse = await getSupertransactionReceipt(client, parameters)
-  const FINALLY_STATUSES = ["SUCCESS", "ERROR"]
+  // Force waitForReceipts to true for this function
+  const paramsWithWait = { ...parameters, waitForReceipts: true }
 
-  if (!FINALLY_STATUSES.includes(explorerResponse.transactionStatus)) {
+  // Fetch receipt from MEE node
+  const explorerResponse = await getSupertransactionReceipt(
+    client,
+    paramsWithWait
+  )
+
+  // Calculate the overall transaction status
+  const userOps = explorerResponse.userOps || []
+  const statusResult = await parseTransactionStatus(userOps)
+
+  // Update the response with the calculated status
+  explorerResponse.transactionStatus = statusResult.status
+
+  // Handle error status cases (FAILED, MINED_FAIL)
+  if (
+    statusResult.status === "FAILED" ||
+    statusResult.status === "MINED_FAIL"
+  ) {
+    throw new Error(statusResult.message || "Transaction failed")
+  }
+
+  // If transaction is not finalized yet, continue polling
+  if (!statusResult.isFinalised) {
     await new Promise((resolve) => setTimeout(resolve, pollingInterval))
     return await waitForSupertransactionReceipt(client, parameters)
   }
 
-  return explorerResponse
+  return explorerResponse as WaitForSupertransactionReceiptPayload
 }
 
 export default waitForSupertransactionReceipt

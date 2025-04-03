@@ -1,8 +1,7 @@
-import {
-  type GetTransactionReceiptParameters,
-  type Hex,
-  type TransactionReceipt,
-  isHex
+import type {
+  GetTransactionReceiptParameters,
+  Hex,
+  TransactionReceipt
 } from "viem"
 import { getTransactionReceipt as getTransactionReceiptFromViem } from "viem/actions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -22,7 +21,9 @@ import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
  */
 export type GetSupertransactionReceiptParams =
   GetTransactionReceiptParameters & {
-    /** The number of confirmations to wait for. Defaults to 2. */
+    /** Whether to wait for receipts to be mined. Defaults to true. */
+    waitForReceipts?: boolean
+    /** The number of confirmations to wait for. Defaults to 2. Only used if waitForReceipts is true. */
     confirmations?: number
     /**
      * Optional smart account to execute the transaction.
@@ -36,21 +37,26 @@ export type GetSupertransactionReceiptParams =
  * @type UserOpStatus
  */
 export type UserOpStatus = {
-  executionStatus: "SUCCESS" | "PENDING" | "ERROR"
+  executionStatus:
+    | "SUCCESS"
+    | "MINING"
+    | "MINED_SUCCESS"
+    | "MINED_FAIL"
+    | "FAILED"
+    | "PENDING"
   executionData: Hex
   executionError: string
 }
 
 /**
- * Response payload containing the supertransaction receipt details
+ * Base response payload containing common supertransaction receipt details
  */
-export type GetSupertransactionReceiptPayload = Omit<
+export type BaseGetSupertransactionReceiptPayload = Omit<
   GetQuotePayload,
   "userOps"
 > & {
   userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
   explorerLinks: Url[]
-  receipts: PromiseSettledResult<TransactionReceipt>[]
   /**
    * The transaction hash
    * @example "0x123..."
@@ -58,60 +64,99 @@ export type GetSupertransactionReceiptPayload = Omit<
   hash: Hex
   /**
    * Status of the transaction
-   * @example "success"
+   * @example "FAILED"
    */
-  transactionStatus: string
+  transactionStatus: UserOpStatus["executionStatus"]
 }
 
-export const getSupertransactionReceipt = async (
+/**
+ * Response payload with receipts (when waitForReceipts is true)
+ */
+export type GetSupertransactionReceiptPayloadWithReceipts =
+  BaseGetSupertransactionReceiptPayload & {
+    receipts: TransactionReceipt[]
+  }
+
+/**
+ * Response payload without receipts (when waitForReceipts is false)
+ */
+export type GetSupertransactionReceiptPayloadWithoutReceipts =
+  BaseGetSupertransactionReceiptPayload & {
+    receipts: null
+  }
+
+/**
+ * Combined response payload type that conditionally includes receipts based on waitForReceipts
+ */
+export type GetSupertransactionReceiptPayload =
+  | GetSupertransactionReceiptPayloadWithReceipts
+  | GetSupertransactionReceiptPayloadWithoutReceipts
+
+/**
+ * Get a supertransaction receipt from the MEE node
+ *
+ * @typeParam T - Type of the return value, determined by waitForReceipts parameter
+ * @param client - The Mee client instance
+ * @param parameters - Parameters for retrieving the receipt
+ * @returns Promise resolving to the supertransaction receipt, with or without chain receipts depending on waitForReceipts
+ */
+export function getSupertransactionReceipt<T extends boolean = true>(
+  client: BaseMeeClient,
+  parameters: GetSupertransactionReceiptParams & { waitForReceipts?: T }
+): Promise<
+  T extends true
+    ? GetSupertransactionReceiptPayloadWithReceipts
+    : GetSupertransactionReceiptPayloadWithoutReceipts
+>
+
+export async function getSupertransactionReceipt(
   client: BaseMeeClient,
   parameters: GetSupertransactionReceiptParams
-): Promise<GetSupertransactionReceiptPayload> => {
-  const { confirmations = 2, ...params } = parameters
+): Promise<GetSupertransactionReceiptPayload> {
+  const { confirmations = 2, waitForReceipts = true, ...params } = parameters
   const account = parameters.account ?? client.account
 
+  // We will collect all receipts only after happy path
+  let receipts: TransactionReceipt[] | null = null
+
   const explorerResponse =
-    await client.request<GetSupertransactionReceiptPayload>({
+    await client.request<BaseGetSupertransactionReceiptPayload>({
       path: `explorer/${params.hash}`,
       method: "GET"
     })
 
-  const userOpError = explorerResponse.userOps.find(
-    (userOp) => userOp.executionError
-  )
-  const errorFromExecutionData = explorerResponse.userOps.find(
-    ({ executionData }) => !!executionData && !isHex(executionData)
-  )
-
-  const statuses = explorerResponse.userOps.map(
-    (userOp) => userOp.executionStatus
-  )
-  const statusError = statuses.some((status) => status === "ERROR")
-  if (/*userOpError || */ errorFromExecutionData || statusError) {
-    throw new Error(
-      parseErrorMessage(
-        userOpError?.executionError ||
-          errorFromExecutionData?.executionData ||
-          "Unknown error"
-      )
-    )
-  }
-
-  const receipts = await Promise.allSettled(
-    explorerResponse.userOps.map(({ chainId, executionData }) =>
-      executionData
-        ? getTransactionReceiptFromViem(
-            account.deploymentOn(Number(chainId), true).publicClient,
-            { confirmations, ...parameters, hash: executionData }
+  const metaStatus = await parseTransactionStatus(explorerResponse.userOps)
+  switch (metaStatus.status) {
+    case "FAILED": {
+      throw new Error(parseErrorMessage(metaStatus.message))
+    }
+    case "MINED_FAIL": {
+      console.log({ metaStatus })
+      throw new Error(parseErrorMessage(metaStatus.message))
+    }
+    case "PENDING": {
+      break
+    }
+    case "MINING": {
+      break
+    }
+    case "MINED_SUCCESS": {
+      if (waitForReceipts) {
+        receipts = await Promise.all(
+          explorerResponse.userOps.map(({ chainId, executionData }) =>
+            getTransactionReceiptFromViem(
+              account.deploymentOn(Number(chainId), true).publicClient,
+              { confirmations, ...parameters, hash: executionData }
+            )
           )
-        : Promise.reject(new Error("No execution data"))
-    )
-  )
-
-  const transactionStatus = await parseTransactionStatus(
-    explorerResponse.userOps,
-    receipts
-  )
+        )
+      }
+      break
+    }
+    default: {
+      throw new Error("Unknown transaction status")
+    }
+  }
 
   const explorerLinks = explorerResponse.userOps.reduce(
     (acc, userOp) => {
@@ -128,8 +173,8 @@ export const getSupertransactionReceipt = async (
     ...explorerResponse,
     explorerLinks,
     receipts,
-    transactionStatus
-  }
+    transactionStatus: metaStatus.status
+  } as GetSupertransactionReceiptPayload
 }
 
 export default getSupertransactionReceipt
