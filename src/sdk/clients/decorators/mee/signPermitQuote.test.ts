@@ -90,7 +90,7 @@ describe("mee.signPermitQuote", () => {
     expect(domainSeparator).toBe(expectedDomainSeparatorForOptimism)
   })
 
-  test.concurrent("should sign a quote using signPermitQuote", async () => {
+  test("should sign a quote using signPermitQuote", async () => {
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger: {
         chainId: paymentChain.id,

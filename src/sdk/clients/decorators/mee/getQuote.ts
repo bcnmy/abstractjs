@@ -4,7 +4,7 @@ import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainCon
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 
-export const USEROP_MIN_EXEC_WINDOW_DURATION = 60
+export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
 /**
  * Represents an abstract call to be executed in the transaction.
@@ -304,14 +304,14 @@ export const getQuote = async (
 
   const validFeeToken =
     validPaymentAccount &&
-    client.info.supported_gas_tokens
+    client.info.supportedGasTokens
       .map(({ chainId }) => +chainId)
       .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
-      client.info.supported_chains
+      client.info.supportedChains
         .map(({ chainId }) => +chainId)
         .includes(userOp.chainId)
   )

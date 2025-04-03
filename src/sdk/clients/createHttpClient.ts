@@ -55,7 +55,6 @@ type Extended = Prettify<
 export const createHttpClient = (url: Url, apiKey?: string): HttpClient => {
   const request = async <T>(requesParams: RequestParams) => {
     const { path, method = "POST", body, params } = requesParams
-
     const urlParams = params ? `?${new URLSearchParams(params)}` : ""
     const fullPath = `${url}/${path}${urlParams}`
     const result = await fetch(fullPath, {
