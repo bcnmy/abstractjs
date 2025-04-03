@@ -8,14 +8,12 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 /**
  * Default URL for the MEE node service
  */
-const DEFAULT_PATHFINDER_URL = "https://pathfinder.biconomy.io/v1"
+const DEFAULT_PATHFINDER_URL = "https://mee-node.biconomy.io/v3"
 const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
 const DEFAULT_STAGING_PATHFINDER_URL =
   "https://pathfinder-staging.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZgC8FjgJN5kAT1Di3icZitT"
-
-const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
 
 /**
  * Parameters for creating a Mee client
@@ -52,7 +50,7 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   const {
     account,
     pollingInterval = 1000,
-    url = isStaging() ? DEFAULT_STAGING_PATHFINDER_URL : DEFAULT_MEE_NODE_URL,
+    url = isStaging() ? DEFAULT_STAGING_PATHFINDER_URL : DEFAULT_PATHFINDER_URL,
     apiKey = isStaging()
       ? DEFAULT_STAGING_PATHFINDER_API_KEY
       : DEFAULT_PATHFINDER_API_KEY
@@ -66,7 +64,7 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   })
 
   // Check if the account is supported by the MEE node. Throws if not.
-  const supportedChains = info.supportedChains.map(({ chainId }) =>
+  const supportedChains = info.supported_chains.map(({ chainId }) =>
     Number(chainId)
   )
   const supported = account.deployments.every(({ chain }) =>

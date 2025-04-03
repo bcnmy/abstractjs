@@ -304,14 +304,14 @@ export const getQuote = async (
 
   const validFeeToken =
     validPaymentAccount &&
-    client.info.supportedGasTokens
+    client.info.supported_gas_tokens
       .map(({ chainId }) => +chainId)
       .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
-      client.info.supportedChains
+      client.info.supported_chains
         .map(({ chainId }) => +chainId)
         .includes(userOp.chainId)
   )

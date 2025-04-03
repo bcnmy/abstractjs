@@ -76,7 +76,7 @@ export const getGasToken = async (
   client: BaseMeeClient,
   parameters: GetGasTokenParams
 ): Promise<GetGasTokenPayload> => {
-  const gasToken = client.info.supportedGasTokens.find(
+  const gasToken = client.info.supported_gas_tokens.find(
     (gasToken) => Number(gasToken.chainId) === Number(parameters.chainId)
   )
   if (!gasToken) {
