@@ -123,6 +123,15 @@ export type GetQuoteParams = SupertransactionLike & {
   upperBoundTimestamp?: number
 }
 
+export type Eip7702Auth = {
+  address: Hex
+  signature: Hex
+  nonce: Hex
+  r: Hex
+  s: Hex
+  v: Hex
+  yParity: Hex
+}
 /**
  * Internal structure for submitting a quote request to the MEE service
  * @internal
@@ -145,7 +154,7 @@ type QuoteRequest = {
     /** Upper bound timestamp for operation validity */
     upperBoundTimestamp?: number
     /** EIP7702Auth */
-    eip7702Auth?: string
+    eip7702Auth?: Eip7702Auth
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
