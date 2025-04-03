@@ -38,12 +38,12 @@ export type GetSupertransactionReceiptParams =
  */
 export type UserOpStatus = {
   executionStatus:
-  | "SUCCESS"
-  | "MINING"
-  | "MINED_SUCCESS"
-  | "MINED_FAIL"
-  | "FAILED"
-  | "PENDING"
+    | "SUCCESS"
+    | "MINING"
+    | "MINED_SUCCESS"
+    | "MINED_FAIL"
+    | "FAILED"
+    | "PENDING"
   executionData: Hex
   executionError: string
 }
@@ -105,8 +105,8 @@ export function getSupertransactionReceipt<T extends boolean = true>(
   parameters: GetSupertransactionReceiptParams & { waitForReceipts?: T }
 ): Promise<
   T extends true
-  ? GetSupertransactionReceiptPayloadWithReceipts
-  : GetSupertransactionReceiptPayloadWithoutReceipts
+    ? GetSupertransactionReceiptPayloadWithReceipts
+    : GetSupertransactionReceiptPayloadWithoutReceipts
 >
 
 export async function getSupertransactionReceipt(
