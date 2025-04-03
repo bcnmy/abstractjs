@@ -60,7 +60,7 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   })
 
   // Check if the account is supported by the MEE node. Throws if not.
-  const supportedChains = info.supported_chains.map(({ chainId }) =>
+  const supportedChains = info.supportedChains.map(({ chainId }) =>
     Number(chainId)
   )
   const supported = account.deployments.every(({ chain }) =>
