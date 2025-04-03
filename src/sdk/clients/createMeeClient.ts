@@ -1,5 +1,6 @@
 import type { Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
+import { isStaging } from "../account/utils/Helpers"
 import { inProduction } from "../account/utils/Utils"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
@@ -9,6 +10,9 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
  */
 const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
 const DEFAULT_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
+
+const DEFAULT_STAGING_MEE_NODE_URL = "https://pathfinder-staging.biconomy.io/v1"
+const DEFAULT_STAGING_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 /**
  * Parameters for creating a Mee client
  */
@@ -42,10 +46,10 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   this package are yet to be verified.
 -------------------------------------------------------------------------------`)
   const {
-    url = DEFAULT_MEE_NODE_URL,
-    pollingInterval = 1000,
     account,
-    apiKey = DEFAULT_API_KEY
+    pollingInterval = 1000,
+    url = isStaging() ? DEFAULT_STAGING_MEE_NODE_URL : DEFAULT_MEE_NODE_URL,
+    apiKey = isStaging() ? DEFAULT_STAGING_API_KEY : DEFAULT_API_KEY
   } = params
   const httpClient = createHttpClient(url, apiKey)
   const info = await getInfo(httpClient)
