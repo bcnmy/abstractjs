@@ -68,7 +68,6 @@ describe("mee.buildMultichainInstructions", () => {
       { account: mcNexus, currentInstructions: [] },
       {
         type: "toInstallModuleCalls",
-        chainId: 1,
         parameters: toInstallData(meeValidator)
       }
     )
@@ -79,7 +78,6 @@ describe("mee.buildMultichainInstructions", () => {
     const instructions: Instruction[] = await buildMultichainInstructions(
       { account: mcNexus, currentInstructions: [] },
       {
-        chainId: 1,
         calls: [
           {
             to: tokenAddress,
@@ -109,7 +107,6 @@ describe("mee.buildMultichainInstructions", () => {
         { account: mcNexus, currentInstructions: [] },
         {
           type: "toInstallModuleCalls",
-          chainId: 1,
           parameters: toInstallData(meeValidator)
         }
       ),
@@ -117,7 +114,6 @@ describe("mee.buildMultichainInstructions", () => {
         { account: mcNexus, currentInstructions: [] },
         {
           type: "toInstallModuleCalls",
-          chainId: 2,
           parameters: toInstallData(smartSessionValidator)
         }
       ),
@@ -129,15 +125,13 @@ describe("mee.buildMultichainInstructions", () => {
               to: tokenAddress,
               data: "0x"
             }
-          ],
-          chainId: 2
+          ]
         }
       ),
       buildMultichainInstructions(
         { account: mcNexus, currentInstructions: [] },
         {
           type: "toInstallModuleCalls",
-          chainId: 2,
           parameters: toInstallData(ownableValidator)
         }
       ),
@@ -145,7 +139,6 @@ describe("mee.buildMultichainInstructions", () => {
         { account: mcNexus, currentInstructions: [] },
         {
           type: "toSetThresholdCalls",
-          chainId: 2,
           parameters: { threshold: 1 }
         }
       ),
@@ -153,7 +146,6 @@ describe("mee.buildMultichainInstructions", () => {
         { account: mcNexus, currentInstructions: [] },
         {
           type: "toEnableActionPoliciesCalls",
-          chainId: 2,
           parameters: {
             permissionId:
               "0x0000000000000000000000000000000000000000000000000000000000000000" as Hex,

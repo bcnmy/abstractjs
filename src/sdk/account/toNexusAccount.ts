@@ -89,6 +89,9 @@ export type GenericModuleConfig<
   T extends MinimalModuleConfig = MinimalModuleConfig
 > = T
 
+export type PrevalidationHookModuleConfig = GenericModuleConfig & {
+  hookType: bigint
+}
 /**
  * Parameters for creating a Nexus Smart Account
  */
@@ -108,14 +111,12 @@ export type ToNexusSmartAccountParameters = {
   index?: bigint | undefined
   /** Optional account address override */
   accountAddress?: Address
-  /** Attester addresses to apply to the account */
-  attesters?: Address[]
-  /** Optional attestors threshold for the account */
-  attesterThreshold?: number
   /** Optional validator modules configuration */
   validators?: Array<Validator>
   /** Optional executor modules configuration */
   executors?: Array<GenericModuleConfig>
+  /** Optional prevalidation hook modules configuration */
+  prevalidationHooks?: Array<PrevalidationHookModuleConfig>
   /** Optional hook module configuration */
   hook?: GenericModuleConfig
   /** Optional fallback modules configuration */
@@ -174,9 +175,6 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     /** Factory address used for account creation */
     factoryAddress: Address
 
-    /** Attester addresses for account verification */
-    attesters: Address[]
-
     /** The signer instance */
     signer: Signer
 
@@ -224,15 +222,14 @@ export const toNexusAccount = async (
     index = 0n,
     key = "nexus account",
     name = "Nexus Account",
-    attesterThreshold = 0,
-    attesters = [],
     registryAddress = zeroAddress,
     validators: customValidators,
     executors: customExecutors,
     hook: customHook,
     fallbacks: customFallbacks,
     factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
-    accountAddress: accountAddress_
+    accountAddress: accountAddress_,
+    prevalidationHooks: customPrevalidationHooks
   } = parameters
 
   // @ts-ignore
@@ -257,6 +254,7 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   const validators = customValidators || [toMeeModule({ signer })]
+
   let [module] = validators
 
   // Prepare executor modules
@@ -271,15 +269,16 @@ export const toNexusAccount = async (
   // Generate the initialization data for the account using the initNexus function
   const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
 
+  const prevalidationHooks = customPrevalidationHooks || []
+
   const initData = getInitData({
     validators: validators.map(toInitData),
     executors: executors.map(toInitData),
     hook: toInitData(hook),
     fallbacks: fallbacks.map(toInitData),
     registryAddress,
-    attesters,
-    attesterThreshold,
-    bootStrapAddress
+    bootStrapAddress,
+    prevalidationHooks
   })
 
   // Generate the factory data with the bootstrap address and init data
@@ -610,7 +609,6 @@ export const toNexusAccount = async (
       signer,
       walletClient,
       publicClient,
-      attesters,
       chain,
       setModule,
       getModule: () => module

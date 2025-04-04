@@ -31,7 +31,7 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
-import { K1_VALIDATOR_ADDRESS, MEE_VALIDATOR_ADDRESS } from "../constants"
+import { MEE_VALIDATOR_ADDRESS } from "../constants"
 import {
   type NexusClient,
   createSmartAccountClient

@@ -10,9 +10,14 @@ import {
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
+  erc20Abi,
   parseEther
 } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+import { base, optimism, polygon } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
+import { toMultichainNexusAccount } from "../sdk/account"
+import buildComposable from "../sdk/account/decorators/instructions/buildComposable"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
 import {
@@ -25,7 +30,7 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { SmartSessionMode } from "../sdk/constants"
+import { SmartSessionMode, mcUSDC, mcUSDD } from "../sdk/constants"
 import type {
   CreateSessionDataParams,
   SessionData
@@ -177,5 +182,13 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     })
     expect(success).toBe("true")
     expect(balanceAfter - balanceBefore).toBe(1n)
+  })
+
+  test("should execute composable", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [optimism, base, polygon],
+      signer: privateKeyToAccount("0x"),
+      transports: [http(), http(), http()]
+    })
   })
 })

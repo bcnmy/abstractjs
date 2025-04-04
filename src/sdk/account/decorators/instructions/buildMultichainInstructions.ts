@@ -25,9 +25,7 @@ type ArgumentTypes<F extends Function> = F extends (
   ? A
   : never
 
-export type BuildMultichainInstructionsParameters = {
-  chainId: number
-} & OneOf<
+export type BuildMultichainInstructionsParameters = OneOf<
   | {
       calls: Call[]
     }
