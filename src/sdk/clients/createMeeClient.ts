@@ -8,11 +8,10 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 /**
  * Default URL for the MEE node service
  */
-const DEFAULT_PATHFINDER_URL = "https://pathfinder.biconomy.io/v1"
+const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
 const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
-const DEFAULT_STAGING_PATHFINDER_URL =
-  "https://pathfinder-staging.biconomy.io/v1"
+const DEFAULT_STAGING_PATHFINDER_URL = "https://staging-network.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
 /**
