@@ -8,7 +8,8 @@ import {
   toHex
 } from "viem"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
-import type { GenericModuleConfig } from "../toNexusAccount"
+import type { GenericModuleConfig, PrevalidationHookModuleConfig } from "../toNexusAccount"
+import { NexusBootstrapV12xAbi } from "../../constants/abi/NexusBootstrapV12x"
 
 export type GetFactoryDataParams = {
   /** Hex string of the validator init data */
@@ -48,7 +49,7 @@ export type GetInitDataParams = {
   bootStrapAddress: Address
 }
 
-export const getInitData = (params: GetInitDataParams): Hex =>
+export const getInitDataV10x = (params: GetInitDataParams): Hex =>
   encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },
@@ -71,3 +72,30 @@ export const getInitData = (params: GetInitDataParams): Hex =>
       })
     ]
   )
+
+
+export type GetInitDataV12xParams = GetInitDataParams & {
+  prevalidationHooks: PrevalidationHookModuleConfig[]
+}
+
+export const getInitDataV12x = (params: GetInitDataV12xParams): Hex =>
+    encodeAbiParameters(
+      [
+        { name: "bootstrap", type: "address" },
+        { name: "initData", type: "bytes" }
+      ],
+      [
+        params.bootStrapAddress,
+        encodeFunctionData({
+          abi: NexusBootstrapV12xAbi,
+          functionName: 'initNexusNoRegistry',
+          args: [
+            params.validators,
+            params.executors,
+            params.hook,
+            params.fallbacks,
+            params.prevalidationHooks
+          ]
+        })
+      ]
+    )

@@ -43,7 +43,7 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 
-import { ENTRY_POINT_ADDRESS, LATEST_DEFAULT_ADDRESSES } from "../constants"
+import { ENTRY_POINT_ADDRESS, LATEST_DEFAULT_ADDRESSES, NEXUS_V120_DEFAULT_ADDRESSES } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
@@ -51,7 +51,7 @@ import { toComposableFallback } from "../modules/toComposableFallback"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import { toMeeModule } from "../modules/validators/mee/toMeeModule"
 import type { Validator } from "../modules/validators/toValidator"
-import { getFactoryData, getInitData } from "./decorators/getFactoryData"
+import { getFactoryData, getInitDataV10x, getInitDataV12x } from "./decorators/getFactoryData"
 import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
@@ -89,6 +89,9 @@ export type GenericModuleConfig<
   T extends MinimalModuleConfig = MinimalModuleConfig
 > = T
 
+export type PrevalidationHookModuleConfig = GenericModuleConfig & {
+  hookType: bigint
+}
 /**
  * Parameters for creating a Nexus Smart Account
  */
@@ -124,6 +127,8 @@ export type ToNexusSmartAccountParameters = {
   registryAddress?: Address
   /** Optional factory address */
   factoryAddress?: Address
+  /** Nexus Version */
+  nexusVersion?: 'v1.0.x' | 'v1.2.x'
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -232,7 +237,8 @@ export const toNexusAccount = async (
     hook: customHook,
     fallbacks: customFallbacks,
     factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
-    accountAddress: accountAddress_
+    accountAddress: accountAddress_,
+    nexusVersion = 'v1.2.x'
   } = parameters
 
   // @ts-ignore
@@ -257,6 +263,7 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   const validators = customValidators || [toMeeModule({ signer })]
+
   let [module] = validators
 
   // Prepare executor modules
@@ -268,19 +275,38 @@ export const toNexusAccount = async (
   // Prepare fallback modules
   const fallbacks = customFallbacks || [toComposableFallback()]
 
-  // Generate the initialization data for the account using the initNexus function
-  const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
+  // Generate the initialization data for the account using the iitNexus function
+  const bootStrapAddress = (() => {
+    if(nexusVersion === 'v1.0.x') {
+      return LATEST_DEFAULT_ADDRESSES.bootStrapAddress
+    } else {
+      return NEXUS_V120_DEFAULT_ADDRESSES.bootStrapAddress
+    }
+  })()
 
-  const initData = getInitData({
-    validators: validators.map(toInitData),
-    executors: executors.map(toInitData),
-    hook: toInitData(hook),
-    fallbacks: fallbacks.map(toInitData),
-    registryAddress,
-    attesters,
-    attesterThreshold,
-    bootStrapAddress
-  })
+  const initData = (() => {
+    
+    const baseConfig = {
+      validators: validators.map(toInitData),
+      executors: executors.map(toInitData),
+      hook: toInitData(hook),
+      fallbacks: fallbacks.map(toInitData),
+      registryAddress,
+      attesters,
+      attesterThreshold,
+      bootStrapAddress
+    }
+
+    if(nexusVersion === 'v1.0.x') {
+      return getInitDataV10x(baseConfig)
+    } else {
+      const prevalidationHooks = []
+      return getInitDataV12x({
+        ...baseConfig,
+        prevalidationHooks: prevalidationHooks
+      })
+    }
+  })()  
 
   // Generate the factory data with the bootstrap address and init data
   const factoryData = getFactoryData({ initData, index })

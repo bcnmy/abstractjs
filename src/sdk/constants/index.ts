@@ -52,6 +52,15 @@ export const NEXUS_ACCOUNT_FACTORY_ADDRESS_UNTIL_0_2: Hex =
 export const COMPOSABLE_MODULE_ADDRESS: Hex =
   "0x7454C587FCDe26C62deDCFa53548A827CFeB7F78"
 
+export const NEXUS_V120_IMPLEMENTATION_ADDRESS: Hex = 
+  "0x000000004F43C49e93C970E84001853a70923B03"
+
+export const NEXUS_V120_BOOTSTRAP_ADDRESS =
+  "0x00000000fc7930C6F28401804b9606669A015Ff7"
+
+export const NEXUS_V120_ACCOUNT_FACTORY_ADDRESS =
+  "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de"
+
 export const LATEST_DEFAULT_ADDRESSES: AddressConfig = {
   attesters: [],
   factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
@@ -60,6 +69,16 @@ export const LATEST_DEFAULT_ADDRESSES: AddressConfig = {
   accountId: "biconomy.nexus.1.0.2",
   implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS,
   executorAddress: COMPOSABLE_MODULE_ADDRESS
+}
+
+export const NEXUS_V120_DEFAULT_ADDRESSES: AddressConfig = {
+  attesters: [],
+  accountId: "biconomy.nexus.1.2.0",
+  factoryAddress: NEXUS_V120_ACCOUNT_FACTORY_ADDRESS,
+  bootStrapAddress: NEXUS_V120_BOOTSTRAP_ADDRESS,
+  executorAddress: COMPOSABLE_MODULE_ADDRESS,
+  implementationAddress: NEXUS_V120_IMPLEMENTATION_ADDRESS,
+  validatorAddress: MEE_VALIDATOR_ADDRESS
 }
 
 export const EARLIEST_DEFAULT_ADDRESSES: AddressConfig = {

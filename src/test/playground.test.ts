@@ -10,7 +10,8 @@ import {
   createPublicClient,
   createWalletClient,
   encodeFunctionData,
-  parseEther
+  parseEther,
+  erc20Abi
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
@@ -25,7 +26,7 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { SmartSessionMode } from "../sdk/constants"
+import { mcUSDC, mcUSDD, SmartSessionMode } from "../sdk/constants"
 import type {
   CreateSessionDataParams,
   SessionData
@@ -34,6 +35,10 @@ import { toSmartSessionsModule } from "../sdk/modules/validators/smartSessions/t
 import { CounterAbi } from "./__contracts/abi/CounterAbi"
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
+import buildComposable from "../sdk/account/decorators/instructions/buildComposable"
+import { base, optimism, polygon } from "viem/chains"
+import { toMultichainNexusAccount } from "../sdk/account"
+import { privateKeyToAccount } from "viem/accounts"
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
@@ -178,4 +183,16 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     expect(success).toBe("true")
     expect(balanceAfter - balanceBefore).toBe(1n)
   })
+
+  test("should execute composable", async () => {
+
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [optimism, base, polygon],
+      signer: privateKeyToAccount('0x'),
+      transports: [http(), http(), http()]
+    })
+
+
+  })
+
 })

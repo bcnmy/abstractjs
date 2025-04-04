@@ -10,7 +10,7 @@ import {
   toBytes
 } from "viem"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, chai, describe, expect, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
