@@ -29,7 +29,7 @@ import {
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
 
-const index = 3n
+const index = 0n
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
@@ -61,7 +61,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     paymasterUrl = network.paymasterUrl
     eoaAccount = network.account as PrivateKeyAccount
 
-    recipientAddress = eoaAccount.address
+    recipientAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 
     walletClient = createWalletClient({
       account: eoaAccount,
@@ -98,7 +98,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   })
 
   test("should log relevant addresses", async () => {
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
     console.log({ nexusAccountAddress })
   })
 
@@ -125,12 +125,8 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
       expect(receipt.status).toBe("success")
       const [ownerBalanceTwo, smartAccountBalanceTwo] = await Promise.all([
-        publicClient.getBalance({
-          address: eoaAccount.address
-        }),
-        publicClient.getBalance({
-          address: nexusAccountAddress
-        })
+        publicClient.getBalance({ address: eoaAccount.address }),
+        publicClient.getBalance({ address: nexusAccountAddress })
       ])
       console.log({ ownerBalanceTwo, smartAccountBalanceTwo })
     }
@@ -141,19 +137,14 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     const balanceBefore = await publicClient.getBalance({
       address: recipientAddress
     })
-    const hash = await nexusClient.debugUserOperation({
-      calls: [
-        {
-          to: recipientAddress,
-          value: 1n
-        }
-      ]
+    const hash = await nexusClient.sendUserOperation({
+      calls: [{ to: recipientAddress, value: 1n }]
     })
-    const { status } = await publicClient.waitForTransactionReceipt({ hash })
+    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
     const balanceAfter = await publicClient.getBalance({
       address: recipientAddress
     })
-    expect(status).toBe("success")
+    expect(success).toBe("true")
     expect(balanceAfter - balanceBefore).toBe(1n)
   })
 

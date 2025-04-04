@@ -43,7 +43,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import { MEE_VALIDATOR_ADDRESS } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
@@ -101,7 +100,7 @@ describe("nexus.account", async () => {
     })
 
     nexusAccount = nexusClient.account
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
     await fundAndDeployClients(testClient, [nexusClient])
   })
   afterAll(async () => {
@@ -217,7 +216,7 @@ describe("nexus.account", async () => {
       entryPointVersion
     ] = await Promise.all([
       nexusAccount.isDeployed(),
-      nexusAccount.getCounterFactualAddress(),
+      nexusAccount.getAddress(),
       nexusAccount.getUserOpHash({
         sender: eoaAccount.address,
         nonce: 0n,
@@ -324,7 +323,7 @@ describe("nexus.account", async () => {
 
     const finalSignature = encodePacked(
       ["address", "bytes"],
-      [MEE_VALIDATOR_ADDRESS, signatureData]
+      [nexusAccount.getModule().address, signatureData]
     )
 
     const contractResponse = await testClient.readContract({

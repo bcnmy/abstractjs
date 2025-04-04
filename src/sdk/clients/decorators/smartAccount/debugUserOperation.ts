@@ -2,17 +2,15 @@ import type { BaseError, Chain, Client, Hex, Transport } from "viem"
 import {
   type FormatUserOperationRequestErrorType,
   type PrepareUserOperationErrorType,
-  type PrepareUserOperationParameters,
   type SendUserOperationParameters,
   type SmartAccount,
   type UserOperation,
   formatUserOperationRequest,
   getUserOperationError,
-  prepareUserOperation,
   toPackedUserOperation
 } from "viem/account-abstraction"
 import { parseAccount } from "viem/accounts"
-import { type RequestErrorType, getAction } from "viem/utils"
+import type { RequestErrorType } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import { parseRequestArguments } from "../../../account/utils/Utils"
 import { deepHexlify } from "../../../account/utils/deepHexlify"
@@ -74,13 +72,11 @@ export async function debugUserOperation<
     // @ts-ignore
     const callData = await account?.encodeCalls(parameters?.calls)
     // @ts-ignore
-    const sender = await account?.getCounterFactualAddress()
+    const sender = await account?.getAddress()
     // @ts-ignore
     const nonce = await account?.getNonce()
     // @ts-ignore
     const factoryArgs = await account?.getFactoryArgs()
-
-    // console.log({ factoryArgs })
 
     const request = {
       sender,

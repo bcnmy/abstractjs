@@ -3,7 +3,6 @@ import {
   type AbiFunction,
   type Address,
   type Hex,
-  type PublicClient,
   getAddress,
   toBytes,
   toFunctionSelector,
@@ -13,10 +12,8 @@ import {
   type ActionData,
   OWNABLE_VALIDATOR_ADDRESS,
   type PolicyData,
-  REGISTRY_ADDRESS,
   encodeValidationData
 } from "../../../constants"
-import { ERC7484RegistryAbi } from "../../../constants/abi"
 import { parseReferenceValue } from "../../utils/Helpers"
 import type { AnyData } from "../../utils/Types"
 import type {

@@ -21,7 +21,7 @@ import type {
   InstructionLike
 } from "../../../clients/decorators/mee"
 import { mcUSDC } from "../../../constants/tokens"
-import { toMeeModule } from "../../../modules/validators/mee/toMeeModule"
+import { toDefaultModule } from "../../../modules/validators/mee/toDefaultModule"
 import { toOwnableModule } from "../../../modules/validators/ownable/toOwnableModule"
 import { toSmartSessionsModule } from "../../../modules/validators/smartSessions/toSmartSessionsModule"
 import {
@@ -63,7 +63,7 @@ describe("mee.buildMultichainInstructions", () => {
   })
 
   it("should build multichain instructions", async () => {
-    const meeValidator = toMeeModule({ signer: eoaAccount })
+    const meeValidator = toDefaultModule({ signer: eoaAccount })
     const instructions: Instruction[] = await buildMultichainInstructions(
       { account: mcNexus, currentInstructions: [] },
       {
@@ -94,7 +94,7 @@ describe("mee.buildMultichainInstructions", () => {
   })
 
   it("should install ownables, meeValidator and smartSessionValidator on several chains at once, and initialise each module on each chain", async () => {
-    const meeValidator = toMeeModule({ signer: eoaAccount })
+    const meeValidator = toDefaultModule({ signer: eoaAccount })
     const smartSessionValidator = toSmartSessionsModule({ signer: eoaAccount })
     const ownableValidator = toOwnableModule({
       signer: eoaAccount,

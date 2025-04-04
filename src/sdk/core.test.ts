@@ -61,7 +61,7 @@ describe("core", async () => {
     })
 
     nexusAccount = nexusClient.account
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])

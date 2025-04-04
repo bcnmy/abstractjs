@@ -41,6 +41,7 @@ export type ModuleConfig = {
 }
 
 export type GetInitDataParams = {
+  defaultValidator: GenericModuleConfig
   prevalidationHooks: PrevalidationHookModuleConfig[]
   validators: GenericModuleConfig[]
   executors: GenericModuleConfig[]
@@ -50,14 +51,8 @@ export type GetInitDataParams = {
   bootStrapAddress: Address
 }
 
-export const getInitData = (params: GetInitDataParams): Hex => {
-  console.log("params.prevalidationHooks", params.prevalidationHooks)
-  console.log("params.validators", params.validators)
-  console.log("params.executors", params.executors)
-  console.log("params.hook", params.hook)
-  console.log("params.fallbacks", params.fallbacks)
-  console.log("params.bootStrapAddress", params.bootStrapAddress)
-  return encodeAbiParameters(
+export const getInitData = (params: GetInitDataParams): Hex =>
+  encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },
       { name: "initData", type: "bytes" }
@@ -66,8 +61,9 @@ export const getInitData = (params: GetInitDataParams): Hex => {
       params.bootStrapAddress,
       encodeFunctionData({
         abi: NexusBootstrapAbi,
-        functionName: "initNexusNoRegistry",
+        functionName: "initNexusWithDefaultValidatorAndOtherModulesNoRegistry",
         args: [
+          params.defaultValidator.data,
           params.validators,
           params.executors,
           params.hook,
@@ -77,4 +73,3 @@ export const getInitData = (params: GetInitDataParams): Hex => {
       })
     ]
   )
-}

@@ -19,9 +19,9 @@ import {
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
 import type { Validator } from "../toValidator"
-import { toMeeModule } from "./toMeeModule"
+import { toDefaultModule } from "./toDefaultModule"
 
-describe("modules.toMeeModule", () => {
+describe("modules.toDefaultModule", () => {
   let ecosystem: Ecosystem
   let infra: Infra
   let chain: Chain
@@ -44,7 +44,7 @@ describe("modules.toMeeModule", () => {
 
     const { testClient } = await toClients(infra.network)
 
-    meeModule = toMeeModule({ signer: eoaAccount })
+    meeModule = toDefaultModule({ signer: eoaAccount })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,

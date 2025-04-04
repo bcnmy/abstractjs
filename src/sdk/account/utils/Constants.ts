@@ -5,11 +5,6 @@ export const MAGIC_BYTES =
 export const BICONOMY_TOKEN_PAYMASTER: Hex =
   "0x00000000301515A5410e0d768aF4f53c416edf19"
 
-export const NEXUS_IMPLEMENTATION_ADDRESS =
-  "0x000000aC74357BFEa72BBD0781833631F732cf19"
-export const NEXUS_IMPLEMENTATION_ADDRESS_UNTIL_0_2 =
-  "0x8EBDcA5ce92f9aBF1D1ab21de24068B2a2EaF808"
-
 export const EIP1559_UNSUPPORTED_NETWORKS: Array<number> = [97, 56, 1442, 1101]
 
 export const PROXY_CREATION_CODE =
@@ -108,7 +103,7 @@ export const MOCK_MULTI_MODULE_ADDRESS =
 export const MODULE_TYPE_MULTI = 0
 
 export const NEXUS_DOMAIN_NAME = "nexus"
-export const NEXUS_DOMAIN_VERSION = "1.0.2"
+export const NEXUS_DOMAIN_VERSION = "1.2.0"
 export const NEXUS_DOMAIN_TYPEHASH =
   "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
 
