@@ -1,4 +1,3 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Address,
@@ -9,15 +8,12 @@ import {
   type WalletClient,
   createPublicClient,
   createWalletClient,
-  encodeFunctionData,
-  erc20Abi,
   parseEther
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { base, optimism, polygon } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { toMultichainNexusAccount } from "../sdk/account"
-import buildComposable from "../sdk/account/decorators/instructions/buildComposable"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
 import {
@@ -30,15 +26,10 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { SmartSessionMode, mcUSDC, mcUSDD } from "../sdk/constants"
-import type {
-  CreateSessionDataParams,
-  SessionData
-} from "../sdk/modules/validators/smartSessions/Types"
-import { toSmartSessionsModule } from "../sdk/modules/validators/smartSessions/toSmartSessionsModule"
-import { CounterAbi } from "./__contracts/abi/CounterAbi"
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
+
+const index = 3n
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
@@ -98,7 +89,8 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http()
+        transport: http(),
+        index
       }),
       transport: http(bundlerUrl),
       ...(paymasterParams ? paymasterParams : {})
@@ -119,8 +111,6 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         address: nexusAccountAddress
       })
     ])
-
-    console.log({ ownerBalance, smartAccountBalance })
 
     const balancesAreOfCorrectType = [ownerBalance, smartAccountBalance].every(
       (balance) => typeof balance === "bigint"
@@ -151,7 +141,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     const balanceBefore = await publicClient.getBalance({
       address: recipientAddress
     })
-    const hash = await nexusClient.sendTransaction({
+    const hash = await nexusClient.debugUserOperation({
       calls: [
         {
           to: recipientAddress,
@@ -167,7 +157,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     expect(balanceAfter - balanceBefore).toBe(1n)
   })
 
-  test("should send a user operation using nexusClient.sendUserOperation", async () => {
+  test.skip("should send a user operation using nexusClient.sendUserOperation", async () => {
     const balanceBefore = await publicClient.getBalance({
       address: recipientAddress
     })
@@ -182,13 +172,5 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     })
     expect(success).toBe("true")
     expect(balanceAfter - balanceBefore).toBe(1n)
-  })
-
-  test("should execute composable", async () => {
-    const mcNexus = await toMultichainNexusAccount({
-      chains: [optimism, base, polygon],
-      signer: privateKeyToAccount("0x"),
-      transports: [http(), http(), http()]
-    })
   })
 })

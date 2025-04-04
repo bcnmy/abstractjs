@@ -10,13 +10,11 @@ import { deepHexlify } from "./deepHexlify"
 export type AnyUserOperation = Partial<UserOperation<"0.7"> | RpcUserOperation>
 
 export const DUMMY_SIMULATION_GAS = {
-  callGasLimit: 100_000_000_000n,
-  verificationGasLimit: 100_000_000_000n,
-  preVerificationGas: 1n,
-  maxFeePerGas: 100_000_000_000n,
-  maxPriorityFeePerGas: 1n,
-  paymasterVerificationGasLimit: 100_000_000_000n,
-  paymasterPostOpGasLimit: 100_000n
+  callGasLimit: 1000000n,
+  verificationGasLimit: 1000000n,
+  preVerificationGas: 1000000n,
+  maxFeePerGas: 1000000n,
+  maxPriorityFeePerGas: 1000000n
 }
 
 export const getSimulationUserOp = (partialUserOp: AnyUserOperation) => {
@@ -46,6 +44,8 @@ export function tenderlySimulation(
   )
 
   const packedUserOp = getSimulationUserOp(partialUserOp)
+
+  console.log({ packedUserOp })
 
   const params = new URLSearchParams({
     contractAddress: ENTRY_POINT_ADDRESS,

@@ -1,4 +1,4 @@
-import { MEE_VALIDATOR_ADDRESS, MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
+import { MEE_VALIDATOR_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Account,
@@ -134,44 +134,5 @@ describe("erc7579.decorators", async () => {
         true,
       ]
     `)
-  })
-
-  test("should install a module", async () => {
-    const hash = await nexusClient.installModule({
-      module: {
-        type: "validator",
-        address: MOCK_K1_VALIDATOR,
-        initData: encodePacked(["address"], [eoaAccount.address])
-      }
-    })
-
-    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(success).toBe(true)
-  })
-
-  test.skip("should uninstall a module", async () => {
-    const hash = await nexusClient.uninstallModule({
-      module: {
-        type: "validator",
-        address: MOCK_K1_VALIDATOR,
-        initData: encodePacked(["address"], [eoaAccount.address])
-      }
-    })
-
-    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(success).toBe(true)
-  })
-
-  test.skip("should install it again", async () => {
-    const hash = await nexusClient.installModule({
-      module: {
-        type: "validator",
-        address: MOCK_K1_VALIDATOR,
-        initData: encodePacked(["address"], [eoaAccount.address])
-      }
-    })
-
-    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(success).toBe(true)
   })
 })

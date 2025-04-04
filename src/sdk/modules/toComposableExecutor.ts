@@ -1,8 +1,7 @@
-import { zeroHash } from "viem"
 import type { ModuleConfig } from "../account/decorators/getFactoryData"
-import { LATEST_DEFAULT_ADDRESSES } from "../constants"
+import { COMPOSABLE_MODULE_ADDRESS } from "../constants"
 
 export const toComposableExecutor = (): ModuleConfig => ({
-  module: LATEST_DEFAULT_ADDRESSES.executorAddress,
-  data: zeroHash
+  module: COMPOSABLE_MODULE_ADDRESS,
+  data: "0x"
 })

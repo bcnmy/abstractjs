@@ -51,7 +51,12 @@ export type GetInitDataParams = {
 }
 
 export const getInitData = (params: GetInitDataParams): Hex => {
-  console.log({ params })
+  console.log("params.prevalidationHooks", params.prevalidationHooks)
+  console.log("params.validators", params.validators)
+  console.log("params.executors", params.executors)
+  console.log("params.hook", params.hook)
+  console.log("params.fallbacks", params.fallbacks)
+  console.log("params.bootStrapAddress", params.bootStrapAddress)
   return encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },

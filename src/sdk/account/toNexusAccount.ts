@@ -43,7 +43,11 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 
-import { ENTRY_POINT_ADDRESS, LATEST_DEFAULT_ADDRESSES } from "../constants"
+import {
+  ENTRY_POINT_ADDRESS,
+  NEXUS_ACCOUNT_FACTORY_ADDRESS,
+  NEXUS_BOOTSTRAP_ADDRESS
+} from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor } from "../modules/toComposableExecutor"
@@ -125,6 +129,8 @@ export type ToNexusSmartAccountParameters = {
   registryAddress?: Address
   /** Optional factory address */
   factoryAddress?: Address
+  /** Optional bootstrap address */
+  bootStrapAddress?: Address
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -227,9 +233,10 @@ export const toNexusAccount = async (
     executors: customExecutors,
     hook: customHook,
     fallbacks: customFallbacks,
-    factoryAddress = LATEST_DEFAULT_ADDRESSES.factoryAddress,
+    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
     accountAddress: accountAddress_,
-    prevalidationHooks: customPrevalidationHooks
+    prevalidationHooks: customPrevalidationHooks,
+    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS
   } = parameters
 
   // @ts-ignore
@@ -254,7 +261,6 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   const validators = customValidators || [toMeeModule({ signer })]
-
   let [module] = validators
 
   // Prepare executor modules
@@ -267,8 +273,6 @@ export const toNexusAccount = async (
   const fallbacks = customFallbacks || [toComposableFallback()]
 
   // Generate the initialization data for the account using the initNexus function
-  const bootStrapAddress = LATEST_DEFAULT_ADDRESSES.bootStrapAddress
-
   const prevalidationHooks = customPrevalidationHooks || []
 
   const initData = getInitData({
