@@ -86,8 +86,6 @@ describe("nexus.client", async () => {
     const isDeployed = await nexusClient.account.isDeployed()
 
     if (!isDeployed) {
-      console.log("Smart account not deployed. Deploying...")
-
       // Fund the account first
       await topUp(testClient, nexusAccountAddress, parseEther("0.01"))
 

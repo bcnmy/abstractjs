@@ -107,12 +107,8 @@ export const buildTransferFrom = async (
   if (isComposableCall) {
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
-      params: {
-        type: functionSig,
-        data: {
-          args: args as unknown as Array<AnyData>
-        }
-      },
+      functionName: functionSig,
+      args: args as unknown as Array<AnyData>,
       abi,
       chainId,
       gasLimit

@@ -4,6 +4,8 @@ import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainCon
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 
+export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
+
 /**
  * Represents an abstract call to be executed in the transaction.
  * Each call specifies a target contract and optional parameters.
@@ -111,8 +113,25 @@ export type GetQuoteParams = SupertransactionLike & {
    * Only required when using permit-enabled tokens
    */
   eoa?: Address
+  /**
+   * Lower bound execution timestamp to be applied to all user operations
+   */
+  lowerBoundTimestamp?: number
+  /**
+   * Upper bound execution timestamp to be applied to all user operations
+   */
+  upperBoundTimestamp?: number
 }
 
+export type Eip7702Auth = {
+  address: Hex
+  signature: Hex
+  nonce: Hex
+  r: Hex
+  s: Hex
+  v: Hex
+  yParity: Hex
+}
 /**
  * Internal structure for submitting a quote request to the MEE service
  * @internal
@@ -130,6 +149,12 @@ type QuoteRequest = {
     nonce: string
     /** Chain ID where the operation will be executed */
     chainId: string
+    /** Lower bound timestamp for operation validity */
+    lowerBoundTimestamp?: number
+    /** Upper bound timestamp for operation validity */
+    upperBoundTimestamp?: number
+    /** EIP7702Auth */
+    eip7702Auth?: Eip7702Auth
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -268,7 +293,10 @@ export const getQuote = async (
     instructions,
     feeToken,
     path = "quote",
-    eoa
+    eoa,
+    lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
+    upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
+      USEROP_MIN_EXEC_WINDOW_DURATION
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -276,14 +304,14 @@ export const getQuote = async (
 
   const validFeeToken =
     validPaymentAccount &&
-    client.info.supported_gas_tokens
+    client.info.supportedGasTokens
       .map(({ chainId }) => +chainId)
       .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
-      client.info.supported_chains
+      client.info.supportedChains
         .map(({ chainId }) => +chainId)
         .includes(userOp.chainId)
   )
@@ -335,6 +363,8 @@ export const getQuote = async (
       callGasLimit,
       chainId
     ]) => ({
+      lowerBoundTimestamp: lowerBoundTimestamp_,
+      upperBoundTimestamp: upperBoundTimestamp_,
       sender,
       callData,
       callGasLimit,
@@ -361,10 +391,7 @@ export const getQuote = async (
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
-  return await client.request<GetQuotePayload>({
-    path,
-    body: quoteRequest
-  })
+  return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 
 export default getQuote

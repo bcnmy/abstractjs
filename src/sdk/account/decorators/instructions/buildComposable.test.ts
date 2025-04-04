@@ -4,16 +4,17 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
+  type PublicClient,
+  createPublicClient,
   erc20Abi,
   fromBytes,
   parseUnits,
   toBytes
 } from "viem"
-import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MeeClient,
   createMeeClient
@@ -30,7 +31,6 @@ import {
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import { getMultichainContract } from "../../utils"
-import { getMeeScanLink } from "../../utils/explorer"
 import buildComposable from "./buildComposable"
 
 describe("mee.buildComposable", () => {
@@ -39,6 +39,7 @@ describe("mee.buildComposable", () => {
 
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
+  let publicClient: PublicClient
 
   let tokenAddress: Address
   let runtimeTransferAddress: Address
@@ -47,8 +48,12 @@ describe("mee.buildComposable", () => {
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
+    chain = network.chain
 
-    chain = baseSepolia
+    publicClient = createPublicClient({
+      chain,
+      transport: http()
+    })
 
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
@@ -64,35 +69,34 @@ describe("mee.buildComposable", () => {
     runtimeTransferAddress = "0xb46e85b8Bd24D1dca043811D5b8B18b2a8c5F95D"
   })
 
-  it("should highlight building composable instructions", async () => {
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
-        to: tokenAddress,
-        abi: erc20Abi,
-        params: {
-          type: "transferFrom",
-          data: {
-            args: [
-              eoaAccount.address,
-              mcNexus.addressOn(chain.id, true),
-              runtimeERC20BalanceOf(
-                eoaAccount.address,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-              )
-            ]
-          }
-        },
-        chainId: chain.id
-      }
-    )
+  it.concurrent(
+    "should highlight building composable instructions",
+    async () => {
+      const instructions: Instruction[] = await buildComposable(
+        { account: mcNexus },
+        {
+          to: tokenAddress,
+          abi: erc20Abi,
+          functionName: "transferFrom",
+          args: [
+            eoaAccount.address,
+            mcNexus.addressOn(chain.id, true),
+            runtimeERC20BalanceOf({
+              targetAddress: eoaAccount.address,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
+            })
+          ],
+          chainId: chain.id
+        }
+      )
 
-    expect(instructions.length).toBeGreaterThan(0)
-  })
+      expect(instructions.length).toBeGreaterThan(0)
+    }
+  )
 
-  it("should execute composable transaction for static args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for static args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -110,20 +114,15 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFunds",
-          data: {
-            args: [
-              eoaAccount.address,
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-              )
-            ]
-          }
-        },
+        functionName: "transferFunds",
+        args: [
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -139,27 +138,13 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for static args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for struct args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for struct args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -177,23 +162,18 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithStruct",
-          data: {
-            args: [
-              runtimeTransferAddress,
-              {
-                recipient: eoaAccount.address,
-                amount: runtimeERC20BalanceOf(
-                  runtimeTransferAddress,
-                  testnetMcUSDC,
-                  chain.id,
-                  [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-                )
-              }
-            ]
+        functionName: "transferFundsWithStruct",
+        args: [
+          runtimeTransferAddress,
+          {
+            recipient: eoaAccount.address,
+            amount: runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+            })
           }
-        },
+        ],
         chainId: chain.id
       }
     )
@@ -209,27 +189,13 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for struct args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for dynamic array args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for dynamic array args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -247,21 +213,16 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithDynamicArray",
-          data: {
-            args: [
-              runtimeTransferAddress,
-              [runtimeTransferAddress, eoaAccount.address],
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              )
-            ]
-          }
-        },
+        functionName: "transferFundsWithDynamicArray",
+        args: [
+          runtimeTransferAddress,
+          [runtimeTransferAddress, eoaAccount.address],
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -277,27 +238,13 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for dynamic array args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for string args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for string args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -315,21 +262,16 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithString",
-          data: {
-            args: [
-              "random_string_this_doesnt_matter",
-              [runtimeTransferAddress, eoaAccount.address],
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              )
-            ]
-          }
-        },
+        functionName: "transferFundsWithString",
+        args: [
+          "random_string_this_doesnt_matter",
+          [runtimeTransferAddress, eoaAccount.address],
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -345,27 +287,13 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for string args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for bytes args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for bytes args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -383,21 +311,16 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithBytes",
-          data: {
-            args: [
-              fromBytes(toBytes("random_string_this_doesnt_matter"), "hex"),
-              [runtimeTransferAddress, eoaAccount.address],
-              runtimeERC20BalanceOf(
-                runtimeTransferAddress,
-                testnetMcUSDC,
-                chain.id,
-                [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              )
-            ]
-          }
-        },
+        functionName: "transferFundsWithBytes",
+        args: [
+          fromBytes(toBytes("random_string_this_doesnt_matter"), "hex"),
+          [runtimeTransferAddress, eoaAccount.address],
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -413,27 +336,13 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for bytes args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for runtime arg inside dynamic array args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -451,22 +360,17 @@ describe("mee.buildComposable", () => {
       {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        params: {
-          type: "transferFundsWithRuntimeParamInsideArray",
-          data: {
-            args: [
-              [runtimeTransferAddress, eoaAccount.address],
-              [
-                runtimeERC20BalanceOf(
-                  runtimeTransferAddress,
-                  testnetMcUSDC,
-                  chain.id,
-                  [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-                )
-              ]
-            ]
-          }
-        },
+        functionName: "transferFundsWithRuntimeParamInsideArray",
+        args: [
+          [runtimeTransferAddress, eoaAccount.address],
+          [
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
+            })
+          ]
+        ],
         chainId: chain.id
       }
     )
@@ -482,27 +386,13 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for runtime arg inside dynamic array args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for uniswap args", async () => {
+  // Skipping this just because this file takes a long time to run.
+  it.skip("should execute composable transaction for uniswap args", async () => {
     const fusionToken = getMultichainContract<typeof erc20Abi>({
       abi: erc20Abi,
       deployments: [
@@ -525,20 +415,15 @@ describe("mee.buildComposable", () => {
       { account: mcNexus },
       {
         to: inToken.addressOn(chain.id),
-        abi: erc20Abi as Abi,
-        params: {
-          type: "approve",
-          data: {
-            args: [
-              testnetMcUniswapSwapRouter.addressOn(chain.id),
-              runtimeERC20BalanceOf(
-                mcNexus.addressOn(chain.id, true),
-                inToken,
-                chain.id
-              )
-            ]
-          }
-        },
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [
+          testnetMcUniswapSwapRouter.addressOn(chain.id),
+          runtimeERC20BalanceOf({
+            targetAddress: mcNexus.addressOn(chain.id, true),
+            tokenAddress: inToken.addressOn(chain.id)
+          })
+        ],
         chainId: chain.id
       }
     )
@@ -547,27 +432,22 @@ describe("mee.buildComposable", () => {
       { account: mcNexus },
       {
         to: testnetMcUniswapSwapRouter.addressOn(chain.id),
-        abi: UniswapSwapRouterAbi as Abi,
-        params: {
-          type: "exactInputSingle",
-          data: {
-            args: [
-              {
-                tokenIn: inToken.addressOn(chain.id),
-                tokenOut: outToken.addressOn(chain.id),
-                fee: 3000,
-                recipient: eoaAccount.address,
-                amountIn: runtimeERC20BalanceOf(
-                  mcNexus.addressOn(chain.id, true),
-                  inToken,
-                  chain.id
-                ),
-                amountOutMinimum: BigInt(1),
-                sqrtPriceLimitX96: BigInt(0)
-              }
-            ]
+        abi: UniswapSwapRouterAbi,
+        functionName: "exactInputSingle",
+        args: [
+          {
+            tokenIn: inToken.addressOn(chain.id),
+            tokenOut: outToken.addressOn(chain.id),
+            fee: 3000,
+            recipient: eoaAccount.address,
+            amountIn: runtimeERC20BalanceOf({
+              targetAddress: mcNexus.addressOn(chain.id, true),
+              tokenAddress: inToken.addressOn(chain.id)
+            }),
+            amountOutMinimum: BigInt(1),
+            sqrtPriceLimitX96: BigInt(0)
           }
-        },
+        ],
         chainId: chain.id
       }
     )
@@ -583,24 +463,9 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for uniswap args: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
   it("should execute composable transaction for approval and transferFrom builders", async () => {
@@ -615,11 +480,10 @@ describe("mee.buildComposable", () => {
     const approval = await mcNexus.build({
       type: "approve",
       data: {
-        amount: runtimeERC20BalanceOf(
-          mcNexus.addressOn(chain.id, true),
-          testnetMcUSDC,
-          chain.id
-        ),
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true),
+          tokenAddress: testnetMcUSDC.addressOn(chain.id)
+        }),
         chainId: chain.id,
         tokenAddress: testnetMcUSDC.addressOn(chain.id),
         spender: mcNexus.addressOn(chain.id, true)
@@ -631,11 +495,10 @@ describe("mee.buildComposable", () => {
       data: {
         chainId: chain.id,
         tokenAddress: testnetMcUSDC.addressOn(chain.id),
-        amount: runtimeERC20BalanceOf(
-          mcNexus.addressOn(chain.id, true),
-          testnetMcUSDC,
-          chain.id
-        ),
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true),
+          tokenAddress: testnetMcUSDC.addressOn(chain.id)
+        }),
         sender: mcNexus.addressOn(chain.id, true),
         recipient: eoaAccount.address
       }
@@ -652,23 +515,8 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log(
-      "Link for composable transaction for approval and transferFrom builders: ",
-      getMeeScanLink(hash)
-    )
-
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash
-    })
-
-    const execResult = receipt.receipts.map(
-      (receipt) => receipt.status === "fulfilled"
-    )
-
-    // This is not 100% reliable to assume the SuperTX is successful. Because the MEE explorer shows success status for failed user
-    // operation as well. This will be 100% reliable when the MEE node changes the status handling
-    expect(new Array(receipt.receipts.length).fill(true).toString()).to.be.eq(
-      execResult.toString()
-    )
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 })

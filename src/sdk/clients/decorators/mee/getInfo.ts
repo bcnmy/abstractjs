@@ -19,12 +19,12 @@ export type GetInfoPayload = {
   /**
    * List of supported blockchain chains
    */
-  supported_chains: SupportedChain[]
+  supportedChains: SupportedChain[]
   /**
    * List of supported gas tokens per chain
    * @see {@link GetGasTokenPayload}
    */
-  supported_gas_tokens: GetGasTokenPayload[]
+  supportedGasTokens: GetGasTokenPayload[]
   /**
    * List of supported wallet providers and their capabilities
    */
@@ -88,11 +88,11 @@ export interface SupportedWalletProvider {
  * // {
  * //   version: "1.0.0",
  * //   node: "mee-node-1",
- * //   supported_chains: [
+ * //   supportedChains: [
  * //     { chainId: "1", name: "Ethereum Mainnet" },
  * //     { chainId: "137", name: "Polygon" }
  * //   ],
- * //   supported_gas_tokens: [...],
+ * //   supportedGasTokens: [...],
  * //   supported_wallet_providers: [
  * //     {
  * //       walletProvider: "SAFE_V141",

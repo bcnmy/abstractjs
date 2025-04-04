@@ -110,12 +110,23 @@ export const signPermitQuote = async (
     client: walletClient
   })
 
-  const [nonce, name, version, domainSeparator] = await Promise.all([
+  const values = await Promise.allSettled([
     token.read.nonces([owner]),
     token.read.name(),
     token.read.version(),
     token.read.DOMAIN_SEPARATOR()
   ])
+
+  const [nonce, name, version, domainSeparator] = values.map((value, i) => {
+    const key = ["nonce", "name", "version", "domainSeparator"][i]
+    if (value.status === "fulfilled") {
+      return value.value
+    }
+    if (value.status === "rejected" && key === "version") {
+      return "2"
+    }
+    throw new Error(`Failed to get value: ${value.reason}`)
+  }) as [bigint, string, string, `0x${string}`]
 
   const signature = await walletClient.signTypedData({
     domain: {

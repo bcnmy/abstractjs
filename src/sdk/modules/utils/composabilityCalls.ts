@@ -1,10 +1,10 @@
 import {
-  type Abi,
+  type Address,
   type Hex,
   encodeAbiParameters,
-  encodeFunctionData
+  encodeFunctionData,
+  erc20Abi
 } from "viem"
-import type { MultichainContract } from "../../account/utils/getMultichainContract"
 import type { AnyData } from "../../modules/utils/Types"
 import {
   type FunctionContext,
@@ -65,6 +65,12 @@ export type ConstraintField = {
   value: AnyData // type any is being implicitly used. The appropriate value validation happens in the runtime function
 }
 
+export type RuntimeERC20BalanceOfParams = {
+  targetAddress: Address
+  tokenAddress: Address
+  constraints?: ConstraintField[]
+}
+
 // Detects whether the value is runtime injected value or not
 export const isRuntimeComposableValue = (value: AnyData) => {
   if (
@@ -116,22 +122,19 @@ export const equalTo = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.EQ, value }
 }
 
-export const runtimeERC20BalanceOf = <TAbi extends Abi>(
-  targetAddress: string,
-  token: MultichainContract<TAbi>,
-  chainId: number,
-  constraints: ConstraintField[] = []
-) => {
+export const runtimeERC20BalanceOf = ({
+  targetAddress,
+  tokenAddress,
+  constraints = []
+}: RuntimeERC20BalanceOfParams): RuntimeValue => {
   const defaultFunctionSig = "balanceOf"
-
-  const tokenAddress = token.addressOn(chainId)
 
   const encodedParam = encodeAbiParameters(
     [{ type: "address" }, { type: "bytes" }],
     [
       tokenAddress,
       encodeFunctionData({
-        abi: token.abi as Abi,
+        abi: erc20Abi,
         functionName: defaultFunctionSig,
         args: [targetAddress]
       })

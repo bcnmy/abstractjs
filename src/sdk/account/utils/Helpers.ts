@@ -12,6 +12,14 @@ export const isDebugging = () => {
   }
 }
 
+export const isStaging = () => {
+  try {
+    return process?.env?.STAGING?.toString() === "true"
+  } catch (e) {
+    return false
+  }
+}
+
 export const bigIntReplacer = (_: string, value: AnyData): AnyData => {
   if (typeof value === "bigint") {
     return `${value.toString()}n`
