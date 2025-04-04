@@ -22,7 +22,7 @@ import type {
 import type { AnyData } from "../../modules/utils/Types"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
 
-export const LARGE_DEFAULT_GAS_LIMIT = 700_000n
+export const LARGE_DEFAULT_GAS_LIMIT = 50_000n
 /**
  * Contract instance capable of encoding transactions across multiple chains
  * @template TAbi - The contract ABI type

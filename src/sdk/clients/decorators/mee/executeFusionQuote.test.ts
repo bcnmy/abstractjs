@@ -24,7 +24,7 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 const { runPaidTests } = inject("settings")
 
 // Tests below are skipped because they conflict with permit flows when the same nonce for the eoa is used
-describe.runIf(runPaidTests).skip("mee.executeFusionQuote", () => {
+describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -78,6 +78,11 @@ describe.runIf(runPaidTests).skip("mee.executeFusionQuote", () => {
       amount: triggerAmount
     }
 
+    console.log("##### mcNexus.deploymentOn(paymentChain.id)?.address", mcNexus.deploymentOn(paymentChain.id)?.address);
+    // return;
+
+    console.log("##### eoaAccount.address", eoaAccount.address);
+    
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
       instructions: [
@@ -85,15 +90,20 @@ describe.runIf(runPaidTests).skip("mee.executeFusionQuote", () => {
           type: "transfer",
           data: {
             ...trigger,
-            recipient: recipientAccount.address
+            amount: 1n,
+            recipient: "0x4b19129EA58431A06D01054f69AcAe5de50633b6",
+            gasLimit: 50000n
           }
         })
       ],
       feeToken
     })
 
+    console.log("##### fusionQuote", fusionQuote);
+
     console.timeEnd("executeFusionQuote:getQuote")
     const { hash } = await executeFusionQuote(meeClient, { fusionQuote })
+    console.log("##### hash", hash);
     const receipt = await waitForSupertransactionReceipt(meeClient, {
       hash,
       confirmations: 3

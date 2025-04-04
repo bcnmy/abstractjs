@@ -7,8 +7,13 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 /**
  * Default URL for the MEE node service
  */
-const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
-
+// const DEFAULT_MEE_NODE_URL = "https://network.biconomy.io/v1"
+// const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
+// const DEFAULT_MEE_NODE_URL = "https://mainnet.mee.stakepool.dev.br/v3"
+// const DEFAULT_MEE_NODE_URL = "https://biconomy-mee.lgns.net/v3"
+const DEFAULT_MEE_NODE_URL = "https://biconomy.nodera.app/v3"
+// const DEFAULT_MEE_NODE_URL = "https://biconomy.mainnet.dacminfrastructure.com/v3"
+// const DEFAULT_MEE_NODE_URL = "http://localhost:3000/v3"
 /**
  * Parameters for creating a Mee client
  */
@@ -52,6 +57,7 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   const supportedChains = info.supported_chains.map(({ chainId }) =>
     Number(chainId)
   )
+  console.log("supportedChains", supportedChains)
   const supported = account.deployments.every(({ chain }) =>
     supportedChains.includes(chain.id)
   )

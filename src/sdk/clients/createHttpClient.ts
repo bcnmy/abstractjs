@@ -65,12 +65,20 @@ export const createHttpClient = (url: Url): HttpClient => {
       },
       ...(body ? { body: JSON.stringify(body) } : {})
     })
+    console.log("fullPath", fullPath);
+    console.log("body", body);
+    console.log("result", result);
 
-    const json = (await result.json()) as AnyData
-    if (!result.ok) {
-      throw new Error(parseErrorMessage(json ?? result?.statusText ?? result))
+    try {
+      const json = (await result.json()) as AnyData
+      if (!result.ok) {
+        throw new Error(parseErrorMessage(json ?? result?.statusText ?? result))
+      }
+      return json as T
+    } catch (error) {
+      console.error(error)
+      throw new Error(error);
     }
-    return json as T
   }
 
   const client = { request }

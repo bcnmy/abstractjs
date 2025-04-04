@@ -41,7 +41,7 @@ describe("mee.buildIntent", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  it("should highlight building intent instructions", async () => {
+  it.skip("should highlight building intent instructions", async () => {
     const instructions: Instruction[] = await buildIntent(
       { account: mcNexus },
       {

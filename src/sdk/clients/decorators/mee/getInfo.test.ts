@@ -62,7 +62,6 @@ describe("mee.getInfo", () => {
     expect(supportedChains).toContain(targetChain.id)
 
     expect(info.supported_gas_tokens.length).toBeGreaterThan(0)
-
     expect(tokenSymbols).toContain("USDC")
   })
 

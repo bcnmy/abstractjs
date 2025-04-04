@@ -75,6 +75,8 @@ describe("mee.executeSignedQuote", () => {
       signedQuote
     })
 
+    console.log("##### hash", hash);
+
     expect(hash).toEqual(mockExecuteResponse.hash)
 
     expect(executeSignedQuote).toHaveBeenCalledWith(meeClient, {

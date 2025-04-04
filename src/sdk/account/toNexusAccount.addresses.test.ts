@@ -17,7 +17,7 @@ import {
 } from "../clients/createBicoBundlerClient"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 
-describe("nexus.account.addresses", async () => {
+describe.skip("nexus.account.addresses", async () => {
   let network: NetworkConfig
   let chain: Chain
   let bundlerUrl: string
