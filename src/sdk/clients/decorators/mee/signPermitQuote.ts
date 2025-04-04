@@ -123,7 +123,7 @@ export const signPermitQuote = async (
       return value.value
     }
     if (value.status === "rejected" && key === "version") {
-      return "2"
+      return "1"
     }
     throw new Error(`Failed to get value: ${value.reason}`)
   }) as [bigint, string, string, `0x${string}`]
