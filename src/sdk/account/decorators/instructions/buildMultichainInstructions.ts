@@ -16,7 +16,7 @@ export const GLOBAL_COMPOSABLE_CALLS = {
   ...smartSessionCalls
 } as const
 
-export type MethodKeys = keyof typeof GLOBAL_COMPOSABLE_CALLS
+export type SupportedCall = keyof typeof GLOBAL_COMPOSABLE_CALLS
 // biome-ignore lint/complexity/noBannedTypes: Later inference will be used
 type ArgumentTypes<F extends Function> = F extends (
   account: ModularSmartAccount,
@@ -25,15 +25,13 @@ type ArgumentTypes<F extends Function> = F extends (
   ? A
   : never
 
-export type BuildMultichainInstructionsParameters = {
-  chainId: number
-} & OneOf<
+export type BuildMultichainInstructionsParameters = OneOf<
   | {
       calls: Call[]
     }
   | {
-      type: MethodKeys
-      parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[MethodKeys]>
+      type: SupportedCall
+      parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[SupportedCall]>
     }
 >
 
