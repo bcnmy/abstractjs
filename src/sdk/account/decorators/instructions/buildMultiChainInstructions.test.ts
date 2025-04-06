@@ -21,7 +21,7 @@ import type {
   InstructionLike
 } from "../../../clients/decorators/mee"
 import { mcUSDC } from "../../../constants/tokens"
-import { toDefaultModule } from "../../../modules/validators/mee/toDefaultModule"
+import { toDefaultModule } from "../../../modules/validators/default/toDefaultModule"
 import { toOwnableModule } from "../../../modules/validators/ownable/toOwnableModule"
 import { toSmartSessionsModule } from "../../../modules/validators/smartSessions/toSmartSessionsModule"
 import {

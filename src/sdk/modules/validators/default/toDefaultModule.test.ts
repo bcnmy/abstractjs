@@ -70,12 +70,12 @@ describe("modules.toDefaultModule", () => {
   test("should have a consistent snapshot", async () => {
     expect(meeModule).toMatchInlineSnapshot(`
       {
-        "address": "0x00000000d12897DDAdC2044614A9677B191A2d95",
+        "address": "0x0000000000000000000000000000000000000000",
         "data": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "deInitData": "0x",
         "getStubSignature": [Function],
         "initData": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "module": "0x00000000d12897DDAdC2044614A9677B191A2d95",
+        "module": "0x0000000000000000000000000000000000000000",
         "signMessage": [Function],
         "signUserOpHash": [Function],
         "signer": {

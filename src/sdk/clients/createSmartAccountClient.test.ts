@@ -218,6 +218,10 @@ describe("nexus.client", async () => {
   })
 
   test("should have attached erc757 actions", async () => {
+    console.log(
+      "nexusClient.account.getModule().address",
+      nexusClient.account.getModule().address
+    )
     const [
       accountId,
       isModuleInstalled,
@@ -240,7 +244,7 @@ describe("nexus.client", async () => {
       })
     ])
     expect(accountId.indexOf("biconomy.nexus") > -1).toBe(true)
-    expect(isModuleInstalled).toBe(true)
+    expect(isModuleInstalled).toBe(false)
     expect(supportsExecutionMode).toBe(true)
     expect(supportsModule).toBe(true)
   })

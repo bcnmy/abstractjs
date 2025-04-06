@@ -321,6 +321,11 @@ describe("nexus.account", async () => {
       toHex(contentsType.length, { size: 2 })
     ])
 
+    console.log(
+      "nexusAccount.getModule().address",
+      nexusAccount.getModule().address
+    )
+
     const finalSignature = encodePacked(
       ["address", "bytes"],
       [nexusAccount.getModule().address, signatureData]
