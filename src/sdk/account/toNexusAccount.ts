@@ -413,32 +413,33 @@ export const toNexusAccount = async (
    */
   const getNonce = async (parameters?: {
     key?: bigint
-    validationMode?: "0x00" | "0x01" | "0x02"
+    validationMode?: "0x00" | "0x01"
     moduleAddress?: Address
   }): Promise<bigint> => {
-    const TIMESTAMP_ADJUSTMENT = 16777215n
-    const {
-      key: key_ = 0n,
-      validationMode = "0x00",
-      moduleAddress = module.module
-    } = parameters ?? {}
     try {
-      const adjustedKey = BigInt(key_) % TIMESTAMP_ADJUSTMENT
-      const key: string = concat([
-        toHex(adjustedKey, { size: 3 }),
-        validationMode,
-        moduleAddress
+      // Example usage
+      const randomHex = generateRandomBytes()
+      console.log(randomHex) // e.g. "a4f01b"
+
+      const key = concatHex([
+        randomHex as Hex,
+        "0x020000000000000000000000000000000000000000" // prep
       ])
-      const accountAddress = await getAddress()
-      return await entryPointContract.read.getNonce([
-        accountAddress,
+
+      console.log("key:", key)
+
+      const sequentialNonce = await entryPointContract.read.getNonce([
+        "0xD558E0853896f06E30752A1071530e8eF85D61C1", // getAddress()
         BigInt(key)
       ])
+
+      console.log("final nonce:", sequentialNonce.toString(16))
+
+      return sequentialNonce
     } catch (e) {
       return 0n
     }
   }
-
   /**
    * @description Signs a message
    * @param params - The parameters for signing
