@@ -272,13 +272,21 @@ describe("nexus.account", async () => {
     const message = {
       contents: keccak256(toBytes("test", { size: 32 }))
     }
-    const domainSeparator = await testClient.readContract({
-      address: await nexusAccount.getAddress(),
-      abi: parseAbi([
-        "function DOMAIN_SEPARATOR() external view returns (bytes32)"
-      ]),
-      functionName: "DOMAIN_SEPARATOR"
-    })
+    const meta = await getAccountMeta(testClient, nexusAccountAddress)
+
+    // Calculate the domain separator
+    const domainSeparator = keccak256(
+      encodeAbiParameters(
+        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
+        [
+          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
+          keccak256(toBytes(meta.name)),
+          keccak256(toBytes(meta.version)),
+          BigInt(chain.id),
+          nexusAccountAddress
+        ]
+      )
+    )
 
     const typedHashHashed = keccak256(
       concat(["0x1901", domainSeparator, message.contents])
@@ -320,11 +328,6 @@ describe("nexus.account", async () => {
       toHex(contentsType),
       toHex(contentsType.length, { size: 2 })
     ])
-
-    console.log(
-      "nexusAccount.getModule().address",
-      nexusAccount.getModule().address
-    )
 
     const finalSignature = encodePacked(
       ["address", "bytes"],

@@ -10,6 +10,8 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
+  type PublicClient,
+  createPublicClient,
   parseEther
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
@@ -36,6 +38,7 @@ describe("modules.toSmartSessionsModule", () => {
   let nexusAccountAddress: Address
   let nexusAccount: NexusAccount
   let sessionDetails: string
+  let publicClient: PublicClient
 
   beforeAll(async () => {
     ecosystem = await toEcosystem()
@@ -45,6 +48,11 @@ describe("modules.toSmartSessionsModule", () => {
     eoaAccount = getTestAccount(0)
     redeemerAccount = getTestAccount(1)
     redeemerAddress = redeemerAccount.address
+
+    publicClient = createPublicClient({
+      chain,
+      transport: http(infra.network.rpcUrl)
+    })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,

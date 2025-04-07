@@ -10,18 +10,18 @@ import {
   getEnableSessionDetails,
   getOwnableValidatorMockSignature
 } from "@rhinestone/module-sdk"
-import type {
-  Address,
-  Chain,
-  Client,
-  Hex,
-  Prettify,
-  PublicClient,
-  RequiredBy,
-  Transport
+import {
+  type Address,
+  type Chain,
+  type Client,
+  type Hex,
+  type Prettify,
+  type PublicClient,
+  type RequiredBy,
+  type Transport,
+  zeroAddress
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
-import { MEE_VALIDATOR_ADDRESS } from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt, stringify } from "../Helpers"
 
@@ -109,12 +109,13 @@ export async function grantPermission<
     address: await nexusAccount.getAddress(),
     type: "nexus"
   })
+
   const sessionDetailsWithPermissionEnableHash = await getEnableSessionDetails({
     enableMode: SmartSessionMode.UNSAFE_ENABLE,
     sessions: [session],
     account: nexusAccountForRhinestone,
     clients: [publicClient],
-    enableValidatorAddress: MEE_VALIDATOR_ADDRESS,
+    enableValidatorAddress: zeroAddress, // default validator
     ignoreSecurityAttestations: true
   })
 

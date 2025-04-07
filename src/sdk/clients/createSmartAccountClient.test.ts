@@ -218,10 +218,6 @@ describe("nexus.client", async () => {
   })
 
   test("should have attached erc757 actions", async () => {
-    console.log(
-      "nexusClient.account.getModule().address",
-      nexusClient.account.getModule().address
-    )
     const [
       accountId,
       isModuleInstalled,
