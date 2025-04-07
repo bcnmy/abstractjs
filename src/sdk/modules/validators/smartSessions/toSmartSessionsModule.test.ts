@@ -23,6 +23,7 @@ import {
 } from "../../../clients/createBicoBundlerClient"
 import { getSudoPolicy } from "../../../constants"
 import { smartSessionActions } from "./decorators"
+import type { GrantPermissionResponse } from "./decorators/grantPermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
 
 describe("modules.toSmartSessionsModule", () => {
@@ -37,7 +38,7 @@ describe("modules.toSmartSessionsModule", () => {
   let nexusClient: NexusClient
   let nexusAccountAddress: Address
   let nexusAccount: NexusAccount
-  let sessionDetails: string
+  let sessionDetails: GrantPermissionResponse
   let publicClient: PublicClient
 
   beforeAll(async () => {

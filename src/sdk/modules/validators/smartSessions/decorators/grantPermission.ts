@@ -23,7 +23,7 @@ import {
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import type { ModularSmartAccount } from "../../../utils/Types"
-import { generateSalt, stringify } from "../Helpers"
+import { generateSalt } from "../Helpers"
 
 export type PrettifiedSession = {
   // The optional address of the validator that will be used to validate the session. Default is the ownable validator.
@@ -59,7 +59,12 @@ export type GrantPermissionParameters<
 >
 
 // The session details in stringified format.
-export type GrantPermissionResponse = string
+export type GrantPermissionResponse = Prettify<
+  Omit<
+    Awaited<ReturnType<typeof getEnableSessionDetails>>,
+    "permissionEnableHash"
+  >
+>
 
 export async function grantPermission<
   TModularSmartAccount extends ModularSmartAccount | undefined
@@ -129,5 +134,5 @@ export async function grantPermission<
     await signer.signMessage({ message: { raw: permissionEnableHash } })
 
   sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
-  return stringify(sessionDetails)
+  return sessionDetails
 }
