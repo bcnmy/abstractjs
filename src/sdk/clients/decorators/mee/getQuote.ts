@@ -1,4 +1,4 @@
-import type { Address, Hex, OneOf } from "viem"
+import { type Address, type Hex, type OneOf, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
@@ -342,7 +342,7 @@ export const getQuote = async (
           : deployment.encodeExecute(userOp.calls[0]),
         deployment.getNonce(),
         deployment.isDeployed(),
-        deployment.getInitCode(),
+        deployment.getFactoryArgs(),
         deployment.address,
         userOp.calls
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
@@ -358,20 +358,26 @@ export const getQuote = async (
       callData,
       nonce_,
       isAccountDeployed,
-      initCode,
+      factoryArgs,
       sender,
       callGasLimit,
       chainId
-    ]) => ({
-      lowerBoundTimestamp: lowerBoundTimestamp_,
-      upperBoundTimestamp: upperBoundTimestamp_,
-      sender,
-      callData,
-      callGasLimit,
-      nonce: nonce_.toString(),
-      chainId,
-      ...(!isAccountDeployed && initCode ? { initCode } : {})
-    })
+    ]) => {
+      const initCode =
+        factoryArgs.factory && factoryArgs.factoryData
+          ? concatHex([factoryArgs.factory, factoryArgs.factoryData])
+          : undefined
+      return {
+        lowerBoundTimestamp: lowerBoundTimestamp_,
+        upperBoundTimestamp: upperBoundTimestamp_,
+        sender,
+        callData,
+        callGasLimit,
+        nonce: nonce_.toString(),
+        chainId,
+        ...(!isAccountDeployed && initCode ? { initCode } : {})
+      }
+    }
   )
 
   const [nonce, isAccountDeployed, initCode] = await Promise.all([
