@@ -51,7 +51,9 @@ import {
   getAccountMeta
 } from "./utils"
 import {
+  NEXUS_DOMAIN_NAME,
   NEXUS_DOMAIN_TYPEHASH,
+  NEXUS_DOMAIN_VERSION,
   PARENT_TYPEHASH,
   eip1271MagicValue
 } from "./utils/Constants"
@@ -107,8 +109,64 @@ describe("nexus.account", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
+  test.skip("should check isValidSignature using EIP-6492", async () => {
+    const undeployedAccount = await toNexusAccount({
+      chain,
+      signer: eoaAccount,
+      transport: http(),
+      index: 100n // undeployed
+    })
+
+    const undeployedAccountAddress = await undeployedAccount.getAddress()
+    expect(await undeployedAccount.isDeployed()).toBe(false)
+    const data = hashMessage("0x1234")
+
+    // Calculate the domain separator
+    const domainSeparator = keccak256(
+      encodeAbiParameters(
+        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
+        [
+          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
+          keccak256(toBytes(NEXUS_DOMAIN_NAME)),
+          keccak256(toBytes(NEXUS_DOMAIN_VERSION)),
+          BigInt(chain.id),
+          undeployedAccountAddress
+        ]
+      )
+    )
+
+    // Calculate the parent struct hash
+    const parentStructHash = keccak256(
+      encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
+        keccak256(toBytes("PersonalSign(bytes prefixed)")),
+        data
+      ])
+    )
+
+    // Calculate the final hash
+    const resultHash: Hex = keccak256(
+      concat(["0x1901", domainSeparator, parentStructHash])
+    )
+    const signature = await undeployedAccount.signMessage({
+      message: { raw: toBytes(resultHash) }
+    })
+
+    const { factory, factoryData } = await undeployedAccount.getFactoryArgs()
+
+    const viemResponse = await testClient.verifyMessage({
+      factory,
+      factoryData,
+      address: undeployedAccountAddress,
+      message: data,
+      signature
+    })
+
+    expect(viemResponse).toBe(true)
+  })
+
   test("should check isValidSignature PersonalSign is valid", async () => {
     const meta = await getAccountMeta(testClient, nexusAccountAddress)
+    console.log({ meta })
 
     const data = hashMessage("0x1234")
 
@@ -125,6 +183,8 @@ describe("nexus.account", async () => {
         ]
       )
     )
+
+    console.log("personal", { domainSeparator })
 
     // Calculate the parent struct hash
     const parentStructHash = keccak256(
