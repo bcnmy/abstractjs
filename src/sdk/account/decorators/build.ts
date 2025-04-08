@@ -9,7 +9,7 @@ import {
 import buildBatch, {
   type BuildBatchParameters
 } from "./instructions/buildBatch"
-import buildComposable, {
+import buildComposableUtil, {
   type BuildComposableParameters
 } from "./instructions/buildComposable"
 import {
@@ -144,7 +144,7 @@ export type BuildBatchInstruction = {
  * @property data - {@link BuildComposableParameters} The parameters for the composable action
  */
 export type BuildComposableInstruction = {
-  type: "composable"
+  type: "default"
   data: BuildComposableParameters
 }
 
@@ -158,19 +158,29 @@ export type BuildMultichainInstructionInstruction = {
   data: BuildMultichainInstructionsParameters
 }
 
-/**
- * Union type of all possible build instruction types
- */
-export type BuildInstructionTypes =
-  | BuildDefaultInstruction
+export type BaseInstructionTypes =
   | BuildIntentInstruction
   | BuildTransferFromInstruction
   | BuildTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
-  | BuildComposableInstruction
   | BuildMultichainInstructionInstruction
+
+/**
+ * Union type of all possible build instruction types
+ */
+export type BuildInstructionTypes =
+  | BaseInstructionTypes
+  | BuildDefaultInstruction
+
+/**
+ * Union type of all possible build composable instruction types
+ */
+export type BuildComposableInstructionTypes =
+  | BaseInstructionTypes
+  | BuildComposableInstruction
+
 /**
  * Builds transaction instructions based on the provided action type and parameters
  *
@@ -222,9 +232,6 @@ export const build = async (
     case "default": {
       return buildDefaultInstructions(baseParams, data)
     }
-    case "composable": {
-      return buildComposable(baseParams, data)
-    }
     case "transferFrom": {
       return buildTransferFrom(baseParams, data)
     }
@@ -242,6 +249,38 @@ export const build = async (
     }
     case "multichain": {
       return buildMultichainInstructions(baseParams, data)
+    }
+    default: {
+      throw new Error(`Unknown build action type: ${type}`)
+    }
+  }
+}
+
+// Exactly same as build decorator, but forces to use composable call.
+export const buildComposable = async (
+  baseParams: BaseInstructionsParams,
+  parameters: BuildComposableInstructionTypes
+): Promise<Instruction[]> => {
+  const { type, data } = parameters
+
+  switch (type) {
+    case "default": {
+      return buildComposableUtil(baseParams, data)
+    }
+    case "transferFrom": {
+      return buildTransferFrom(baseParams, data, true)
+    }
+    case "transfer": {
+      return buildTransfer(baseParams, data, true)
+    }
+    case "approve": {
+      return buildApprove(baseParams, data, true)
+    }
+    case "withdrawal": {
+      return buildWithdrawal(baseParams, data, true)
+    }
+    case "batch": {
+      return buildBatch(baseParams, data)
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

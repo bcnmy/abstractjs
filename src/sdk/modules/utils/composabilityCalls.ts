@@ -52,8 +52,8 @@ export type Constraint = {
   referenceData: string
 }
 
-export type ComposableExecution = {
-  to: string
+export type ComposableCall = {
+  to: Address
   value: bigint
   functionSig: string
   inputParams: InputParam[]

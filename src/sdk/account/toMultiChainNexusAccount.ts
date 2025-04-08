@@ -8,7 +8,9 @@ import {
 import type { Signer } from "./utils/toSigner"
 
 import {
+  type BuildComposableInstructionTypes,
   type BuildInstructionTypes,
+  buildComposable as buildComposableDecorator,
   build as buildDecorator
 } from "./decorators/build"
 import {
@@ -99,6 +101,22 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+  /**
+   * Function to build composable instructions
+   * @param params - The parameters for the composable instruction
+   * @returns Returns composable instructions
+   * @example
+   * const instructions = await mcAccount.build({
+   *   amount: BigInt(1000),
+   *   mcToken: mcUSDC,
+   *   toChain: base
+   * })
+   */
+  buildComposable: (
+    params: BuildComposableInstructionTypes,
+    currentInstructions?: Instruction[]
+  ) => Promise<Instruction[]>
+
   /**
    * Function to build instructions for bridging a token across all deployments
    * @param params - The parameters for the balance requirement
@@ -225,6 +243,15 @@ export async function toMultichainNexusAccount(
   ): Promise<Instruction[]> =>
     buildDecorator({ currentInstructions, account: baseAccount }, params)
 
+  const buildComposable = (
+    params: BuildComposableInstructionTypes,
+    currentInstructions?: Instruction[]
+  ): Promise<Instruction[]> =>
+    buildComposableDecorator(
+      { currentInstructions, account: baseAccount },
+      params
+    )
+
   const buildBridgeInstructions = (
     params: Omit<MultichainBridgingParams, "account">
   ) => buildBridgeInstructionsDecorator({ ...params, account: baseAccount })
@@ -236,6 +263,7 @@ export async function toMultichainNexusAccount(
     ...baseAccount,
     getUnifiedERC20Balance,
     build,
+    buildComposable,
     buildBridgeInstructions,
     queryBridge
   }
