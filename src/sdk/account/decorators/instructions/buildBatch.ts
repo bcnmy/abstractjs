@@ -67,7 +67,9 @@ export const buildBatch = async (
     ({ isComposable }) => isComposable === true
   )
 
-  if (!resolvedInstructions.every((inx) => !!inx.isComposable === !!isComposable)) {
+  if (
+    !resolvedInstructions.every((inx) => !!inx.isComposable === !!isComposable)
+  ) {
     throw new Error(
       `${isComposable ? "All instructions must be composable" : "All instructions must be non composable"}`
     )
