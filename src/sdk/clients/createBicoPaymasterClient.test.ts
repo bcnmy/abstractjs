@@ -79,7 +79,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
       transport: http()
     })
 
-    nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
+    nexusAccountAddress = await nexusAccount.getAddress()
 
     nexusClient = createSmartAccountClient({
       account: nexusAccount,

@@ -1,23 +1,13 @@
-import { type Abi, type Address, encodeFunctionData, isAddress } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
-import { COMPOSABILITY_MODULE_ABI } from "../../../constants/abi/ComposabilityAbi"
+import { type Abi, type Address, isAddress } from "viem"
+import type { Instruction } from "../../../clients/decorators/mee"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
-  type ComposableExecution,
+  type ComposableCall,
   type InputParam,
-  isComposableCallRequired,
   prepareComposableParams
 } from "../../../modules/utils/composabilityCalls"
 import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
-
-// type OverrideObjectValues<T, OverrideType> = {
-//   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type
-// };
-
-// type OverrideArrayObjects<T, OverrideType> = {
-//   [K in keyof T]: OverrideObjectValues<T[K], OverrideType>;
-// };
 
 // TODO:
 // These types are being removed for now as it requires all the previous parent function types needs to be changed.
@@ -42,16 +32,15 @@ export type BuildComposableParameters = {
   args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function whihc can be handled later
   abi: Abi
   chainId: number
-  value?: bigint
   gasLimit?: bigint
 }
 
 export const buildComposableCall = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters
-): Promise<AbstractCall> => {
+): Promise<ComposableCall[]> => {
   const { account } = baseParams
-  const { to, value, gasLimit, functionName, args, abi, chainId } = parameters
+  const { to, gasLimit, functionName, args, abi, chainId } = parameters
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
@@ -83,44 +72,25 @@ export const buildComposableCall = async (
     throw new Error(`Invalid arguments for the ${functionName} function`)
   }
 
-  // Check for the runtime arguments and detect the need for composable call
-  const isComposableCall = isComposableCallRequired(functionContext, args)
-
-  if (!isComposableCall) {
-    throw new Error("Unsupported arguments for composable call")
-  }
-
   const composableParams: InputParam[] = prepareComposableParams(
     functionContext,
     args
   )
 
-  const composableCalls: ComposableExecution[] = []
+  const composableCalls: ComposableCall[] = []
 
-  const composableCall: ComposableExecution = {
+  const composableCall: ComposableCall = {
     to,
     value: BigInt(0), // In the current scope, the value is always zero. When there is a need, this can be changed accordingly
     functionSig: functionContext.functionSig,
     inputParams: composableParams,
-    outputParams: [] // In the current scope, output params are not handled. When more composability functions are added, this will change
+    outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
+    ...(gasLimit ? { gasLimit } : {})
   }
 
   composableCalls.push(composableCall)
 
-  const calldata = encodeFunctionData({
-    abi: COMPOSABILITY_MODULE_ABI,
-    functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
-    args: [composableCalls] // Multiple composable calls can be batched here.
-  })
-
-  const call: AbstractCall = {
-    to: smartAccountAddress,
-    data: calldata,
-    ...(value ? { value } : { value: BigInt(0) }),
-    ...(gasLimit ? { gasLimit } : {})
-  }
-
-  return call
+  return composableCalls
 }
 
 /**
@@ -166,21 +136,22 @@ export const buildComposableCall = async (
  * )
  * ```
  */
-export const buildComposable = async (
+export const buildComposableUtil = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
 
-  const call = await buildComposableCall(baseParams, parameters)
+  const calls = await buildComposableCall(baseParams, parameters)
 
   return [
     ...currentInstructions,
     {
-      calls: [call],
-      chainId: parameters.chainId
+      calls: calls,
+      chainId: parameters.chainId,
+      isComposable: true
     }
   ]
 }
 
-export default buildComposable
+export default buildComposableUtil

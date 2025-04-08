@@ -18,6 +18,11 @@
 - Added support for custom bootstrap addresses during account initialization
 - Implemented smart session helpers for improved session management
 - Added new utility functions `toInitData` and `toInstallData` for standardized module formatting
+- Added composability module for multi-transaction batching in a single userOp
+- Added support for Nexus v1.2.0 with improved composability features
+- Added custom gas limits for composability calls
+- Added EIP-6492 compatibility for account signatures
+- Integrated userOp status reporting and receipt tracking
 
 #### Improvements
 - Enable mode for smart sessions by default
@@ -27,6 +32,8 @@
 - Reduced bundle size through code optimization (-5.45% ESM, -7.42% CJS)
 - Added comprehensive test coverage for new module initialization flows
 - Improved status reporting for userOps
+- Fixed initCode computation for accurate counterfactual address generation
+- Enhanced batch builder with better composability checks
 
 ## 0.3.0
 

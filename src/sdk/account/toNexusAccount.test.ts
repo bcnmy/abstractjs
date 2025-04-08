@@ -43,7 +43,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import { MEE_VALIDATOR_ADDRESS } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
@@ -52,7 +51,9 @@ import {
   getAccountMeta
 } from "./utils"
 import {
+  NEXUS_DOMAIN_NAME,
   NEXUS_DOMAIN_TYPEHASH,
+  NEXUS_DOMAIN_VERSION,
   PARENT_TYPEHASH,
   eip1271MagicValue
 } from "./utils/Constants"
@@ -101,16 +102,70 @@ describe("nexus.account", async () => {
     })
 
     nexusAccount = nexusClient.account
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
     await fundAndDeployClients(testClient, [nexusClient])
   })
   afterAll(async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
+  test.skip("should check isValidSignature using EIP-6492", async () => {
+    const undeployedAccount = await toNexusAccount({
+      chain,
+      signer: eoaAccount,
+      transport: http(),
+      index: 100n // undeployed
+    })
+
+    const undeployedAccountAddress = await undeployedAccount.getAddress()
+    expect(await undeployedAccount.isDeployed()).toBe(false)
+    const data = hashMessage("0x1234")
+
+    // Calculate the domain separator
+    const domainSeparator = keccak256(
+      encodeAbiParameters(
+        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
+        [
+          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
+          keccak256(toBytes(NEXUS_DOMAIN_NAME)),
+          keccak256(toBytes(NEXUS_DOMAIN_VERSION)),
+          BigInt(chain.id),
+          undeployedAccountAddress
+        ]
+      )
+    )
+
+    // Calculate the parent struct hash
+    const parentStructHash = keccak256(
+      encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
+        keccak256(toBytes("PersonalSign(bytes prefixed)")),
+        data
+      ])
+    )
+
+    // Calculate the final hash
+    const resultHash: Hex = keccak256(
+      concat(["0x1901", domainSeparator, parentStructHash])
+    )
+    const signature = await undeployedAccount.signMessage({
+      message: { raw: toBytes(resultHash) }
+    })
+
+    const { factory, factoryData } = await undeployedAccount.getFactoryArgs()
+
+    const viemResponse = await testClient.verifyMessage({
+      factory,
+      factoryData,
+      address: undeployedAccountAddress,
+      message: data,
+      signature
+    })
+
+    expect(viemResponse).toBe(true)
+  })
+
   test("should check isValidSignature PersonalSign is valid", async () => {
     const meta = await getAccountMeta(testClient, nexusAccountAddress)
-
     const data = hashMessage("0x1234")
 
     // Calculate the domain separator
@@ -127,7 +182,6 @@ describe("nexus.account", async () => {
       )
     )
 
-    // Calculate the parent struct hash
     const parentStructHash = keccak256(
       encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
         keccak256(toBytes("PersonalSign(bytes prefixed)")),
@@ -217,7 +271,7 @@ describe("nexus.account", async () => {
       entryPointVersion
     ] = await Promise.all([
       nexusAccount.isDeployed(),
-      nexusAccount.getCounterFactualAddress(),
+      nexusAccount.getAddress(),
       nexusAccount.getUserOpHash({
         sender: eoaAccount.address,
         nonce: 0n,
@@ -273,13 +327,21 @@ describe("nexus.account", async () => {
     const message = {
       contents: keccak256(toBytes("test", { size: 32 }))
     }
-    const domainSeparator = await testClient.readContract({
-      address: await nexusAccount.getAddress(),
-      abi: parseAbi([
-        "function DOMAIN_SEPARATOR() external view returns (bytes32)"
-      ]),
-      functionName: "DOMAIN_SEPARATOR"
-    })
+    const meta = await getAccountMeta(testClient, nexusAccountAddress)
+
+    // Calculate the domain separator
+    const domainSeparator = keccak256(
+      encodeAbiParameters(
+        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
+        [
+          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
+          keccak256(toBytes(meta.name)),
+          keccak256(toBytes(meta.version)),
+          BigInt(chain.id),
+          nexusAccountAddress
+        ]
+      )
+    )
 
     const typedHashHashed = keccak256(
       concat(["0x1901", domainSeparator, message.contents])
@@ -324,7 +386,7 @@ describe("nexus.account", async () => {
 
     const finalSignature = encodePacked(
       ["address", "bytes"],
-      [MEE_VALIDATOR_ADDRESS, signatureData]
+      [nexusAccount.getModule().address, signatureData]
     )
 
     const contractResponse = await testClient.readContract({

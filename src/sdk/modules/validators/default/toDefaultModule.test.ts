@@ -19,9 +19,9 @@ import {
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
 import type { Validator } from "../toValidator"
-import { toMeeModule } from "./toMeeModule"
+import { toDefaultModule } from "./toDefaultModule"
 
-describe("modules.toMeeModule", () => {
+describe("modules.toDefaultModule", () => {
   let ecosystem: Ecosystem
   let infra: Infra
   let chain: Chain
@@ -44,7 +44,7 @@ describe("modules.toMeeModule", () => {
 
     const { testClient } = await toClients(infra.network)
 
-    meeModule = toMeeModule({ signer: eoaAccount })
+    meeModule = toDefaultModule({ signer: eoaAccount })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
@@ -64,18 +64,18 @@ describe("modules.toMeeModule", () => {
     })
   })
   afterAll(async () => {
-    await killNetwork([infra.network.rpcPort, infra.bundler.port])
+    await killNetwork([infra?.network?.rpcPort, infra?.bundler?.port])
   })
 
   test("should have a consistent snapshot", async () => {
     expect(meeModule).toMatchInlineSnapshot(`
       {
-        "address": "0x00000000d12897DDAdC2044614A9677B191A2d95",
+        "address": "0x0000000000000000000000000000000000000000",
         "data": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "deInitData": "0x",
         "getStubSignature": [Function],
         "initData": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "module": "0x00000000d12897DDAdC2044614A9677B191A2d95",
+        "module": "0x0000000000000000000000000000000000000000",
         "signMessage": [Function],
         "signUserOpHash": [Function],
         "signer": {

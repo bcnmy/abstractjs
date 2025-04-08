@@ -2,7 +2,7 @@ import { type Hex, concatHex, encodeAbiParameters } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
-import type { GetQuotePayload } from "./getQuote"
+import type { AbstractCall, GetQuotePayload } from "./getQuote"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 
@@ -59,7 +59,9 @@ export const signOnChainQuote = async (
     data: { ...trigger, spender }
   })
 
-  const dataOrPrefix = triggerCall.data ?? FUSION_NATIVE_TRANSFER_PREFIX
+  // This will be always a non composable transaction, so don't worry about the composability
+  const dataOrPrefix =
+    (triggerCall as AbstractCall)?.data ?? FUSION_NATIVE_TRANSFER_PREFIX
   const call = { ...triggerCall, data: concatHex([dataOrPrefix, quote.hash]) }
 
   // @ts-ignore

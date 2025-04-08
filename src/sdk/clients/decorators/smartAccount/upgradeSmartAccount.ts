@@ -15,7 +15,7 @@ import {
 import { getAction, parseAccount } from "viem/utils"
 import type { Call } from "../../../account"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import { LATEST_DEFAULT_ADDRESSES } from "../../../constants"
+import { NEXUS_IMPLEMENTATION_ADDRESS } from "../../../constants"
 import type { ModularSmartAccount } from "../../../modules"
 
 export type UpgradeSmartAccountParameters<
@@ -60,7 +60,7 @@ export async function upgradeSmartAccount<
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
-    implementationAddress = LATEST_DEFAULT_ADDRESSES.implementationAddress,
+    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
     initData = "0x",
     ...rest
   } = parameters ?? {}
