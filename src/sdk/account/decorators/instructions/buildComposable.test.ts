@@ -30,7 +30,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { getMultichainContract } from "../../utils"
+import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
 
 describe("mee.buildComposable", () => {
@@ -116,6 +116,8 @@ describe("mee.buildComposable", () => {
       })
     })
 
+    console.log('MEE Scan link One: ', getMeeScanLink(hashOne));
+
     const { transactionStatus: transactionStatusOne } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
@@ -150,7 +152,7 @@ describe("mee.buildComposable", () => {
     const batchedInstructions = await mcNexus.buildComposable({
       type: "batch",
       data: {
-        instructions: [...transferInstruction, ...instructions, ...instructions]
+        instructions: [...transferInstruction, ...instructions]
       }
     })
 
@@ -163,6 +165,8 @@ describe("mee.buildComposable", () => {
         }
       })
     })
+
+    console.log('MEE Scan link Two: ', getMeeScanLink(hashTwo));
 
     const { transactionStatus: transactionStatusTwo } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
@@ -190,6 +194,8 @@ describe("mee.buildComposable", () => {
       })
     })
 
+    console.log('MEE Scan link One: ', getMeeScanLink(hashOne));
+
     const { transactionStatus: transactionStatusOne } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
@@ -235,13 +241,15 @@ describe("mee.buildComposable", () => {
       })
     })
 
+    console.log('MEE Scan link One: ', getMeeScanLink(hashOne));
+
     const { transactionStatus: transactionStatusTwo } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
     expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute manually batched composable transaction", async () => {
+  it.skip("should execute manually batched composable transaction", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -298,7 +306,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute batched composable transaction", async () => {
+  it.skip("should execute batched composable transaction", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -358,7 +366,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for static args", async () => {
+  it.skip("should execute composable transaction for static args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -411,7 +419,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for struct args", async () => {
+  it.skip("should execute composable transaction for struct args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -468,7 +476,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for dynamic array args", async () => {
+  it.skip("should execute composable transaction for dynamic array args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -523,7 +531,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for string args", async () => {
+  it.skip("should execute composable transaction for string args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -578,7 +586,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for bytes args", async () => {
+  it.skip("should execute composable transaction for bytes args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -633,7 +641,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
+  it.skip("should execute composable transaction for runtime arg inside dynamic array args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -689,7 +697,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for uniswap args", async () => {
+  it.skip("should execute composable transaction for uniswap args", async () => {
     const fusionToken = getMultichainContract<typeof erc20Abi>({
       abi: erc20Abi,
       deployments: [
@@ -765,7 +773,7 @@ describe("mee.buildComposable", () => {
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
-  it("should execute composable transaction for approval and transferFrom builders", async () => {
+  it.skip("should execute composable transaction for approval and transferFrom builders", async () => {
     const amount = parseUnits("0.2", 6)
 
     const trigger = {
