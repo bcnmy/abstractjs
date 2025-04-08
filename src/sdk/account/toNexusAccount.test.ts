@@ -166,8 +166,6 @@ describe("nexus.account", async () => {
 
   test("should check isValidSignature PersonalSign is valid", async () => {
     const meta = await getAccountMeta(testClient, nexusAccountAddress)
-    console.log({ meta })
-
     const data = hashMessage("0x1234")
 
     // Calculate the domain separator
@@ -184,9 +182,6 @@ describe("nexus.account", async () => {
       )
     )
 
-    console.log("personal", { domainSeparator })
-
-    // Calculate the parent struct hash
     const parentStructHash = keccak256(
       encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
         keccak256(toBytes("PersonalSign(bytes prefixed)")),
