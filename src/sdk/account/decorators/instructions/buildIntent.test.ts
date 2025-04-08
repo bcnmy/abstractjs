@@ -42,8 +42,6 @@ describe("mee.buildIntent", () => {
   })
 
   it("should highlight building intent instructions", async () => {
-    console.log("mcNexus", mcNexus.addressOn(targetChain.id))
-
     const instructions: Instruction[] = await buildIntent(
       { account: mcNexus },
       {

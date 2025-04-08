@@ -43,4 +43,3 @@ jobs:
           MAINNET_CHAIN_ID: 10
           RUN_PAID_TESTS: false
           CI: true 
-          STAGING: true
