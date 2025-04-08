@@ -1,5 +1,6 @@
 import { type Hex, concat, keccak256, pad, toHex } from "viem"
 export const ADDRESS_ZERO: Hex = "0x0000000000000000000000000000000000000000"
+
 export const MAGIC_BYTES =
   "0x6492649264926492649264926492649264926492649264926492649264926492"
 export const BICONOMY_TOKEN_PAYMASTER: Hex =
@@ -102,7 +103,7 @@ export const MOCK_MULTI_MODULE_ADDRESS =
   "0x9C992f91E7Cd4697B81E137007f446E826b8378b"
 export const MODULE_TYPE_MULTI = 0
 
-export const NEXUS_DOMAIN_NAME = "nexus"
+export const NEXUS_DOMAIN_NAME = "Nexus"
 export const NEXUS_DOMAIN_VERSION = "1.2.0"
 export const NEXUS_DOMAIN_TYPEHASH =
   "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
