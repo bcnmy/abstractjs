@@ -12,6 +12,7 @@ import {
   type MultichainSmartAccount,
   buildApprove,
   buildTransferFrom,
+  resolveInstructions,
   toMultichainNexusAccount
 } from ".."
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
@@ -103,12 +104,12 @@ describe("utils.batchInstructions", () => {
       createBaseApproval(mcNexus, "2.0")
     ]
 
+    const resolvedInstructions = await resolveInstructions(instructions)
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
       account: mcNexus,
-      triggerCall,
-      instructions
+      instructions: [...triggerCall, ...resolvedInstructions]
     })
 
     expect(result).toHaveLength(1) // All instructions should be batched
@@ -121,12 +122,12 @@ describe("utils.batchInstructions", () => {
       createOptimismApproval(mcNexus, "1.0")
     ]
 
+    const resolvedInstructions = await resolveInstructions(instructions)
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
       account: mcNexus,
-      triggerCall,
-      instructions
+      instructions: [...triggerCall, ...resolvedInstructions]
     })
 
     expect(result).toHaveLength(2)
@@ -146,12 +147,12 @@ describe("utils.batchInstructions", () => {
       createBaseApproval(mcNexus, "4.0")
     ]
 
+    const resolvedInstructions = await resolveInstructions(instructions)
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
       account: mcNexus,
-      triggerCall,
-      instructions
+      instructions: [...triggerCall, ...resolvedInstructions]
     })
 
     expect(result).toHaveLength(3) // Should have 3 groups: base batch, optimism, base batch
@@ -167,12 +168,12 @@ describe("utils.batchInstructions", () => {
       createMainnetApproval(mcNexus, "1.0")
     ]
 
+    const resolvedInstructions = await resolveInstructions(instructions)
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
       account: mcNexus,
-      triggerCall,
-      instructions
+      instructions: [...triggerCall, ...resolvedInstructions]
     })
 
     expect(result).toHaveLength(3) // Should have 3 separate instructions

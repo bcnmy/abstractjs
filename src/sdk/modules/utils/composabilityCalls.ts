@@ -52,12 +52,16 @@ export type Constraint = {
   referenceData: string
 }
 
-export type ComposableExecution = {
-  to: string
+export type BaseComposableCall = {
+  to: Address
   value: bigint
   functionSig: string
   inputParams: InputParam[]
   outputParams: OutputParam[]
+}
+
+export type ComposableCall = BaseComposableCall & {
+  gasLimit?: bigint
 }
 
 export type ConstraintField = {

@@ -176,6 +176,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     /** Encodes a batch of calls for execution */
     encodeExecuteBatch: (calls: readonly Call[]) => Promise<Hex>
 
+    /** Encodes a composable call for execution */
+    encodeExecuteComposable: (calls: ComposableCall[]) => Promise<Hex>
+
     /** Calculates the hash of a user operation */
     getUserOpHash: (userOp: UserOperation) => Hex
 
@@ -460,6 +463,31 @@ export const toNexusAccount = async (
   }
 
   /**
+   * @description Encodes a composable calls for execution
+   * @param call - The calls to encode
+   * @returns The encoded composable compatible call
+   */
+  const encodeExecuteComposable = async (
+    calls: ComposableCall[]
+  ): Promise<Hex> => {
+    const composableCalls: BaseComposableCall[] = calls.map((call) => {
+      return {
+        to: call.to,
+        value: call.value,
+        functionSig: call.functionSig,
+        inputParams: call.inputParams,
+        outputParams: call.outputParams
+      }
+    })
+
+    return encodeFunctionData({
+      abi: COMPOSABILITY_MODULE_ABI,
+      functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
+      args: [composableCalls] // Multiple composable calls can be batched here.
+    })
+  }
+
+  /**
    * @description Gets the nonce for the account
    * @param parameters - Optional parameters for getting the nonce
    * @returns The nonce
@@ -530,6 +558,7 @@ export const toNexusAccount = async (
     ])
 
     const accountIsDeployed = await isDeployed()
+    console.log({ accountIsDeployed })
     return accountIsDeployed ? signature : erc6492Signature
   }
 
@@ -665,6 +694,7 @@ export const toNexusAccount = async (
       getInitCode,
       encodeExecute,
       encodeExecuteBatch,
+      encodeExecuteComposable,
       getUserOpHash,
       factoryData,
       factoryAddress,
