@@ -116,7 +116,7 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log('MEE Scan link One: ', getMeeScanLink(hashOne));
+    console.log("MEE Scan link One: ", getMeeScanLink(hashOne))
 
     const { transactionStatus: transactionStatusOne } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
@@ -166,7 +166,7 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log('MEE Scan link Two: ', getMeeScanLink(hashTwo));
+    console.log("MEE Scan link Two: ", getMeeScanLink(hashTwo))
 
     const { transactionStatus: transactionStatusTwo } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
@@ -194,7 +194,7 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log('MEE Scan link One: ', getMeeScanLink(hashOne));
+    console.log("MEE Scan link One: ", getMeeScanLink(hashOne))
 
     const { transactionStatus: transactionStatusOne } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
@@ -241,7 +241,7 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    console.log('MEE Scan link One: ', getMeeScanLink(hashOne));
+    console.log("MEE Scan link One: ", getMeeScanLink(hashOne))
 
     const { transactionStatus: transactionStatusTwo } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
