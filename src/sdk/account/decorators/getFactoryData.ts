@@ -8,7 +8,10 @@ import {
   toHex
 } from "viem"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
-import type { GenericModuleConfig } from "../toNexusAccount"
+import type {
+  GenericModuleConfig,
+  PrevalidationHookModuleConfig
+} from "../toNexusAccount"
 
 export type GetFactoryDataParams = {
   /** Hex string of the validator init data */
@@ -38,13 +41,13 @@ export type ModuleConfig = {
 }
 
 export type GetInitDataParams = {
+  defaultValidator: GenericModuleConfig
+  prevalidationHooks: PrevalidationHookModuleConfig[]
   validators: GenericModuleConfig[]
   executors: GenericModuleConfig[]
   hook: GenericModuleConfig
   fallbacks: GenericModuleConfig[]
   registryAddress: Address
-  attesters: Address[]
-  attesterThreshold: number
   bootStrapAddress: Address
 }
 
@@ -58,15 +61,14 @@ export const getInitData = (params: GetInitDataParams): Hex =>
       params.bootStrapAddress,
       encodeFunctionData({
         abi: NexusBootstrapAbi,
-        functionName: "initNexus",
+        functionName: "initNexusWithDefaultValidatorAndOtherModulesNoRegistry",
         args: [
+          params.defaultValidator.data,
           params.validators,
           params.executors,
           params.hook,
           params.fallbacks,
-          params.registryAddress,
-          params.attesters,
-          params.attesterThreshold
+          params.prevalidationHooks
         ]
       })
     ]

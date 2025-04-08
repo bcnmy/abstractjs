@@ -52,7 +52,7 @@ describe("bico.bundler", async () => {
       bundlerUrl,
       account: nexusAccount
     })
-    nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
+    nexusAccountAddress = await nexusAccount.getAddress()
     await topUp(testClient, nexusAccountAddress)
   })
 

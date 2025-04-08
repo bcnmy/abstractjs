@@ -10,6 +10,8 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
+  type PublicClient,
+  createPublicClient,
   parseEther
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
@@ -21,6 +23,7 @@ import {
 } from "../../../clients/createBicoBundlerClient"
 import { getSudoPolicy } from "../../../constants"
 import { smartSessionActions } from "./decorators"
+import type { GrantPermissionResponse } from "./decorators/grantPermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
 
 describe("modules.toSmartSessionsModule", () => {
@@ -35,7 +38,8 @@ describe("modules.toSmartSessionsModule", () => {
   let nexusClient: NexusClient
   let nexusAccountAddress: Address
   let nexusAccount: NexusAccount
-  let sessionDetails: string
+  let sessionDetails: GrantPermissionResponse
+  let publicClient: PublicClient
 
   beforeAll(async () => {
     ecosystem = await toEcosystem()
@@ -45,6 +49,11 @@ describe("modules.toSmartSessionsModule", () => {
     eoaAccount = getTestAccount(0)
     redeemerAccount = getTestAccount(1)
     redeemerAddress = redeemerAccount.address
+
+    publicClient = createPublicClient({
+      chain,
+      transport: http(infra.network.rpcUrl)
+    })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,

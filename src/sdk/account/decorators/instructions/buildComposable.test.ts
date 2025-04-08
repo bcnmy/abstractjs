@@ -9,7 +9,8 @@ import {
   erc20Abi,
   fromBytes,
   parseUnits,
-  toBytes
+  toBytes,
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
@@ -96,7 +97,7 @@ describe("mee.buildComposable", () => {
   )
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for static args", async () => {
+  it("should batch execute composable transaction with getQuotes (Without fusion)", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -105,13 +106,44 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply]
+    const { hash: hashOne } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [
+          {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
     })
 
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const { transactionStatus: transactionStatusOne } =
+      await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
+    expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
+    })
+
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFunds",
@@ -119,13 +151,269 @@ describe("mee.buildComposable", () => {
           eoaAccount.address,
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: testnetMcUSDC.addressOn(chain.id),
-            constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
+            tokenAddress: testnetMcUSDC.addressOn(chain.id)
           })
         ],
         chainId: chain.id
       }
-    )
+    })
+
+    const batchedInstructions = await mcNexus.buildComposable({
+      type: "batch",
+      data: {
+        instructions: [...transferInstruction, ...instructions]
+      }
+    })
+
+    const { hash: hashTwo } = await meeClient.executeQuote({
+      quote: await meeClient.getQuote({
+        instructions: batchedInstructions,
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus: transactionStatusTwo } =
+      await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
+    expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
+  })
+
+  // Skipping this just because this file takes a long time to run.
+  it("should execute composable transaction with getQuotes (Without fusion)", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const { hash: hashOne } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [
+          {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus: transactionStatusOne } =
+      await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
+    expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
+    })
+
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id)
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash: hashTwo } = await meeClient.executeQuote({
+      quote: await meeClient.getQuote({
+        instructions: [
+          ...transferInstruction,
+          ...instructions,
+          ...instructions
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus: transactionStatusTwo } =
+      await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
+    expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
+  })
+
+  // Skipping this just because this file takes a long time to run.
+  it("should execute manually batched composable transaction", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
+    })
+
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id)
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [
+          ...transferInstruction,
+          ...instructions,
+          ...instructions
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+  })
+
+  // Skipping this just because this file takes a long time to run.
+  it("should execute batched composable transaction", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
+    })
+
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id)
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const batchedInstructions = await mcNexus.buildComposable({
+      type: "batch",
+      data: {
+        instructions: [...transferInstruction, ...instructions, ...instructions]
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: batchedInstructions,
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+  })
+
+  // Skipping this just because this file takes a long time to run.
+  it("should execute composable transaction for static args", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
+    })
+
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress: testnetMcUSDC.addressOn(chain.id)
+          })
+        ],
+        chainId: chain.id
+      }
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -144,7 +432,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for struct args", async () => {
+  it("should execute composable transaction for struct args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -153,13 +441,19 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply]
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
     })
 
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithStruct",
@@ -176,7 +470,7 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -195,7 +489,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for dynamic array args", async () => {
+  it("should execute composable transaction for dynamic array args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -204,13 +498,19 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply]
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
     })
 
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithDynamicArray",
@@ -225,7 +525,7 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -244,7 +544,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for string args", async () => {
+  it("should execute composable transaction for string args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -253,13 +553,19 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply]
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
     })
 
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithString",
@@ -274,7 +580,7 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -293,7 +599,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for bytes args", async () => {
+  it("should execute composable transaction for bytes args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -302,13 +608,19 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply]
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
     })
 
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithBytes",
@@ -323,7 +635,7 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -342,7 +654,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for runtime arg inside dynamic array args", async () => {
+  it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -351,13 +663,19 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const transferInstruction = testnetMcUSDC.on(chain.id).transfer({
-      args: [runtimeTransferAddress, amountToSupply]
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
     })
 
-    const instructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: runtimeTransferAddress,
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithRuntimeParamInsideArray",
@@ -373,7 +691,7 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
@@ -392,7 +710,7 @@ describe("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for uniswap args", async () => {
+  it("should execute composable transaction for uniswap args", async () => {
     const fusionToken = getMultichainContract<typeof erc20Abi>({
       abi: erc20Abi,
       deployments: [
@@ -403,7 +721,7 @@ describe("mee.buildComposable", () => {
     const inToken = testnetMcUSDC
     const outToken = fusionToken
 
-    const amount = parseUnits("0.2", 6)
+    const amount = parseUnits("0.1", 6)
 
     const trigger = {
       chainId: chain.id,
@@ -411,9 +729,9 @@ describe("mee.buildComposable", () => {
       amount: amount
     }
 
-    const approveInstructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const approveInstructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: inToken.addressOn(chain.id),
         abi: erc20Abi,
         functionName: "approve",
@@ -426,11 +744,11 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
-    const swapInstructions: Instruction[] = await buildComposable(
-      { account: mcNexus },
-      {
+    const swapInstructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
         to: testnetMcUniswapSwapRouter.addressOn(chain.id),
         abi: UniswapSwapRouterAbi,
         functionName: "exactInputSingle",
@@ -450,7 +768,7 @@ describe("mee.buildComposable", () => {
         ],
         chainId: chain.id
       }
-    )
+    })
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({

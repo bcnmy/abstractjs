@@ -1,17 +1,9 @@
 import {
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode,
-  encodeSmartSessionSignature,
-  type getEnableSessionDetails
+  encodeSmartSessionSignature
 } from "@rhinestone/module-sdk"
-import type {
-  Chain,
-  Client,
-  Hash,
-  Prettify,
-  PublicClient,
-  Transport
-} from "viem"
+import type { Chain, Client, Hash, PublicClient, Transport } from "viem"
 import {
   prepareUserOperation,
   sendUserOperation
@@ -19,7 +11,7 @@ import {
 import type { Call } from "../../../../account/utils"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import type { AnyData, ModularSmartAccount } from "../../../utils/Types"
-import { parse } from "../Helpers"
+import type { GrantPermissionResponse } from "./grantPermission"
 
 export type UsePermissionParameters<
   TModularSmartAccount extends ModularSmartAccount | undefined
@@ -27,7 +19,7 @@ export type UsePermissionParameters<
   /** Additional calls to be included in the user operation. */
   calls: Call[]
   /** Data string returned from grantPermission. Could be stored in local storage or a database. */
-  sessionDetails: string
+  sessionDetails: GrantPermissionResponse
   /** Mode. ENABLE the first time, or USE when > 1 time. */
   mode: "ENABLE_AND_USE" | "USE"
   /** Verification gas limit. */
@@ -45,13 +37,8 @@ export type UsePermissionParameters<
   /** The modular smart account to create sessions for. If not provided, the client's account will be used. */
   account?: TModularSmartAccount
 } & { account?: TModularSmartAccount }
-export type UsePermissionResponse = string
-export type SessionDetails = Prettify<
-  Omit<
-    Awaited<ReturnType<typeof getEnableSessionDetails>>,
-    "permissionEnableHash"
-  >
->
+
+export type UsePermissionResponse = GrantPermissionResponse
 
 export async function usePermission<
   TModularSmartAccount extends ModularSmartAccount | undefined
@@ -61,7 +48,7 @@ export async function usePermission<
 ): Promise<Hash> {
   const {
     account: nexusAccount = nexusClient.account,
-    sessionDetails: stringifiedSessionDetails,
+    sessionDetails: sessionDetails_,
     nonce: nonce_,
     mode: mode_,
     ...rest
@@ -76,9 +63,9 @@ export async function usePermission<
       : SmartSessionMode.USE
 
   const sessionDetails = {
-    ...parse(stringifiedSessionDetails),
+    ...sessionDetails_,
     mode
-  } as SessionDetails
+  }
 
   if (!chainId) {
     throw new Error("Chain ID is not set")

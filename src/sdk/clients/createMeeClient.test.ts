@@ -17,7 +17,6 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../account/utils/getMultichainContract"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
@@ -227,6 +226,8 @@ describe("mee.createMeeClient", async () => {
         mcNexus.signer.address,
         mcAUSDC.addressOn(targetChain.id)
       )
+
+      console.log("")
 
       const trigger = {
         chainId: paymentChain.id,

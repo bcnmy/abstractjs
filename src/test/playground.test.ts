@@ -1,4 +1,3 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type Address,
@@ -9,10 +8,12 @@ import {
   type WalletClient,
   createPublicClient,
   createWalletClient,
-  encodeFunctionData,
   parseEther
 } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+import { base, optimism, polygon } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
+import { toMultichainNexusAccount } from "../sdk/account"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
 import {
@@ -25,15 +26,10 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { SmartSessionMode } from "../sdk/constants"
-import type {
-  CreateSessionDataParams,
-  SessionData
-} from "../sdk/modules/validators/smartSessions/Types"
-import { toSmartSessionsModule } from "../sdk/modules/validators/smartSessions/toSmartSessionsModule"
-import { CounterAbi } from "./__contracts/abi/CounterAbi"
 import { toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
+
+const index = 0n
 
 describe.skipIf(!playgroundTrue())("playground", () => {
   let network: NetworkConfig
@@ -65,7 +61,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     paymasterUrl = network.paymasterUrl
     eoaAccount = network.account as PrivateKeyAccount
 
-    recipientAddress = eoaAccount.address
+    recipientAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 
     walletClient = createWalletClient({
       account: eoaAccount,
@@ -93,7 +89,8 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http()
+        transport: http(),
+        index
       }),
       transport: http(bundlerUrl),
       ...(paymasterParams ? paymasterParams : {})
@@ -101,7 +98,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   })
 
   test("should log relevant addresses", async () => {
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
     console.log({ nexusAccountAddress })
   })
 
@@ -114,8 +111,6 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         address: nexusAccountAddress
       })
     ])
-
-    console.log({ ownerBalance, smartAccountBalance })
 
     const balancesAreOfCorrectType = [ownerBalance, smartAccountBalance].every(
       (balance) => typeof balance === "bigint"
@@ -130,12 +125,8 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
       expect(receipt.status).toBe("success")
       const [ownerBalanceTwo, smartAccountBalanceTwo] = await Promise.all([
-        publicClient.getBalance({
-          address: eoaAccount.address
-        }),
-        publicClient.getBalance({
-          address: nexusAccountAddress
-        })
+        publicClient.getBalance({ address: eoaAccount.address }),
+        publicClient.getBalance({ address: nexusAccountAddress })
       ])
       console.log({ ownerBalanceTwo, smartAccountBalanceTwo })
     }
@@ -146,23 +137,18 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     const balanceBefore = await publicClient.getBalance({
       address: recipientAddress
     })
-    const hash = await nexusClient.sendTransaction({
-      calls: [
-        {
-          to: recipientAddress,
-          value: 1n
-        }
-      ]
+    const hash = await nexusClient.sendUserOperation({
+      calls: [{ to: recipientAddress, value: 1n }]
     })
-    const { status } = await publicClient.waitForTransactionReceipt({ hash })
+    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
     const balanceAfter = await publicClient.getBalance({
       address: recipientAddress
     })
-    expect(status).toBe("success")
+    expect(success).toBe("true")
     expect(balanceAfter - balanceBefore).toBe(1n)
   })
 
-  test("should send a user operation using nexusClient.sendUserOperation", async () => {
+  test.skip("should send a user operation using nexusClient.sendUserOperation", async () => {
     const balanceBefore = await publicClient.getBalance({
       address: recipientAddress
     })

@@ -10,10 +10,6 @@ import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
-import {
-  BICONOMY_ATTESTER_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
-} from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import {
   type MultichainSmartAccount,

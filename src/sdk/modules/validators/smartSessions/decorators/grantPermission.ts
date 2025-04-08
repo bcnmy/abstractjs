@@ -10,20 +10,20 @@ import {
   getEnableSessionDetails,
   getOwnableValidatorMockSignature
 } from "@rhinestone/module-sdk"
-import type {
-  Address,
-  Chain,
-  Client,
-  Hex,
-  Prettify,
-  PublicClient,
-  RequiredBy,
-  Transport
+import {
+  type Address,
+  type Chain,
+  type Client,
+  type Hex,
+  type Prettify,
+  type PublicClient,
+  type RequiredBy,
+  type Transport,
+  zeroAddress
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
-import { MEE_VALIDATOR_ADDRESS } from "../../../../constants"
 import type { ModularSmartAccount } from "../../../utils/Types"
-import { generateSalt, stringify } from "../Helpers"
+import { generateSalt } from "../Helpers"
 
 export type PrettifiedSession = {
   // The optional address of the validator that will be used to validate the session. Default is the ownable validator.
@@ -59,7 +59,12 @@ export type GrantPermissionParameters<
 >
 
 // The session details in stringified format.
-export type GrantPermissionResponse = string
+export type GrantPermissionResponse = Prettify<
+  Omit<
+    Awaited<ReturnType<typeof getEnableSessionDetails>>,
+    "permissionEnableHash"
+  >
+>
 
 export async function grantPermission<
   TModularSmartAccount extends ModularSmartAccount | undefined
@@ -109,12 +114,13 @@ export async function grantPermission<
     address: await nexusAccount.getAddress(),
     type: "nexus"
   })
+
   const sessionDetailsWithPermissionEnableHash = await getEnableSessionDetails({
     enableMode: SmartSessionMode.UNSAFE_ENABLE,
     sessions: [session],
     account: nexusAccountForRhinestone,
     clients: [publicClient],
-    enableValidatorAddress: MEE_VALIDATOR_ADDRESS,
+    enableValidatorAddress: zeroAddress, // default validator
     ignoreSecurityAttestations: true
   })
 
@@ -128,5 +134,5 @@ export async function grantPermission<
     await signer.signMessage({ message: { raw: permissionEnableHash } })
 
   sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
-  return stringify(sessionDetails)
+  return sessionDetails
 }
