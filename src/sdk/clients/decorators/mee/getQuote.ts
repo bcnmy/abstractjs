@@ -360,11 +360,8 @@ export const getQuote = async (
         deployment.getInitCode(),
         deployment.address,
         userOp.calls
-          .map(
-            (uo: AbstractCall | ComposableCall) =>
-              uo?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
-          )
-          .reduce((curr, acc) => curr + acc, 0n)
+          .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
+          .reduce((curr, acc) => curr + acc)
           .toString(),
         userOp.chainId.toString()
       ])
