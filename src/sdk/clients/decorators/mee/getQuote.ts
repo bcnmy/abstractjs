@@ -121,9 +121,14 @@ export type GetQuoteParams = SupertransactionLike & {
    * Upper bound execution timestamp to be applied to all user operations
    */
   upperBoundTimestamp?: number
+  /**
+   * Whether to delegate the transaction to the account using EIP-7702
+   */
+  delegate?: boolean
 }
 
 export type Eip7702Auth = {
+  chainId: Hex
   address: Hex
   signature: Hex
   nonce: Hex
@@ -174,6 +179,8 @@ export type PaymentInfo = {
   nonce: string
   /** Chain ID where the payment will be processed */
   chainId: string
+  /** EIP7702Auth */
+  eip7702Auth?: Eip7702Auth
 }
 
 /**
@@ -252,6 +259,8 @@ export type GetQuotePayload = {
   userOps: MeeFilledUserOpDetails[]
 }
 
+export type InitData = { eip7702Auth: Eip7702Auth } | { initCode: Hex }
+
 /**
  * Requests a quote from the MEE service for executing a set of instructions.
  * This function handles the complexity of creating a supertransaction quote
@@ -296,7 +305,8 @@ export const getQuote = async (
     eoa,
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
-      USEROP_MIN_EXEC_WINDOW_DURATION
+      USEROP_MIN_EXEC_WINDOW_DURATION,
+    delegate = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -304,14 +314,14 @@ export const getQuote = async (
 
   const validFeeToken =
     validPaymentAccount &&
-    client.info.supportedGasTokens
+    client.info.supported_gas_tokens
       .map(({ chainId }) => +chainId)
       .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
-      client.info.supportedChains
+      client.info.supported_chains
         .map(({ chainId }) => +chainId)
         .includes(userOp.chainId)
   )
@@ -348,17 +358,23 @@ export const getQuote = async (
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
           .reduce((curr, acc) => curr + acc)
           .toString(),
-        userOp.chainId.toString()
+        userOp.chainId.toString(),
+        deployment
       ])
     })
   )
 
-  const initCodeDone: string[] = [feeToken.chainId.toString()]
+  const hasAlreadyProcessedInitData: string[] = [feeToken.chainId.toString()]
   const [nonce, isAccountDeployed, initCode] = await Promise.all([
     validPaymentAccount.getNonce(),
     validPaymentAccount.isDeployed(),
     validPaymentAccount.getInitCode()
   ])
+
+  // Do authorization only if required as it requires signing
+  const initData: InitData = delegate
+    ? { eip7702Auth: await validPaymentAccount.authorize() }
+    : { initCode }
 
   const paymentInfo: PaymentInfo = {
     sender: validPaymentAccount.address,
@@ -366,39 +382,45 @@ export const getQuote = async (
     nonce: nonce.toString(),
     chainId: feeToken.chainId.toString(),
     ...(eoa ? { eoa } : {}),
-    ...(!isAccountDeployed && initCode ? { initCode } : {})
+    ...(!isAccountDeployed ? initData : {})
   }
 
-  const userOps = userOpResults.map(
-    ([
-      callData,
-      nonce_,
-      isAccountDeployed,
-      initCode,
-      sender,
-      callGasLimit,
-      chainId
-    ]) => {
-      const shouldContainInitCode =
-        !initCodeDone.includes(chainId) && !isAccountDeployed && initCode
-      if (shouldContainInitCode) {
-        initCodeDone.push(chainId)
-      }
-      return {
-        lowerBoundTimestamp: lowerBoundTimestamp_,
-        upperBoundTimestamp: upperBoundTimestamp_,
-        sender,
+  const userOps = await Promise.all(
+    userOpResults.map(
+      async ([
         callData,
+        nonce_,
+        isAccountDeployed,
+        initCode,
+        sender,
         callGasLimit,
-        nonce: nonce_.toString(),
         chainId,
-        ...(shouldContainInitCode && { initCode })
+        nexusAccount
+      ]) => {
+        let initDataForUserOp: InitData = {} as InitData
+        const shouldContainInitData =
+          !isAccountDeployed && !hasAlreadyProcessedInitData.includes(chainId)
+        if (shouldContainInitData) {
+          hasAlreadyProcessedInitData.push(chainId)
+          initDataForUserOp = delegate
+            ? { eip7702Auth: await nexusAccount.authorize() }
+            : { initCode }
+        }
+        return {
+          lowerBoundTimestamp: lowerBoundTimestamp_,
+          upperBoundTimestamp: upperBoundTimestamp_,
+          sender,
+          callData,
+          callGasLimit,
+          nonce: nonce_.toString(),
+          chainId,
+          ...initDataForUserOp
+        }
       }
-    }
+    )
   )
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
-
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 

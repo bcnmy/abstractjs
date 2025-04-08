@@ -29,6 +29,7 @@ import {
   parseAbi,
   parseAbiParameters,
   publicActions,
+  serializeSignature,
   toBytes,
   toHex,
   validateTypedData,
@@ -42,11 +43,14 @@ import {
   getUserOperationHash,
   toSmartAccount
 } from "viem/account-abstraction"
-
+import { sepolia } from "viem/chains"
+import { type Eip7702Actions, eip7702Actions } from "viem/experimental"
+import type { Eip7702Auth } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
   NEXUS_ACCOUNT_FACTORY_ADDRESS,
-  NEXUS_BOOTSTRAP_ADDRESS
+  NEXUS_BOOTSTRAP_ADDRESS,
+  NEXUS_IMPLEMENTATION_ADDRESS
 } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
@@ -129,6 +133,8 @@ export type ToNexusSmartAccountParameters = {
   factoryAddress?: Address
   /** Optional bootstrap address */
   bootStrapAddress?: Address
+  /** Optional implementation address */
+  implementationAddress?: Address
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -186,7 +192,13 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     publicClient: PublicClient
 
     /** The wallet client instance */
-    walletClient: WalletClient
+    walletClient: WalletClient<
+      Transport,
+      Chain | undefined,
+      Account,
+      RpcSchema
+    > &
+      Eip7702Actions<Account>
 
     /** The blockchain network */
     chain: Chain
@@ -196,6 +208,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Set the active module */
     setModule: (validationModule: Validator) => void
+
+    /** Authorize eoa to Nexus Account */
+    authorize: () => Promise<Eip7702Auth>
   }
 >
 
@@ -234,17 +249,22 @@ export const toNexusAccount = async (
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
     factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS
+    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
+    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS
   } = parameters
 
   const signer = await toSigner({ signer: _signer })
+
   const walletClient = createWalletClient({
     account: signer,
     chain,
     transport,
     key,
     name
-  }).extend(publicActions)
+  })
+    .extend(publicActions)
+    .extend(eip7702Actions())
+
   const publicClient = createPublicClient({ chain, transport })
 
   const entryPointContract = getContract({
@@ -331,6 +351,39 @@ export const toNexusAccount = async (
     return (contractCode?.length ?? 0) > 2
   }
 
+  /** Authorize eoa to Nexus Account
+   * @returns Eip7702Auth
+   *
+   * @example
+   * const eip7702Auth = await nexusAccount.authorize()
+   *
+   */
+  const authorize = async (): Promise<Eip7702Auth> => {
+    const eoaNonce = await publicClient.getTransactionCount({
+      address: signer.address
+    })
+    const authorization = await walletClient.signAuthorization({
+      contractAddress: implementationAddress,
+      nonce: eoaNonce
+    })
+
+    return {
+      chainId: `0x${sepolia.id.toString(16)}`,
+      address: implementationAddress,
+      nonce: `0x${authorization.nonce.toString(16)}`,
+      r: authorization.r,
+      s: authorization.s,
+      v: `0x${authorization.v!.toString(16)}`,
+      yParity: `0x${authorization.yParity!.toString(16)}`,
+      signature: serializeSignature({
+        r: authorization.r,
+        s: authorization.s,
+        v: authorization.v!,
+        yParity: authorization.yParity
+      })
+    }
+  }
+
   /**
    * @description Calculates the hash of a user operation
    * @param userOp - The user operation
@@ -413,29 +466,28 @@ export const toNexusAccount = async (
    */
   const getNonce = async (parameters?: {
     key?: bigint
-    validationMode?: "0x00" | "0x01"
+    validationMode?: "0x00" | "0x01" | "0x02"
     moduleAddress?: Address
   }): Promise<bigint> => {
+    const TIMESTAMP_ADJUSTMENT = 16777215n
+    const {
+      key: key_ = 0n,
+      validationMode = "0x00",
+      moduleAddress = module.module
+    } = parameters ?? {}
+
     try {
-      // Example usage
-      const randomHex = generateRandomBytes()
-      console.log(randomHex) // e.g. "a4f01b"
-
-      const key = concatHex([
-        randomHex as Hex,
-        "0x020000000000000000000000000000000000000000" // prep
+      const adjustedKey = BigInt(key_) % TIMESTAMP_ADJUSTMENT
+      const key: string = concat([
+        toHex(adjustedKey, { size: 3 }),
+        validationMode,
+        moduleAddress
       ])
-
-      console.log("key:", key)
-
-      const sequentialNonce = await entryPointContract.read.getNonce([
-        "0xD558E0853896f06E30752A1071530e8eF85D61C1", // getAddress()
+      const accountAddress = await getAddress()
+      return await entryPointContract.read.getNonce([
+        accountAddress,
         BigInt(key)
       ])
-
-      console.log("final nonce:", sequentialNonce.toString(16))
-
-      return sequentialNonce
     } catch (e) {
       return 0n
     }
@@ -478,7 +530,6 @@ export const toNexusAccount = async (
     ])
 
     const accountIsDeployed = await isDeployed()
-    console.log({ accountIsDeployed })
     return accountIsDeployed ? signature : erc6492Signature
   }
 
@@ -623,7 +674,8 @@ export const toNexusAccount = async (
       publicClient,
       chain,
       setModule,
-      getModule: () => module
+      getModule: () => module,
+      authorize
     }
   })
 }

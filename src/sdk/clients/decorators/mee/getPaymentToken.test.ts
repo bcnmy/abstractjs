@@ -44,19 +44,19 @@ describe("mee.getPaymentToken", () => {
   test("should get info from meeNode", async () => {
     const info = await getInfo(meeClient)
 
-    const supportedChains = info.supportedChains.flatMap(({ chainId }) =>
+    const supportedChains = info.supported_chains.flatMap(({ chainId }) =>
       Number(chainId)
     )
 
-    const tokenSymbols = info.supportedGasTokens.flatMap(({ paymentTokens }) =>
-      paymentTokens.map(({ symbol }) => symbol)
+    const tokenSymbols = info.supported_gas_tokens.flatMap(
+      ({ paymentTokens }) => paymentTokens.map(({ symbol }) => symbol)
     )
 
     expect(supportedChains.length).toBeGreaterThan(0)
     expect(supportedChains).toContain(paymentChain.id)
     expect(supportedChains).toContain(targetChain.id)
 
-    expect(info.supportedGasTokens.length).toBeGreaterThan(0)
+    expect(info.supported_gas_tokens.length).toBeGreaterThan(0)
 
     expect(tokenSymbols).toContain("USDC")
   })

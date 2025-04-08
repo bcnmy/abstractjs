@@ -19,12 +19,12 @@ export type GetInfoPayload = {
   /**
    * List of supported blockchain chains
    */
-  supportedChains: SupportedChain[]
+  supported_chains: SupportedChain[]
   /**
    * List of supported gas tokens per chain
    * @see {@link GetGasTokenPayload}
    */
-  supportedGasTokens: GetGasTokenPayload[]
+  supported_gas_tokens: GetGasTokenPayload[]
   /**
    * List of supported wallet providers and their capabilities
    */
