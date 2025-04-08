@@ -15,7 +15,7 @@ import {
 import { beforeAll, describe, expect, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { toNetwork } from "../../../../test/testSetup"
-import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MeeClient,
   createMeeClient
