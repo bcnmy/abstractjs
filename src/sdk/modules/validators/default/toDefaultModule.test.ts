@@ -64,7 +64,7 @@ describe("modules.toDefaultModule", () => {
     })
   })
   afterAll(async () => {
-    await killNetwork([infra.network.rpcPort, infra.bundler.port])
+    await killNetwork([infra?.network?.rpcPort, infra?.bundler?.port])
   })
 
   test("should have a consistent snapshot", async () => {

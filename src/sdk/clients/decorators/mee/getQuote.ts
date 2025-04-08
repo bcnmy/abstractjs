@@ -368,27 +368,7 @@ export const getQuote = async (
     })
   )
 
-  const userOps = userOpResults.map(
-    ([
-      callData,
-      nonce_,
-      isAccountDeployed,
-      initCode,
-      sender,
-      callGasLimit,
-      chainId
-    ]) => ({
-      lowerBoundTimestamp: lowerBoundTimestamp_,
-      upperBoundTimestamp: upperBoundTimestamp_,
-      sender,
-      callData,
-      callGasLimit,
-      nonce: nonce_.toString(),
-      chainId,
-      ...(!isAccountDeployed && initCode ? { initCode } : {})
-    })
-  )
-
+  const initCodeDone: string[] = [feeToken.chainId.toString()]
   const [nonce, isAccountDeployed, initCode] = await Promise.all([
     validPaymentAccount.getNonce(),
     validPaymentAccount.isDeployed(),
@@ -403,6 +383,34 @@ export const getQuote = async (
     ...(eoa ? { eoa } : {}),
     ...(!isAccountDeployed && initCode ? { initCode } : {})
   }
+
+  const userOps = userOpResults.map(
+    ([
+      callData,
+      nonce_,
+      isAccountDeployed,
+      initCode,
+      sender,
+      callGasLimit,
+      chainId
+    ]) => {
+      const shouldContainInitCode =
+        !initCodeDone.includes(chainId) && !isAccountDeployed && initCode
+      if (shouldContainInitCode) {
+        initCodeDone.push(chainId)
+      }
+      return {
+        lowerBoundTimestamp: lowerBoundTimestamp_,
+        upperBoundTimestamp: upperBoundTimestamp_,
+        sender,
+        callData,
+        callGasLimit,
+        nonce: nonce_.toString(),
+        chainId,
+        ...(shouldContainInitCode && { initCode })
+      }
+    }
+  )
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 

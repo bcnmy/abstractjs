@@ -124,7 +124,7 @@ describe("utils.parseTransactionStatus", () => {
     const result = await parseTransactionStatus(userOps)
     expect(result.status).toBe("MINED_SUCCESS")
     expect(result.isFinalised).toBe(true)
-    expect(result.message).toBe("Transaction executed successfully")
+    expect(result.message).toBe("[0] Transaction executed successfully")
   })
 
   test("should return SUCCESS for legacy status handling with finalised=false", async () => {
@@ -154,7 +154,7 @@ describe("utils.parseTransactionStatus", () => {
     expect(result.status).toBe("MINING")
     expect(result.isFinalised).toBe(false)
     expect(result.message).toBe(
-      "Transaction is mining, waiting for blockchain confirmation"
+      "[1] Transaction is mining, waiting for blockchain confirmation"
     )
   })
 
@@ -215,7 +215,7 @@ describe("utils.parseTransactionStatus", () => {
     expect(result.status).toBe("MINING")
     expect(result.isFinalised).toBe(false)
     expect(result.message).toContain(
-      "Transaction is mining, waiting for blockchain confirmation"
+      "[0] Transaction is mining, waiting for blockchain confirmation"
     )
   })
 
