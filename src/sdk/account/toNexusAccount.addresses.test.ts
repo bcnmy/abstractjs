@@ -83,7 +83,7 @@ describe("nexus.account.addresses", async () => {
 
     const accountAddress = await newNexusClient.account.getAddress()
     const someoneElseCounterfactualAddress =
-      await newNexusClient.account.getCounterFactualAddress()
+      await newNexusClient.account.getAddress()
     expect(newNexusClient.account.address).toBe(
       someoneElseCounterfactualAddress
     )

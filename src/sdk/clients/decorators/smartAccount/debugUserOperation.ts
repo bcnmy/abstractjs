@@ -2,22 +2,23 @@ import type { BaseError, Chain, Client, Hex, Transport } from "viem"
 import {
   type FormatUserOperationRequestErrorType,
   type PrepareUserOperationErrorType,
-  type PrepareUserOperationParameters,
   type SendUserOperationParameters,
   type SmartAccount,
   type UserOperation,
   formatUserOperationRequest,
   getUserOperationError,
-  prepareUserOperation,
   toPackedUserOperation
 } from "viem/account-abstraction"
 import { parseAccount } from "viem/accounts"
-import { type RequestErrorType, getAction } from "viem/utils"
+import type { RequestErrorType } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import { parseRequestArguments } from "../../../account/utils/Utils"
 import { deepHexlify } from "../../../account/utils/deepHexlify"
 import { getAAError } from "../../../account/utils/getAAError"
-import { tenderlySimulation } from "../../../account/utils/tenderlySimulation"
+import {
+  DUMMY_SIMULATION_GAS,
+  tenderlySimulation
+} from "../../../account/utils/tenderlySimulation"
 import type { AnyData } from "../../../modules/utils/Types"
 export type DebugUserOperationParameters = SendUserOperationParameters
 export type DebugUserOperationReturnType = Hex
@@ -68,13 +69,23 @@ export async function debugUserOperation<
     if (!account_ && !parameters.sender) throw new AccountNotFoundError()
     const account = account_ ? parseAccount(account_) : undefined
 
-    const request = account
-      ? await getAction(
-          client,
-          prepareUserOperation,
-          "prepareUserOperation"
-        )(parameters as unknown as PrepareUserOperationParameters)
-      : parameters
+    // @ts-ignore
+    const callData = await account?.encodeCalls(parameters?.calls)
+    // @ts-ignore
+    const sender = await account?.getAddress()
+    // @ts-ignore
+    const nonce = await account?.getNonce()
+    // @ts-ignore
+    const factoryArgs = await account?.getFactoryArgs()
+
+    const request = {
+      sender,
+      callData,
+      nonce,
+      ...factoryArgs,
+      ...parameters,
+      ...DUMMY_SIMULATION_GAS
+    }
 
     const signature = (parameters.signature ||
       (await account?.signUserOperation(request as UserOperation)))!

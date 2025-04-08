@@ -1,4 +1,4 @@
-import { MEE_VALIDATOR_ADDRESS } from "../../../constants"
+import { zeroAddress } from "viem"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type Validator,
@@ -6,7 +6,7 @@ import {
   toValidator
 } from "../toValidator"
 
-export const toMeeModule = (
+export const toDefaultModule = (
   parameters: Omit<ValidatorParameters, "module" | "initData">
 ): Validator =>
   toValidator({
@@ -14,8 +14,8 @@ export const toMeeModule = (
     data: parameters.signer.address,
     deInitData: "0x",
     ...parameters,
-    address: MEE_VALIDATOR_ADDRESS,
-    module: MEE_VALIDATOR_ADDRESS,
+    address: zeroAddress,
+    module: zeroAddress,
     type: "validator",
     getStubSignature: async () => DUMMY_SIGNATURE
   })

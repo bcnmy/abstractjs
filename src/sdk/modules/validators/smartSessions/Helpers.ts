@@ -3,7 +3,6 @@ import {
   type AbiFunction,
   type Address,
   type Hex,
-  type PublicClient,
   getAddress,
   toBytes,
   toFunctionSelector,
@@ -13,10 +12,8 @@ import {
   type ActionData,
   OWNABLE_VALIDATOR_ADDRESS,
   type PolicyData,
-  REGISTRY_ADDRESS,
   encodeValidationData
 } from "../../../constants"
-import { ERC7484RegistryAbi } from "../../../constants/abi"
 import { parseReferenceValue } from "../../utils/Helpers"
 import type { AnyData } from "../../utils/Types"
 import type {
@@ -184,45 +181,6 @@ export function parse(data: string): Record<string, AnyData> {
     }
     return value
   })
-}
-
-// Todo
-// 1. find trusted attesters. why not just here instead of part of read decorators?
-// 2. get trusteAttesters calldata. or returning the whole "Action"/Execution
-
-/**
- * Retrieves the list of trusted attesters for a given account from the registry.
- *
- * This function queries the registry contract to find all attesters that are trusted
- * by the specified account.
- *
- * @param params - The parameters object
- * @param params.account - The account to check trusted attesters for
- * @param params.client - The public client used to interact with the blockchain
- * @returns A promise that resolves to an array of addresses representing the trusted attesters
- * @throws Will log error and return empty array if registry query fails
- */
-
-export const getTrustedAttesters = async ({
-  accountAddress,
-  client
-}: {
-  accountAddress: Address
-  client: PublicClient
-}): Promise<Address[]> => {
-  try {
-    const attesters = (await client.readContract({
-      address: REGISTRY_ADDRESS,
-      abi: ERC7484RegistryAbi,
-      functionName: "findTrustedAttesters",
-      args: [accountAddress]
-    })) as Address[]
-
-    return attesters
-  } catch (err) {
-    console.error(err)
-    return []
-  }
 }
 
 /**

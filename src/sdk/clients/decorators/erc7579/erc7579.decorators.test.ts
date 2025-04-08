@@ -1,4 +1,3 @@
-import { MEE_VALIDATOR_ADDRESS, MOCK_K1_VALIDATOR } from "@biconomy/ecosystem"
 import {
   http,
   type Account,
@@ -62,7 +61,7 @@ describe("erc7579.decorators", async () => {
       mock: true
     })
 
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
     await fundAndDeployClients(testClient, [nexusClient])
   })
 
@@ -89,14 +88,16 @@ describe("erc7579.decorators", async () => {
       nexusClient.isModuleInstalled({
         module: {
           type: "validator",
-          address: MEE_VALIDATOR_ADDRESS,
+          address: nexusClient.account.getModule().address,
           initData: "0x"
         }
       })
     ])
 
     expect(installedExecutors[0].length).toBeTypeOf("number")
-    expect(installedValidators[0]).toEqual([MEE_VALIDATOR_ADDRESS])
+    expect(installedValidators[0]).toEqual([
+      nexusClient.account.getModule().address
+    ])
     expect(isHex(activeHook)).toBe(true)
     expect(fallbackSelector.length).toBeTypeOf("number")
     expect(supportsValidator).toBe(true)
@@ -134,44 +135,5 @@ describe("erc7579.decorators", async () => {
         true,
       ]
     `)
-  })
-
-  test("should install a module", async () => {
-    const hash = await nexusClient.installModule({
-      module: {
-        type: "validator",
-        address: MOCK_K1_VALIDATOR,
-        initData: encodePacked(["address"], [eoaAccount.address])
-      }
-    })
-
-    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(success).toBe(true)
-  })
-
-  test.skip("should uninstall a module", async () => {
-    const hash = await nexusClient.uninstallModule({
-      module: {
-        type: "validator",
-        address: MOCK_K1_VALIDATOR,
-        initData: encodePacked(["address"], [eoaAccount.address])
-      }
-    })
-
-    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(success).toBe(true)
-  })
-
-  test.skip("should install it again", async () => {
-    const hash = await nexusClient.installModule({
-      module: {
-        type: "validator",
-        address: MOCK_K1_VALIDATOR,
-        initData: encodePacked(["address"], [eoaAccount.address])
-      }
-    })
-
-    const { success } = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(success).toBe(true)
   })
 })

@@ -31,7 +31,6 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
-import { K1_VALIDATOR_ADDRESS, MEE_VALIDATOR_ADDRESS } from "../constants"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -229,7 +228,7 @@ describe("nexus.client", async () => {
       nexusClient.isModuleInstalled({
         module: {
           type: "validator",
-          address: MEE_VALIDATOR_ADDRESS,
+          address: nexusClient.account.getModule().address,
           initData: "0x"
         }
       }),
@@ -241,7 +240,7 @@ describe("nexus.client", async () => {
       })
     ])
     expect(accountId.indexOf("biconomy.nexus") > -1).toBe(true)
-    expect(isModuleInstalled).toBe(true)
+    expect(isModuleInstalled).toBe(false)
     expect(supportsExecutionMode).toBe(true)
     expect(supportsModule).toBe(true)
   })

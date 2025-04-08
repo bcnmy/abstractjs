@@ -1,9 +1,4 @@
 import type { Hex } from "viem"
-import {
-  DEFAULT_CONFIGURATIONS_BY_VERSION,
-  EARLIEST_DEFAULT_ADDRESSES,
-  LATEST_DEFAULT_ADDRESSES
-} from "../../constants"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -183,8 +178,6 @@ export const isVersionNewer = (
 }
 
 export type AddressConfig = {
-  /** The attesters for the account */
-  attesters: Hex[]
   /** The factory address for the account */
   factoryAddress: Hex
   /** The bootstrap address for the account */
@@ -197,45 +190,4 @@ export type AddressConfig = {
   implementationAddress: Hex
   /** The execution module address for the account */
   executorAddress: Hex
-}
-/**
- * Returns the appropriate configuration based on the SDK version
- * @param version - The SDK version string (e.g., "0.2.0")
- * @returns The configuration containing attester and factory addresses
- * @throws Error if the version is not supported
- */
-export function getConfigFromVersion(oldVersion: string): AddressConfig {
-  // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
-  if (oldVersion in DEFAULT_CONFIGURATIONS_BY_VERSION) {
-    return DEFAULT_CONFIGURATIONS_BY_VERSION[oldVersion]
-  }
-
-  // If the version is not explicitly listed, find the closest compatible version
-  // Sort the available versions in descending order
-  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_VERSION).sort(
-    (a, b) => semverCompare(b, a)
-  )
-  // First check if the version is after the latest version...
-  if (isVersionNewer(oldVersion, allVersions[0])) {
-    return LATEST_DEFAULT_ADDRESSES
-  }
-  // Also check if it's before the earliest version, use the earliest version
-  if (isVersionOlder(oldVersion, allVersions[allVersions.length - 1])) {
-    return EARLIEST_DEFAULT_ADDRESSES
-  }
-
-  // Find the first version that is less than or equal to the requested version
-  for (const availableVersion of allVersions) {
-    // Then sort it through the available versions...
-    if (versionMeetsRequirement(oldVersion, availableVersion)) {
-      return DEFAULT_CONFIGURATIONS_BY_VERSION[availableVersion]
-    }
-  }
-
-  // If no compatible version is found, throw an error
-  throw new Error(
-    `Unsupported SDK version: ${oldVersion}. Compatible versions are: ${allVersions.join(
-      ", "
-    )}`
-  )
 }

@@ -56,7 +56,7 @@ describe("account.decorators", async () => {
       transport: http(bundlerUrl),
       mock: true
     })
-    nexusAccountAddress = await nexusClient.account.getCounterFactualAddress()
+    nexusAccountAddress = await nexusClient.account.getAddress()
     await fundAndDeployClients(testClient, [nexusClient])
   })
 

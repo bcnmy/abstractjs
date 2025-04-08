@@ -120,7 +120,7 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
         transport: http()
       })
 
-      nexusAccountAddress = await nexusAccount.getCounterFactualAddress()
+      nexusAccountAddress = await nexusAccount.getAddress()
 
       const balance = await publicClient.getBalance({
         address: nexusAccountAddress

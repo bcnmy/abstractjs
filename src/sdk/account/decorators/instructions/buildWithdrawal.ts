@@ -3,6 +3,7 @@ import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
+  type ComposableCall,
   isComposableCallRequired,
   isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
@@ -77,7 +78,8 @@ export type BuildWithdrawalParams = BaseInstructionsParams & {
  */
 export const buildWithdrawal = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildWithdrawalParameters
+  parameters: BuildWithdrawalParameters,
+  forceComposableEncoding = false
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], account } = baseParams
   const {
@@ -93,18 +95,20 @@ export const buildWithdrawal = async (
     "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
   )
 
-  let triggerCall: AbstractCall
+  let triggerCalls: AbstractCall[] | ComposableCall[]
 
   if (isNativeToken) {
     if (isRuntimeComposableValue(amount)) {
       throw new Error("Runtime balance is not supported for Native tokens")
     }
 
-    triggerCall = {
-      to: recipient,
-      value: amount as bigint,
-      ...(gasLimit ? { gasLimit } : {})
-    }
+    triggerCalls = [
+      {
+        to: recipient,
+        value: amount as bigint,
+        ...(gasLimit ? { gasLimit } : {})
+      }
+    ]
   } else {
     const abi = TokenWithPermitAbi
     const functionSig = "transfer"
@@ -116,10 +120,12 @@ export const buildWithdrawal = async (
     const functionContext = getFunctionContextFromAbi(functionSig, abi)
 
     // Check for the runtime arguments and detect the need for composable call
-    const isComposableCall = isComposableCallRequired(
-      functionContext,
-      args as unknown as Array<AnyData>
-    )
+    const isComposableCall = forceComposableEncoding
+      ? true
+      : isComposableCallRequired(
+          functionContext,
+          args as unknown as Array<AnyData>
+        )
 
     // If the composable call is detected ? The call needs to composed with runtime encoding
     if (isComposableCall) {
@@ -128,28 +134,29 @@ export const buildWithdrawal = async (
         functionName: functionSig,
         args: args as unknown as Array<AnyData>,
         abi,
-        chainId,
-        gasLimit
+        chainId
       }
 
-      triggerCall = await buildComposableCall(baseParams, composableCallParams)
+      triggerCalls = await buildComposableCall(baseParams, composableCallParams)
     } else {
-      triggerCall = {
-        to: tokenAddress,
-        data: encodeFunctionData({
-          abi,
-          functionName: functionSig,
-          args: args as [`0x${string}`, bigint]
-        }),
-        ...(gasLimit ? { gasLimit } : {})
-      }
+      triggerCalls = [
+        {
+          to: tokenAddress,
+          data: encodeFunctionData({
+            abi,
+            functionName: functionSig,
+            args: args as [`0x${string}`, bigint]
+          }),
+          ...(gasLimit ? { gasLimit } : {})
+        }
+      ] as AbstractCall[]
     }
   }
 
   return [
     ...currentInstructions,
     {
-      calls: [triggerCall],
+      calls: triggerCalls,
       chainId
     }
   ]

@@ -1,10 +1,6 @@
-import type {
-  Instruction,
-  InstructionLike
-} from "../../clients/decorators/mee/getQuote"
+import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
-import { resolveInstructions } from "./resolveInstructions"
 
 type BatchInstructionsParameters = {
   /**
@@ -12,13 +8,9 @@ type BatchInstructionsParameters = {
    */
   account: MultichainSmartAccount
   /**
-   * The first instruction to be executed.
-   */
-  triggerCall: InstructionLike
-  /**
    * The remaining instructions to be executed.
    */
-  instructions: InstructionLike[]
+  instructions: Instruction[]
 }
 
 /**
@@ -35,17 +27,13 @@ type BatchInstructionsParameters = {
 export const batchInstructions = async (
   parameters: BatchInstructionsParameters
 ): Promise<Instruction[]> => {
-  const { account, triggerCall, instructions } = parameters
-  const allInstructions = await resolveInstructions([
-    triggerCall,
-    ...instructions
-  ])
+  const { account, instructions } = parameters
 
   const result: Instruction[] = []
   let currentBatch: Instruction[] = []
   let currentChainId: string | null = null
 
-  for (const instruction of allInstructions) {
+  for (const instruction of instructions) {
     const chainId = String(instruction.chainId)
 
     if (currentChainId === null || chainId === currentChainId) {
