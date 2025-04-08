@@ -51,7 +51,7 @@ import {
 // Constants
 import { EntrypointAbi } from "../constants/abi"
 import { COMPOSABILITY_MODULE_ABI } from "../constants/abi/ComposabilityAbi"
-import type { BaseComposableCall, ComposableCall } from "../modules"
+import type { ComposableCall } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import type { Validator } from "../modules/validators/toValidator"
@@ -419,20 +419,10 @@ export const toNexusAccount = async (
   const encodeExecuteComposable = async (
     calls: ComposableCall[]
   ): Promise<Hex> => {
-    const composableCalls: BaseComposableCall[] = calls.map((call) => {
-      return {
-        to: call.to,
-        value: call.value,
-        functionSig: call.functionSig,
-        inputParams: call.inputParams,
-        outputParams: call.outputParams
-      }
-    })
-
     return encodeFunctionData({
       abi: COMPOSABILITY_MODULE_ABI,
       functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
-      args: [composableCalls] // Multiple composable calls can be batched here.
+      args: [calls] // Multiple composable calls can be batched here.
     })
   }
 

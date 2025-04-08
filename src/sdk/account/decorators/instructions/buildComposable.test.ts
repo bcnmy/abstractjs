@@ -9,7 +9,8 @@ import {
   erc20Abi,
   fromBytes,
   parseUnits,
-  toBytes
+  toBytes,
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
@@ -108,7 +109,17 @@ describe("mee.buildComposable", () => {
     const { hash: hashOne } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
-        instructions: [],
+        instructions: [
+          {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
         feeToken: {
           chainId: chain.id,
           address: testnetMcUSDC.addressOn(chain.id)
@@ -182,7 +193,17 @@ describe("mee.buildComposable", () => {
     const { hash: hashOne } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
-        instructions: [],
+        instructions: [
+          {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
         feeToken: {
           chainId: chain.id,
           address: testnetMcUSDC.addressOn(chain.id)

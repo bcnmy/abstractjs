@@ -67,12 +67,11 @@ export const buildBatch = async (
     ({ isComposable }) => isComposable === true
   )
 
-  // If any one instruction in a batch is composable, every other instructions should follow composable encoding.
   if (
     !resolvedInstructions.every((inx) => !!inx.isComposable === !!isComposable)
   ) {
     throw new Error(
-      `${isComposable ? "All the instructions must be built with buildComposable in order to support the runtime time parameters." : "All the instructions must be non composable when there are no runtime parameters"}`
+      `${isComposable ? "All instructions must be composable" : "All instructions must be non composable"}`
     )
   }
 
