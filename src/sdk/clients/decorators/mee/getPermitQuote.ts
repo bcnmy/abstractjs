@@ -1,4 +1,6 @@
+import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
+import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
@@ -78,15 +80,24 @@ export const getPermitQuote = async (
   const sender = account_.signer.address
   const recipient = account_.addressOn(trigger.chainId, true)
 
-  const triggerTransfer = account_.build({
+  const resolvedInstructions = await resolveInstructions(instructions)
+
+  const isComposable = resolvedInstructions.some(
+    ({ isComposable }) => isComposable
+  )
+
+  const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: { ...trigger, recipient, sender }
-  })
+  }
+
+  const triggerTransfer = await (isComposable
+    ? account_.buildComposable(params)
+    : account_.build(params))
 
   const batchedInstructions = await batchInstructions({
     account: account_,
-    triggerCall: triggerTransfer,
-    instructions
+    instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 
   const quote = await getQuote(client, {

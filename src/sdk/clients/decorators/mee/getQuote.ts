@@ -2,6 +2,7 @@ import type { Address, Hex, OneOf } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
+import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -46,12 +47,14 @@ export type FeeTokenInfo = {
  */
 export type Instruction = {
   /** Array of abstract calls to be executed in the transaction */
-  calls: AbstractCall[]
+  calls: AbstractCall[] | ComposableCall[]
   /**
    * Chain ID where the transaction will be executed
    * @example 1 // Ethereum Mainnet
    */
   chainId: number
+  /** Flag for composable call */
+  isComposable?: boolean
 }
 
 /**
@@ -336,17 +339,29 @@ export const getQuote = async (
   const userOpResults = await Promise.all(
     resolvedInstructions.map((userOp) => {
       const deployment = account_.deploymentOn(userOp.chainId, true)
+
+      let callsPromise: Promise<Hex>
+
+      if (userOp.isComposable) {
+        callsPromise = deployment.encodeExecuteComposable(
+          userOp.calls as ComposableCall[]
+        )
+      } else {
+        callsPromise =
+          userOp.calls.length > 1
+            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
+            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
+      }
+
       return Promise.all([
-        userOp.calls.length > 1
-          ? deployment.encodeExecuteBatch(userOp.calls)
-          : deployment.encodeExecute(userOp.calls[0]),
+        callsPromise,
         deployment.getNonce(),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
         userOp.calls
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
-          .reduce((curr, acc) => curr + acc)
+          .reduce((curr, acc) => curr + acc, 0n)
           .toString(),
         userOp.chainId.toString()
       ])

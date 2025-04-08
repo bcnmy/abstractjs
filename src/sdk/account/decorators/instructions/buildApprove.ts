@@ -1,7 +1,10 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import type { AnyData } from "../../../modules/utils/Types"
-import { isComposableCallRequired } from "../../../modules/utils/composabilityCalls"
+import {
+  type ComposableCall,
+  isComposableCallRequired
+} from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
   getFunctionContextFromAbi
@@ -73,7 +76,8 @@ export type BuildApproveParams = BaseInstructionsParams & {
  */
 export const buildApprove = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildApproveParameters
+  parameters: BuildApproveParameters,
+  forceComposableEncoding = false
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
@@ -88,12 +92,14 @@ export const buildApprove = async (
   const functionContext = getFunctionContextFromAbi(functionSig, abi)
 
   // Check for the runtime arguments and detect the need for composable call
-  const isComposableCall = isComposableCallRequired(
-    functionContext,
-    args as unknown as Array<AnyData>
-  )
+  const isComposableCall = forceComposableEncoding
+    ? true
+    : isComposableCallRequired(
+        functionContext,
+        args as unknown as Array<AnyData>
+      )
 
-  let triggerCall: AbstractCall
+  let triggerCalls: AbstractCall[] | ComposableCall[]
 
   // If the composable call is detected ? The call needs to composed with runtime encoding
   if (isComposableCall) {
@@ -106,24 +112,27 @@ export const buildApprove = async (
       gasLimit
     }
 
-    triggerCall = await buildComposableCall(baseParams, composableCallParams)
+    triggerCalls = await buildComposableCall(baseParams, composableCallParams)
   } else {
-    triggerCall = {
-      to: tokenAddress,
-      data: encodeFunctionData({
-        abi,
-        functionName: functionSig,
-        args: args as [`0x${string}`, bigint]
-      }),
-      ...(gasLimit ? { gasLimit } : {})
-    }
+    triggerCalls = [
+      {
+        to: tokenAddress,
+        data: encodeFunctionData({
+          abi,
+          functionName: functionSig,
+          args: args as [`0x${string}`, bigint]
+        }),
+        ...(gasLimit ? { gasLimit } : {})
+      }
+    ] as AbstractCall[]
   }
 
   return [
     ...currentInstructions,
     {
-      calls: [triggerCall],
-      chainId
+      calls: triggerCalls,
+      chainId,
+      isComposable: isComposableCall
     }
   ]
 }
