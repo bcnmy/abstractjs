@@ -507,6 +507,7 @@ export const toNexusAccount = async (
     ])
 
     const accountIsDeployed = await isDeployed()
+    console.log({ accountIsDeployed })
     return accountIsDeployed ? signature : erc6492Signature
   }
 
