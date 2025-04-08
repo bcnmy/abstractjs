@@ -3,7 +3,7 @@ import type {
   Instruction,
   InstructionLike
 } from "../../../clients/decorators/mee"
-import type { ComposableCall } from "../../../modules"
+import type { AnyData, ComposableCall } from "../../../modules"
 import { resolveInstructions } from "../../utils"
 import type { BaseInstructionsParams } from "../build"
 
@@ -75,7 +75,9 @@ export const buildBatch = async (
     )
   }
 
-  const calls = resolvedInstructions.flatMap(({ calls }) => calls)
+  const calls: AbstractCall[] | ComposableCall[] = resolvedInstructions.flatMap(
+    ({ calls }) => calls as AnyData
+  )
 
   return [
     ...currentInstructions,

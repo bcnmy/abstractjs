@@ -4,7 +4,6 @@ import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
   type InputParam,
-  isComposableCallRequired,
   prepareComposableParams
 } from "../../../modules/utils/composabilityCalls"
 import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
@@ -41,8 +40,6 @@ export type BuildComposableParameters = {
   args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function whihc can be handled later
   abi: Abi
   chainId: number
-  value?: bigint
-  gasLimit?: bigint
 }
 
 export const buildComposableCall = async (
@@ -50,7 +47,7 @@ export const buildComposableCall = async (
   parameters: BuildComposableParameters
 ): Promise<ComposableCall[]> => {
   const { account } = baseParams
-  const { to, value, gasLimit, functionName, args, abi, chainId } = parameters
+  const { to, functionName, args, abi, chainId } = parameters
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")

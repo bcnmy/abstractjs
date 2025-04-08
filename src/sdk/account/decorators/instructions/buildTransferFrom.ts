@@ -116,8 +116,7 @@ export const buildTransferFrom = async (
       functionName: functionSig,
       args: args as unknown as Array<AnyData>,
       abi,
-      chainId,
-      gasLimit
+      chainId
     }
 
     triggerCalls = await buildComposableCall(baseParams, composableCallParams)

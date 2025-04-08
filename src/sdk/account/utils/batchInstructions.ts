@@ -1,10 +1,6 @@
-import type {
-  Instruction,
-  InstructionLike
-} from "../../clients/decorators/mee/getQuote"
+import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
-import { resolveInstructions } from "./resolveInstructions"
 
 type BatchInstructionsParameters = {
   /**
