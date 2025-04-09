@@ -585,7 +585,9 @@ export const toNexusAccount = async (
   ): Promise<SignAuthorizationReturnType | MeeAuthorization> {
     const contractAddress = delegatedContract ?? implementationAddress
     const authorization = await walletClient.signAuthorization({
-      contractAddress
+      contractAddress,
+      executor: "self",
+      account: signer
     })
 
     if (forMee) {
