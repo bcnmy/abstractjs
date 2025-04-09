@@ -12,10 +12,10 @@ import {
   toBytes,
   zeroAddress
 } from "viem"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { toNetwork } from "../../../../test/testSetup"
-import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MeeClient,
   createMeeClient
@@ -33,6 +33,9 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
+
+// @ts-ignore
+const { runPaidTests } = inject("settings")
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig
@@ -63,8 +66,13 @@ describe("mee.buildComposable", () => {
       index: 1n // Added based on the suggestion by Joe to prevent the collision with nonce
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus
+    })
     tokenAddress = testnetMcUSDC.addressOn(chain.id)
+
+    console.log("mcNexus", mcNexus.addressOn(chain.id, true))
+    console.log("eoa.address", eoaAccount.address)
 
     // Mock testing contract for composability testing
     runtimeTransferAddress = "0xb46e85b8Bd24D1dca043811D5b8B18b2a8c5F95D"
@@ -107,25 +115,30 @@ describe("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
-    const { hash: hashOne } = await meeClient.executeFusionQuote({
-      fusionQuote: await meeClient.getFusionQuote({
-        trigger,
-        instructions: [
-          {
-            calls: [
-              {
-                to: zeroAddress,
-                value: 0n
-              }
-            ],
-            chainId: chain.id
-          }
-        ],
-        feeToken: {
-          chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id)
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger,
+      instructions: [
+        {
+          calls: [
+            {
+              to: zeroAddress,
+              value: 0n
+            }
+          ],
+          chainId: chain.id
         }
-      })
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    console.log("trigger.amount", trigger.amount)
+    console.log("fusionQuote.trigger.amount", fusionQuote.trigger.amount)
+
+    const { hash: hashOne } = await meeClient.executeFusionQuote({
+      fusionQuote
     })
 
     const { transactionStatus: transactionStatusOne } =
@@ -176,9 +189,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus: transactionStatusTwo } =
+    const { transactionStatus: transactionStatusTwo, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
     expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash: hashTwo })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -213,9 +227,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus: transactionStatusOne } =
+    const { transactionStatus: transactionStatusOne, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash: hashOne })
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -258,9 +273,12 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus: transactionStatusTwo } =
-      await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
+    const {
+      transactionStatus: transactionStatusTwo,
+      explorerLinks: explorerLinksTwo
+    } = await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
     expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks: explorerLinksTwo })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -300,24 +318,23 @@ describe("mee.buildComposable", () => {
       }
     })
 
-    const { hash } = await meeClient.executeFusionQuote({
-      fusionQuote: await meeClient.getFusionQuote({
-        trigger,
-        instructions: [
-          ...transferInstruction,
-          ...instructions,
-          ...instructions
-        ],
-        feeToken: {
-          chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id)
-        }
-      })
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger,
+      instructions: [...transferInstruction, ...instructions, ...instructions],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
     })
 
-    const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+    const receipt = await meeClient.executeFusionQuote({ fusionQuote })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient.waitForSupertransactionReceipt({
+        hash: receipt.hash
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash: receipt.hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -375,9 +392,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -428,9 +446,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -485,9 +504,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -540,9 +560,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -595,9 +616,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -650,9 +672,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -706,9 +729,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -783,9 +807,10 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
   })
 
   it("should execute composable transaction for approval and transferFrom builders", async () => {
@@ -835,7 +860,7 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus } =
+    const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })

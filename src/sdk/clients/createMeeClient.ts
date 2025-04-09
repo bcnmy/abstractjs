@@ -14,8 +14,9 @@ const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 const DEFAULT_STAGING_PATHFINDER_URL = "https://staging-network.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
+export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
+
 /**
-  const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
   const STAKEPOOL_MEE_NODE_URL = "https://mainnet.mee.stakepool.dev.br/v3"
 */
 
