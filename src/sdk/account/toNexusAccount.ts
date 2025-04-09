@@ -422,7 +422,7 @@ export const toNexusAccount = async (
     const composableCalls: BaseComposableCall[] = calls.map((call) => {
       return {
         to: call.to,
-        value: call.value,
+        value: call.value ?? 0n,
         functionSig: call.functionSig,
         inputParams: call.inputParams,
         outputParams: call.outputParams

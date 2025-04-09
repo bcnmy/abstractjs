@@ -41,6 +41,7 @@ export type BuildComposableParameters = {
   abi: Abi
   chainId: number
   gasLimit?: bigint
+  value?: bigint
 }
 
 export const buildComposableCall = async (
@@ -48,7 +49,7 @@ export const buildComposableCall = async (
   parameters: BuildComposableParameters
 ): Promise<ComposableCall[]> => {
   const { account } = baseParams
-  const { to, gasLimit, functionName, args, abi, chainId } = parameters
+  const { to, gasLimit, value, functionName, args, abi, chainId } = parameters
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
@@ -89,7 +90,7 @@ export const buildComposableCall = async (
 
   const composableCall: ComposableCall = {
     to,
-    value: BigInt(0), // In the current scope, the value is always zero. When there is a need, this can be changed accordingly
+    value: value ?? BigInt(0),
     functionSig: functionContext.functionSig,
     inputParams: composableParams,
     outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change

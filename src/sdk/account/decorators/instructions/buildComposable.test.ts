@@ -6,6 +6,7 @@ import {
   type LocalAccount,
   type PublicClient,
   createPublicClient,
+  encodeFunctionData,
   erc20Abi,
   fromBytes,
   parseUnits,
@@ -33,9 +34,6 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
-
-// @ts-ignore
-const { runPaidTests } = inject("settings")
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig
@@ -863,5 +861,54 @@ describe("mee.buildComposable", () => {
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+  })
+
+  it("should execute raw composable transaction for approve", async () => {
+    const amount = parseUnits("0.5", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amount
+    }
+
+    const rawCalldata = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [runtimeTransferAddress, amount]
+    })
+
+    const approval = await mcNexus.buildComposable({
+      type: "rawCalldata",
+      data: {
+        to: testnetMcUSDC.addressOn(chain.id),
+        calldata: rawCalldata,
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [...approval],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    const tokenApproval = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [mcNexus.addressOn(chain.id, true), runtimeTransferAddress]
+    })
+
+    expect(tokenApproval).to.eq(amount)
   })
 })

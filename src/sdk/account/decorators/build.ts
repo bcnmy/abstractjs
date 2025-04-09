@@ -24,6 +24,9 @@ import {
   type BuildMultichainInstructionsParameters,
   buildMultichainInstructions
 } from "./instructions/buildMultichainInstructions"
+import buildRawComposable, {
+  type BuildRawComposableParameters
+} from "./instructions/buildRawComposable"
 import {
   type BuildTransferParameters,
   buildTransfer
@@ -149,6 +152,16 @@ export type BuildComposableInstruction = {
 }
 
 /**
+ * Build composable action which is used to build instructions for a raw composable call
+ * @property type - Literal "raw" to identify the action type
+ * @property data - {@link BuildComposableParameters} The parameters for the raw composable action
+ */
+export type BuildComposableRawInstruction = {
+  type: "rawCalldata"
+  data: BuildRawComposableParameters
+}
+
+/**
  * Build action which is used to build instructions for uninstalling modules
  * @property type - Literal "buildMultichainInstructions" to identify the action type
  * @property data - {@link BuildMultichainInstructionParameters} The parameters for the uninstall modules action
@@ -180,6 +193,7 @@ export type BuildInstructionTypes =
 export type BuildComposableInstructionTypes =
   | BaseInstructionTypes
   | BuildComposableInstruction
+  | BuildComposableRawInstruction
 
 /**
  * Builds transaction instructions based on the provided action type and parameters
@@ -266,6 +280,9 @@ export const buildComposable = async (
   switch (type) {
     case "default": {
       return buildComposableUtil(baseParams, data)
+    }
+    case "rawCalldata": {
+      return buildRawComposable(baseParams, data)
     }
     case "transferFrom": {
       return buildTransferFrom(baseParams, data, true)

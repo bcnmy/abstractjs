@@ -257,3 +257,14 @@ export const prepareComposableParams = (
   // Dynamic types have tail params where the head only have offset which points the dynamic param in tail
   return composableParams.flat()
 }
+
+export const prepareRawComposableParams = (calldata: Hex) => {
+  const composableParams = [
+    prepareInputParam(InputParamFetcherType.RAW_BYTES, calldata as Hex)
+  ]
+
+  // Head Params,Head Params,Head Params + (len + Tail Params),(len + Tail Params),(len + Tail Params)
+  // Static type doesn't have tail
+  // Dynamic types have tail params where the head only have offset which points the dynamic param in tail
+  return composableParams.flat()
+}
