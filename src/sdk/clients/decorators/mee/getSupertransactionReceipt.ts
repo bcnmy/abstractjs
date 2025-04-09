@@ -128,9 +128,11 @@ export async function getSupertransactionReceipt(
   const metaStatus = await parseTransactionStatus(explorerResponse.userOps)
   switch (metaStatus.status) {
     case "FAILED": {
+      console.log({ metaStatus, explorerResponse, hash: params.hash })
       throw new Error(parseErrorMessage(metaStatus.message))
     }
     case "MINED_FAIL": {
+      console.log({ metaStatus, explorerResponse, hash: params.hash })
       throw new Error(parseErrorMessage(metaStatus.message))
     }
     case "PENDING": {
