@@ -9,6 +9,14 @@ import {
 import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
 
+// type OverrideObjectValues<T, OverrideType> = {
+//   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type
+// };
+
+// type OverrideArrayObjects<T, OverrideType> = {
+//   [K in keyof T]: OverrideObjectValues<T[K], OverrideType>;
+// };
+
 // TODO:
 // These types are being removed for now as it requires all the previous parent function types needs to be changed.
 // We will revisit on this topic later and this decision is taken based on the conversation with Joe.
