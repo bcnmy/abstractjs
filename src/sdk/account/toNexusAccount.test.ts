@@ -109,12 +109,12 @@ describe("nexus.account", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test.skip("should check isValidSignature using EIP-6492", async () => {
+  test("should check isValidSignature using EIP-6492", async () => {
     const undeployedAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
       transport: http(),
-      index: 100n // undeployed
+      index: 101n // undeployed
     })
 
     const undeployedAccountAddress = await undeployedAccount.getAddress()
@@ -147,15 +147,16 @@ describe("nexus.account", async () => {
     const resultHash: Hex = keccak256(
       concat(["0x1901", domainSeparator, parentStructHash])
     )
+    console.log(Object.keys(undeployedAccount))
     const signature = await undeployedAccount.signMessage({
-      message: { raw: toBytes(resultHash) }
+      message: resultHash
     })
 
     const { factory, factoryData } = await undeployedAccount.getFactoryArgs()
 
     const viemResponse = await testClient.verifyMessage({
-      factory,
-      factoryData,
+      // factory,
+      // factoryData,
       address: undeployedAccountAddress,
       message: data,
       signature
