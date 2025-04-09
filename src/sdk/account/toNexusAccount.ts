@@ -60,7 +60,6 @@ import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
-  MAGIC_BYTES,
   PARENT_TYPEHASH
 } from "./utils/Constants"
 // Utils
@@ -159,9 +158,6 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
   {
     /** Gets the counterfactual address of the account */
     getAddress: () => Promise<Address>
-
-    /** Checks if the account is deployed */
-    isDeployed: () => Promise<boolean>
 
     /** Gets the init code for the account */
     getInitCode: () => Hex
@@ -327,16 +323,6 @@ export const toNexusAccount = async (
   }
 
   /**
-   * @description Checks if the account is deployed
-   * @returns True if the account is deployed, false otherwise
-   */
-  const isDeployed = async (): Promise<boolean> => {
-    const address = await getAddress()
-    const contractCode = await publicClient.getCode({ address })
-    return (contractCode?.length ?? 0) > 2
-  }
-
-  /**
    * @description Calculates the hash of a user operation
    * @param userOp - The user operation
    * @returns The hash of the user operation
@@ -470,48 +456,6 @@ export const toNexusAccount = async (
   }
 
   /**
-   * @description Signs a message
-   * @param params - The parameters for signing
-   * @param params.message - The message to sign
-   * @returns The signature
-   */
-  const signMessage = async ({
-    message
-  }: { message: SignableMessage }): Promise<Hex> => {
-    const tempSignature = await module.signMessage(message)
-
-    const signature = encodePacked(
-      ["address", "bytes"],
-      [module.module, tempSignature]
-    )
-
-    const erc6492Signature = concat([
-      encodeAbiParameters(
-        [
-          {
-            type: "address",
-            name: "create2Factory"
-          },
-          {
-            type: "bytes",
-            name: "factoryCalldata"
-          },
-          {
-            type: "bytes",
-            name: "originalERC1271Signature"
-          }
-        ],
-        [factoryAddress, initData, signature]
-      ),
-      MAGIC_BYTES
-    ])
-
-    const accountIsDeployed = await isDeployed()
-    console.log({ accountIsDeployed })
-    return accountIsDeployed ? signature : erc6492Signature
-  }
-
-  /**
    * @description Signs typed data
    * @param parameters - The typed data parameters
    * @returns The signature
@@ -611,7 +555,16 @@ export const toNexusAccount = async (
       factoryData
     }),
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
-    signMessage,
+    /**
+     * @description Signs a message
+     * @param params - The parameters for signing
+     * @param params.message - The message to sign
+     * @returns The signature
+     */
+    async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
+      const tempSignature = await module.signMessage(message)
+      return encodePacked(["address", "bytes"], [module.module, tempSignature])
+    },
     signTypedData,
     signUserOperation: async (
       parameters: UnionPartialBy<UserOperation, "sender"> & {
@@ -639,7 +592,6 @@ export const toNexusAccount = async (
     extend: {
       entryPointAddress: entryPoint07Address,
       getAddress,
-      isDeployed,
       getInitCode,
       encodeExecute,
       encodeExecuteBatch,

@@ -109,17 +109,19 @@ describe("nexus.account", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test.skip("should check isValidSignature using EIP-6492", async () => {
+  test("should check isValidSignature using EIP-6492", async () => {
     const undeployedAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
       transport: http(),
-      index: 100n // undeployed
+      index: 102n // undeployed
     })
+
+    const message = "0x1234"
 
     const undeployedAccountAddress = await undeployedAccount.getAddress()
     expect(await undeployedAccount.isDeployed()).toBe(false)
-    const data = hashMessage("0x1234")
+    const data = hashMessage(message)
 
     // Calculate the domain separator
     const domainSeparator = keccak256(
@@ -151,13 +153,9 @@ describe("nexus.account", async () => {
       message: { raw: toBytes(resultHash) }
     })
 
-    const { factory, factoryData } = await undeployedAccount.getFactoryArgs()
-
     const viemResponse = await testClient.verifyMessage({
-      factory,
-      factoryData,
       address: undeployedAccountAddress,
-      message: data,
+      message,
       signature
     })
 
@@ -233,9 +231,7 @@ describe("nexus.account", async () => {
     })
 
     // Sign with Ethereum signed message
-    const ethSignature = await eoaAccount.signMessage({
-      message
-    })
+    const ethSignature = await eoaAccount.signMessage({ message })
 
     const isValidRegular = await mockSigVerifierContract.read.verify([
       messageHash,
