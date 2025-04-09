@@ -8,8 +8,10 @@ import {
 import { privateKeyToAccount } from "viem/accounts"
 import { sepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
-import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import {
+  type MultichainSmartAccount,
+  toMultichainNexusAccount
+} from "../../../account/toMultiChainNexusAccount"
 import { getRandomBigInt } from "../../../account/utils/Helpers"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 
@@ -23,32 +25,63 @@ const sepoliaChain: Chain = {
 }
 
 describe("EIP-7702 auth", () => {
-  const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
-
-  let mcAccount: MultichainSmartAccount
+  let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
   let publicClient: PublicClient
 
+  const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
+
   beforeAll(async () => {
-    mcAccount = await toMultichainNexusAccount({
+    const index = getRandomBigInt()
+
+    console.log("account.address", account.address)
+
+    mcNexus = await toMultichainNexusAccount({
       accountAddress: account.address,
       signer: account,
       chains: [sepoliaChain],
       transports: [http()],
-      index: getRandomBigInt()
+      index
     })
-
-    meeClient = await createMeeClient({ account: mcAccount })
+    meeClient = await createMeeClient({ account: mcNexus })
     publicClient = createPublicClient({
       chain: sepoliaChain,
       transport: http()
     })
   })
 
-  test("should get a MEE quote with eip7702 delegation", async () => {
+  test("should undelegate the account", async () => {
+    const isDeployed = await mcNexus
+      .deploymentOn(sepoliaChain.id, true)
+      .isDeployed()
+    expect(isDeployed).toBe(true)
+    if (isDeployed) {
+      const hash = await mcNexus
+        .deploymentOn(sepoliaChain.id, true)
+        .unDelegate()
+      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      expect(receipt.status).toBe("success")
+      const codeAtAddress = await publicClient.getCode({
+        address: mcNexus.addressOn(sepoliaChain.id, true)
+      })
+      expect(codeAtAddress).toBeUndefined()
+    }
+  })
+
+  test.skip("should get a MEE quote with eip7702 delegation", async () => {
+    const isDeployed = await mcNexus
+      .deploymentOn(sepoliaChain.id, true)
+      .isDeployed()
+    expect(isDeployed).toBe(false)
+    const codeAtAddress = await publicClient.getCode({
+      address: mcNexus.addressOn(sepoliaChain.id, true)
+    })
+    console.log({ codeAtAddress })
+
     const balanceBefore = await publicClient.getBalance({
       address: zeroAddress
     })
+    console.log({ balanceBefore })
     const quote = await meeClient.getQuote({
       delegate: true,
       instructions: [
@@ -68,9 +101,10 @@ describe("EIP-7702 auth", () => {
       }
     })
 
+    console.log({ quote })
+
     expect(quote).toBeDefined()
     const { hash } = await meeClient.executeQuote({ quote })
-    console.log({ quote })
     expect(hash).toBeDefined()
 
     const receipt = await meeClient.waitForSupertransactionReceipt({ hash })

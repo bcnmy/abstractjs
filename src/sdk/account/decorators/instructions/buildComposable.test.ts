@@ -17,7 +17,6 @@ import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts
 import { toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
-  DEFAULT_MEE_NODE_URL,
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"

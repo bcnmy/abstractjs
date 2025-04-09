@@ -130,7 +130,7 @@ export type GetQuoteParams = SupertransactionLike & {
   delegate?: boolean
 }
 
-export type Eip7702Auth = {
+export type MeeAuthorization = {
   address: Hex
   signature: Hex
   nonce: Hex
@@ -161,7 +161,7 @@ type QuoteRequest = {
     /** Upper bound timestamp for operation validity */
     upperBoundTimestamp?: number
     /** EIP7702Auth */
-    eip7702Auth?: Eip7702Auth
+    eip7702Auth?: MeeAuthorization
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -182,7 +182,7 @@ export type PaymentInfo = {
   /** Chain ID where the payment will be processed */
   chainId: string
   /** EIP7702Auth */
-  eip7702Auth?: Eip7702Auth
+  eip7702Auth?: MeeAuthorization
 }
 
 /**
@@ -261,7 +261,8 @@ export type GetQuotePayload = {
   userOps: MeeFilledUserOpDetails[]
 }
 
-export type InitData = { eip7702Auth: Eip7702Auth } | { initCode: Hex }
+export type InitData = { eip7702Auth: MeeAuthorization } | { initCode: Hex }
+export type InitDataOrUndefined = InitData | undefined
 
 /**
  * Requests a quote from the MEE service for executing a set of instructions.
@@ -378,7 +379,7 @@ export const getQuote = async (
     })
   )
 
-  const initCodeDone: string[] = [feeToken.chainId.toString()]
+  const hasProcessedInitData: string[] = [feeToken.chainId.toString()]
   const [nonce, isAccountDeployed, initCode] = await Promise.all([
     validPaymentAccount.getNonce(),
     validPaymentAccount.isDeployed(),
@@ -386,9 +387,11 @@ export const getQuote = async (
   ])
 
   // Do authorization only if required as it requires signing
-  const initData: InitData = delegate
-    ? { eip7702Auth: await validPaymentAccount.authorize() }
-    : { initCode }
+  const initData: InitDataOrUndefined = isAccountDeployed
+    ? undefined
+    : delegate
+      ? { eip7702Auth: await validPaymentAccount.toAuthorization(true) }
+      : { initCode }
 
   const paymentInfo: PaymentInfo = {
     sender: validPaymentAccount.address,
@@ -396,35 +399,43 @@ export const getQuote = async (
     nonce: nonce.toString(),
     chainId: feeToken.chainId.toString(),
     ...(eoa ? { eoa } : {}),
-    ...(!isAccountDeployed ? initData : {})
+    ...initData
   }
 
-  const userOps = userOpResults.map(
-    ([
-      callData,
-      nonce_,
-      isAccountDeployed,
-      initCode,
-      sender,
-      callGasLimit,
-      chainId
-    ]) => {
-      const shouldContainInitCode =
-        !initCodeDone.includes(chainId) && !isAccountDeployed && initCode
-      if (shouldContainInitCode) {
-        initCodeDone.push(chainId)
-      }
-      return {
-        lowerBoundTimestamp: lowerBoundTimestamp_,
-        upperBoundTimestamp: upperBoundTimestamp_,
-        sender,
+  const userOps = await Promise.all(
+    userOpResults.map(
+      async ([
         callData,
+        nonce_,
+        isAccountDeployed,
+        initCode,
+        sender,
         callGasLimit,
-        nonce: nonce_.toString(),
         chainId,
-        ...(shouldContainInitCode && { initCode })
+        nexusAccount
+      ]) => {
+        let initDataOrUndefined: InitDataOrUndefined = undefined
+        const shouldContainInitData =
+          !hasProcessedInitData.includes(chainId) && !isAccountDeployed
+
+        if (shouldContainInitData) {
+          hasProcessedInitData.push(chainId)
+          initDataOrUndefined = delegate
+            ? { eip7702Auth: await nexusAccount.toAuthorization(true) }
+            : { initCode }
+        }
+        return {
+          lowerBoundTimestamp: lowerBoundTimestamp_,
+          upperBoundTimestamp: upperBoundTimestamp_,
+          sender,
+          callData,
+          callGasLimit,
+          nonce: nonce_.toString(),
+          chainId,
+          ...initDataOrUndefined
+        }
       }
-    }
+    )
   )
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
