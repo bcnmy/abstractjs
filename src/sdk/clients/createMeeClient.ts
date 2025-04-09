@@ -15,7 +15,7 @@ const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
 const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
 const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
-const DEFAULT_STAGING_PATHFINDER_URL = DEFAULT_MEE_NODE_URL // "https://mee-node.biconomy.io/v3"
+const DEFAULT_STAGING_PATHFINDER_URL = "https://staging-network.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
 /**
@@ -30,8 +30,6 @@ export type CreateMeeClientParams = {
   account: MultichainSmartAccount
   /** Auth key for the Mee client */
   apiKey?: string
-  /** Whether to use a node. Defaults to false */
-  useNode?: boolean
 }
 
 export type BaseMeeClient = Prettify<
@@ -55,7 +53,6 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   const {
     account,
     pollingInterval = 1000,
-    useNode = true,
     url = isStaging() ? DEFAULT_STAGING_PATHFINDER_URL : DEFAULT_PATHFINDER_URL,
     apiKey = isStaging()
       ? DEFAULT_STAGING_PATHFINDER_API_KEY
@@ -71,7 +68,7 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
   })
 
   // Check if the account is supported by the MEE node. Throws if not.
-  const supportedChains = info.supported_chains.map(({ chainId }) =>
+  const supportedChains = info.supportedChains.map(({ chainId }) =>
     Number(chainId)
   )
   const supported = account.deployments.every(({ chain }) =>

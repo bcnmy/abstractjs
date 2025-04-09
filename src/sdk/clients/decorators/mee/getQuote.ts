@@ -125,13 +125,12 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   upperBoundTimestamp?: number
   /**
-   * Whether to delegate the transaction to the account using EIP-7702
+   * Whether to delegate the transaction to the account
    */
   delegate?: boolean
 }
 
 export type Eip7702Auth = {
-  chainId: Hex
   address: Hex
   signature: Hex
   nonce: Hex
@@ -317,14 +316,14 @@ export const getQuote = async (
 
   const validFeeToken =
     validPaymentAccount &&
-    client.info.supported_gas_tokens
+    client.info.supportedGasTokens
       .map(({ chainId }) => +chainId)
       .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
-      client.info.supported_chains
+      client.info.supportedChains
         .map(({ chainId }) => +chainId)
         .includes(userOp.chainId)
   )
@@ -379,7 +378,7 @@ export const getQuote = async (
     })
   )
 
-  const hasAlreadyProcessedInitData: string[] = [feeToken.chainId.toString()]
+  const initCodeDone: string[] = [feeToken.chainId.toString()]
   const [nonce, isAccountDeployed, initCode] = await Promise.all([
     validPaymentAccount.getNonce(),
     validPaymentAccount.isDeployed(),
@@ -400,42 +399,36 @@ export const getQuote = async (
     ...(!isAccountDeployed ? initData : {})
   }
 
-  const userOps = await Promise.all(
-    userOpResults.map(
-      async ([
-        callData,
-        nonce_,
-        isAccountDeployed,
-        initCode,
-        sender,
-        callGasLimit,
-        chainId,
-        nexusAccount
-      ]) => {
-        let initDataForUserOp: InitData = {} as InitData
-        const shouldContainInitData =
-          !isAccountDeployed && !hasAlreadyProcessedInitData.includes(chainId)
-        if (shouldContainInitData) {
-          hasAlreadyProcessedInitData.push(chainId)
-          initDataForUserOp = delegate
-            ? { eip7702Auth: await nexusAccount.authorize() }
-            : { initCode }
-        }
-        return {
-          lowerBoundTimestamp: lowerBoundTimestamp_,
-          upperBoundTimestamp: upperBoundTimestamp_,
-          sender,
-          callData,
-          callGasLimit,
-          nonce: nonce_.toString(),
-          chainId,
-          ...initDataForUserOp
-        }
+  const userOps = userOpResults.map(
+    ([
+      callData,
+      nonce_,
+      isAccountDeployed,
+      initCode,
+      sender,
+      callGasLimit,
+      chainId
+    ]) => {
+      const shouldContainInitCode =
+        !initCodeDone.includes(chainId) && !isAccountDeployed && initCode
+      if (shouldContainInitCode) {
+        initCodeDone.push(chainId)
       }
-    )
+      return {
+        lowerBoundTimestamp: lowerBoundTimestamp_,
+        upperBoundTimestamp: upperBoundTimestamp_,
+        sender,
+        callData,
+        callGasLimit,
+        nonce: nonce_.toString(),
+        chainId,
+        ...(shouldContainInitCode && { initCode })
+      }
+    }
   )
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
+
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 

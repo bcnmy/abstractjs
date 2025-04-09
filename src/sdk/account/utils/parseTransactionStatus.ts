@@ -80,31 +80,37 @@ export const parseTransactionStatus = async (
     status = "FAILED"
     // Find the first failed userOp to get error details
     const failedUserOpIndex = userOps.findIndex(
-      (userOp) => userOp.executionStatus === "FAILED"
+      (userOp) => userOp.executionStatus === status
     )
     const failedUserOp = userOps[failedUserOpIndex]
-    message = `[userOp index: ${failedUserOpIndex}] ${failedUserOp?.executionError || "Transaction failed off-chain"}`
+    message = `[${failedUserOpIndex}] ${failedUserOp?.executionError || "Transaction failed off-chain"}`
   } else if (statusMap.hasMinedFailOps) {
     status = "MINED_FAIL"
     // Find the first mined-failed userOp to get error details
     const minedFailUserOpIndex = userOps.findIndex(
-      (userOp) => userOp.executionStatus === "MINED_FAIL"
+      (userOp) => userOp.executionStatus === status
     )
     const minedFailUserOp = userOps[minedFailUserOpIndex]
-    message = `[userOp index: ${minedFailUserOpIndex}] ${minedFailUserOp?.executionError || "Transaction failed on-chain"}`
+    message = `[${minedFailUserOpIndex}] ${minedFailUserOp?.executionError || "Transaction failed on-chain"}`
   } else if (statusMap.hasMiningOps) {
     status = "MINING"
-    message = "Transaction is mining, waiting for blockchain confirmation"
+    const pendingUserOpIndex = userOps.findIndex(
+      (userOp) => userOp.executionStatus === status
+    )
+    message = `[${pendingUserOpIndex}] Transaction is mining, waiting for blockchain confirmation`
   } else if (statusMap.hasPendingOps) {
     status = "PENDING"
     const pendingUserOpIndex = userOps.findIndex(
-      (userOp) => userOp.executionStatus === "PENDING"
+      (userOp) => userOp.executionStatus === status
     )
     const pendingUserOp = userOps[pendingUserOpIndex]
-    message = `[userOp index: ${pendingUserOpIndex}] ${pendingUserOp?.executionError || "Transaction is pending, waiting for conditions to be met"}`
+    message = `[${pendingUserOpIndex}] ${pendingUserOp?.executionError || "Transaction is pending, waiting for conditions to be met"}`
   } else if (statusMap.allMinedSuccess) {
     status = "MINED_SUCCESS"
-    message = "Transaction executed successfully"
+    const minedSuccessUserOpIndex = userOps.findIndex(
+      (userOp) => userOp.executionStatus === status
+    )
+    message = `[${minedSuccessUserOpIndex}] Transaction executed successfully`
   }
 
   const isFinalised =

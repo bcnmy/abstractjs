@@ -54,7 +54,12 @@ import {
 } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
+import { COMPOSABILITY_MODULE_ABI } from "../constants/abi"
 import { toEmptyHook } from "../modules/toEmptyHook"
+import type {
+  BaseComposableCall,
+  ComposableCall
+} from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import type { Validator } from "../modules/validators/toValidator"
 import { getFactoryData, getInitData } from "./decorators/getFactoryData"
@@ -212,7 +217,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     /** Set the active module */
     setModule: (validationModule: Validator) => void
 
-    /** Authorize eoa to Nexus Account */
+    /** Authorize the account */
     authorize: () => Promise<Eip7702Auth>
   }
 >
@@ -257,7 +262,6 @@ export const toNexusAccount = async (
   } = parameters
 
   const signer = await toSigner({ signer: _signer })
-
   const walletClient = createWalletClient({
     account: signer,
     chain,
@@ -371,7 +375,6 @@ export const toNexusAccount = async (
     })
 
     return {
-      chainId: `0x${sepolia.id.toString(16)}`,
       address: implementationAddress,
       nonce: `0x${authorization.nonce.toString(16)}`,
       r: authorization.r,
@@ -503,7 +506,6 @@ export const toNexusAccount = async (
       validationMode = "0x00",
       moduleAddress = module.module
     } = parameters ?? {}
-
     try {
       const adjustedKey = BigInt(key_) % TIMESTAMP_ADJUSTMENT
       const key: string = concat([
@@ -520,6 +522,7 @@ export const toNexusAccount = async (
       return 0n
     }
   }
+
   /**
    * @description Signs a message
    * @param params - The parameters for signing
@@ -558,7 +561,6 @@ export const toNexusAccount = async (
     ])
 
     const accountIsDeployed = await isDeployed()
-    console.log({ accountIsDeployed })
     return accountIsDeployed ? signature : erc6492Signature
   }
 
@@ -688,6 +690,7 @@ export const toNexusAccount = async (
     },
     getNonce,
     extend: {
+      authorize,
       entryPointAddress: entryPoint07Address,
       getAddress,
       isDeployed,
@@ -704,8 +707,7 @@ export const toNexusAccount = async (
       publicClient,
       chain,
       setModule,
-      getModule: () => module,
-      authorize
+      getModule: () => module
     }
   })
 }

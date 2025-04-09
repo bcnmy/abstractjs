@@ -8,7 +8,6 @@
     "src/sdk/constants/tokens/**/*.ts"
   ],
   "basePath": "src/sdk",
-  "includes": "src/sdk",
   "out": "docs",
   "gitRevision": "main"
 }
