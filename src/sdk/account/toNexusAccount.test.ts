@@ -114,12 +114,14 @@ describe("nexus.account", async () => {
       chain,
       signer: eoaAccount,
       transport: http(),
-      index: 101n // undeployed
+      index: 102n // undeployed
     })
+
+    const message = "0x1234"
 
     const undeployedAccountAddress = await undeployedAccount.getAddress()
     expect(await undeployedAccount.isDeployed()).toBe(false)
-    const data = hashMessage("0x1234")
+    const data = hashMessage(message)
 
     // Calculate the domain separator
     const domainSeparator = keccak256(
@@ -147,18 +149,13 @@ describe("nexus.account", async () => {
     const resultHash: Hex = keccak256(
       concat(["0x1901", domainSeparator, parentStructHash])
     )
-    console.log(Object.keys(undeployedAccount))
     const signature = await undeployedAccount.signMessage({
-      message: resultHash
+      message: { raw: toBytes(resultHash) }
     })
 
-    const { factory, factoryData } = await undeployedAccount.getFactoryArgs()
-
     const viemResponse = await testClient.verifyMessage({
-      // factory,
-      // factoryData,
       address: undeployedAccountAddress,
-      message: data,
+      message,
       signature
     })
 
@@ -234,9 +231,7 @@ describe("nexus.account", async () => {
     })
 
     // Sign with Ethereum signed message
-    const ethSignature = await eoaAccount.signMessage({
-      message
-    })
+    const ethSignature = await eoaAccount.signMessage({ message })
 
     const isValidRegular = await mockSigVerifierContract.read.verify([
       messageHash,

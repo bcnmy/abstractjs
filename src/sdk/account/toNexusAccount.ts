@@ -60,7 +60,6 @@ import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
-  MAGIC_BYTES,
   PARENT_TYPEHASH
 } from "./utils/Constants"
 // Utils
@@ -563,7 +562,6 @@ export const toNexusAccount = async (
      * @returns The signature
      */
     async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
-      console.log("JOSEPH signMessage hardcoded", { message })
       const tempSignature = await module.signMessage(message)
       return encodePacked(["address", "bytes"], [module.module, tempSignature])
     },
