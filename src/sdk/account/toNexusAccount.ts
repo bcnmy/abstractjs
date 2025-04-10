@@ -2,7 +2,6 @@ import {
   type AbiParameter,
   type Account,
   type Address,
-  type Authorization,
   type Chain,
   type ClientConfig,
   type Hex,
@@ -30,7 +29,6 @@ import {
   parseAbi,
   parseAbiParameters,
   publicActions,
-  serializeSignature,
   toBytes,
   toHex,
   validateTypedData,
@@ -44,7 +42,6 @@ import {
   getUserOperationHash,
   toSmartAccount
 } from "viem/account-abstraction"
-import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
@@ -208,19 +205,16 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     setModule: (validationModule: Validator) => void
 
     /** Get authorization data for the EOA to Nexus Account
-     * forMee=true returns the formatted MeeAuthorization
-     * forMee=false returns the raw SignAuthorizationReturnType
+     * @param delegatedContract - The contract address to delegate the authorization to. Defaults to the implementation address.
+     * @returns MeeAuthorization
      */
-    toAuthorization: {
-      (forMee: true, delegatedContract?: Address): Promise<MeeAuthorization>
-      (
-        forMee: false,
-        delegatedContract?: Address
-      ): Promise<SignAuthorizationReturnType>
-    }
+    toDelegation: (delegatedContract?: Address) => Promise<MeeAuthorization>
 
     /** Execute the transaction to unauthorize the account */
     unDelegate: () => Promise<Hex>
+
+    /** Check if the account is delegated to the implementation address */
+    isDelegated: () => Promise<boolean>
   }
 >
 
@@ -568,47 +562,35 @@ export const toNexusAccount = async (
    * @param delegatedContract - The contract address to delegate the authorization to. Defaults to the implementation address.
    *
    * @example
-   * const eip7702Auth = await nexusAccount.toAuthorization(true) // Returns MeeAuthorization
-   * const authorization = await nexusAccount.toAuthorization(false) // Returns SignAuthorizationReturnType
+   * const eip7702Auth = await nexusAccount.toDelegation() // Returns MeeAuthorization
    */
-  async function toAuthorization(
-    forMee: true,
+  async function toDelegation(
     delegatedContract?: Address
-  ): Promise<MeeAuthorization>
-  async function toAuthorization(
-    forMee: false,
-    delegatedContract?: Address
-  ): Promise<SignAuthorizationReturnType>
-  async function toAuthorization(
-    forMee: boolean,
-    delegatedContract?: Address
-  ): Promise<SignAuthorizationReturnType | MeeAuthorization> {
-    const contractAddress = delegatedContract ?? implementationAddress
+  ): Promise<MeeAuthorization> {
+    const contractAddress = delegatedContract || implementationAddress
     const authorization = await walletClient.signAuthorization({
-      contractAddress,
-      executor: "self",
-      account: signer
+      contractAddress
     })
-
-    if (forMee) {
-      const eip7702Auth: MeeAuthorization = {
-        address: contractAddress,
-        nonce: `0x${authorization.nonce.toString(16)}`,
-        r: authorization.r,
-        s: authorization.s,
-        v: `0x${authorization.v!.toString(16)}`,
-        yParity: `0x${authorization.yParity!.toString(16)}`,
-        signature: serializeSignature({
-          r: authorization.r,
-          s: authorization.s,
-          v: authorization.v!,
-          yParity: authorization.yParity
-        })
-      }
-      return eip7702Auth
+    const eip7702Auth: MeeAuthorization = {
+      chainId: `0x${chain.id.toString(16)}` as Hex,
+      address: contractAddress as Hex,
+      nonce: `0x${authorization.nonce.toString(16)}` as Hex,
+      r: authorization.r as Hex,
+      s: authorization.s as Hex,
+      v: `0x${authorization.v!.toString(16)}` as Hex,
+      yParity: `0x${authorization.yParity!.toString(16)}` as Hex
     }
+    return eip7702Auth
+  }
 
-    return authorization
+  async function isDelegated(): Promise<boolean> {
+    const code = await publicClient.getCode({ address: signer.address })
+    return (
+      !!code &&
+      code
+        ?.toLowerCase()
+        .includes(NEXUS_IMPLEMENTATION_ADDRESS.substring(2).toLowerCase())
+    )
   }
 
   /**
@@ -619,18 +601,20 @@ export const toNexusAccount = async (
    * const eip7702Auth = await nexusAccount.unDelegate()
    */
   async function unDelegate(): Promise<Hex> {
-    const auth = await toAuthorization(false, zeroAddress)
-    console.log({ auth })
+    const deAuthorization = await walletClient.signAuthorization({
+      address: zeroAddress,
+      executor: "self"
+    })
     return await walletClient.sendTransaction({
       to: signer.address,
-      value: BigInt(0),
+      data: "0xdeadbeef",
       type: "eip7702",
-      authorizationList: [auth]
+      authorizationList: [deAuthorization]
     })
   }
 
   return toSmartAccount({
-    client: walletClient,
+    client: publicClient,
     entryPoint: {
       abi: EntrypointAbi,
       address: ENTRY_POINT_ADDRESS,
@@ -682,7 +666,8 @@ export const toNexusAccount = async (
     },
     getNonce,
     extend: {
-      toAuthorization,
+      isDelegated,
+      toDelegation,
       unDelegate,
       entryPointAddress: entryPoint07Address,
       getAddress,
@@ -701,5 +686,5 @@ export const toNexusAccount = async (
       setModule,
       getModule: () => module
     }
-  }) as unknown as NexusAccount
+  })
 }

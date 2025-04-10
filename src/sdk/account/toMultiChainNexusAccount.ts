@@ -23,10 +23,25 @@ import {
   getUnifiedERC20Balance as getUnifiedERC20BalanceDecorator
 } from "./decorators/getUnifiedERC20Balance"
 import {
+  type IsDelegatedParameters,
+  type IsDelegatedPayload,
+  isDelegated as isDelegatedDecorator
+} from "./decorators/isDelegated"
+import {
   type BridgeQueryResult,
   type QueryBridgeParams,
   queryBridge as queryBridgeDecorator
 } from "./decorators/queryBridge"
+import {
+  type UnDelegateParameters,
+  type UnDelegatePayload,
+  unDelegate as unDelegateDecorator
+} from "./decorators/unDelegate"
+import {
+  type WaitForTransactionReceiptParameters,
+  type WaitForTransactionReceiptPayload,
+  waitForTransactionReceipts as waitForTransactionReceiptsDecorator
+} from "./decorators/waitForTransactionReceipts"
 import type { MultichainToken } from "./utils/Types"
 
 /**
@@ -143,6 +158,32 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * })
    */
   queryBridge: (params: QueryBridgeParams) => Promise<BridgeQueryResult | null>
+  /**
+   * Function to check if the account is delegated
+   * @returns True if the account is delegated, false otherwise
+   * @example
+   * const isDelegated = await mcAccount.isDelegated()
+   */
+  isDelegated: (
+    parameter?: IsDelegatedParameters
+  ) => Promise<IsDelegatedPayload>
+  /**
+   * Function to undelegate the account
+   * @returns The transaction hashes of the undelegate transactions
+   * @example
+   * const receipts = await mcAccount.unDelegate()
+   */
+  unDelegate: (parameters?: UnDelegateParameters) => Promise<UnDelegatePayload>
+  /**
+   * Function to wait for transaction receipts
+   * @param hashes - The transaction hashes to wait for
+   * @returns The transaction receipts
+   * @example
+   * const receipts = await mcAccount.waitForTransactionReceipts([hash1, hash2])
+   */
+  waitForTransactionReceipts: (
+    parameters: WaitForTransactionReceiptParameters
+  ) => Promise<WaitForTransactionReceiptPayload>
 }
 
 /**
@@ -214,11 +255,9 @@ export async function toMultichainNexusAccount(
     const deployment = deployments.find(
       (dep) => dep.client.chain?.id === chainId
     )
-
     if (!deployment && strictMode) {
       throw new Error(`Deployment not found for chainId: ${chainId}`)
     }
-
     return deployment
   }
 
@@ -259,12 +298,24 @@ export async function toMultichainNexusAccount(
   const queryBridge = (params: QueryBridgeParams) =>
     queryBridgeDecorator({ ...params, account: baseAccount })
 
+  const isDelegated = (parameters?: IsDelegatedParameters) =>
+    isDelegatedDecorator({ ...parameters, account: baseAccount })
+  const unDelegate = (parameters?: UnDelegateParameters) =>
+    unDelegateDecorator({ ...parameters, account: baseAccount })
+  const waitForTransactionReceipts = (
+    parameters: WaitForTransactionReceiptParameters
+  ) =>
+    waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
+
   return {
     ...baseAccount,
     getUnifiedERC20Balance,
     build,
     buildComposable,
     buildBridgeInstructions,
-    queryBridge
+    queryBridge,
+    isDelegated,
+    unDelegate,
+    waitForTransactionReceipts
   }
 }

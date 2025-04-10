@@ -132,7 +132,7 @@ export type GetQuoteParams = SupertransactionLike & {
 
 export type MeeAuthorization = {
   address: Hex
-  signature: Hex
+  chainId: Hex
   nonce: Hex
   r: Hex
   s: Hex
@@ -390,7 +390,7 @@ export const getQuote = async (
   const initData: InitDataOrUndefined = isAccountDeployed
     ? undefined
     : delegate
-      ? { eip7702Auth: await validPaymentAccount.toAuthorization(true) }
+      ? { eip7702Auth: await validPaymentAccount.toDelegation() }
       : { initCode }
 
   const paymentInfo: PaymentInfo = {
@@ -421,7 +421,7 @@ export const getQuote = async (
         if (shouldContainInitData) {
           hasProcessedInitData.push(chainId)
           initDataOrUndefined = delegate
-            ? { eip7702Auth: await nexusAccount.toAuthorization(true) }
+            ? { eip7702Auth: await nexusAccount.toDelegation() }
             : { initCode }
         }
         return {

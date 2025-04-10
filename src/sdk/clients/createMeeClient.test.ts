@@ -9,7 +9,7 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { gnosisChiado } from "viem/chains"
+import { gnosisChiado, sepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
@@ -19,7 +19,11 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC } from "../constants/tokens"
-import { type MeeClient, createMeeClient } from "./createMeeClient"
+import {
+  DEFAULT_MEE_NODE_URL,
+  type MeeClient,
+  createMeeClient
+} from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
 // @ts-ignore
@@ -289,6 +293,88 @@ describe("mee.createMeeClient", async () => {
       )
       expect(balanceAfter).toBeGreaterThan(balanceBefore)
       expect(sTxReceipt).toBeDefined()
+    }
+  )
+})
+
+describe("mee.createMeeClient.delegated", async () => {
+  let mcNexus: MultichainSmartAccount
+  let meeClient: MeeClient
+
+  const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
+  const rpc = `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`
+
+  beforeAll(async () => {
+    mcNexus = await toMultichainNexusAccount({
+      chains: [sepolia],
+      signer: eoaAccount,
+      transports: [http(rpc)],
+      accountAddress: eoaAccount.address
+    })
+
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: DEFAULT_MEE_NODE_URL
+    })
+  })
+
+  test("should check if the nexus account is delegated", async () => {
+    const isDelegated = await mcNexus.isDelegated()
+    expect(isDelegated).toBeTypeOf("boolean")
+  })
+
+  test.runIf(runPaidTests)(
+    "should get a quote for a delegated account",
+    async () => {
+      const balanceBefore = await getBalance(
+        mcNexus.deploymentOn(sepolia.id, true).publicClient,
+        zeroAddress
+      )
+      const quote = await meeClient.getQuote({
+        delegate: true,
+        instructions: [
+          {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 1n
+              }
+            ],
+            chainId: sepolia.id
+          }
+        ],
+        feeToken: {
+          address: zeroAddress,
+          chainId: sepolia.id
+        }
+      })
+      expect(quote).toBeDefined()
+
+      const signedQuote = await meeClient.signQuote({ quote })
+      expect(signedQuote).toBeDefined()
+      expect(signedQuote.signature).toBeDefined()
+
+      const { hash } = await meeClient.executeQuote({ quote })
+      expect(hash).toBeDefined()
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      const balanceAfter = await getBalance(
+        mcNexus.deploymentOn(sepolia.id, true).publicClient,
+        zeroAddress
+      )
+      expect(balanceAfter).toBeGreaterThan(balanceBefore)
+      const isDelegated = await mcNexus.isDelegated()
+      expect(isDelegated).toBe(true)
+
+      if (isDelegated) {
+        const { receipts, status } = await mcNexus.unDelegate()
+        expect(receipts.length).toBeGreaterThan(0)
+        expect(status).toBe("success")
+        const isDelegatedAfter = await mcNexus.isDelegated()
+        expect(isDelegatedAfter).toBe(false)
+      }
     }
   )
 })
