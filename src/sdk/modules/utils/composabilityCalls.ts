@@ -190,6 +190,35 @@ export const runtimeERC20BalanceOf = ({
   }
 }
 
+/// @dev This is a helper function for composable pseudo-dynamic `bytes` values.
+/// which are in fact several static values abi.encoded together
+/// and we want one of those static values to be runtime value
+/// so what we do here is we just treat runtimeAbiEncode as pseudo-function composable call
+/// and just mimic the process of encoding the params for it.
+/// it prepares the independent encoding with internal offsets for dynamic params, so
+/// every `runtimeAbiEncode` can has nested `runtimeAbiEncode`-s inside it
+export const runtimeAbiEncode = (
+  /*
+  functionContext: FunctionContext,
+  args: Array<AnyData>
+  */
+): RuntimeValue => {
+
+  // prepare functionContext and args out of what this helper is expecting  
+  const inputParams: InputParam[] = prepareComposableParams(functionContext, args)
+
+  // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
+  // with several input params here. some of those params will be runtime values (fetcherType: STATIC_CALL)
+  // and some of them will be raw bytes (fetcherType: RAW_BYTES)
+  // So we should account for that in the `encodeParams` method
+  return {
+    isRuntime: true,
+    inputParams: inputParams,
+    outputParams: []
+  }
+  
+}
+
 export const isComposableCallRequired = (
   functionContext: FunctionContext,
   args: Array<AnyData>
@@ -244,6 +273,15 @@ export const prepareComposableParams = (
         return (calldata as RuntimeValue)?.inputParams
       }
 
+      
+      // TODO: What if calldata is RuntimeValue object with isRuntime = false?
+      // We can not treat it as Hex , we should also extract the inputParams from it
+      // ================================
+      // In theory RuntimeValue should never have `isRuntime = false` 
+      // but in theory it is possible. why do we even have this field? 
+      // Can we just check that if the object type is RuntimeValue instead of checking isRuntime === true?
+      
+      
       // These are non runtime values which are encoded by the encodeRuntimeFunctionData helper.
       // These params are injected are individual raw bytes which will be combined on the composable contract
       return [

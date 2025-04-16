@@ -34,6 +34,7 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
+import { readContract } from "viem/actions"
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig
@@ -400,6 +401,13 @@ describe("mee.buildComposable", () => {
   it("should execute composable transaction for static args", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
+    const balanceBefore = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [eoaAccount.address]
+    })
+
     const trigger = {
       chainId: chain.id,
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
@@ -447,6 +455,19 @@ describe("mee.buildComposable", () => {
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    const balanceAfter = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [eoaAccount.address]
+    })
+
+    // -amountToSupply as a result of the trigger
+    // +(amountToSupply-gas) as a result of the second composable action
+    // so the balance should be the same -gas that nexus paid to MEE Node, as gas is paid as USDC token
+    expect(Number(balanceAfter)).to.be.approximately(Number(balanceBefore), 9999)
+
     console.log({ explorerLinks, hash })
   })
 
