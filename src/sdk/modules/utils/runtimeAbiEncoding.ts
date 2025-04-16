@@ -105,7 +105,14 @@ const encodeBytes = <const param extends AbiParameter>(
       return { dynamic: false, data: [value] }
     }
     // if there is no param size, it is a dynamic value
-    // just pass the RuntimeValue as is
+    // calculate the length of the InputParams and push it as the first InputParam
+    const inputParamsLength = getRuntimeValueLength((value as RuntimeValue).inputParams)
+    const firstInputParam: InputParam = {
+      fetcherType: InputParamFetcherType.RAW_BYTES,
+      paramData: numberToHex(inputParamsLength, { size: 32 }),
+      constraints: []
+    }
+    value.inputParams = [firstInputParam, ...value.inputParams]
     return { dynamic: true, data: [value] }
   }
 
@@ -328,20 +335,7 @@ const encodeParams = (
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
-          const inputParamsLength = (val as RuntimeValue).inputParams.reduce(
-            (acc2: number, inputParam: InputParam) => {
-              // if it is a STATIC_CALL, we can not know the size beforehand
-              // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
-              if (
-                inputParam.fetcherType === InputParamFetcherType.STATIC_CALL
-              ) {
-                return acc2 + 32
-              }
-              // if it is a RAW_BYTES, the length is the length of the paramData
-              return acc2 + size(inputParam.paramData as Hex)
-            },
-            0
-          )
+          const inputParamsLength = getRuntimeValueLength((val as RuntimeValue).inputParams)
           return acc + inputParamsLength
         }
 
@@ -378,27 +372,10 @@ const encodeParams = (
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
-          const inputParamsLength = (val as RuntimeValue).inputParams.reduce(
-            (acc2: number, inputParam: InputParam) => {
-              // if it is a STATIC_CALL, we can not know the size beforehand
-              // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
-              if (
-                inputParam.fetcherType === InputParamFetcherType.STATIC_CALL
-              ) {
-                return acc2 + 32
-              }
-              // if it is a RAW_BYTES, the length is the length of the paramData
-              return acc2 + size(inputParam.paramData as Hex)
-            },
-            0
-          )
-          //dynamicParams.push(numberToHex(inputParamsLength, { size: 32 })) // since this is the dynamic value, we have to push the length first
-          //dynamicParams.push(val) // then push the value itself
-          // return acc + inputParamsLength + 32 // extra 32 bytes for length
+          const inputParamsLength = getRuntimeValueLength((val as RuntimeValue).inputParams)          
           return acc + inputParamsLength
         }
         // if it is not a RuntimeValue, it is a Hex value. So we just add its length to the accumulator
-        //dynamicParams.push(val)
         return acc + size(val as Hex)
       }, 0)
 
@@ -568,4 +545,21 @@ export const getFunctionContextFromAbi = (
     functionType: ["view", "pure"].includes(stateMutability) ? "read" : "write",
     functionSig: toFunctionSelector(functionInfo as AbiFunction)
   }
+}
+
+export const getRuntimeValueLength = (inputParams: InputParam[]) => {
+  return inputParams.reduce(
+    (acc: number, inputParam: InputParam) => {
+      // if it is a STATIC_CALL, we can not know the size beforehand
+      // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
+      if (
+        inputParam.fetcherType === InputParamFetcherType.STATIC_CALL
+      ) {
+        return acc + 32
+      }
+      // if it is a RAW_BYTES, the length is the length of the paramData
+      return acc + size(inputParam.paramData as Hex)
+    },
+    0
+  ) 
 }

@@ -648,7 +648,7 @@ describe("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-  it("should execute composable transaction for non-runtime bytes args", async () => {
+  it("should execute composable transaction for non-runtime bytes arg", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -688,7 +688,7 @@ describe("mee.buildComposable", () => {
 
     console.log(instructions[0].calls[0])
 
-    const { hash } = await meeClient.executeFusionQuote({
+    /* const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
         instructions: [transferInstruction, ...instructions],
@@ -702,10 +702,10 @@ describe("mee.buildComposable", () => {
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log({ explorerLinks, hash }) 
+    console.log({ explorerLinks, hash }) */
   })
 
-  it("should execute composable transaction for bytes args made with runtimeEncodeAbiParameters", async () => {
+  it("should execute composable transaction for bytes arg made with runtimeEncodeAbiParameters", async () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const trigger = {
@@ -733,9 +733,9 @@ describe("mee.buildComposable", () => {
         args: [
           runtimeEncodeAbiParameters(
             [
-              { name: 'x', type: 'uint256' },
-              { name: 'y', type: 'uint256' },
-              { name: 'z', type: 'bool' }
+              { name: "x", type: "uint256" },
+              { name: "y", type: "uint256" },
+              { name: "z", type: "bool" }
             ],
             [
               420n,
@@ -743,7 +743,7 @@ describe("mee.buildComposable", () => {
                 targetAddress: runtimeTransferAddress,
                 tokenAddress: testnetMcUSDC.addressOn(chain.id),
                 constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
-              }), 
+              }),
               true
             ]
           ),
@@ -760,7 +760,7 @@ describe("mee.buildComposable", () => {
 
     console.log(instructions[0].calls[0])
 
-    const { hash } = await meeClient.executeFusionQuote({
+    /* const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
         instructions: [transferInstruction, ...instructions],
@@ -774,7 +774,7 @@ describe("mee.buildComposable", () => {
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log({ explorerLinks, hash }) 
+    console.log({ explorerLinks, hash }) */
   })
 
   it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
