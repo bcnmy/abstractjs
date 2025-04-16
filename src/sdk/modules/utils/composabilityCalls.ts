@@ -1,10 +1,10 @@
 import {
+  type AbiParameter,
   type Address,
   type Hex,
   encodeAbiParameters,
   encodeFunctionData,
-  erc20Abi,
-  AbiParameter
+  erc20Abi
 } from "viem"
 import type { AnyData } from "../../modules/utils/Types"
 import {
@@ -208,7 +208,7 @@ export const runtimeEncodeAbiParameters = (
   const inputParams: InputParam[] = prepareComposableParams(inputs, args)
 
   // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
-  // wrapped into a RuntimeValue object with several InputParam's. 
+  // wrapped into a RuntimeValue object with several InputParam's.
   // Some of those params will be runtime values (fetcherType: STATIC_CALL)
   // and some of them will be raw bytes (fetcherType: RAW_BYTES)
   // So we should account for that in the `encodeParams` method
@@ -263,7 +263,6 @@ export const isComposableCallRequired = (
 }
 
 export const prepareComposableParams = (
-  //functionContext: FunctionContext,
   inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {

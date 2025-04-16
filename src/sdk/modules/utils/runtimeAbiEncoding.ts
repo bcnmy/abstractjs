@@ -392,9 +392,13 @@ const encodeParams = (
             },
             0
           )
+          //dynamicParams.push(numberToHex(inputParamsLength, { size: 32 })) // since this is the dynamic value, we have to push the length first
+          //dynamicParams.push(val) // then push the value itself
+          // return acc + inputParamsLength + 32 // extra 32 bytes for length
           return acc + inputParamsLength
         }
         // if it is not a RuntimeValue, it is a Hex value. So we just add its length to the accumulator
+        //dynamicParams.push(val)
         return acc + size(val as Hex)
       }, 0)
 
@@ -506,7 +510,6 @@ const prepareParam = <const param extends AbiParameter>({
 }
 
 export const encodeRuntimeFunctionData = (
-  //functionContext: FunctionContext,
   inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {
