@@ -3,7 +3,8 @@ import {
   type Hex,
   encodeAbiParameters,
   encodeFunctionData,
-  erc20Abi
+  erc20Abi,
+  AbiParameter
 } from "viem"
 import type { AnyData } from "../../modules/utils/Types"
 import {
@@ -197,18 +198,18 @@ export const runtimeERC20BalanceOf = ({
 /// and just mimic the process of encoding the params for it.
 /// it prepares the independent encoding with internal offsets for dynamic params, so
 /// every `runtimeAbiEncode` can has nested `runtimeAbiEncode`-s inside it
-export const runtimeAbiEncode = (
-  /*
-  functionContext: FunctionContext,
+export const runtimeEncodeAbiParameters = (
+  // mimics the interface of the og encodeAbiParameters
+  // but is able to work with runtime values
+  inputs: AbiParameter[],
   args: Array<AnyData>
-  */
 ): RuntimeValue => {
-
-  // prepare functionContext and args out of what this helper is expecting  
-  const inputParams: InputParam[] = prepareComposableParams(functionContext, args)
+  // prepare functionContext and args out of what this helper is expecting
+  const inputParams: InputParam[] = prepareComposableParams(inputs, args)
 
   // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
-  // with several input params here. some of those params will be runtime values (fetcherType: STATIC_CALL)
+  // wrapped into a RuntimeValue object with several InputParam's. 
+  // Some of those params will be runtime values (fetcherType: STATIC_CALL)
   // and some of them will be raw bytes (fetcherType: RAW_BYTES)
   // So we should account for that in the `encodeParams` method
   return {
@@ -216,7 +217,6 @@ export const runtimeAbiEncode = (
     inputParams: inputParams,
     outputParams: []
   }
-  
 }
 
 export const isComposableCallRequired = (
@@ -263,25 +263,24 @@ export const isComposableCallRequired = (
 }
 
 export const prepareComposableParams = (
-  functionContext: FunctionContext,
+  //functionContext: FunctionContext,
+  inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {
-  const composableParams = encodeRuntimeFunctionData(functionContext, args).map(
+  const composableParams = encodeRuntimeFunctionData(inputs, args).map(
     (calldata) => {
       if (isRuntimeComposableValue(calldata)) {
         // Just handling input params here. In future, we may need to add support for output params as well
         return (calldata as RuntimeValue)?.inputParams
       }
 
-      
       // TODO: What if calldata is RuntimeValue object with isRuntime = false?
       // We can not treat it as Hex , we should also extract the inputParams from it
       // ================================
-      // In theory RuntimeValue should never have `isRuntime = false` 
-      // but in theory it is possible. why do we even have this field? 
+      // In theory RuntimeValue should never have `isRuntime = false`
+      // but in theory it is possible. why do we even have this field?
       // Can we just check that if the object type is RuntimeValue instead of checking isRuntime === true?
-      
-      
+
       // These are non runtime values which are encoded by the encodeRuntimeFunctionData helper.
       // These params are injected are individual raw bytes which will be combined on the composable contract
       return [

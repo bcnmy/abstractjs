@@ -318,7 +318,7 @@ const encodeParams = (
     if (dynamic) {
       staticSize += 32
     } else {
-    // STATIC ARGUMENT
+      // STATIC ARGUMENT
       // Most probably the size of this data array will be one for this instance.
       // However, for arrays, it can be more than one.
       // Calculate the length for all the `data` elements, which are values of Hex or RuntimeValue
@@ -328,15 +328,20 @@ const encodeParams = (
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
-          const inputParamsLength = (val as RuntimeValue).inputParams.reduce((acc2: number, inputParam: InputParam) => {
-            // if it is a STATIC_CALL, we can not know the size beforehand
-            // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
-            if(inputParam.fetcherType === InputParamFetcherType.STATIC_CALL) {
-              return acc2 + 32
-            }
-            // if it is a RAW_BYTES, the length is the length of the paramData
-            return acc2 + size(inputParam.paramData as Hex)
-          }, 0)
+          const inputParamsLength = (val as RuntimeValue).inputParams.reduce(
+            (acc2: number, inputParam: InputParam) => {
+              // if it is a STATIC_CALL, we can not know the size beforehand
+              // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
+              if (
+                inputParam.fetcherType === InputParamFetcherType.STATIC_CALL
+              ) {
+                return acc2 + 32
+              }
+              // if it is a RAW_BYTES, the length is the length of the paramData
+              return acc2 + size(inputParam.paramData as Hex)
+            },
+            0
+          )
           return acc + inputParamsLength
         }
 
@@ -364,7 +369,7 @@ const encodeParams = (
       staticParams.push(
         numberToHex(staticSize + dynamicSize, { size: 32 }) as Hex
       )
-      
+
       // go over `data` array entries and for each of them calculate the length, then accumulate the length
       // this length will be used to calculate the offset for the next dynamic value
       // `data` is a list of Hex values or RuntimeValues. can contain more than one element
@@ -373,21 +378,26 @@ const encodeParams = (
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
-          const inputParamsLength = (val as RuntimeValue).inputParams.reduce((acc2: number, inputParam: InputParam) => {
-            // if it is a STATIC_CALL, we can not know the size beforehand
-            // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
-            if(inputParam.fetcherType === InputParamFetcherType.STATIC_CALL) {
-              return acc2 + 32
-            }
-            // if it is a RAW_BYTES, the length is the length of the paramData
-            return acc2 + size(inputParam.paramData as Hex)
-          }, 0)
-          return acc + inputParamsLength 
+          const inputParamsLength = (val as RuntimeValue).inputParams.reduce(
+            (acc2: number, inputParam: InputParam) => {
+              // if it is a STATIC_CALL, we can not know the size beforehand
+              // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
+              if (
+                inputParam.fetcherType === InputParamFetcherType.STATIC_CALL
+              ) {
+                return acc2 + 32
+              }
+              // if it is a RAW_BYTES, the length is the length of the paramData
+              return acc2 + size(inputParam.paramData as Hex)
+            },
+            0
+          )
+          return acc + inputParamsLength
         }
         // if it is not a RuntimeValue, it is a Hex value. So we just add its length to the accumulator
         return acc + size(val as Hex)
       }, 0)
-      
+
       // push the `data` items into `dynamicParams` list
       dynamicParams.push(...data)
 
@@ -395,7 +405,6 @@ const encodeParams = (
       // For every dynamic argument, the pointer placed in head will sum the static size and existing dynamic values to find/point a new place after all
       // existing dynamic arguments
       dynamicSize += len
-
     } else {
       // if it is a STATIC ARGUMENT, just push the data into staticParams list
       // its length has already been accumulated in `staticSize`
@@ -415,7 +424,7 @@ const prepareParams = <const params extends readonly AbiParameter[]>({
   params: params
   values: Array<AnyData>
 }): PreparedParam[] => {
-  let preparedParams: PreparedParam[] = []
+  const preparedParams: PreparedParam[] = []
   for (let i = 0; i < params.length; i++) {
     preparedParams.push(prepareParam({ param: params[i], value: values[i] }))
   }
@@ -497,25 +506,26 @@ const prepareParam = <const param extends AbiParameter>({
 }
 
 export const encodeRuntimeFunctionData = (
-  functionContext: FunctionContext,
+  //functionContext: FunctionContext,
+  inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {
   // If there is no arguments to the function, no need for encoding at all.
-  if (!functionContext.inputs || functionContext.inputs.length === 0) {
+  if (!inputs || inputs.length === 0) {
     return ["0x" as Hex]
   }
 
   // If the required inputs and arguments passed is not same, throw an error
-  if (functionContext.inputs.length !== args.length) {
+  if (inputs.length !== args.length) {
     throw new AbiEncodingLengthMismatchError({
-      expectedLength: functionContext?.inputs?.length as number,
+      expectedLength: inputs.length,
       givenLength: args.length
     })
   }
 
   // Prepare the encoding
   const preparedParams = prepareParams({
-    params: functionContext.inputs,
+    params: inputs,
     values: args as Array<AnyData>
   })
 

@@ -13,6 +13,7 @@ import {
   toBytes,
   zeroAddress
 } from "viem"
+import { readContract } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { toNetwork } from "../../../../test/testSetup"
@@ -27,14 +28,13 @@ import {
   testnetMcUniswapSwapRouter
 } from "../../../constants"
 import { testnetMcUSDC } from "../../../constants/tokens"
-import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules"
+import { greaterThanOrEqualTo, runtimeERC20BalanceOf, runtimeEncodeAbiParameters } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import { getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
-import { readContract } from "viem/actions"
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig
@@ -466,7 +466,10 @@ describe("mee.buildComposable", () => {
     // -amountToSupply as a result of the trigger
     // +(amountToSupply-gas) as a result of the second composable action
     // so the balance should be the same -gas that nexus paid to MEE Node, as gas is paid as USDC token
-    expect(Number(balanceAfter)).to.be.approximately(Number(balanceBefore), 9999)
+    expect(Number(balanceAfter)).to.be.approximately(
+      Number(balanceBefore),
+      9999
+    )
 
     console.log({ explorerLinks, hash })
   })
