@@ -48,7 +48,7 @@ export type BuildComposableParameters = {
 export const buildComposableCall = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters,
-  efficientMode: boolean = true
+  efficientMode: boolean
 ): Promise<ComposableCall[]> => {
   const { account } = baseParams
   const { to, gasLimit, value, functionName, args, abi, chainId } = parameters
@@ -94,7 +94,9 @@ export const buildComposableCall = async (
     to,
     value: value ?? BigInt(0),
     functionSig: functionContext.functionSig,
-    inputParams: efficientMode ? compressInputParams(composableParams) : composableParams,
+    inputParams: efficientMode
+      ? compressInputParams(composableParams)
+      : composableParams,
     //inputParams: composableParams,
     outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
     ...(gasLimit ? { gasLimit } : {})
@@ -103,50 +105,6 @@ export const buildComposableCall = async (
   composableCalls.push(composableCall)
 
   return composableCalls
-}
-
-// Implement the compressInputParams function
-// This function goes over all the input params and merges the input params with InputParamFetcherType.RAW_BYTES together 
-// It does this by creating a new InputParam with 
-
-// unless it sees the first param with InputParamFetcherType.STATIC_CALL
-// It leaves this param as is and then proceeds to merge the rest of the params with InputParamFetcherType.RAW_BYTES 
-// and so on
-const compressInputParams = (inputParams: InputParam[]): InputParam[] => {
-  const compressedParams: InputParam[] = []
-  let currentParam: InputParam = {
-    fetcherType: InputParamFetcherType.RAW_BYTES,
-    constraints: [],
-    paramData: ""
-  }
-
-  for (const param of inputParams) {
-    // Static call or constraint based params are left as is
-    if (param.fetcherType === InputParamFetcherType.STATIC_CALL || param.constraints.length > 0) {
-      // If there is a current param, push it to the compressed params
-      // and reset the current param
-      if (currentParam.paramData.length > 0) {
-        compressedParams.push(currentParam)
-        currentParam = {
-          fetcherType: InputParamFetcherType.RAW_BYTES,
-          constraints: [],
-          paramData: ""
-        }
-      }
-      compressedParams.push(param)
-      continue
-    }
-    
-    // If the current param is a raw bytes param with no constraints, merge it with the current param
-    currentParam.paramData = concatHex([currentParam.paramData as `0x${string}`, param.paramData as `0x${string}`])
-  }
-
-  // If there is a non-empty current param, push it to the compressed params
-  if (currentParam.paramData.length > 0) {
-    compressedParams.push(currentParam)
-  }
-
-  return compressedParams
 }
 
 /**
@@ -194,11 +152,12 @@ const compressInputParams = (inputParams: InputParam[]): InputParam[] => {
  */
 export const buildComposableUtil = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildComposableParameters
+  parameters: BuildComposableParameters,
+  efficientMode = true
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
 
-  const calls = await buildComposableCall(baseParams, parameters)
+  const calls = await buildComposableCall(baseParams, parameters, efficientMode)
 
   return [
     ...currentInstructions,
@@ -211,3 +170,54 @@ export const buildComposableUtil = async (
 }
 
 export default buildComposableUtil
+
+/**
+ * Compresses the input params by merging the input params with InputParamFetcherType.RAW_BYTES
+ * and no constraints together
+ * It does this by creating a new InputParam with InputParamFetcherType.RAW_BYTES and no constraints
+ * and paramData as the concat of paramData's
+ * It allows for less input params in the composable call => less iterations in the composable smart contract
+ * => less gas used
+ */
+const compressInputParams = (inputParams: InputParam[]): InputParam[] => {
+  const compressedParams: InputParam[] = []
+  let currentParam: InputParam = {
+    fetcherType: InputParamFetcherType.RAW_BYTES,
+    constraints: [],
+    paramData: ""
+  }
+
+  for (const param of inputParams) {
+    // Static call or constraint based params are left as is
+    if (
+      param.fetcherType === InputParamFetcherType.STATIC_CALL ||
+      param.constraints.length > 0
+    ) {
+      // If there is a current param, push it to the compressed params
+      // and reset the current param
+      if (currentParam.paramData.length > 0) {
+        compressedParams.push(currentParam)
+        currentParam = {
+          fetcherType: InputParamFetcherType.RAW_BYTES,
+          constraints: [],
+          paramData: ""
+        }
+      }
+      compressedParams.push(param)
+      continue
+    }
+
+    // If the current param is a raw bytes param with no constraints, merge it with the current param
+    currentParam.paramData = concatHex([
+      currentParam.paramData as `0x${string}`,
+      param.paramData as `0x${string}`
+    ])
+  }
+
+  // If there is a non-empty current param, push it to the compressed params
+  if (currentParam.paramData.length > 0) {
+    compressedParams.push(currentParam)
+  }
+
+  return compressedParams
+}

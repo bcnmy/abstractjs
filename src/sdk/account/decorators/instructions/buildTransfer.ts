@@ -77,7 +77,8 @@ export type BuildTransferParams = BaseInstructionsParams & {
 export const buildTransfer = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferParameters,
-  forceComposableEncoding = false
+  forceComposableEncoding = false,
+  efficientMode = true
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, recipient } = parameters
@@ -111,7 +112,11 @@ export const buildTransfer = async (
       chainId
     }
 
-    triggerCalls = await buildComposableCall(baseParams, composableCallParams)
+    triggerCalls = await buildComposableCall(
+      baseParams,
+      composableCallParams,
+      efficientMode
+    )
   } else {
     triggerCalls = [
       {

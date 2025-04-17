@@ -79,7 +79,8 @@ export type BuildWithdrawalParams = BaseInstructionsParams & {
 export const buildWithdrawal = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildWithdrawalParameters,
-  forceComposableEncoding = false
+  forceComposableEncoding = false,
+  efficientMode = true
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], account } = baseParams
   const {
@@ -137,7 +138,11 @@ export const buildWithdrawal = async (
         chainId
       }
 
-      triggerCalls = await buildComposableCall(baseParams, composableCallParams)
+      triggerCalls = await buildComposableCall(
+        baseParams,
+        composableCallParams,
+        efficientMode
+      )
     } else {
       triggerCalls = [
         {

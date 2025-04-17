@@ -89,6 +89,7 @@ export type BuildDefaultInstruction = {
 export type BuildIntentInstruction = {
   type: "intent"
   data: BuildIntentParameters
+  efficientMode?: false // non composable currently => no need to compress
 }
 
 /**
@@ -99,6 +100,7 @@ export type BuildIntentInstruction = {
 export type BuildTransferFromInstruction = {
   type: "transferFrom"
   data: BuildTransferFromParameters
+  efficientMode?: boolean
 }
 
 /**
@@ -109,6 +111,7 @@ export type BuildTransferFromInstruction = {
 export type BuildTransferInstruction = {
   type: "transfer"
   data: BuildTransferParameters
+  efficientMode?: boolean
 }
 
 /**
@@ -119,6 +122,7 @@ export type BuildTransferInstruction = {
 export type BuildApproveInstruction = {
   type: "approve"
   data: BuildApproveParameters
+  efficientMode?: boolean
 }
 
 /**
@@ -129,6 +133,7 @@ export type BuildApproveInstruction = {
 export type BuildWithdrawalInstruction = {
   type: "withdrawal"
   data: BuildWithdrawalParameters
+  efficientMode?: boolean
 }
 
 /**
@@ -139,6 +144,7 @@ export type BuildWithdrawalInstruction = {
 export type BuildBatchInstruction = {
   type: "batch"
   data: BuildBatchParameters
+  efficientMode?: false // not used for batch
 }
 
 /**
@@ -149,6 +155,7 @@ export type BuildBatchInstruction = {
 export type BuildComposableInstruction = {
   type: "default"
   data: BuildComposableParameters
+  efficientMode?: boolean
 }
 
 /**
@@ -159,6 +166,7 @@ export type BuildComposableInstruction = {
 export type BuildComposableRawInstruction = {
   type: "rawCalldata"
   data: BuildRawComposableParameters
+  efficientMode?: false // as raw calldata doesn't have to be compressed
 }
 
 /**
@@ -169,6 +177,7 @@ export type BuildComposableRawInstruction = {
 export type BuildMultichainInstructionInstruction = {
   type: "multichain"
   data: BuildMultichainInstructionsParameters
+  efficientMode?: false // non composable currently => no need to compress
 }
 
 export type BaseInstructionTypes =
@@ -275,26 +284,26 @@ export const buildComposable = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildComposableInstructionTypes
 ): Promise<Instruction[]> => {
-  const { type, data } = parameters
+  const { type, data, efficientMode } = parameters
 
   switch (type) {
     case "default": {
-      return buildComposableUtil(baseParams, data)
+      return buildComposableUtil(baseParams, data, efficientMode)
     }
     case "rawCalldata": {
       return buildRawComposable(baseParams, data)
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data, true)
+      return buildTransferFrom(baseParams, data, true, efficientMode)
     }
     case "transfer": {
-      return buildTransfer(baseParams, data, true)
+      return buildTransfer(baseParams, data, true, efficientMode)
     }
     case "approve": {
-      return buildApprove(baseParams, data, true)
+      return buildApprove(baseParams, data, true, efficientMode)
     }
     case "withdrawal": {
-      return buildWithdrawal(baseParams, data, true)
+      return buildWithdrawal(baseParams, data, true, efficientMode)
     }
     case "batch": {
       return buildBatch(baseParams, data)

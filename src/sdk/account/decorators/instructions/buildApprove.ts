@@ -77,7 +77,8 @@ export type BuildApproveParams = BaseInstructionsParams & {
 export const buildApprove = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildApproveParameters,
-  forceComposableEncoding = false
+  forceComposableEncoding = false,
+  efficientMode = true
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
@@ -111,7 +112,11 @@ export const buildApprove = async (
       chainId
     }
 
-    triggerCalls = await buildComposableCall(baseParams, composableCallParams)
+    triggerCalls = await buildComposableCall(
+      baseParams,
+      composableCallParams,
+      efficientMode
+    )
   } else {
     triggerCalls = [
       {
