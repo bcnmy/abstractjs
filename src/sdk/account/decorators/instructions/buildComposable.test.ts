@@ -11,11 +11,19 @@ import {
   fromBytes,
   parseUnits,
   toBytes,
-  zeroAddress
+  zeroAddress,
+  parseEventLogs,
+  Log,
+  Hex,
+  TransactionReceipt,
+  pad,
+  toHex,
+  encodeAbiParameters,
+  numberToHex,
 } from "viem"
-import { readContract } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
+import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
 import { toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
@@ -37,8 +45,9 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { getMultichainContract } from "../../utils"
+import { getMultichainContract, WaitForTransactionReceiptPayload } from "../../utils"
 import buildComposable from "./buildComposable"
+import { readContract } from "viem/actions"
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig
@@ -50,6 +59,7 @@ describe("mee.buildComposable", () => {
 
   let tokenAddress: Address
   let runtimeTransferAddress: Address
+  let fooContractAddress: Address
   let chain: Chain
 
   beforeAll(async () => {
@@ -79,6 +89,7 @@ describe("mee.buildComposable", () => {
 
     // Mock testing contract for composability testing
     runtimeTransferAddress = "0xb46e85b8Bd24D1dca043811D5b8B18b2a8c5F95D"
+    fooContractAddress = "0x40Ad19a280cdD7649981A7c3C76A5D725840efCF"
   })
 
   it.concurrent(
@@ -767,10 +778,120 @@ describe("mee.buildComposable", () => {
       })
     })
 
-    const { transactionStatus, explorerLinks } =
+    const { transactionStatus, explorerLinks, receipts } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
+    
+    let logs: Log[] = []
+    for (const receipt of receipts) {
+      const transferLogs = parseEventLogs({ 
+        abi: erc20Abi, 
+        eventName: 'Transfer', 
+        logs: receipt.logs,
+      })
+
+      logs.push(...transferLogs)
+    }
+
+    console.log(logs)
+  })
+
+  it("should execute composable transaction for bytes arg made with runtimeEncodeAbiParameters and events assertions", async () => {
+    const amountToSupply = parseUnits("0.000123814655", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToSupply,
+        chainId: chain.id
+      }
+    })
+
+    const expectedBar = fooContractAddress
+    const expectedBaz = numberToHex(amountToSupply, { size: 32 })
+    const expectedCorge = amountToSupply * 3n
+    const expectedWaldo = fromBytes(toBytes("random_string_this_doesnt_matter"), "hex")
+
+    const instructions: Instruction[] = await mcNexus.buildComposable({
+      type: "default",
+      data: {
+        to: fooContractAddress,
+        abi: FOO_CONTRACT_ABI as Abi,
+        functionName: "foo",
+        args: [
+          expectedBar, // bar
+          expectedBaz, // baz
+          runtimeEncodeAbiParameters( // qux
+            [
+              { name: "x", type: "uint256" },
+              { name: "y", type: "uint256" },
+              { name: "z", type: "bool" }
+            ],
+            [
+              420n,
+              runtimeERC20BalanceOf({
+                targetAddress: mcNexus.addressOn(chain.id, true),
+                tokenAddress: testnetMcUSDC.addressOn(chain.id),
+                constraints: []
+              }),
+              true
+            ]
+          ),
+          expectedCorge, // corge
+          expectedWaldo // waldo
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [transferInstruction, ...instructions],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus, explorerLinks, receipts } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
+
+    const expectedQux = encodeAbiParameters(
+      [
+        { name: "x", type: "uint256" },
+        { name: "y", type: "uint256" },
+        { name: "z", type: "bool" }
+      ],
+      [
+        420n,
+        await publicClient.readContract({
+          address: testnetMcUSDC.addressOn(chain.id),
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [mcNexus.addressOn(chain.id, true)]
+        }),
+        true
+      ]
+    )
+    
+    _assertEmitAddressEvent(receipts, 0, expectedBar)
+    _assertEmitBytes32Event(receipts, 0, expectedBaz)
+    _assertEmitBytesEvent(receipts, 0, expectedQux)
+    _assertEmitUint256Event(receipts, 0, expectedCorge)
+    _assertEmitBytesEvent(receipts, 1, expectedWaldo)
   })
 
   it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
@@ -1007,4 +1128,179 @@ describe("mee.buildComposable", () => {
 
     expect(tokenApproval).to.eq(amount)
   })
+
+  it("should cleanup Nexus USDC balance after all tests", async () => {
+    const amountToSupply = parseUnits("0.05", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true),
+          tokenAddress: testnetMcUSDC.addressOn(chain.id)
+        }),
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: await meeClient.getFusionQuote({
+        trigger,
+        instructions: [...transferInstruction],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log({ explorerLinks, hash })
+
+    const nexusUSDCBalance = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [mcNexus.addressOn(chain.id, true)]
+    })
+
+    expect(nexusUSDCBalance).to.eq(0n)
+  })
 })
+
+
+// ================================ assert emit event helpers =====================
+
+function _assertEmitAddressEvent(
+  receipts: TransactionReceipt[], 
+  index: number,
+  expectedAddress: String
+) {
+  let logs: Log[] = []
+  for (const receipt of receipts) {
+    const transferLogs = parseEventLogs({ 
+      abi: FOO_CONTRACT_ABI as Abi, 
+      eventName: 'EmitAddress', 
+      logs: receipt.logs,
+    })
+
+    logs.push(...transferLogs)
+  }
+
+  const eventAbi = {
+    name: 'EmitAddress',
+    type: 'event',
+    inputs: [
+      { name: 'a', type: 'address', indexed: false }
+    ]
+  } as const
+
+  type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
+
+  const myEventLog = logs[index] as MyEventLog
+
+  expect(myEventLog.args.a).to.eq(expectedAddress)
+}
+
+function _assertEmitBytes32Event(
+  receipts: TransactionReceipt[],
+  index: number,
+  expectedBytes32: Hex
+) {
+  let logs: Log[] = []
+  for (const receipt of receipts) {
+    const transferLogs = parseEventLogs({ 
+      abi: FOO_CONTRACT_ABI as Abi, 
+      eventName: 'EmitBytes32', 
+      logs: receipt.logs,
+    })
+
+    logs.push(...transferLogs)
+  }
+
+  const eventAbi = {
+    name: 'EmitBytes32',
+    type: 'event',
+    inputs: [
+      { name: 'b', type: 'bytes32', indexed: false }
+    ]
+  } as const
+
+  type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
+
+  const myEventLog = logs[index] as MyEventLog
+
+  expect(myEventLog.args.b).to.eq(expectedBytes32)
+}
+
+function _assertEmitUint256Event(
+  receipts: TransactionReceipt[],
+  index: number,
+  expectedUint256: bigint
+) {
+  let logs: Log[] = []
+  for (const receipt of receipts) {
+    const transferLogs = parseEventLogs({ 
+      abi: FOO_CONTRACT_ABI as Abi, 
+      eventName: 'EmitUint256', 
+      logs: receipt.logs,
+    })
+
+    logs.push(...transferLogs)
+  }
+
+  const eventAbi = {
+    name: 'EmitUint256',
+    type: 'event',
+    inputs: [
+      { name: 'u', type: 'uint256', indexed: false }
+    ]
+  } as const
+
+  type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
+
+  const myEventLog = logs[index] as MyEventLog
+
+  expect(myEventLog.args.u).to.eq(expectedUint256)
+}
+
+function _assertEmitBytesEvent( 
+  receipts: TransactionReceipt[],
+  index: number,
+  expectedBytes: Hex
+) {
+  let logs: Log[] = []
+  for (const receipt of receipts) {
+    const transferLogs = parseEventLogs({ 
+      abi: FOO_CONTRACT_ABI as Abi, 
+      eventName: 'EmitBytes', 
+      logs: receipt.logs,
+    })
+
+    logs.push(...transferLogs)
+  }
+
+  const eventAbi = {
+    name: 'EmitBytes',
+    type: 'event',
+    inputs: [
+      { name: 'b', type: 'bytes', indexed: false }
+    ]
+  } as const
+
+  type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
+
+  const myEventLog = logs[index] as MyEventLog
+
+  expect(myEventLog.args.b).to.eq(expectedBytes)
+}
