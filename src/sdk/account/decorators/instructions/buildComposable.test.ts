@@ -659,6 +659,8 @@ describe("mee.buildComposable", () => {
       }
     })
 
+    console.log(instructions[0].calls[0])
+
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
