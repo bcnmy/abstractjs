@@ -106,7 +106,9 @@ const encodeBytes = <const param extends AbiParameter>(
     }
     // if there is no param size, it is a dynamic value
     // calculate the length of the InputParams and push it as the first InputParam
-    const inputParamsLength = getRuntimeValueLength((value as RuntimeValue).inputParams)
+    const inputParamsLength = getRuntimeValueLength(
+      (value as RuntimeValue).inputParams
+    )
     const firstInputParam: InputParam = {
       fetcherType: InputParamFetcherType.RAW_BYTES,
       paramData: numberToHex(inputParamsLength, { size: 32 }),
@@ -335,7 +337,9 @@ const encodeParams = (
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
-          const inputParamsLength = getRuntimeValueLength((val as RuntimeValue).inputParams)
+          const inputParamsLength = getRuntimeValueLength(
+            (val as RuntimeValue).inputParams
+          )
           return acc + inputParamsLength
         }
 
@@ -372,7 +376,9 @@ const encodeParams = (
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
-          const inputParamsLength = getRuntimeValueLength((val as RuntimeValue).inputParams)          
+          const inputParamsLength = getRuntimeValueLength(
+            (val as RuntimeValue).inputParams
+          )
           return acc + inputParamsLength
         }
         // if it is not a RuntimeValue, it is a Hex value. So we just add its length to the accumulator
@@ -548,18 +554,13 @@ export const getFunctionContextFromAbi = (
 }
 
 export const getRuntimeValueLength = (inputParams: InputParam[]) => {
-  return inputParams.reduce(
-    (acc: number, inputParam: InputParam) => {
-      // if it is a STATIC_CALL, we can not know the size beforehand
-      // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
-      if (
-        inputParam.fetcherType === InputParamFetcherType.STATIC_CALL
-      ) {
-        return acc + 32
-      }
-      // if it is a RAW_BYTES, the length is the length of the paramData
-      return acc + size(inputParam.paramData as Hex)
-    },
-    0
-  ) 
+  return inputParams.reduce((acc: number, inputParam: InputParam) => {
+    // if it is a STATIC_CALL, we can not know the size beforehand
+    // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
+    if (inputParam.fetcherType === InputParamFetcherType.STATIC_CALL) {
+      return acc + 32
+    }
+    // if it is a RAW_BYTES, the length is the length of the paramData
+    return acc + size(inputParam.paramData as Hex)
+  }, 0)
 }

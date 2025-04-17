@@ -649,7 +649,7 @@ describe("mee.buildComposable", () => {
   })
 
   it("should execute composable transaction for non-runtime bytes arg", async () => {
-    const amountToSupply = parseUnits("0.1", 6)
+    const amountToSupply = parseUnits("0.05", 6)
 
     const trigger = {
       chainId: chain.id,
@@ -686,9 +686,7 @@ describe("mee.buildComposable", () => {
       }
     })
 
-    console.log(instructions[0].calls[0])
-
-    /* const { hash } = await meeClient.executeFusionQuote({
+    const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
         instructions: [transferInstruction, ...instructions],
@@ -702,11 +700,11 @@ describe("mee.buildComposable", () => {
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log({ explorerLinks, hash }) */
+    console.log({ explorerLinks, hash })
   })
 
   it("should execute composable transaction for bytes arg made with runtimeEncodeAbiParameters", async () => {
-    const amountToSupply = parseUnits("0.1", 6)
+    const amountToSupply = parseUnits("0.05", 6)
 
     const trigger = {
       chainId: chain.id,
@@ -758,9 +756,7 @@ describe("mee.buildComposable", () => {
       }
     })
 
-    console.log(instructions[0].calls[0])
-
-    /* const { hash } = await meeClient.executeFusionQuote({
+    const { hash } = await meeClient.executeFusionQuote({
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
         instructions: [transferInstruction, ...instructions],
@@ -774,7 +770,7 @@ describe("mee.buildComposable", () => {
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log({ explorerLinks, hash }) */
+    console.log({ explorerLinks, hash })
   })
 
   it("should execute composable transaction for runtime arg inside dynamic array args", async () => {
