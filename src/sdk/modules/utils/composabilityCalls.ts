@@ -273,13 +273,6 @@ export const prepareComposableParams = (
         return (calldata as RuntimeValue)?.inputParams
       }
 
-      // TODO: What if calldata is RuntimeValue object with isRuntime = false?
-      // We can not treat it as Hex , we should also extract the inputParams from it
-      // ================================
-      // In theory RuntimeValue should never have `isRuntime = false`
-      // but in theory it is possible. why do we even have this field?
-      // Can we just check that if the object type is RuntimeValue instead of checking isRuntime === true?
-
       // These are non runtime values which are encoded by the encodeRuntimeFunctionData helper.
       // These params are injected are individual raw bytes which will be combined on the composable contract
       return [
