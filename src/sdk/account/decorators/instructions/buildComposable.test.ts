@@ -43,9 +43,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import {
-  getMultichainContract
-} from "../../utils"
+import { getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
 
 describe("mee.buildComposable", () => {
