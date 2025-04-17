@@ -3,24 +3,25 @@ import {
   type Abi,
   type Address,
   type Chain,
+  type Hex,
   type LocalAccount,
+  type Log,
   type PublicClient,
+  type TransactionReceipt,
   createPublicClient,
+  encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
   fromBytes,
+  numberToHex,
+  pad,
+  parseEventLogs,
   parseUnits,
   toBytes,
-  zeroAddress,
-  parseEventLogs,
-  Log,
-  Hex,
-  TransactionReceipt,
-  pad,
   toHex,
-  encodeAbiParameters,
-  numberToHex,
+  zeroAddress
 } from "viem"
+import { readContract } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
@@ -45,9 +46,11 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { getMultichainContract, WaitForTransactionReceiptPayload } from "../../utils"
+import {
+  WaitForTransactionReceiptPayload,
+  getMultichainContract
+} from "../../utils"
 import buildComposable from "./buildComposable"
-import { readContract } from "viem/actions"
 
 describe("mee.buildComposable", () => {
   let network: NetworkConfig
@@ -782,13 +785,13 @@ describe("mee.buildComposable", () => {
       await meeClient.waitForSupertransactionReceipt({ hash })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
-    
-    let logs: Log[] = []
+
+    const logs: Log[] = []
     for (const receipt of receipts) {
-      const transferLogs = parseEventLogs({ 
-        abi: erc20Abi, 
-        eventName: 'Transfer', 
-        logs: receipt.logs,
+      const transferLogs = parseEventLogs({
+        abi: erc20Abi,
+        eventName: "Transfer",
+        logs: receipt.logs
       })
 
       logs.push(...transferLogs)
@@ -819,7 +822,10 @@ describe("mee.buildComposable", () => {
     const expectedBar = fooContractAddress
     const expectedBaz = numberToHex(amountToSupply, { size: 32 })
     const expectedCorge = amountToSupply * 3n
-    const expectedWaldo = fromBytes(toBytes("random_string_this_doesnt_matter"), "hex")
+    const expectedWaldo = fromBytes(
+      toBytes("random_string_this_doesnt_matter"),
+      "hex"
+    )
 
     const instructions: Instruction[] = await mcNexus.buildComposable({
       type: "default",
@@ -830,7 +836,8 @@ describe("mee.buildComposable", () => {
         args: [
           expectedBar, // bar
           expectedBaz, // baz
-          runtimeEncodeAbiParameters( // qux
+          runtimeEncodeAbiParameters(
+            // qux
             [
               { name: "x", type: "uint256" },
               { name: "y", type: "uint256" },
@@ -886,7 +893,7 @@ describe("mee.buildComposable", () => {
         true
       ]
     )
-    
+
     _assertEmitAddressEvent(receipts, 0, expectedBar)
     _assertEmitBytes32Event(receipts, 0, expectedBaz)
     _assertEmitBytesEvent(receipts, 0, expectedQux)
@@ -1178,31 +1185,28 @@ describe("mee.buildComposable", () => {
   })
 })
 
-
 // ================================ assert emit event helpers =====================
 
 function _assertEmitAddressEvent(
-  receipts: TransactionReceipt[], 
+  receipts: TransactionReceipt[],
   index: number,
-  expectedAddress: String
+  expectedAddress: string
 ) {
-  let logs: Log[] = []
+  const logs: Log[] = []
   for (const receipt of receipts) {
-    const transferLogs = parseEventLogs({ 
-      abi: FOO_CONTRACT_ABI as Abi, 
-      eventName: 'EmitAddress', 
-      logs: receipt.logs,
+    const transferLogs = parseEventLogs({
+      abi: FOO_CONTRACT_ABI as Abi,
+      eventName: "EmitAddress",
+      logs: receipt.logs
     })
 
     logs.push(...transferLogs)
   }
 
   const eventAbi = {
-    name: 'EmitAddress',
-    type: 'event',
-    inputs: [
-      { name: 'a', type: 'address', indexed: false }
-    ]
+    name: "EmitAddress",
+    type: "event",
+    inputs: [{ name: "a", type: "address", indexed: false }]
   } as const
 
   type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
@@ -1217,23 +1221,21 @@ function _assertEmitBytes32Event(
   index: number,
   expectedBytes32: Hex
 ) {
-  let logs: Log[] = []
+  const logs: Log[] = []
   for (const receipt of receipts) {
-    const transferLogs = parseEventLogs({ 
-      abi: FOO_CONTRACT_ABI as Abi, 
-      eventName: 'EmitBytes32', 
-      logs: receipt.logs,
+    const transferLogs = parseEventLogs({
+      abi: FOO_CONTRACT_ABI as Abi,
+      eventName: "EmitBytes32",
+      logs: receipt.logs
     })
 
     logs.push(...transferLogs)
   }
 
   const eventAbi = {
-    name: 'EmitBytes32',
-    type: 'event',
-    inputs: [
-      { name: 'b', type: 'bytes32', indexed: false }
-    ]
+    name: "EmitBytes32",
+    type: "event",
+    inputs: [{ name: "b", type: "bytes32", indexed: false }]
   } as const
 
   type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
@@ -1248,23 +1250,21 @@ function _assertEmitUint256Event(
   index: number,
   expectedUint256: bigint
 ) {
-  let logs: Log[] = []
+  const logs: Log[] = []
   for (const receipt of receipts) {
-    const transferLogs = parseEventLogs({ 
-      abi: FOO_CONTRACT_ABI as Abi, 
-      eventName: 'EmitUint256', 
-      logs: receipt.logs,
+    const transferLogs = parseEventLogs({
+      abi: FOO_CONTRACT_ABI as Abi,
+      eventName: "EmitUint256",
+      logs: receipt.logs
     })
 
     logs.push(...transferLogs)
   }
 
   const eventAbi = {
-    name: 'EmitUint256',
-    type: 'event',
-    inputs: [
-      { name: 'u', type: 'uint256', indexed: false }
-    ]
+    name: "EmitUint256",
+    type: "event",
+    inputs: [{ name: "u", type: "uint256", indexed: false }]
   } as const
 
   type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
@@ -1274,28 +1274,26 @@ function _assertEmitUint256Event(
   expect(myEventLog.args.u).to.eq(expectedUint256)
 }
 
-function _assertEmitBytesEvent( 
+function _assertEmitBytesEvent(
   receipts: TransactionReceipt[],
   index: number,
   expectedBytes: Hex
 ) {
-  let logs: Log[] = []
+  const logs: Log[] = []
   for (const receipt of receipts) {
-    const transferLogs = parseEventLogs({ 
-      abi: FOO_CONTRACT_ABI as Abi, 
-      eventName: 'EmitBytes', 
-      logs: receipt.logs,
+    const transferLogs = parseEventLogs({
+      abi: FOO_CONTRACT_ABI as Abi,
+      eventName: "EmitBytes",
+      logs: receipt.logs
     })
 
     logs.push(...transferLogs)
   }
 
   const eventAbi = {
-    name: 'EmitBytes',
-    type: 'event',
-    inputs: [
-      { name: 'b', type: 'bytes', indexed: false }
-    ]
+    name: "EmitBytes",
+    type: "event",
+    inputs: [{ name: "b", type: "bytes", indexed: false }]
   } as const
 
   type MyEventLog = Log<bigint, number, boolean, typeof eventAbi>
