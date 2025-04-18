@@ -8,7 +8,6 @@ import type { RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
-  isRuntimeComposableValue,
   runtimeERC20BalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
