@@ -555,7 +555,7 @@ const prepareCleanUpUserOps = async (
       const nonceDependencies: RuntimeValue[] = []
 
       if (cleanUp.dependsOn && cleanUp.dependsOn.length > 0) {
-        cleanUp.dependsOn.forEach((userOpIndex) => {
+        for (const userOpIndex of cleanUp.dependsOn) {
           const userOpNonceInfo = userOpsNonceInfo[userOpIndex]
           if (!userOpNonceInfo)
             throw new Error(
@@ -571,7 +571,7 @@ const prepareCleanUpUserOps = async (
           })
 
           nonceDependencies.push(nonceOf)
-        })
+        }
       } else {
         const lastUserOp = userOpsNonceInfo[userOpsNonceInfo.length - 1]
         const { nonce, nonceKey } = lastUserOp

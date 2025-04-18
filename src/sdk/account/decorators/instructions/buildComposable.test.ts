@@ -980,7 +980,7 @@ describe("mee.buildComposable", () => {
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
-    for (let userOp of userOps) {
+    for (const userOp of userOps) {
       expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
     }
 
@@ -1041,7 +1041,7 @@ describe("mee.buildComposable", () => {
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
-    for (let userOp of userOps) {
+    for (const userOp of userOps) {
       expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
     }
 
@@ -1242,7 +1242,7 @@ describe("mee.buildComposable", () => {
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
-    for (let userOp of userOps) {
+    for (const userOp of userOps) {
       expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
     }
 
@@ -1306,10 +1306,10 @@ describe("mee.buildComposable", () => {
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
-    for (let userOp of userOps) {
+    for (const userOp of userOps) {
       expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
     }
-    
+
     console.log({ explorerLinks, hash })
 
     const balanceAfter = await publicClient.readContract({
