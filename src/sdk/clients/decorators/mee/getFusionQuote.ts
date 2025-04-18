@@ -2,7 +2,7 @@ import type { BaseMeeClient } from "../../createMeeClient"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
-import type { GetQuoteParams } from "./getQuote"
+import type { CleanUp, GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
@@ -24,6 +24,10 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+  /**
+   * token cleanup option to pull the funds on failure or dust cleanup
+   */
+  cleanUps?: CleanUp[]
 }
 
 /**
