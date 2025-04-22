@@ -484,7 +484,7 @@ export const getQuote = async (
 const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
-  isCleanUpUserOps: boolean = false
+  isCleanUpUserOps = false
 ) => {
   return await Promise.all(
     instructions.map((userOp) => {
