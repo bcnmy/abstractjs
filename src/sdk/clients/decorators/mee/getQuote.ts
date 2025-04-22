@@ -205,6 +205,8 @@ type QuoteRequest = {
     upperBoundTimestamp?: number
     /** EIP7702Auth */
     eip7702Auth?: MeeAuthorization
+    /** Cleanup userop flag - Special user op */
+    isCleanUpUserOp?: boolean
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -286,6 +288,10 @@ export interface MeeFilledUserOpDetails {
   maxFeePerGas: string
   /** Chain ID where the operation will be executed */
   chainId: string
+  /** EIP7702 authorization info */
+  eip7702Auth?: MeeAuthorization
+  /** Cleanup userop flag - Special user op */
+  isCleanUpUserOp?: boolean
 }
 
 /**
@@ -442,7 +448,8 @@ export const getQuote = async (
         sender,
         callGasLimit,
         chainId,
-        nexusAccount
+        nexusAccount,
+        isCleanUpUserOp
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
         const shouldContainInitData =
@@ -462,6 +469,7 @@ export const getQuote = async (
           callGasLimit,
           nonce: nonce.toString(),
           chainId,
+          isCleanUpUserOp,
           ...initDataOrUndefined
         }
       }
@@ -475,7 +483,8 @@ export const getQuote = async (
 
 const prepareUserOps = async (
   account: MultichainSmartAccount,
-  instructions: Instruction[]
+  instructions: Instruction[],
+  isCleanUpUserOps: boolean = false
 ) => {
   return await Promise.all(
     instructions.map((userOp) => {
@@ -505,7 +514,8 @@ const prepareUserOps = async (
           .reduce((curr, acc) => curr + acc)
           .toString(),
         userOp.chainId.toString(),
-        deployment
+        deployment,
+        isCleanUpUserOps
       ])
     })
   )
@@ -599,7 +609,11 @@ const prepareCleanUpUserOps = async (
     })
   )
 
-  const cleanUpUserOps = await prepareUserOps(account, cleanUpInstructions)
+  const cleanUpUserOps = await prepareUserOps(
+    account,
+    cleanUpInstructions,
+    true
+  )
 
   return cleanUpUserOps
 }
