@@ -32,6 +32,10 @@ export type Trigger = {
    * @example 1000000n // 1 USDC (6 decimals)
    */
   amount: bigint
+  /**
+   * Whether to exclude the gas amount from the total amount. Default is false.
+   */
+  excludeGasFees?: boolean
 }
 
 /**

@@ -4,16 +4,24 @@ import {
   type Chain,
   type LocalAccount,
   type Transport,
-  createPublicClient,
+  erc20Abi,
+  parseUnits,
   zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import type { FeeTokenInfo, Instruction } from "."
+import {
+  type FeeTokenInfo,
+  type Instruction,
+  type Trigger,
+  getFusionQuote
+} from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
+import { getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
+import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
 
@@ -30,6 +38,8 @@ describe("mee.getPermitQuote", () => {
   let paymentChain: Chain
   let targetChain: Chain
   let transports: Transport[]
+
+  const recipient: Address = "0x3079B249DFDE4692D7844aA261f8cf7D927A0DA5"
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -49,6 +59,43 @@ describe("mee.getPermitQuote", () => {
 
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
+  })
+
+  test("should exclude gas fees from the total amount", async () => {
+    const balance = await getBalance(
+      mcNexus.deploymentOn(paymentChain.id, true).client,
+      mcNexus.deploymentOn(paymentChain.id, true).address,
+      tokenAddress
+    )
+
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: balance,
+      excludeGasFees: true
+    }
+
+    const withdrawal = mcNexus.buildComposable({
+      type: "withdrawal",
+      data: {
+        tokenAddress,
+        amount: runtimeERC20BalanceOf({
+          targetAddress: eoaAccount.address,
+          tokenAddress
+        }),
+        chainId: paymentChain.id
+      }
+    })
+
+    const quote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [withdrawal],
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+    expect(quote.trigger).toBeDefined()
+    expect(quote.trigger.amount).toBe(balance)
   })
 
   test("should resolve instructions", async () => {
