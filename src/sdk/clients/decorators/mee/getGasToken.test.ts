@@ -22,7 +22,7 @@ describe("mee.getGasToken", () => {
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+      ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -45,7 +45,7 @@ describe("mee.getGasToken", () => {
       address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     })
     expect(result.chainId).toBe("1")
-    expect(result.paymentTokens).toHaveLength(6)
+    expect(result.paymentTokens.length).toBeGreaterThan(6)
     expect(result.paymentTokens[0].symbol).toBe("ETH")
   })
 

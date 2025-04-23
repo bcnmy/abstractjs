@@ -37,7 +37,7 @@ import type { BaseInstructionsParams } from "../build"
 export type BuildComposableParameters = {
   to: Address
   functionName: string
-  args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function whihc can be handled later
+  args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function which can be handled later
   abi: Abi
   chainId: number
   gasLimit?: bigint

@@ -209,7 +209,7 @@ function isTestnetChain(chainId: number): boolean {
 const getBalances = async (
   params: {
     chainId: number
-    tokenAddress: Address
+    tokenAddress?: Address
   },
   address: Address
 ): Promise<[bigint, bigint]> => {
