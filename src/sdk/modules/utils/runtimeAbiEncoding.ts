@@ -232,7 +232,7 @@ const encodeArray = <const param extends AbiParameter>(
 
     // If the main array itself dynamic and has a atleast one element, the encoding will be
     // length + list of elements appended one after other based on the internal data type encoding
-    // If it is a emtpy dynamic arrray ? zero length is added as encoding
+    // If it is a empty dynamic arrray ? zero length is added as encoding
     if (dynamic) {
       const length = numberToHex(preparedParams.length, { size: 32 })
       return {
