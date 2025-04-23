@@ -35,7 +35,10 @@ import {
 import { getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
 
-describe("mee.buildComposable", () => {
+// @ts-ignore
+const { runPaidTests } = inject("settings")
+
+describe.runIf(runPaidTests)("mee.buildComposable", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

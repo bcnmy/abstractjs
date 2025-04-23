@@ -133,7 +133,7 @@ export const createBicoBundlerClient = (
     : bundlerUrl
       ? http(bundlerUrl)
       : http(
-          // @ts-ignore: Type saftey provided by the if statement above
+          // @ts-ignore: Type safety provided by the if statement above
           `https://bundler.biconomy.io/api/v3/${chain?.id}/${
             apiKey ?? "nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14"
           }`
