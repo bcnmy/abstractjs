@@ -350,21 +350,12 @@ export const getQuote = async (
     resolvedInstructions.map((userOp) => {
       const deployment = account_.deploymentOn(userOp.chainId, true)
 
-      let callsPromise: Promise<Hex>
-
-      if (userOp.isComposable) {
-        callsPromise = deployment.encodeExecuteComposable(
-          userOp.calls as ComposableCall[]
-        )
-      } else {
-        callsPromise =
-          userOp.calls.length > 1
-            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
-            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
-      }
-
       return Promise.all([
-        callsPromise,
+        userOp.isComposable
+          ? deployment.encodeExecuteComposable(userOp.calls as ComposableCall[])
+          : userOp.calls.length > 1
+            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
+            : deployment.encodeExecute(userOp.calls[0] as AbstractCall),
         deployment.getNonce(),
         deployment.isDeployed(),
         deployment.getInitCode(),

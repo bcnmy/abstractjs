@@ -28,7 +28,7 @@ describe("mee.getInfo", () => {
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-      ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
