@@ -112,9 +112,9 @@ export const getOnChainQuote = async (
 
   const trigger_ = {
     ...trigger,
-    amount:
-      BigInt(trigger.amount) +
-      BigInt(trigger.excludeGasFees ? 0n : quote.paymentInfo.tokenWeiAmount)
+    amount: trigger.useMaxAvailableAmount
+      ? BigInt(trigger.amount)
+      : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
   }
 
   return { quote, trigger: trigger_ }
