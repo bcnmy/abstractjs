@@ -1,10 +1,37 @@
 # @biconomy/abstractjs
 
+## 1.0.4
+
+### Patch Changes
+
+- Added a useMaxAvailableAmount to trigger
+
+## 1.0.3
+
+### Patch Changes
+
+- 7702 support
+
+## 1.0.2
+
+### Patch Changes
+
+- Raw call data
+
+## 1.0.1
+
+### Patch Changes
+
+- - Added callData helper for composability
+  - Improved error reporting during tests
+  - Fix 6492 signature verification
+
 ## 1.0.0
 
 ### Minor Changes
 
 #### Breaking Changes
+
 - Added composability module by default resulting in a change of address for all users of latest SDK
 - Renamed `getDefaultFactoryData` to `getFactoryData` for more generic module support
 - Renamed `getDefaultNexusAddress` to `getlNexusAccount` to reflect universal module initialization
@@ -12,6 +39,7 @@
 - Changed module configuration format to require explicit type declarations
 
 #### Features
+
 - Added universal module initialization support for Nexus accounts
 - Same account for both mee and 4337 flows
 - Introduced flexible module configuration system allowing extended properties
@@ -25,6 +53,7 @@
 - Integrated userOp status reporting and receipt tracking
 
 #### Improvements
+
 - Enable mode for smart sessions by default
 - Streamlined factory data and counterfactual address calculations
 - Enhanced type safety for module configurations
