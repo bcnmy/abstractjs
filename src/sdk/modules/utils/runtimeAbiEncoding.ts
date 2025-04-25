@@ -152,7 +152,7 @@ const encodeNumber = (
   value: number,
   { signed, size = 256 }: { signed: boolean; size?: number | undefined }
 ): PreparedParam => {
-  // Validating the boundry of uint and int types
+  // Validating the boundary of uint and int types
   if (typeof size === "number") {
     const max =
       BigInt(2) ** (BigInt(size) - (signed ? BigInt(1) : BigInt(0))) - BigInt(1)
