@@ -150,12 +150,12 @@ export const runtimeERC20BalanceOf = ({
 
   if (constraints.length > 0) {
     for (const constraint of constraints) {
-      // Contraint type IN is ignored for the runtimeBalanceOf
+      // Constraint type IN is ignored for the runtimeBalanceOf
       // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
       if (
         !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
       ) {
-        throw new Error("Invalid contraint type")
+        throw new Error("Invalid constraint type")
       }
 
       // Handle value validation in a appropriate to runtime function
@@ -163,7 +163,7 @@ export const runtimeERC20BalanceOf = ({
         typeof constraint.value !== "bigint" ||
         constraint.value < BigInt(0)
       ) {
-        throw new Error("Invalid contraint value")
+        throw new Error("Invalid constraint value")
       }
 
       const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
