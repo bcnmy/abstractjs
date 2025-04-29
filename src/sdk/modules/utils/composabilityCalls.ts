@@ -1,4 +1,5 @@
 import {
+  type AbiParameter,
   type Address,
   type Hex,
   encodeAbiParameters,
@@ -190,6 +191,34 @@ export const runtimeERC20BalanceOf = ({
   }
 }
 
+/// @dev This is a helper function for composable pseudo-dynamic `bytes` values.
+/// which are in fact several static values abi.encoded together
+/// and we want one of those static values to be runtime value
+/// so what we do here is we just treat runtimeAbiEncode as pseudo-function composable call
+/// and just mimic the process of encoding the params for it.
+/// it prepares the independent encoding with internal offsets for dynamic params, so
+/// every `runtimeAbiEncode` can has nested `runtimeAbiEncode`-s inside it
+export const runtimeEncodeAbiParameters = (
+  // mimics the interface of the og encodeAbiParameters
+  // but is able to work with runtime values
+  inputs: AbiParameter[],
+  args: Array<AnyData>
+): RuntimeValue => {
+  // prepare functionContext and args out of what this helper is expecting
+  const inputParams: InputParam[] = prepareComposableParams(inputs, args)
+
+  // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
+  // wrapped into a RuntimeValue object with several InputParam's.
+  // Some of those params will be runtime values (fetcherType: STATIC_CALL)
+  // and some of them will be raw bytes (fetcherType: RAW_BYTES)
+  // So we should account for that in the `encodeParams` method
+  return {
+    isRuntime: true,
+    inputParams: inputParams,
+    outputParams: []
+  }
+}
+
 export const isComposableCallRequired = (
   functionContext: FunctionContext,
   args: Array<AnyData>
@@ -234,10 +263,10 @@ export const isComposableCallRequired = (
 }
 
 export const prepareComposableParams = (
-  functionContext: FunctionContext,
+  inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {
-  const composableParams = encodeRuntimeFunctionData(functionContext, args).map(
+  const composableParams = encodeRuntimeFunctionData(inputs, args).map(
     (calldata) => {
       if (isRuntimeComposableValue(calldata)) {
         // Just handling input params here. In future, we may need to add support for output params as well

@@ -100,6 +100,7 @@ export async function usePermission<
   sessionDetails.signature = await signer.signMessage({
     message: { raw: userOpHashToSign }
   })
+
   userOperation.signature = encodeSmartSessionSignature(sessionDetails)
   return await sendUserOperation(nexusClient, userOperation)
 }
