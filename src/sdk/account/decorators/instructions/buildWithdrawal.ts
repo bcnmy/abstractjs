@@ -138,19 +138,27 @@ export const buildWithdrawal = async (
       }
 
       triggerCalls = await buildComposableCall(baseParams, composableCallParams)
-    } else {
-      triggerCalls = [
+
+      return [
+        ...currentInstructions,
         {
-          to: tokenAddress,
-          data: encodeFunctionData({
-            abi,
-            functionName: functionSig,
-            args: args as [`0x${string}`, bigint]
-          }),
-          ...(gasLimit ? { gasLimit } : {})
+          calls: triggerCalls,
+          chainId,
+          isComposable: true
         }
-      ] as AbstractCall[]
+      ]
     }
+    triggerCalls = [
+      {
+        to: tokenAddress,
+        data: encodeFunctionData({
+          abi,
+          functionName: functionSig,
+          args: args as [`0x${string}`, bigint]
+        }),
+        ...(gasLimit ? { gasLimit } : {})
+      }
+    ] as AbstractCall[]
   }
 
   return [

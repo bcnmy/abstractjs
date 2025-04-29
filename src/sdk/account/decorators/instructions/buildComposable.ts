@@ -82,14 +82,14 @@ export const buildComposableCall = async (
   }
 
   const composableParams: InputParam[] = prepareComposableParams(
-    functionContext,
+    [...functionContext.inputs],
     args
   )
 
   const composableCalls: ComposableCall[] = []
 
   const composableCall: ComposableCall = {
-    to,
+    to: to,
     value: value ?? BigInt(0),
     functionSig: functionContext.functionSig,
     inputParams: composableParams,

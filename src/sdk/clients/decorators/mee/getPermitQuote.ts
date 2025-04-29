@@ -92,6 +92,9 @@ export const getPermitQuote = async (
     data: { ...trigger, recipient, sender }
   }
 
+  // The trigger transfer is the first instruction in the array.
+  // It draws funds from the eoa to the nexus account with a transferFrom call.
+  // If the instructions are composable, we build the composable transaction
   const triggerTransfer = await (isComposable
     ? account_.buildComposable(params)
     : account_.build(params))
@@ -109,9 +112,12 @@ export const getPermitQuote = async (
     ...rest
   })
 
+  // This trigger should have an amount that is the amount user wishes to spend, plus the gas fees
   const trigger_ = {
     ...trigger,
-    amount: BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+    amount: trigger.useMaxAvailableAmount
+      ? BigInt(trigger.amount)
+      : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
   }
 
   return { quote, trigger: trigger_ }

@@ -111,9 +111,12 @@ export const getOnChainQuote = async (
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
+
   const trigger_ = {
     ...trigger,
-    amount: BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+    amount: trigger.useMaxAvailableAmount
+      ? BigInt(trigger.amount)
+      : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
   }
 
   return { quote, trigger: trigger_ }
