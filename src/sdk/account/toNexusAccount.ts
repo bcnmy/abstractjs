@@ -217,9 +217,13 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Get authorization data for the EOA to Nexus Account
      * @param delegatedContract - The contract address to delegate the authorization to. Defaults to the implementation address.
+     * @param multiChain - Whether to use the multi-chain authorization. Defaults to false.
      * @returns MeeAuthorization
      */
-    toDelegation: (delegatedContract?: Address) => Promise<MeeAuthorization>
+    toDelegation: (
+      multiChain?: boolean,
+      delegatedContract?: Address
+    ) => Promise<MeeAuthorization>
 
     /** Execute the transaction to unauthorize the account */
     unDelegate: () => Promise<Hex>
@@ -612,6 +616,7 @@ export const toNexusAccount = async (
    * const eip7702Auth = await nexusAccount.toDelegation() // Returns MeeAuthorization
    */
   async function toDelegation(
+    multiChain = false,
     delegatedContract?: Address
   ): Promise<MeeAuthorization> {
     const contractAddress = delegatedContract || implementationAddress
@@ -619,7 +624,7 @@ export const toNexusAccount = async (
       contractAddress
     })
     const eip7702Auth: MeeAuthorization = {
-      chainId: `0x${chain.id.toString(16)}` as Hex,
+      chainId: `0x${(multiChain ? 0 : chain.id).toString(16)}` as Hex,
       address: contractAddress as Hex,
       nonce: `0x${authorization.nonce.toString(16)}` as Hex,
       r: authorization.r as Hex,

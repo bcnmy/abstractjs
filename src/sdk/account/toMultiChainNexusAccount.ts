@@ -1,5 +1,8 @@
 import type { Chain, Hex, Transport } from "viem"
-import type { Instruction } from "../clients/decorators/mee/getQuote"
+import type {
+  Instruction,
+  MeeAuthorization
+} from "../clients/decorators/mee/getQuote"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
   type ToNexusSmartAccountParameters,
@@ -184,6 +187,14 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
   waitForTransactionReceipts: (
     parameters: WaitForTransactionReceiptParameters
   ) => Promise<WaitForTransactionReceiptPayload>
+  /**
+   * Function to get the delegation data for the account.
+   * The chainId will be 0 for multi-chain authorization.
+   * @returns The delegation data.
+   * @example
+   * const delegation = await mcAccount.toDelegation()
+   */
+  toDelegation: () => Promise<MeeAuthorization>
 }
 
 /**
@@ -307,6 +318,9 @@ export async function toMultichainNexusAccount(
   ) =>
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
+  // The specific deployment doesn't matter here because chainId = 0
+  const toDelegation = async () => await deployments[0].toDelegation(true)
+
   return {
     ...baseAccount,
     getUnifiedERC20Balance,
@@ -316,6 +330,7 @@ export async function toMultichainNexusAccount(
     queryBridge,
     isDelegated,
     unDelegate,
-    waitForTransactionReceipts
+    waitForTransactionReceipts,
+    toDelegation
   }
 }

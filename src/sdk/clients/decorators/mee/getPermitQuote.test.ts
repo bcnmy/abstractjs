@@ -12,16 +12,24 @@ import {
   type FeeTokenInfo,
   type Instruction,
   type Trigger,
-  getFusionQuote
+  executeSignedQuote,
+  getFusionQuote,
+  signPermitQuote,
+  waitForSupertransactionReceipt
 } from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import { getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { getAllowance } from "../../../account/utils/Utils"
 import { mcUSDC } from "../../../constants/tokens"
 import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
-import { type MeeClient, createMeeClient } from "../../createMeeClient"
+import {
+  DEFAULT_MEE_NODE_URL,
+  type MeeClient,
+  createMeeClient
+} from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
 
 describe("mee.getPermitQuote", () => {
@@ -56,7 +64,10 @@ describe("mee.getPermitQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: DEFAULT_MEE_NODE_URL
+    })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
@@ -185,6 +196,92 @@ describe("mee.getPermitQuote", () => {
 
     // Verify that the amount is usable (not negative)
     expect(fusionQuote.trigger.amount).toBeGreaterThan(0n)
+  })
+
+  // @ts-ignore
+  test("should investigate issue for swapped", async () => {
+    expect(1).toEqual(1)
+
+    const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    const chainId = paymentChain.id
+    const client = createPublicClient({
+      chain: paymentChain,
+      transport: transports[0]
+    })
+
+    console.log({ paymentChain })
+
+    const amount = 7000n // should be more than the cost of gas
+    const vitalikBalance = await getBalance(client, vitalik, tokenAddress)
+    const eoaBalance = await getBalance(
+      client,
+      eoaAccount.address,
+      tokenAddress
+    )
+    const mcNexusAddress = mcNexus.addressOn(paymentChain.id, true)
+    const mcNexusBalance = await getBalance(
+      client,
+      mcNexusAddress,
+      tokenAddress
+    )
+    const allowance = await getAllowance(
+      client,
+      eoaAccount.address,
+      tokenAddress,
+      mcNexusAddress
+    )
+
+    console.log("vitalikBalance", vitalikBalance)
+    console.log("eoaBalance", eoaBalance)
+    console.log("mcNexusAddress", mcNexusAddress)
+    console.log("mcNexusBalance", mcNexusBalance)
+    console.log("allowance", allowance)
+
+    const trigger: Trigger = {
+      amount,
+      chainId,
+      tokenAddress,
+      useMaxAvailableAmount: true
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        chainId,
+        tokenAddress,
+        recipient: vitalik,
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexusAddress,
+          tokenAddress
+        })
+      }
+    })
+
+    const fusionQuote = await meeClient.getPermitQuote({
+      trigger,
+      instructions: [transferInstruction],
+      feeToken
+    })
+
+    console.log("fusionQuote", fusionQuote)
+
+    const signedQuote = await signPermitQuote(meeClient, { fusionQuote })
+
+    console.log("signedPermitQuote", signedQuote)
+    console.log(
+      "signedPermitQuote.userOps[0].userOp",
+      signedQuote.userOps[0].userOp
+    )
+    console.log(
+      "signedPermitQuote.userOps[1].userOp",
+      signedQuote.userOps[1].userOp
+    )
+
+    const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+    console.log("hash", hash)
+
+    const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
+    console.log("receipt", receipt)
   })
 
   test("should add gas fees to amount when not using max available amount", async () => {

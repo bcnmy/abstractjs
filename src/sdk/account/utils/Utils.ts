@@ -424,13 +424,13 @@ export const getAllowance = async (
   client: PublicClient,
   owner: Address,
   tokenAddress: Address,
-  grantee = BICONOMY_TOKEN_PAYMASTER
+  spender = BICONOMY_TOKEN_PAYMASTER
 ): Promise<bigint> => {
   const approval = await client.readContract({
     address: tokenAddress,
     abi: erc20Abi,
     functionName: "allowance",
-    args: [owner, grantee]
+    args: [owner, spender]
   })
 
   return approval as bigint

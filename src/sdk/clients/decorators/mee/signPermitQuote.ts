@@ -136,6 +136,15 @@ export const signPermitQuote = async (
     throw new Error(`Failed to get value: ${value.reason}`)
   }) as [bigint, string, string, `0x${string}`]
 
+  console.log("signPermitQuote", {
+    trigger,
+    owner,
+    spender,
+    value: trigger.amount,
+    nonce,
+    deadline: BigInt(quote.hash)
+  })
+
   const signature = await walletClient.signTypedData({
     domain: {
       name,

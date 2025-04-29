@@ -80,7 +80,6 @@ export const getPermitQuote = async (
 
   const sender = account_.signer.address
   const recipient = account_.addressOn(trigger.chainId, true)
-
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const isComposable = resolvedInstructions.some(
@@ -89,8 +88,16 @@ export const getPermitQuote = async (
 
   const params: BuildInstructionTypes = {
     type: "transferFrom",
-    data: { ...trigger, recipient, sender }
+    data: {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      amount: trigger.amount,
+      recipient,
+      sender
+    }
   }
+
+  console.log("params", params)
 
   // The trigger transfer is the first instruction in the array.
   // It draws funds from the eoa to the nexus account with a transferFrom call.
@@ -112,6 +119,18 @@ export const getPermitQuote = async (
     ...rest
   })
 
+  console.log("trigger.useMaxAvailableAmount", trigger.useMaxAvailableAmount)
+  console.log("batchedInstructions.length", batchedInstructions.length)
+  console.log(
+    "batchedInstructions[0].calls[0]",
+    batchedInstructions[0].calls[0]
+  )
+  console.log(
+    "batchedInstructions[0].calls[1]",
+    batchedInstructions[0].calls[1]
+  )
+  console.log(triggerTransfer[0].calls)
+  console.log(resolvedInstructions[0].calls)
   // This trigger should have an amount that is the amount user wishes to spend, plus the gas fees
   const trigger_ = {
     ...trigger,
