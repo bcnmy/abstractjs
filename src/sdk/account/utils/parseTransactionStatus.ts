@@ -51,20 +51,28 @@ export const parseTransactionStatus = async (
     }
   }
 
+  // Cleanup user ops failure / success status is not considered for main status
+  const userOpsWithoutCleanup = userOps.filter((usop) => !usop.isCleanUpUserOp)
+
   const statusMap = {
-    hasFailedOps: userOps.some((userOp) => userOp.executionStatus === "FAILED"),
-    hasMinedFailOps: userOps.some(
+    // If there is a cleanup user op failue ? Ignore it
+    hasFailedOps: userOpsWithoutCleanup.some(
+      (userOp) => userOp.executionStatus === "FAILED"
+    ),
+    // If there is a cleanup user op mining failue ? Ignore it
+    hasMinedFailOps: userOpsWithoutCleanup.some(
       (userOp) => userOp.executionStatus === "MINED_FAIL"
     ),
     hasPendingOps: userOps.some(
       (userOp) => userOp.executionStatus === "PENDING"
     ),
     hasMiningOps: userOps.some((userOp) => userOp.executionStatus === "MINING"),
-    allMinedSuccess: userOps.every(
+    // If there is a cleanup user op failue / mining failure ? Ignore it and mark the sprTx successful.
+    allMinedSuccess: userOpsWithoutCleanup.every(
       (userOp) => userOp.executionStatus === "MINED_SUCCESS"
     ),
     // Check if all userOps have a final state
-    allFinalised: userOps.every(
+    allFinalised: userOpsWithoutCleanup.every(
       (userOp) =>
         userOp.executionStatus === "FAILED" ||
         userOp.executionStatus === "MINED_FAIL" ||

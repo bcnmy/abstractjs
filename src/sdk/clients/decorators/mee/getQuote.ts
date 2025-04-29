@@ -1,8 +1,16 @@
 import type { Address, Hex, OneOf } from "viem"
+import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import type { NonceInfo } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
-import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
+import type { RuntimeValue } from "../../../modules"
+import {
+  type ComposableCall,
+  greaterThanOrEqualTo,
+  runtimeERC20BalanceOf,
+  runtimeNonceOf
+} from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -98,6 +106,37 @@ export type WalletProvider =
   | "ZERODEV_V31"
 
 /**
+ * Parameters for a cleanup userops
+ */
+export type CleanUp = {
+  /**
+   * The address of the token to cleanup
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+   */
+  tokenAddress: Address
+  /**
+   * The chainId to use
+   * @example 1 // Ethereum Mainnet
+   */
+  chainId: number
+  /**
+   * Amount of the token to use, in the token's smallest unit
+   * @example 1000000n // 1 USDC (6 decimals)
+   */
+  amount?: bigint
+  /**
+   * The address of the receiver where the token to cleanup
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // EVM address
+   */
+  recipientAddress: Address
+  /**
+   * The user ops dependency for nonce injection
+   * @example [userOp(1)]
+   */
+  dependsOn?: number[]
+}
+
+/**
  * Parameters required for requesting a quote from the MEE service
  */
 export type GetQuoteParams = SupertransactionLike & {
@@ -128,6 +167,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * Whether to delegate the transaction to the account
    */
   delegate?: boolean
+  /**
+   * token cleanup option to pull the funds on failure or dust cleanup
+   */
+  cleanUps?: CleanUp[]
 }
 
 export type MeeAuthorization = {
@@ -162,6 +205,8 @@ type QuoteRequest = {
     upperBoundTimestamp?: number
     /** EIP7702Auth */
     eip7702Auth?: MeeAuthorization
+    /** Cleanup userop flag - Special user op */
+    isCleanUpUserOp?: boolean
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -243,6 +288,10 @@ export interface MeeFilledUserOpDetails {
   maxFeePerGas: string
   /** Chain ID where the operation will be executed */
   chainId: string
+  /** EIP7702 authorization info */
+  eip7702Auth?: MeeAuthorization
+  /** Cleanup userop flag - Special user op */
+  isCleanUpUserOp?: boolean
 }
 
 /**
@@ -303,6 +352,7 @@ export const getQuote = async (
   const {
     account: account_ = client.account,
     instructions,
+    cleanUps,
     feeToken,
     path = "quote",
     eoa,
@@ -346,38 +396,24 @@ export const getQuote = async (
         .join(", ")}`
     )
   }
-  const userOpResults = await Promise.all(
-    resolvedInstructions.map((userOp) => {
-      const deployment = account_.deploymentOn(userOp.chainId, true)
 
-      let callsPromise: Promise<Hex>
+  const preparedUserOps = await prepareUserOps(account_, resolvedInstructions)
 
-      if (userOp.isComposable) {
-        callsPromise = deployment.encodeExecuteComposable(
-          userOp.calls as ComposableCall[]
-        )
-      } else {
-        callsPromise =
-          userOp.calls.length > 1
-            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
-            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
-      }
+  // If cleanup is configured, the cleanup userops will be appended to the existing userops
+  // Every cleanup is a separate user op and will be executed if certain conditions met
+  if (cleanUps && cleanUps.length > 0) {
+    const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
+      ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
+    )
 
-      return Promise.all([
-        callsPromise,
-        deployment.getNonce(),
-        deployment.isDeployed(),
-        deployment.getInitCode(),
-        deployment.address,
-        userOp.calls
-          .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
-          .reduce((curr, acc) => curr + acc)
-          .toString(),
-        userOp.chainId.toString(),
-        deployment
-      ])
-    })
-  )
+    const cleanUpUserOps = await prepareCleanUpUserOps(
+      account_,
+      userOpsNonceInfo,
+      cleanUps
+    )
+
+    preparedUserOps.push(...cleanUpUserOps)
+  }
 
   const hasProcessedInitData: string[] = [feeToken.chainId.toString()]
   const [nonce, isAccountDeployed, initCode] = await Promise.all([
@@ -403,16 +439,17 @@ export const getQuote = async (
   }
 
   const userOps = await Promise.all(
-    userOpResults.map(
+    preparedUserOps.map(
       async ([
         callData,
-        nonce_,
+        { nonce },
         isAccountDeployed,
         initCode,
         sender,
         callGasLimit,
         chainId,
-        nexusAccount
+        nexusAccount,
+        isCleanUpUserOp
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
         const shouldContainInitData =
@@ -430,8 +467,9 @@ export const getQuote = async (
           sender,
           callData,
           callGasLimit,
-          nonce: nonce_.toString(),
+          nonce: nonce.toString(),
           chainId,
+          isCleanUpUserOp,
           ...initDataOrUndefined
         }
       }
@@ -441,6 +479,143 @@ export const getQuote = async (
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
+}
+
+const prepareUserOps = async (
+  account: MultichainSmartAccount,
+  instructions: Instruction[],
+  isCleanUpUserOps = false
+) => {
+  return await Promise.all(
+    instructions.map((userOp) => {
+      const deployment = account.deploymentOn(userOp.chainId, true)
+
+      let callsPromise: Promise<Hex>
+
+      if (userOp.isComposable) {
+        callsPromise = deployment.encodeExecuteComposable(
+          userOp.calls as ComposableCall[]
+        )
+      } else {
+        callsPromise =
+          userOp.calls.length > 1
+            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
+            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
+      }
+
+      return Promise.all([
+        callsPromise,
+        deployment.getNonceWithKey(),
+        deployment.isDeployed(),
+        deployment.getInitCode(),
+        deployment.address,
+        userOp.calls
+          .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
+          .reduce((curr, acc) => curr + acc)
+          .toString(),
+        userOp.chainId.toString(),
+        deployment,
+        isCleanUpUserOps
+      ])
+    })
+  )
+}
+
+export const userOp = (userOpIndex: number) => {
+  if (userOpIndex <= 0)
+    throw new Error("UserOp index should be greater than zero")
+
+  // During the userop building, the payment user ops is not available. But the slot 1 is always reserved for payment userop
+  // as standard practise. Hence, the userOp will indirectly implies this by -1 which yields the first userop defined by devs
+  return userOpIndex - 1
+}
+
+const prepareCleanUpUserOps = async (
+  account: MultichainSmartAccount,
+  userOpsNonceInfo: NonceInfo[],
+  cleanUps: CleanUp[]
+) => {
+  const cleanUpInstructions = await Promise.all(
+    cleanUps.map(async (cleanUp) => {
+      let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
+
+      // If there is no amount specified ? Runtime amount will be cleaned up by default
+      if (amount === 0n) {
+        amount = runtimeERC20BalanceOf({
+          targetAddress: account.addressOn(cleanUp.chainId, true),
+          tokenAddress: cleanUp.tokenAddress,
+          constraints: [greaterThanOrEqualTo(1n)] // Cleanup will only happen if there is atleast 1 wei
+        })
+      }
+
+      const [cleanUpTransferInstruction] = await buildComposable(
+        { account: account, currentInstructions: [] },
+        {
+          type: "transfer",
+          data: {
+            recipient: cleanUp.recipientAddress,
+            tokenAddress: cleanUp.tokenAddress,
+            amount,
+            chainId: cleanUp.chainId
+          }
+        }
+      )
+
+      const nonceDependencies: RuntimeValue[] = []
+
+      if (cleanUp.dependsOn && cleanUp.dependsOn.length > 0) {
+        for (const userOpIndex of cleanUp.dependsOn) {
+          const userOpNonceInfo = userOpsNonceInfo[userOpIndex]
+          if (!userOpNonceInfo)
+            throw new Error(
+              "Invalid UserOp dependency, please check the dependsOn configuration"
+            )
+
+          const { nonce, nonceKey } = userOpNonceInfo
+
+          const nonceOf = runtimeNonceOf({
+            smartAccountAddress: account.addressOn(cleanUp.chainId, true),
+            nonceKey: nonceKey,
+            constraints: [greaterThanOrEqualTo(nonce + 1n)]
+          })
+
+          nonceDependencies.push(nonceOf)
+        }
+      } else {
+        const lastUserOp = userOpsNonceInfo[userOpsNonceInfo.length - 1]
+        const { nonce, nonceKey } = lastUserOp
+
+        const nonceOf = runtimeNonceOf({
+          smartAccountAddress: account.addressOn(cleanUp.chainId, true),
+          nonceKey: nonceKey,
+          constraints: [greaterThanOrEqualTo(nonce + 1n)]
+        })
+
+        nonceDependencies.push(nonceOf)
+      }
+
+      const nonceDependencyInputParams = nonceDependencies.flatMap(
+        (dep) => dep.inputParams
+      )
+
+      cleanUpTransferInstruction.calls = (
+        cleanUpTransferInstruction.calls as ComposableCall[]
+      ).map((call) => {
+        call.inputParams.push(...nonceDependencyInputParams)
+        return call
+      })
+
+      return cleanUpTransferInstruction
+    })
+  )
+
+  const cleanUpUserOps = await prepareUserOps(
+    account,
+    cleanUpInstructions,
+    true
+  )
+
+  return cleanUpUserOps
 }
 
 export default getQuote

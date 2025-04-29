@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.5
+
+### Patch Changes
+
+- Cleanups
+
 ## 1.0.4
 
 ### Patch Changes

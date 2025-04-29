@@ -156,6 +156,14 @@ export type NexusAccount = Prettify<
 >
 
 /**
+ * NonceInfo type
+ */
+export type NonceInfo = {
+  nonceKey: bigint
+  nonce: bigint
+}
+
+/**
  * Nexus Smart Account Implementation
  */
 export type NexusSmartAccountImplementation = SmartAccountImplementation<
@@ -167,6 +175,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Gets the init code for the account */
     getInitCode: () => Hex
+
+    /** Gets the init code for the account */
+    getNonceWithKey: () => Promise<NonceInfo>
 
     /** Encodes a single call for execution */
     encodeExecute: (call: Call) => Promise<Hex>
@@ -238,6 +249,8 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 export const toNexusAccount = async (
   parameters: ToNexusSmartAccountParameters
 ): Promise<NexusAccount> => {
+  let isNonceKeyBeingCalculated = false
+
   const {
     chain,
     transport,
@@ -441,19 +454,36 @@ export const toNexusAccount = async (
     })
   }
 
+  // This function always make sure to provide a unique nonce key with respect to timestamps.
+  // This is helpful to reduce nonce collusion
+  const getDefaultNonceKey = async (): Promise<bigint> => {
+    while (isNonceKeyBeingCalculated) {
+      await new Promise((resolve) => setTimeout(resolve, 1)) // wait for 1 ms if another key is being calculated
+    }
+
+    isNonceKeyBeingCalculated = true
+    const key = BigInt(Date.now())
+
+    await new Promise((resolve) => setTimeout(resolve, 1)) // ensure next call is in the next millisecond
+    isNonceKeyBeingCalculated = false
+
+    return key
+  }
+
   /**
-   * @description Gets the nonce for the account
+   * @description Gets the nonce for the account along with modified key
    * @param parameters - Optional parameters for getting the nonce
-   * @returns The nonce
+   * @returns The nonce and the key
    */
-  const getNonce = async (parameters?: {
+  const getNonceWithKey = async (parameters?: {
     key?: bigint
     validationMode?: "0x00" | "0x01" | "0x02"
     moduleAddress?: Address
-  }): Promise<bigint> => {
+  }): Promise<NonceInfo> => {
     const TIMESTAMP_ADJUSTMENT = 16777215n
+    const defaultNonceKey = await getDefaultNonceKey()
     const {
-      key: key_ = 0n,
+      key: key_ = defaultNonceKey,
       validationMode = "0x00",
       moduleAddress = module.module
     } = parameters ?? {}
@@ -465,13 +495,30 @@ export const toNexusAccount = async (
         moduleAddress
       ])
       const accountAddress = await getAddress()
-      return await entryPointContract.read.getNonce([
+
+      const nonce = await entryPointContract.read.getNonce([
         accountAddress,
         BigInt(key)
       ])
+
+      return { nonceKey: BigInt(key), nonce }
     } catch (e) {
-      return 0n
+      return { nonceKey: 0n, nonce: 0n }
     }
+  }
+
+  /**
+   * @description Gets the nonce for the account
+   * @param parameters - Optional parameters for getting the nonce
+   * @returns The nonce
+   */
+  const getNonce = async (parameters?: {
+    key?: bigint
+    validationMode?: "0x00" | "0x01" | "0x02"
+    moduleAddress?: Address
+  }): Promise<bigint> => {
+    const { nonce } = await getNonceWithKey(parameters)
+    return nonce
   }
 
   /**
@@ -672,6 +719,7 @@ export const toNexusAccount = async (
       entryPointAddress: entryPoint07Address,
       getAddress,
       getInitCode,
+      getNonceWithKey,
       encodeExecute,
       encodeExecuteBatch,
       encodeExecuteComposable,

@@ -14,6 +14,7 @@ import {
   erc20Abi,
   fromBytes,
   numberToHex,
+  parseAbi,
   parseEventLogs,
   parseUnits,
   toBytes,
@@ -28,6 +29,10 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
+import {
+  getSupertransactionReceipt,
+  userOp
+} from "../../../clients/decorators/mee"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
 import {
   UniswapSwapRouterAbi,
@@ -43,7 +48,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { getMultichainContract } from "../../utils"
+import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
 
 // @ts-ignore
@@ -1007,6 +1012,348 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
       expect(nexusUSDCBalance).to.eq(0n)
     })
+  })
+
+  it("should multiple composable cleanup execute", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.06", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          amount: parseUnits("0.1", 6)
+        },
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          amount: parseUnits("0.1", 6)
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should composable cleanup execute based on dependency config", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.03", 6)
+
+    await mcNexus.deploymentOn(chain.id)?.walletClient.writeContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [mcNexus.addressOn(chain.id, true), amountToSupply],
+      chain
+    })
+
+    const transferInstructionOne = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const transferInstructionTwo = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [...transferInstructionOne, ...transferInstructionTwo],
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          dependsOn: [userOp(1), userOp(2)]
+        }
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeQuote({
+      quote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+    }
+
+    console.log({ explorerLinks, hash })
+
+    const balanceAfter = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
+      functionName: "balanceOf",
+      args: [mcNexus.addressOn(chain.id, true)]
+    })
+
+    expect(balanceAfter).to.eq(0n)
+  })
+
+  it("should composable cleanup fails for wrong userOp dependencies", async () => {
+    try {
+      const amountToSupply = parseUnits("0.1", 6)
+
+      const transferInstruction = await mcNexus.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: eoaAccount.address,
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          amount: amountToSupply,
+          chainId: chain.id
+        }
+      })
+
+      await meeClient.getQuote({
+        instructions: [...transferInstruction],
+        cleanUps: [
+          {
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            dependsOn: [userOp(1), userOp(2)]
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    } catch (e) {
+      expect(e.message).to.eq(
+        "Invalid UserOp dependency, please check the dependsOn configuration"
+      )
+    }
+  })
+
+  it("should composable cleanup fails for userOp dependencies less than or equal to 0", async () => {
+    try {
+      const amountToSupply = parseUnits("0.1", 6)
+
+      const transferInstruction = await mcNexus.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: eoaAccount.address,
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          amount: amountToSupply,
+          chainId: chain.id
+        }
+      })
+
+      await meeClient.getQuote({
+        instructions: [...transferInstruction],
+        cleanUps: [
+          {
+            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            dependsOn: [userOp(0), userOp(1)]
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcUSDC.addressOn(chain.id)
+        }
+      })
+    } catch (e) {
+      expect(e.message).to.eq("UserOp index should be greater than zero")
+    }
+  })
+
+  it("should execute composable cleanup for composable call", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.08", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const transferFundsInstructions: Instruction[] =
+      await mcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: runtimeTransferAddress,
+          abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+          functionName: "transferFunds",
+          args: [
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id)
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction, ...transferFundsInstructions],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+    }
+
+    console.log({ explorerLinks, hash })
+
+    const balanceAfter = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
+      functionName: "balanceOf",
+      args: [mcNexus.addressOn(chain.id, true)]
+    })
+
+    expect(balanceAfter).to.eq(0n)
+  })
+
+  it("should execute composable cleanup for non composable call", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.08", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+    }
+
+    console.log({ explorerLinks, hash })
+
+    const balanceAfter = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
+      functionName: "balanceOf",
+      args: [mcNexus.addressOn(chain.id, true)]
+    })
+
+    expect(balanceAfter).to.eq(0n)
   })
 })
 
