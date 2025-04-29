@@ -164,14 +164,28 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   upperBoundTimestamp?: number
   /**
-   * Whether to delegate the transaction to the account
-   */
-  delegate?: boolean
-  /**
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
-}
+} & OneOf<
+    | {
+        /**
+         * Whether to delegate the transaction to the account
+         */
+        delegate?: false
+      }
+    | {
+        /**
+         * Whether to delegate the transaction to the account
+         */
+        delegate: true
+        /**
+         * The authorization data for the transaction. Should be a valid MeeAuthorization object on chainId 0.
+         * If not provided, the account will be delegated to the implementation address, using chainId 0.
+         */
+        authorization?: MeeAuthorization
+      }
+  >
 
 export type MeeAuthorization = {
   address: Hex
@@ -359,11 +373,17 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
-    delegate = false
+    delegate = false,
+    authorization: multiChainAuthorization_
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
+
+  const multiChainAuthorization = delegate
+    ? ((multiChainAuthorization_ ??
+        (await account_.toDelegation())) as MeeAuthorization)
+    : undefined
 
   const validFeeToken =
     validPaymentAccount &&
@@ -425,8 +445,10 @@ export const getQuote = async (
   // Do authorization only if required as it requires signing
   const initData: InitDataOrUndefined = isAccountDeployed
     ? undefined
-    : delegate
-      ? { eip7702Auth: await validPaymentAccount.toDelegation() }
+    : delegate && multiChainAuthorization
+      ? {
+          eip7702Auth: multiChainAuthorization
+        }
       : { initCode }
 
   const paymentInfo: PaymentInfo = {
@@ -448,7 +470,6 @@ export const getQuote = async (
         sender,
         callGasLimit,
         chainId,
-        nexusAccount,
         isCleanUpUserOp
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
@@ -457,9 +478,12 @@ export const getQuote = async (
 
         if (shouldContainInitData) {
           hasProcessedInitData.push(chainId)
-          initDataOrUndefined = delegate
-            ? { eip7702Auth: await nexusAccount.toDelegation() }
-            : { initCode }
+          initDataOrUndefined =
+            delegate && multiChainAuthorization
+              ? {
+                  eip7702Auth: multiChainAuthorization
+                }
+              : { initCode }
         }
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
@@ -514,7 +538,6 @@ const prepareUserOps = async (
           .reduce((curr, acc) => curr + acc)
           .toString(),
         userOp.chainId.toString(),
-        deployment,
         isCleanUpUserOps
       ])
     })

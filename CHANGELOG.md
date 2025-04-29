@@ -5,6 +5,8 @@
 ### Patch Changes
 
 - Cleanups
+- Improved gas efficiency
+- 7702 replay support
 
 ## 1.0.4
 
