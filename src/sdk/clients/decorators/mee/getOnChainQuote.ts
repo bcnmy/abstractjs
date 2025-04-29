@@ -76,6 +76,7 @@ export const getOnChainQuote = async (
   const {
     account: account_ = client.account,
     trigger,
+    cleanUps,
     instructions,
     ...rest
   } = parameters
@@ -107,11 +108,15 @@ export const getOnChainQuote = async (
     path: "quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,
     instructions: batchedInstructions,
+    ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
+
   const trigger_ = {
     ...trigger,
-    amount: BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+    amount: trigger.useMaxAvailableAmount
+      ? BigInt(trigger.amount)
+      : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
   }
 
   return { quote, trigger: trigger_ }

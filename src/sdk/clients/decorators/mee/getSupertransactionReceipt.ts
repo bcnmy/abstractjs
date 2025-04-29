@@ -144,12 +144,23 @@ export async function getSupertransactionReceipt(
     case "MINED_SUCCESS": {
       if (waitForReceipts) {
         receipts = await Promise.all(
-          explorerResponse.userOps.map(({ chainId, executionData }) =>
-            getTransactionReceiptFromViem(
-              account.deploymentOn(Number(chainId), true).publicClient,
-              { confirmations, ...parameters, hash: executionData }
+          explorerResponse.userOps
+            .filter((userOp) => {
+              if (
+                userOp.isCleanUpUserOp &&
+                userOp.executionStatus !== "MINED_SUCCESS"
+              ) {
+                return false
+              }
+
+              return true
+            })
+            .map(({ chainId, executionData }) =>
+              getTransactionReceiptFromViem(
+                account.deploymentOn(Number(chainId), true).publicClient,
+                { confirmations, ...parameters, hash: executionData }
+              )
             )
-          )
         )
       }
       break

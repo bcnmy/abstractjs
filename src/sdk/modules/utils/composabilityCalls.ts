@@ -4,8 +4,10 @@ import {
   type Hex,
   encodeAbiParameters,
   encodeFunctionData,
-  erc20Abi
+  erc20Abi,
+  parseAbi
 } from "viem"
+import { ENTRY_POINT_ADDRESS } from "../../constants"
 import type { AnyData } from "../../modules/utils/Types"
 import {
   type FunctionContext,
@@ -76,6 +78,12 @@ export type RuntimeERC20BalanceOfParams = {
   constraints?: ConstraintField[]
 }
 
+export type RuntimeNonceOfParams = {
+  smartAccountAddress: Address
+  nonceKey: bigint
+  constraints?: ConstraintField[]
+}
+
 // Detects whether the value is runtime injected value or not
 export const isRuntimeComposableValue = (value: AnyData) => {
   if (
@@ -127,6 +135,74 @@ export const equalTo = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.EQ, value }
 }
 
+export const runtimeNonceOf = ({
+  smartAccountAddress,
+  nonceKey,
+  constraints = []
+}: RuntimeNonceOfParams): RuntimeValue => {
+  const defaultFunctionSig = "getNonce"
+
+  const entryPointNonceAbi = parseAbi([
+    "function getNonce(address sender, uint192 key) public view returns (uint256)"
+  ])
+
+  const encodedParam = encodeAbiParameters(
+    [{ type: "address" }, { type: "bytes" }],
+    [
+      ENTRY_POINT_ADDRESS,
+      encodeFunctionData({
+        abi: entryPointNonceAbi,
+        functionName: defaultFunctionSig,
+        args: [smartAccountAddress, nonceKey]
+      })
+    ]
+  )
+
+  const constraintsToAdd: Constraint[] = []
+
+  if (constraints.length > 0) {
+    for (const constraint of constraints) {
+      // Contraint type IN is ignored for the runtimeBalanceOf
+      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
+      if (
+        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
+      ) {
+        throw new Error("Invalid contraint type")
+      }
+
+      // Handle value validation in a appropriate to runtime function
+      if (
+        typeof constraint.value !== "bigint" ||
+        constraint.value < BigInt(0)
+      ) {
+        throw new Error("Invalid contraint value")
+      }
+
+      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
+      const encodedConstraintValue = encodeAbiParameters(
+        [{ type: "bytes32" }],
+        [valueHex as Hex]
+      )
+
+      constraintsToAdd.push(
+        prepareConstraint(constraint.type, encodedConstraintValue)
+      )
+    }
+  }
+
+  return {
+    isRuntime: true,
+    inputParams: [
+      prepareInputParam(
+        InputParamFetcherType.STATIC_CALL,
+        encodedParam,
+        constraintsToAdd
+      )
+    ],
+    outputParams: []
+  }
+}
+
 export const runtimeERC20BalanceOf = ({
   targetAddress,
   tokenAddress,
@@ -150,12 +226,12 @@ export const runtimeERC20BalanceOf = ({
 
   if (constraints.length > 0) {
     for (const constraint of constraints) {
-      // Contraint type IN is ignored for the runtimeBalanceOf
+      // Constraint type IN is ignored for the runtimeBalanceOf
       // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
       if (
         !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
       ) {
-        throw new Error("Invalid contraint type")
+        throw new Error("Invalid constraint type")
       }
 
       // Handle value validation in a appropriate to runtime function
@@ -163,7 +239,7 @@ export const runtimeERC20BalanceOf = ({
         typeof constraint.value !== "bigint" ||
         constraint.value < BigInt(0)
       ) {
-        throw new Error("Invalid contraint value")
+        throw new Error("Invalid constraint value")
       }
 
       const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
