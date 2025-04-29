@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.6
+
+### Patch Changes
+
+- Fix for useMaxAvailableAmount
+
 ## 1.0.5
 
 ### Patch Changes

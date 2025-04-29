@@ -1,6 +1,7 @@
 import {
   type Address,
   type Hex,
+  type OneOf,
   concatHex,
   encodeAbiParameters,
   getContract,
@@ -27,20 +28,27 @@ export type Trigger = {
    * @example 1 // Ethereum Mainnet
    */
   chainId: number
-  /**
-   * Amount of the token to use, in the token's smallest unit
-   * @example 1000000n // 1 USDC (6 decimals)
-   */
-  amount: bigint
-  /**
-   * Whether to use the maximum available token balance, automatically accounting for gas fees.
-   * When true, the specified amount will be ignored and the maximum available balance
-   * after deducting gas fees will be used. Should be used in combination with runtimeERC20BalanceOf
-   * in the instruction which uses the permitted token, so that the amount is the maximum available amount
-   * after deducting gas fees. Default is false.
-   */
-  useMaxAvailableAmount?: boolean
-}
+} & OneOf<
+  | {
+      /**
+       * The amount of the token to use, in the token's smallest unit.
+       * @example 1000000n // 1 USDC (6 decimals)
+       */
+      amount: bigint
+      useMaxAvailableAmount?: false
+    }
+  | {
+      /**
+       * Whether to use the maximum available token balance, automatically accounting for gas fees.
+       * When true, the specified amount will be ignored and the maximum available balance
+       * after deducting gas fees will be used. Should be used in combination with runtimeERC20BalanceOf
+       * in the instruction which uses the permitted token, so that the amount is the maximum available amount
+       * after deducting gas fees. Default is false.
+       */
+      useMaxAvailableAmount: true
+      amount?: never
+    }
+>
 
 /**
  * Parameters for signing a permit quote
@@ -108,6 +116,9 @@ export const signPermitQuote = async (
 
   const signer = account_.signer
 
+  if (!trigger.amount)
+    throw new Error("Amount is required to sign a permit quote")
+
   const { walletClient } = account_.deploymentOn(trigger.chainId, true)
   const owner = signer.address
   const spender = quote.paymentInfo.sender
@@ -135,15 +146,6 @@ export const signPermitQuote = async (
     }
     throw new Error(`Failed to get value: ${value.reason}`)
   }) as [bigint, string, string, `0x${string}`]
-
-  console.log("signPermitQuote", {
-    trigger,
-    owner,
-    spender,
-    value: trigger.amount,
-    nonce,
-    deadline: BigInt(quote.hash)
-  })
 
   const signature = await walletClient.signTypedData({
     domain: {
