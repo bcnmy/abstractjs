@@ -72,6 +72,13 @@ export type ConstraintField = {
   value: AnyData // type any is being implicitly used. The appropriate value validation happens in the runtime function
 }
 
+export type runtimeERC20AllowanceOfParams = {
+  owner: Address
+  spender: Address
+  tokenAddress: Address
+  constraints?: ConstraintField[]
+}
+
 export type RuntimeERC20BalanceOfParams = {
   targetAddress: Address
   tokenAddress: Address
@@ -176,6 +183,76 @@ export const runtimeNonceOf = ({
         constraint.value < BigInt(0)
       ) {
         throw new Error("Invalid contraint value")
+      }
+
+      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
+      const encodedConstraintValue = encodeAbiParameters(
+        [{ type: "bytes32" }],
+        [valueHex as Hex]
+      )
+
+      constraintsToAdd.push(
+        prepareConstraint(constraint.type, encodedConstraintValue)
+      )
+    }
+  }
+
+  return {
+    isRuntime: true,
+    inputParams: [
+      prepareInputParam(
+        InputParamFetcherType.STATIC_CALL,
+        encodedParam,
+        constraintsToAdd
+      )
+    ],
+    outputParams: []
+  }
+}
+
+/**
+ * Returns the runtime value for the ERC20 allowance of the owner for the spender
+ * @param owner - The owner of the tokens
+ * @param spender - The spender of the tokens
+ * @param tokenAddress - The address of the ERC20 token
+ * @returns The runtime value for the ERC20 allowance of the owner for the spender
+ */
+export const runtimeERC20AllowanceOf = ({
+  owner,
+  spender,
+  tokenAddress,
+  constraints = []
+}: runtimeERC20AllowanceOfParams): RuntimeValue => {
+  const encodedParam = encodeAbiParameters(
+    [{ type: "address" }, { type: "bytes" }],
+    [
+      tokenAddress,
+      encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [owner, spender]
+      })
+    ]
+  )
+
+  const constraintsToAdd: Constraint[] = []
+
+  if (constraints.length > 0) {
+    for (const constraint of constraints) {
+      // Constraint type IN is ignored for the runtimeBalanceOf
+      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
+      if (
+        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
+      ) {
+        throw new Error("Invalid constraint type")
+      }
+
+      // Handle value validation in a appropriate to runtime function
+      if (
+        typeof constraint.value !== "bigint" ||
+        constraint.value < BigInt(0)
+      ) {
+        throw new Error("Invalid constraint value")
       }
 
       const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`

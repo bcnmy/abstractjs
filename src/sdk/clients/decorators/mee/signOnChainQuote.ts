@@ -1,4 +1,5 @@
 import { type Hex, concatHex, encodeAbiParameters } from "viem"
+import type { BuildApproveParameters } from "../../../account/decorators/instructions/buildApprove"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
@@ -56,7 +57,12 @@ export const signOnChainQuote = async (
     }
   ] = await account_.build({
     type: "approve",
-    data: { ...trigger, spender }
+    data: {
+      spender,
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      amount: trigger.amount
+    } as BuildApproveParameters
   })
 
   // This will be always a non composable transaction, so don't worry about the composability

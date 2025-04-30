@@ -1,6 +1,17 @@
+import {
+  type Account,
+  type Chain,
+  type PublicClient,
+  type Transport,
+  erc20Abi
+} from "viem"
 import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
+import {
+  greaterThanOrEqualTo,
+  runtimeERC20AllowanceOf
+} from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
@@ -80,21 +91,32 @@ export const getPermitQuote = async (
 
   const sender = account_.signer.address
   const recipient = account_.addressOn(trigger.chainId, true)
-
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const isComposable = resolvedInstructions.some(
     ({ isComposable }) => isComposable
   )
 
+  const transferFromAmount = trigger.useMaxAvailableAmount
+    ? runtimeERC20AllowanceOf({
+        owner: sender,
+        spender: recipient,
+        tokenAddress: trigger.tokenAddress,
+        constraints: [greaterThanOrEqualTo(1n)]
+      })
+    : trigger.amount
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
-    data: { ...trigger, recipient, sender }
+    data: {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      amount: transferFromAmount,
+      recipient,
+      sender
+    }
   }
 
-  // The trigger transfer is the first instruction in the array.
-  // It draws funds from the eoa to the nexus account with a transferFrom call.
-  // If the instructions are composable, we build the composable transaction
   const triggerTransfer = await (isComposable
     ? account_.buildComposable(params)
     : account_.build(params))
@@ -112,15 +134,29 @@ export const getPermitQuote = async (
     ...rest
   })
 
-  // This trigger should have an amount that is the amount user wishes to spend, plus the gas fees
-  const trigger_ = {
-    ...trigger,
-    amount: trigger.useMaxAvailableAmount
-      ? BigInt(trigger.amount)
-      : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+  let resolvedAmount = BigInt(0)
+  if (trigger.useMaxAvailableAmount) {
+    const publicClient = account_.deploymentOn(trigger.chainId, true)
+      .client as PublicClient<Transport, Chain, Account>
+    resolvedAmount = await publicClient.readContract({
+      address: trigger.tokenAddress,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [sender]
+    })
+  } else {
+    resolvedAmount =
+      BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
   }
 
-  return { quote, trigger: trigger_ }
+  return {
+    quote,
+    trigger: {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      amount: resolvedAmount
+    }
+  }
 }
 
 export default getPermitQuote
