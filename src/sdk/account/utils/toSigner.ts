@@ -142,7 +142,7 @@ export async function toSigner<
       )(typedData as AnyData)
     },
     async signTransaction(_) {
-      throw new Error("Smart account signer doesn't need to sign transactions")
+      throw new Error("Not supported")
     }
   })
 }

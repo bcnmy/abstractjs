@@ -1,10 +1,17 @@
 # @biconomy/abstractjs
 
+## 1.0.7
+
+### Patch Changes
+
+- Fix wallet client bug with browsers
+
 ## 1.0.6
 
 ### Patch Changes
 
 - Fix for useMaxAvailableAmount
+- signTransaction signer fix
 
 ## 1.0.5
 
