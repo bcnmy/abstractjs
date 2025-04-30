@@ -1,12 +1,6 @@
 import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { getSudoPolicy } from "@rhinestone/module-sdk"
-import {
-  type Address,
-  type Chain,
-  type LocalAccount,
-  type Transport,
-  toFunctionSelector
-} from "viem"
+import type { Address, Chain, LocalAccount, Transport } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, it } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
@@ -16,10 +10,14 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { toNexusAccount } from "../../../account/toNexusAccount"
 import {
+  DEFAULT_MEE_NODE_URL,
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
+import type { FeeTokenInfo } from "../../../clients/decorators/mee"
+import { mcUSDC } from "../../../constants/tokens"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
@@ -40,6 +38,8 @@ describe("mee.multichainSmartSessions", () => {
 
   let smartSessionsValidator: Validator
 
+  let feeToken: FeeTokenInfo
+
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
     ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
@@ -54,7 +54,15 @@ describe("mee.multichainSmartSessions", () => {
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
+
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: DEFAULT_MEE_NODE_URL
+    })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
   })
 
@@ -79,23 +87,16 @@ describe("mee.multichainSmartSessions", () => {
           parameters: smartSessionsValidator
         }
       })
-      console.log({ installCalls })
+      const { hash } = await meeClient.execute({
+        instructions: installCalls,
+        feeToken
+      })
 
-      /**
-       * Execute the install calls
-       */
-
-      // const hash = await meeClient.execute({
-      //   instructions: installCalls,
-      //   feeToken: {
-      //     address: mcUSDC.addressOn(paymentChain.id),
-      //     chainId: paymentChain.id
-      //   },
-      // })
-
-      // const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-      // console.log({ receipt })
-      // expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      console.log({ receipt })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    } else {
+      console.log("Module already installed")
     }
 
     const addressMapping: MultichainAddressMapping = {
@@ -125,13 +126,38 @@ describe("mee.multichainSmartSessions", () => {
       ]
     })
 
-    const instructions = await sessionMeeClient.usePermission({
-      addressMapping,
-      sessionDetails,
-      mode: "ENABLE_AND_USE"
+    const dappNexusAccount = await toMultichainNexusAccount({
+      accountAddress: eoaAccount.address,
+      chains: [paymentChain, targetChain],
+      transports,
+      signer: redeemerAccount
     })
 
-    console.log({ instructions })
+    const dappMeeClient = await createMeeClient({
+      account: dappNexusAccount,
+      url: DEFAULT_MEE_NODE_URL
+    })
+    const dappSessionClient = dappMeeClient.extend(meeSessionActions)
+
+    const { hash } = await dappSessionClient.usePermission({
+      addressMapping,
+      sessionDetails,
+      mode: "ENABLE_AND_USE",
+      instructions: [
+        {
+          calls: [
+            {
+              to: COUNTER_ADDRESS,
+              data: "0x273ea3e3"
+            }
+          ],
+          chainId: paymentChain.id
+        }
+      ],
+      feeToken
+    })
+
+    console.log({ hash })
 
     // console.log(sessionDetails[0].enableSessionData)
 

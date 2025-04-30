@@ -1,32 +1,37 @@
+import type { Hash } from "viem"
 import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
-import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
+import type { Call } from "../../../../../account/utils/Types"
+import type {
+  BaseMeeClient,
+  MeeClient
+} from "../../../../../clients/createMeeClient"
 import type { Instruction } from "../../../../../clients/decorators/mee"
-import {
-  SmartSessionMode,
-  encodeSmartSessionSignature
-} from "../../../../../constants"
-import { SMART_SESSIONS_ADDRESS } from "../../../../../constants"
+import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
+import { SmartSessionMode } from "../../../../../constants"
 import type { GrantMeePermissionPayload } from "./grantMeePermission"
 
 export type UseMeePermissionParams = {
   sessionDetails: GrantMeePermissionPayload
   addressMapping: MultichainAddressMapping
   mode: "ENABLE_AND_USE" | "USE"
+  instructions: Instruction[]
+  feeToken: FeeTokenInfo
 }
 
-export type UseMeePermissionPayload = {
-  instructions: Instruction[]
-}
+export type UseMeePermissionPayload = { hash: Hash }
 
 export const useMeePermission = async (
-  meeClient: BaseMeeClient,
+  meeClient_: BaseMeeClient,
   parameters: UseMeePermissionParams
 ): Promise<UseMeePermissionPayload> => {
   const {
     sessionDetails: sessionDetailsArray,
     addressMapping,
-    mode: mode_
+    mode: mode_,
+    instructions,
+    feeToken
   } = parameters
+  const meeClient = meeClient_ as MeeClient
   const mcAccount = meeClient.account
 
   const mode =
@@ -34,48 +39,26 @@ export const useMeePermission = async (
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
 
-  console.log({ sessionDetailsArray, addressMapping, mode })
+  console.log("instructions.length", instructions.length)
 
-  const instructions: Instruction[] = await Promise.all(
-    mcAccount.deployments.map(async (account, index) => {
-      const chainId = account.client.chain?.id
-      if (!chainId) {
-        throw new Error("Chain ID is not set")
-      }
+  const quote = await meeClient.getQuote({ instructions, feeToken })
+  const signedQuote = await meeClient.signQuote({ quote })
+  console.log({ signedQuote })
 
-      const sessionDetails = { ...sessionDetailsArray[index], mode }
-
-      // @ts-ignore
-      const nonce = await account.getNonce({
-        moduleAddress: SMART_SESSIONS_ADDRESS
-      })
-
-      const factoryArgs = await account.getFactoryArgs()
-
-      const userOperation = {
-        ...factoryArgs,
-        signature: encodeSmartSessionSignature(sessionDetails),
-        nonce
-      }
-
-      const userOpHashToSign = account.getUserOpHash(userOperation)
-      sessionDetails.signature = await account.signer.signMessage({
-        message: { raw: userOpHashToSign }
-      })
-      userOperation.signature = encodeSmartSessionSignature(sessionDetails)
-
-      return {
-        calls: [
-          {
-            to: account.address,
-            data: encodeSmartSessionSignature(sessionDetails)
-          }
-        ],
-        chainId,
-        isComposable: false
-      }
-    })
+  for (const [i, { userOp, chainId }] of signedQuote.userOps.entries()) {
+    if (i !== 0) continue // Skip the first user op, as it's the payment user op
+    const relevantIndex = sessionDetailsArray.findIndex(
+      ({ enableSessionData }) =>
+        enableSessionData?.enableSession?.sessionToEnable?.chainId ===
+        BigInt(chainId)
+    )
+    userOp.sessionDetails = { ...sessionDetailsArray[relevantIndex], mode }
+  }
+  console.log("signedQuote.userOps", signedQuote.userOps)
+  console.log(
+    "signedQuote.userOps[0]",
+    signedQuote.userOps[0].userOp.sessionDetails
   )
 
-  return { instructions }
+  return await meeClient.executeSignedQuote({ signedQuote })
 }

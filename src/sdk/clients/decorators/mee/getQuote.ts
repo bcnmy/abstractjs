@@ -11,6 +11,7 @@ import {
   runtimeERC20BalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
+import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -280,6 +281,8 @@ export interface MeeFilledUserOp {
   paymasterAndData: Hex
   /** Gas required before operation verification */
   preVerificationGas: string
+  /** Optional Session details for redeeming a permission */
+  sessionDetails?: GrantPermissionResponse
 }
 
 /**
