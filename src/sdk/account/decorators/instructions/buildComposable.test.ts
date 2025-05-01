@@ -1014,6 +1014,149 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
   })
 
+  it("should composable cleanup fail for no dust/funds", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.1", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    // payment userops
+    expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
+
+    // actual dev defined userops
+    expect(userOps[1].executionStatus).to.be.eq("MINED_SUCCESS")
+
+    // cleanup userops - SDK doesn't wait for cleanup userOp status
+    expect(userOps[2].executionStatus).to.be.oneOf([
+      "MINED_FAIL",
+      "PENDING",
+      "MINING",
+      "MINED_SUCCESS"
+    ])
+
+    console.log({ explorerLinks, hash })
+
+    const balanceAfter = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
+      functionName: "balanceOf",
+      args: [mcNexus.addressOn(chain.id, true)]
+    })
+
+    expect(balanceAfter).to.eq(0n)
+  })
+
+  it("should composable cleanup execute when main userops fails", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.2", 6)
+
+    await mcNexus.deploymentOn(chain.id)?.walletClient.writeContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [mcNexus.addressOn(chain.id, true), amountToSupply],
+      chain
+    })
+
+    const transferInstruction = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeQuote({
+      quote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    // payment userops
+    expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
+
+    // actual dev defined userops
+    expect(userOps[1].executionStatus).to.be.eq("MINED_FAIL")
+
+    // cleanup userops - SDK doesn't wait for cleanup userOp status
+    expect(userOps[2].executionStatus).to.be.oneOf([
+      "MINED_FAIL",
+      "PENDING",
+      "MINING",
+      "MINED_SUCCESS"
+    ])
+
+    console.log({ explorerLinks, hash })
+
+    const balanceAfter = await publicClient.readContract({
+      address: testnetMcUSDC.addressOn(chain.id),
+      abi: parseAbi(["function balanceOf(address) view returns (uint256)"]),
+      functionName: "balanceOf",
+      args: [mcNexus.addressOn(chain.id, true)]
+    })
+
+    expect(balanceAfter).to.eq(0n)
+  })
+
   it("should multiple composable cleanup execute", async () => {
     const amountToSupply = parseUnits("0.1", 6)
     const amountToTransfer = parseUnits("0.06", 6)
