@@ -162,8 +162,8 @@ describe("mee.getPermitQuote", () => {
     const trigger: Trigger = {
       chainId: paymentChain.id,
       tokenAddress,
-      amount: 6000n,
-      includeFee: true
+      amount: totalBalance,
+      includeFee: true,
     }
 
     // withdraw
