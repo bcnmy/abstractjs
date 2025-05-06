@@ -46,20 +46,15 @@ export const useMeePermission = async (
   const quote = await meeClient.getQuote({ instructions, feeToken })
   const signedQuote = await meeClient.signQuote({ quote })
 
-  for (const [i, { userOp, chainId }] of signedQuote.userOps.entries()) {
+  for (const [i, userOpEntry] of signedQuote.userOps.entries()) {
     if (i !== 0) continue // Skip the first user op, as it's the payment user op
     const relevantIndex = sessionDetailsArray.findIndex(
       ({ enableSessionData }) =>
         enableSessionData?.enableSession?.sessionToEnable?.chainId ===
-        BigInt(chainId)
+        BigInt(userOpEntry.chainId)
     )
-    userOp.sessionDetails = { ...sessionDetailsArray[relevantIndex], mode }
+    userOpEntry.sessionDetails = { ...sessionDetailsArray[relevantIndex], mode }
   }
-  console.log(
-    "signedQuote.userOps[0].userOp.sessionDetails?.enableSessionData?.enableSession",
-    signedQuote.userOps[0].userOp.sessionDetails?.enableSessionData
-      ?.enableSession
-  )
 
   return await meeClient.executeSignedQuote({ signedQuote })
 }
