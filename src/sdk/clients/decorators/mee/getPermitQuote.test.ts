@@ -163,7 +163,7 @@ describe("mee.getPermitQuote", () => {
       chainId: paymentChain.id,
       tokenAddress,
       amount: totalBalance,
-      includeFee: true,
+      includeFee: true
     }
 
     // withdraw
