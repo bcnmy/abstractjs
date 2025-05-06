@@ -28,20 +28,16 @@ export type Trigger = {
    */
   chainId: number
   /**
-   * Amount of the token to use, in the token's smallest unit
+   * The amount of the token to use, in the token's smallest unit.
    * @example 1000000n // 1 USDC (6 decimals)
    */
   amount: bigint
   /**
-   * Whether to use the maximum available token balance, automatically accounting for gas fees.
-   * When true, the specified amount will be ignored and the maximum available balance
-   * after deducting gas fees will be used. Should be used in combination with runtimeERC20BalanceOf
-   * in the instruction which uses the permitted token, so that the amount is the maximum available amount
-   * after deducting gas fees. Default is false.
+   * Whether to include the fee in the amount, or to add the fee to the amount.
+   * default is false
    */
-  useMaxAvailableAmount?: boolean
+  includeFee?: true
 }
-
 /**
  * Parameters for signing a permit quote
  */
@@ -107,6 +103,9 @@ export const signPermitQuote = async (
   } = parameters
 
   const signer = account_.signer
+
+  if (!trigger.amount)
+    throw new Error("Amount is required to sign a permit quote")
 
   const { walletClient } = account_.deploymentOn(trigger.chainId, true)
   const owner = signer.address

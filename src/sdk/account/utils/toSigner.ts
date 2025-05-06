@@ -12,7 +12,7 @@ import {
   getAddress,
   hexToBytes
 } from "viem"
-import { signTransaction, toAccount } from "viem/accounts"
+import { toAccount } from "viem/accounts"
 
 import { signTypedData } from "viem/actions"
 import { getAction } from "viem/utils"
@@ -141,12 +141,8 @@ export async function toSigner<
         "signTypedData"
       )(typedData as AnyData)
     },
-    async signTransaction(transaction) {
-      return getAction(
-        walletClient,
-        signTransaction,
-        "signTransaction"
-      )(transaction as AnyData)
+    async signTransaction(_) {
+      throw new Error("Not supported")
     }
   })
 }

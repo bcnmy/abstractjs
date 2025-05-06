@@ -1,6 +1,10 @@
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
+import {
+  greaterThanOrEqualTo,
+  runtimeERC20AllowanceOf
+} from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
@@ -90,9 +94,24 @@ export const getOnChainQuote = async (
     ({ isComposable }) => isComposable
   )
 
+  const transferFromAmount = trigger.includeFee
+    ? runtimeERC20AllowanceOf({
+        owner: sender,
+        spender: recipient,
+        tokenAddress: trigger.tokenAddress,
+        constraints: [greaterThanOrEqualTo(1n)]
+      })
+    : trigger.amount
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
-    data: { ...trigger, recipient, sender }
+    data: {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      amount: transferFromAmount,
+      recipient,
+      sender
+    }
   }
 
   const triggerTransfer = await (isComposable
@@ -112,14 +131,18 @@ export const getOnChainQuote = async (
     ...rest
   })
 
-  const trigger_ = {
-    ...trigger,
-    amount: trigger.useMaxAvailableAmount
-      ? BigInt(trigger.amount)
-      : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-  }
+  const amount = trigger.includeFee
+    ? BigInt(trigger.amount)
+    : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
 
-  return { quote, trigger: trigger_ }
+  return {
+    quote,
+    trigger: {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      amount
+    }
+  }
 }
 
 export default getOnChainQuote

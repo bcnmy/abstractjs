@@ -312,10 +312,7 @@ describe("mee.createMeeClient.delegated", async () => {
       accountAddress: eoaAccount.address
     })
 
-    meeClient = await createMeeClient({
-      account: mcNexus,
-      url: DEFAULT_MEE_NODE_URL
-    })
+    meeClient = await createMeeClient({ account: mcNexus })
   })
 
   test("should check if the nexus account is delegated", async () => {

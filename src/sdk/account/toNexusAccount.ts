@@ -19,7 +19,6 @@ import {
   concat,
   concatHex,
   createPublicClient,
-  createWalletClient,
   domainSeparator,
   encodeAbiParameters,
   encodeFunctionData,
@@ -28,7 +27,6 @@ import {
   keccak256,
   parseAbi,
   parseAbiParameters,
-  publicActions,
   toBytes,
   toHex,
   validateTypedData,
@@ -80,6 +78,7 @@ import {
 } from "./utils/Utils"
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
+import { toWalletClient } from "./utils/toWalletClient"
 
 /**
  * Base module configuration type
@@ -257,11 +256,9 @@ export const toNexusAccount = async (
 
   const {
     chain,
-    transport,
+    transport: transportConfig,
     signer: _signer,
     index = 0n,
-    key = "nexus account",
-    name = "Nexus Account",
     registryAddress = zeroAddress,
     validators: customValidators,
     executors: customExecutors,
@@ -275,15 +272,13 @@ export const toNexusAccount = async (
   } = parameters
 
   const signer = await toSigner({ signer: _signer })
-  const walletClient = createWalletClient({
-    account: signer,
+  const walletClient = toWalletClient({
+    unresolvedSigner: _signer,
+    resolvedSigner: signer,
     chain,
-    transport,
-    key,
-    name
-  }).extend(publicActions)
-
-  const publicClient = createPublicClient({ chain, transport })
+    transport: transportConfig
+  })
+  const publicClient = createPublicClient({ chain, transport: transportConfig })
 
   const entryPointContract = getContract({
     address: ENTRY_POINT_ADDRESS,

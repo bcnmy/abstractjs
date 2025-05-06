@@ -26,7 +26,6 @@ export const useMeePermission = async (
 ): Promise<UseMeePermissionPayload> => {
   const {
     sessionDetails: sessionDetailsArray,
-    addressMapping,
     mode: mode_,
     instructions,
     feeToken
@@ -34,16 +33,18 @@ export const useMeePermission = async (
   const meeClient = meeClient_ as MeeClient
   const mcAccount = meeClient.account
 
+  console.log(
+    "mcAccount",
+    mcAccount.deployments.map(({ chain }) => chain.id)
+  )
+
   const mode =
     mode_ === "ENABLE_AND_USE"
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
 
-  console.log("instructions.length", instructions.length)
-
   const quote = await meeClient.getQuote({ instructions, feeToken })
   const signedQuote = await meeClient.signQuote({ quote })
-  console.log({ signedQuote })
 
   for (const [i, { userOp, chainId }] of signedQuote.userOps.entries()) {
     if (i !== 0) continue // Skip the first user op, as it's the payment user op
@@ -54,10 +55,10 @@ export const useMeePermission = async (
     )
     userOp.sessionDetails = { ...sessionDetailsArray[relevantIndex], mode }
   }
-  console.log("signedQuote.userOps", signedQuote.userOps)
   console.log(
-    "signedQuote.userOps[0]",
-    signedQuote.userOps[0].userOp.sessionDetails
+    "signedQuote.userOps[0].userOp.sessionDetails?.enableSessionData?.enableSession",
+    signedQuote.userOps[0].userOp.sessionDetails?.enableSessionData
+      ?.enableSession
   )
 
   return await meeClient.executeSignedQuote({ signedQuote })

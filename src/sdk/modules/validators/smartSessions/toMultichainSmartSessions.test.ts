@@ -127,7 +127,7 @@ describe("mee.multichainSmartSessions", () => {
     })
 
     const dappNexusAccount = await toMultichainNexusAccount({
-      accountAddress: eoaAccount.address,
+      accountAddress: mcNexus.addressOn(paymentChain.id),
       chains: [paymentChain, targetChain],
       transports,
       signer: redeemerAccount
@@ -156,41 +156,5 @@ describe("mee.multichainSmartSessions", () => {
       ],
       feeToken
     })
-
-    console.log({ hash })
-
-    // console.log(sessionDetails[0].enableSessionData)
-
-    // const instructions: Instruction[] = await buildMultichainInstructions(
-    //   { account: mcNexus, currentInstructions: [] },
-    //   {
-    //     type: "toInstallModuleCalls",
-    //     parameters: toInstallData(smartSessionsValidator)
-    //   }
-    // )
-    // expect(instructions.length).toBe(mcNexus.deployments.length)
-
-    // const contractAddresses = {
-    //   [paymentChain.id]: COUNTER_ADDRESS,
-    //   [targetChain.id]: COUNTER_ADDRESS
-    // }
-
-    // const permissionData = await Promise.all(mcNexus.deployments.map((deployment) => {
-    //   const contractAddress = contractAddresses[deployment?.client?.chain?.id as number];
-    //   if (!contractAddress) {
-    //     throw new Error(`No contract address found for chain ${deployment?.client?.chain?.id}`)
-    //   }
-    //   return grantPermission(undefined as AnyData, {
-    //     account: deployment,
-    //     redeemer: redeemerAddress,
-    //     actions: [
-    //       {
-    //         actionTarget: contractAddress,
-    //         actionTargetSelector: "0x273ea3e3",
-    //         actionPolicies: [getSudoPolicy()]
-    //       }
-    //     ]
-    //   })
-    // }))
   })
 })

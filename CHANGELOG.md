@@ -1,9 +1,22 @@
 # @biconomy/abstractjs
 
+## 1.0.8
+
+### Patch Changes
+
+- Change maxAvailableAmount -> includeFee
+
+## 1.0.7
+
+### Patch Changes
+
+- Fix wallet client bug with browsers
+
 ## 1.0.6
 
 ### Patch Changes
 
+- Fix for includeFee
 - signTransaction signer fix
 
 ## 1.0.5
@@ -18,7 +31,7 @@
 
 ### Patch Changes
 
-- Added a useMaxAvailableAmount to trigger
+- Added a includeFee to trigger
 
 ## 1.0.3
 
