@@ -1,3 +1,4 @@
+import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { getPaymentToken } from "./getPaymentToken"
 import signOnChainQuote, {
@@ -60,10 +61,30 @@ export const signFusionQuote = async (
   client: BaseMeeClient,
   parameters: SignFusionQuoteParameters
 ): Promise<SignFusionQuotePayload> => {
-  const { permitEnabled } = await getPaymentToken(
+  const paymentTokenInfo = await getPaymentToken(
     client,
     parameters.fusionQuote.trigger
   )
+
+  let permitEnabled = false
+
+  if (paymentTokenInfo.paymentToken) {
+    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
+  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
+    const modularSmartAccount = client.account.deploymentOn(
+      parameters.fusionQuote.trigger.chainId,
+      true
+    )
+
+    permitEnabled = await isPermitSupported(
+      modularSmartAccount.walletClient,
+      parameters.fusionQuote.trigger.tokenAddress
+    )
+  } else {
+    throw new Error(
+      `Payment token (${parameters.fusionQuote.trigger.tokenAddress}) not supported for chain ${parameters.fusionQuote.trigger.chainId}`
+    )
+  }
 
   return permitEnabled
     ? signPermitQuote(client, parameters)

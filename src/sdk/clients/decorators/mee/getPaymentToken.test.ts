@@ -61,17 +61,29 @@ describe("mee.getPaymentToken", () => {
     expect(tokenSymbols).toContain("USDC")
   })
 
-  test("should return payment token for valid chain id and address", async () => {
-    const result = await meeClient.getPaymentToken({
+  test("should return payment token and arbitrary token payment info for valid chain id and address", async () => {
+    const paymentTokenInfo = await meeClient.getPaymentToken({
       chainId: 1,
       tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     })
-    expect(result.symbol).toBe("USDC")
-    expect(
-      addressEquals(
-        result.address,
-        "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-      )
-    ).toBe(true)
+
+    expect(paymentTokenInfo.isArbitraryPaymentTokensSupported).to.be.oneOf([
+      true,
+      false,
+      null,
+      undefined
+    ])
+
+    expect(paymentTokenInfo.paymentToken).not.to.be.oneOf([undefined, null])
+
+    if (paymentTokenInfo.paymentToken) {
+      expect(paymentTokenInfo.paymentToken.symbol).toBe("USDC")
+      expect(
+        addressEquals(
+          paymentTokenInfo.paymentToken.address,
+          "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        )
+      ).toBe(true)
+    }
   })
 })
