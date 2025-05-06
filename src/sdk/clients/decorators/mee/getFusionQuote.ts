@@ -1,10 +1,10 @@
+import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
 import type { CleanUp, GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
-import { isPermitSupported } from "../../../modules/utils/Helpers"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote
