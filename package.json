@@ -1,6 +1,6 @@
 {
   "name": "@biconomy/abstractjs",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "author": "Biconomy",
   "repository": "github:bcnmy/abstractjs",
   "main": "./dist/_cjs/index.js",
