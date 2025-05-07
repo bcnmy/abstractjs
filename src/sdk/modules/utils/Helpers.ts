@@ -141,8 +141,7 @@ export const isPermitSupported = async (
       )
     ])
 
-    // Return true if permit function exists along with at least one supporting function
-    return hasPermit && (hasDomainSeparator || hasNonces)
+    return hasPermit && hasDomainSeparator && hasNonces
   } catch (err) {
     console.error("Error checking permit support:", err)
     return false
