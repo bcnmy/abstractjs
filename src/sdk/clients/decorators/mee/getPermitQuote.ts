@@ -106,7 +106,8 @@ export const getPermitQuote = async (
       chainId: trigger.chainId,
       amount: transferFromAmount,
       recipient,
-      sender
+      sender,
+      gasLimit: 50_000n
     }
   }
 

@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.9
+
+### Patch Changes
+
+- Fusion gasLimit
+
 ## 1.0.8
 
 ### Patch Changes

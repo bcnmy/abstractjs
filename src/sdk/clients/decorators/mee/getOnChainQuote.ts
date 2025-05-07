@@ -110,7 +110,8 @@ export const getOnChainQuote = async (
       chainId: trigger.chainId,
       amount: transferFromAmount,
       recipient,
-      sender
+      sender,
+      gasLimit: 50_000n
     }
   }
 
