@@ -18,7 +18,7 @@ import {
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
-import { mcAUSDC, mcUSDC } from "../constants/tokens"
+import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
 import {
   DEFAULT_MEE_NODE_URL,
   type MeeClient,
@@ -345,7 +345,7 @@ describe("mee.createMeeClient.delegated", async () => {
           }
         ],
         feeToken: {
-          address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // usdc
+          address: testnetMcUSDC.addressOn(sepolia.id), // usdc
           chainId: sepolia.id
         }
       })
