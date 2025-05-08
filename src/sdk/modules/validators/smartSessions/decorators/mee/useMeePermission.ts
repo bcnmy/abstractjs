@@ -1,13 +1,15 @@
 import type { Hash } from "viem"
 import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
-import type { Call } from "../../../../../account/utils/Types"
 import type {
   BaseMeeClient,
   MeeClient
 } from "../../../../../clients/createMeeClient"
 import type { Instruction } from "../../../../../clients/decorators/mee"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
-import { SmartSessionMode } from "../../../../../constants"
+import {
+  SMART_SESSIONS_ADDRESS,
+  SmartSessionMode
+} from "../../../../../constants"
 import type { GrantMeePermissionPayload } from "./grantMeePermission"
 
 export type UseMeePermissionParams = {
@@ -43,7 +45,15 @@ export const useMeePermission = async (
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
 
-  const quote = await meeClient.getQuote({ instructions, feeToken })
+  const instructionsWithSmartSessions = instructions.map((instruction) => ({
+    ...instruction,
+    moduleAddress: SMART_SESSIONS_ADDRESS
+  }))
+
+  const quote = await meeClient.getQuote({
+    instructions: instructionsWithSmartSessions,
+    feeToken
+  })
   const signedQuote = await meeClient.signQuote({ quote })
 
   for (const [i, userOpEntry] of signedQuote.userOps.entries()) {

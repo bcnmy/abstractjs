@@ -99,18 +99,25 @@ describe("mee.multichainSmartSessions", () => {
       console.log("Module already installed")
     }
 
+    const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
+    const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
+
     const addressMapping: MultichainAddressMapping = {
       deployments: [
         {
           chainId: paymentChain.id,
-          address: COUNTER_ADDRESS
+          address: COUNTER_ON_OPTIMISM
         },
         {
           chainId: targetChain.id,
-          address: COUNTER_ADDRESS
+          address: COUNTER_ON_BASE
         }
       ],
-      on: (chainId: number) => COUNTER_ADDRESS
+      on: (chainId: number) => {
+        if (chainId === paymentChain.id) return COUNTER_ON_OPTIMISM
+        if (chainId === targetChain.id) return COUNTER_ON_BASE
+        throw new Error("Invalid chain id")
+      }
     }
 
     expect(addressMapping).toBeTypeOf("object")
@@ -147,7 +154,7 @@ describe("mee.multichainSmartSessions", () => {
         {
           calls: [
             {
-              to: COUNTER_ADDRESS,
+              to: COUNTER_ON_OPTIMISM,
               data: "0x273ea3e3"
             }
           ],

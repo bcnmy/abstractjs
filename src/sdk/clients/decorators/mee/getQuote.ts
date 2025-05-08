@@ -64,6 +64,8 @@ export type Instruction = {
   chainId: number
   /** Flag for composable call */
   isComposable?: boolean
+  /** Active module address. Used to fetch the nonce for the active module */
+  moduleAddress?: Address
 }
 
 /**
@@ -281,8 +283,6 @@ export interface MeeFilledUserOp {
   paymasterAndData: Hex
   /** Gas required before operation verification */
   preVerificationGas: string
-  /** Optional Session details for redeeming a permission */
-  sessionDetails?: GrantPermissionResponse
 }
 
 /**
@@ -309,6 +309,8 @@ export interface MeeFilledUserOpDetails {
   eip7702Auth?: MeeAuthorization
   /** Cleanup userop flag - Special user op */
   isCleanUpUserOp?: boolean
+  /** Optional Session details for redeeming a permission */
+  sessionDetails?: GrantPermissionResponse
 }
 
 /**
@@ -376,8 +378,7 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
-    delegate = false,
-    authorization: multiChainAuthorization_
+    delegate = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -523,7 +524,7 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey(),
+        deployment.getNonceWithKey({ moduleAddress: userOp.moduleAddress }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
