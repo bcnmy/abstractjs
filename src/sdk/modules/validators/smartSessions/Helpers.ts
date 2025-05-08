@@ -169,6 +169,18 @@ export function stringify(obj: Record<string, AnyData>): string {
 }
 
 /**
+ * Stringifies an object, converting BigInt values to numbers.
+ *
+ * @param obj - The object to be stringified.
+ * @returns A string representing the stringified object with BigInt values converted to numbers.
+ */
+export function stringifyToNumber(obj: Record<string, AnyData>): string {
+  return JSON.stringify(obj, (_, value) =>
+    typeof value === "bigint" ? Number(value) : value
+  )
+}
+
+/**
  * Parses a string representation back into an object, correctly handling tagged BigInt values.
  *
  * @param data - The string representing the stringified object.

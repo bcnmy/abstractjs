@@ -11,6 +11,7 @@ import {
   runtimeERC20BalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
+import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
 import type { BaseMeeClient } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -63,6 +64,8 @@ export type Instruction = {
   chainId: number
   /** Flag for composable call */
   isComposable?: boolean
+  /** Active module address. Used to fetch the nonce for the active module */
+  moduleAddress?: Address
 }
 
 /**
@@ -306,6 +309,8 @@ export interface MeeFilledUserOpDetails {
   eip7702Auth?: MeeAuthorization
   /** Cleanup userop flag - Special user op */
   isCleanUpUserOp?: boolean
+  /** Optional Session details for redeeming a permission */
+  sessionDetails?: GrantPermissionResponse
 }
 
 /**
@@ -519,7 +524,7 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey(),
+        deployment.getNonceWithKey({ moduleAddress: userOp.moduleAddress }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
