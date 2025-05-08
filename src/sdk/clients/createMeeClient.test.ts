@@ -313,7 +313,10 @@ describe("mee.createMeeClient.delegated", async () => {
     })
 
     // The explicit default URL should be removed later.
-    meeClient = await createMeeClient({ account: mcNexus, url: DEFAULT_MEE_NODE_URL })
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: DEFAULT_MEE_NODE_URL
+    })
   })
 
   test("should check if the nexus account is delegated", async () => {
