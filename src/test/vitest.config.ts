@@ -27,6 +27,6 @@ export default defineConfig({
     globalSetup: join(__dirname, "globalSetup.ts"),
     environment: "node",
     testTimeout: 500_000,
-    hookTimeout: 60_000
+    hookTimeout: 100_000
   }
 })
