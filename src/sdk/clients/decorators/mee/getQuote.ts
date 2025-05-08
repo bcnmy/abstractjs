@@ -373,8 +373,7 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
-    delegate = false,
-    authorization: multiChainAuthorization_
+    delegate = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
