@@ -9,17 +9,15 @@ import {
   type PublicClient,
   type TransactionReceipt,
   createPublicClient,
-  encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
   fromBytes,
-  numberToHex,
-  parseAbi,
   parseEventLogs,
   parseUnits,
   toBytes,
   zeroAddress
 } from "viem"
+import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
@@ -50,7 +48,6 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
-import { waitForTransactionReceipt } from "viem/actions"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
