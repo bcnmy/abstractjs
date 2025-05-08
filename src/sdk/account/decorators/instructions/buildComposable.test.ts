@@ -1366,7 +1366,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
   it("should composable cleanup execute based on dependency config", async () => {
     const amountToSupply = parseUnits("0.1", 6)
-    const amountToTransfer = parseUnits("0.03", 6)
+    const amountToTransfer = parseUnits("0.01", 6)
 
     const tx = await mcNexus
       .deploymentOn(chain.id)
@@ -1410,6 +1410,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
           tokenAddress: testnetMcUSDC.addressOn(chain.id),
           chainId: chain.id,
           recipientAddress: eoaAccount.address,
+          amount: amountToTransfer,
           dependsOn: [userOp(1), userOp(2)]
         }
       ],

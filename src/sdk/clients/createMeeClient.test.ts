@@ -319,7 +319,9 @@ describe("mee.createMeeClient.delegated", async () => {
     })
   })
 
-  test("should check if the nexus account is delegated", async () => {
+  // This test has been fixed and tested multiple times. This is being skipped because of high gas cost.
+  // Funds are draining quickly on test wallets
+  test.skip("should check if the nexus account is delegated", async () => {
     const isDelegated = await mcNexus.isDelegated()
     expect(isDelegated).toBeTypeOf("boolean")
   })
