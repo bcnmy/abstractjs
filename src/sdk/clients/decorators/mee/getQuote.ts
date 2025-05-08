@@ -373,17 +373,11 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
-    delegate = false,
-    authorization: multiChainAuthorization_
+    delegate = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
-
-  const multiChainAuthorization = delegate
-    ? ((multiChainAuthorization_ ??
-        (await account_.toDelegation())) as MeeAuthorization)
-    : undefined
 
   const validFeeToken =
     validPaymentAccount &&
@@ -445,10 +439,8 @@ export const getQuote = async (
   // Do authorization only if required as it requires signing
   const initData: InitDataOrUndefined = isAccountDeployed
     ? undefined
-    : delegate && multiChainAuthorization
-      ? {
-          eip7702Auth: multiChainAuthorization
-        }
+    : delegate
+      ? { eip7702Auth: await validPaymentAccount.toDelegation() }
       : { initCode }
 
   const paymentInfo: PaymentInfo = {
@@ -470,7 +462,8 @@ export const getQuote = async (
         sender,
         callGasLimit,
         chainId,
-        isCleanUpUserOp
+        isCleanUpUserOp,
+        nexusAccount
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
         const shouldContainInitData =
@@ -478,12 +471,9 @@ export const getQuote = async (
 
         if (shouldContainInitData) {
           hasProcessedInitData.push(chainId)
-          initDataOrUndefined =
-            delegate && multiChainAuthorization
-              ? {
-                  eip7702Auth: multiChainAuthorization
-                }
-              : { initCode }
+          initDataOrUndefined = delegate
+            ? { eip7702Auth: await nexusAccount.toDelegation() }
+            : { initCode }
         }
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
@@ -535,10 +525,11 @@ const prepareUserOps = async (
         deployment.address,
         userOp.calls
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
-          .reduce((curr, acc) => curr + acc)
+          .reduce((curr, acc) => curr + acc, 0n)
           .toString(),
         userOp.chainId.toString(),
-        isCleanUpUserOps
+        isCleanUpUserOps,
+        deployment
       ])
     })
   )
