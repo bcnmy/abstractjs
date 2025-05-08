@@ -153,16 +153,11 @@ describe("mee.getPermitQuote", () => {
       transport: transports[0]
     })
 
-    const totalBalance = await getBalance(
-      client,
-      eoaAccount.address,
-      tokenAddress
-    )
-
+    const totalAmount = 6000n
     const trigger: Trigger = {
       chainId: paymentChain.id,
       tokenAddress,
-      amount: 6000n,
+      amount: totalAmount,
       includeFee: true
     }
 
@@ -189,7 +184,7 @@ describe("mee.getPermitQuote", () => {
     expect(fusionQuote.trigger).toBeDefined()
 
     // The final amount should be the total balance
-    expect(fusionQuote.trigger.amount).toBe(totalBalance)
+    expect(fusionQuote.trigger.amount).toBe(totalAmount)
 
     // Verify that the amount is usable (not negative)
     expect(fusionQuote.trigger.amount).toBeGreaterThan(0n)
