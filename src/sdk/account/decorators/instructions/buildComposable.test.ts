@@ -11,11 +11,11 @@ import {
   createPublicClient,
   encodeFunctionData,
   erc20Abi,
+  fromBytes,
   parseEventLogs,
   parseUnits,
-  zeroAddress,
-  fromBytes,
-  toBytes
+  toBytes,
+  zeroAddress
 } from "viem"
 import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
@@ -27,19 +27,14 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
-import {
-  userOp
-} from "../../../clients/decorators/mee"
+import { userOp } from "../../../clients/decorators/mee"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
 import {
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
 } from "../../../constants"
 import { testnetMcUSDC } from "../../../constants/tokens"
-import {
-  greaterThanOrEqualTo,
-  runtimeERC20BalanceOf,
-} from "../../../modules"
+import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
