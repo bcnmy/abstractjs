@@ -6,13 +6,13 @@ import {
   type Transport,
   isHex,
   parseUnits,
-  zeroAddress,
-  toHex
+  toHex,
+  zeroAddress
 } from "viem"
 import {
+  type SignAuthorizationReturnType,
   generatePrivateKey,
-  privateKeyToAccount,
-  SignAuthorizationReturnType
+  privateKeyToAccount
 } from "viem/accounts"
 import { gnosisChiado, sepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"

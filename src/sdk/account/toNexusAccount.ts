@@ -40,6 +40,7 @@ import {
   getUserOperationHash,
   toSmartAccount
 } from "viem/account-abstraction"
+import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
@@ -79,7 +80,6 @@ import {
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
-import { type SignAuthorizationReturnType } from "viem/accounts"
 
 /**
  * Base module configuration type

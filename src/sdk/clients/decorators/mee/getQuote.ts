@@ -1,4 +1,5 @@
 import type { Address, Hex, OneOf } from "viem"
+import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
@@ -12,7 +13,6 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { type SignAuthorizationReturnType } from "viem/accounts"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
