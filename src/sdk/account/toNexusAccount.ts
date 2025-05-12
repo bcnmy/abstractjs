@@ -79,6 +79,7 @@ import {
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+import { type SignAuthorizationReturnType } from "viem/accounts"
 
 /**
  * Base module configuration type
@@ -163,6 +164,26 @@ export type NonceInfo = {
 }
 
 /**
+ * Delegation type
+ * @param authorization - Custom authorization to use. Optional
+ * @param delegatedContract - The contract address to delegate the authorization to. Defaults to the implementation address.
+ * @param multiChain - Whether to use the multi-chain authorization. Defaults to false.
+ */
+export type DelegationParams = {
+  authorization?: SignAuthorizationReturnType
+  multiChain?: boolean
+  delegatedContract?: Address
+}
+
+/**
+ * UnDelegation type
+ * @param authorization - Custom authorization to use. Optional
+ */
+export type UnDelegationParams = {
+  authorization?: SignAuthorizationReturnType
+}
+
+/**
  * Nexus Smart Account Implementation
  */
 export type NexusSmartAccountImplementation = SmartAccountImplementation<
@@ -215,17 +236,15 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     setModule: (validationModule: Validator) => void
 
     /** Get authorization data for the EOA to Nexus Account
-     * @param delegatedContract - The contract address to delegate the authorization to. Defaults to the implementation address.
-     * @param multiChain - Whether to use the multi-chain authorization. Defaults to false.
+     * @param params - {@link DelegationParams}
      * @returns MeeAuthorization
      */
-    toDelegation: (
-      multiChain?: boolean,
-      delegatedContract?: Address
-    ) => Promise<MeeAuthorization>
+    toDelegation: (params?: DelegationParams) => Promise<MeeAuthorization>
 
-    /** Execute the transaction to unauthorize the account */
-    unDelegate: () => Promise<Hex>
+    /** Execute the transaction to unauthorize the account
+     * @param params - {@link UnDelegationParams}
+     */
+    unDelegate: (params?: UnDelegationParams) => Promise<Hex>
 
     /** Check if the account is delegated to the implementation address */
     isDelegated: () => Promise<boolean>
@@ -611,22 +630,32 @@ export const toNexusAccount = async (
    * const eip7702Auth = await nexusAccount.toDelegation() // Returns MeeAuthorization
    */
   async function toDelegation(
-    multiChain = false,
-    delegatedContract?: Address
+    params?: DelegationParams
   ): Promise<MeeAuthorization> {
+    const {
+      authorization: authorization_,
+      multiChain,
+      delegatedContract
+    } = params || {}
+
     const contractAddress = delegatedContract || implementationAddress
-    const authorization = await walletClient.signAuthorization({
-      contractAddress
-    })
+
+    const authorization: SignAuthorizationReturnType =
+      authorization_ ||
+      (await walletClient.signAuthorization({
+        contractAddress
+      }))
+
     const eip7702Auth: MeeAuthorization = {
       chainId: `0x${(multiChain ? 0 : chain.id).toString(16)}` as Hex,
-      address: contractAddress as Hex,
+      address: authorization.address as Hex,
       nonce: `0x${authorization.nonce.toString(16)}` as Hex,
       r: authorization.r as Hex,
       s: authorization.s as Hex,
       v: `0x${authorization.v!.toString(16)}` as Hex,
       yParity: `0x${authorization.yParity!.toString(16)}` as Hex
     }
+
     return eip7702Auth
   }
 
@@ -647,11 +676,16 @@ export const toNexusAccount = async (
    * @example
    * const eip7702Auth = await nexusAccount.unDelegate()
    */
-  async function unDelegate(): Promise<Hex> {
-    const deAuthorization = await walletClient.signAuthorization({
-      address: zeroAddress,
-      executor: "self"
-    })
+  async function unDelegate(params?: UnDelegationParams): Promise<Hex> {
+    const { authorization } = params || {}
+
+    const deAuthorization: SignAuthorizationReturnType =
+      authorization ||
+      (await walletClient.signAuthorization({
+        address: zeroAddress,
+        executor: "self"
+      }))
+
     return await walletClient.sendTransaction({
       to: signer.address,
       data: "0xdeadbeef",

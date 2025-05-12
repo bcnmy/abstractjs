@@ -12,6 +12,7 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
+import { type SignAuthorizationReturnType } from "viem/accounts"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -180,10 +181,10 @@ export type GetQuoteParams = SupertransactionLike & {
          */
         delegate: true
         /**
-         * The authorization data for the transaction. Should be a valid MeeAuthorization object on chainId 0.
+         * The authorization data for the transaction. Should be a valid Viem compatible Authorization param on chainId 0
          * If not provided, the account will be delegated to the implementation address, using chainId 0.
          */
-        authorization?: MeeAuthorization
+        authorization?: SignAuthorizationReturnType
       }
   >
 
@@ -373,7 +374,8 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
-    delegate = false
+    delegate = false,
+    authorization
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -440,7 +442,9 @@ export const getQuote = async (
   const initData: InitDataOrUndefined = isAccountDeployed
     ? undefined
     : delegate
-      ? { eip7702Auth: await validPaymentAccount.toDelegation() }
+      ? {
+          eip7702Auth: await validPaymentAccount.toDelegation({ authorization })
+        }
       : { initCode }
 
   const paymentInfo: PaymentInfo = {
@@ -472,7 +476,9 @@ export const getQuote = async (
         if (shouldContainInitData) {
           hasProcessedInitData.push(chainId)
           initDataOrUndefined = delegate
-            ? { eip7702Auth: await nexusAccount.toDelegation() }
+            ? {
+                eip7702Auth: await nexusAccount.toDelegation({ authorization })
+              }
             : { initCode }
         }
         return {
