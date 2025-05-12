@@ -1,7 +1,6 @@
 import type { Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
 import { isStaging } from "../account/utils/Helpers"
-import { inProduction } from "../account/utils/Utils"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
