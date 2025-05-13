@@ -33,6 +33,10 @@ export type GetGasTokenPayload = {
    * @see {@link PaymentToken} for detailed token structure
    */
   paymentTokens: PaymentToken[]
+  /**
+   * This indicates that the network supports Arbitrary token payments as a fallback mechanism
+   */
+  isArbitraryPaymentTokensSupported: boolean
 }
 
 /**

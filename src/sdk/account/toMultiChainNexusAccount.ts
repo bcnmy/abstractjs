@@ -5,6 +5,7 @@ import type {
 } from "../clients/decorators/mee/getQuote"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
+  type DelegationParams,
   type ToNexusSmartAccountParameters,
   toNexusAccount
 } from "./toNexusAccount"
@@ -206,7 +207,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * @example
    * const delegation = await mcAccount.toDelegation()
    */
-  toDelegation: () => Promise<MeeAuthorization>
+  toDelegation: (params?: DelegationParams) => Promise<MeeAuthorization>
 }
 
 /**
@@ -336,7 +337,8 @@ export async function toMultichainNexusAccount(
     >
 
   // The specific deployment doesn't matter here because chainId = 0
-  const toDelegation = async () => await deployments[0].toDelegation(true)
+  const toDelegation = async () =>
+    await deployments[0].toDelegation({ multiChain: true })
 
   return {
     ...baseAccount,

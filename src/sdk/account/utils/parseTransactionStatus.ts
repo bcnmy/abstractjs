@@ -51,7 +51,7 @@ export const parseTransactionStatus = async (
     }
   }
 
-  // Cleanup user ops failure / success status is not considered for main status
+  // Cleanup user ops status is not considered for main status
   const userOpsWithoutCleanup = userOps.filter((usop) => !usop.isCleanUpUserOp)
 
   const statusMap = {
@@ -63,10 +63,12 @@ export const parseTransactionStatus = async (
     hasMinedFailOps: userOpsWithoutCleanup.some(
       (userOp) => userOp.executionStatus === "MINED_FAIL"
     ),
-    hasPendingOps: userOps.some(
+    hasPendingOps: userOpsWithoutCleanup.some(
       (userOp) => userOp.executionStatus === "PENDING"
     ),
-    hasMiningOps: userOps.some((userOp) => userOp.executionStatus === "MINING"),
+    hasMiningOps: userOpsWithoutCleanup.some(
+      (userOp) => userOp.executionStatus === "MINING"
+    ),
     // If there is a cleanup user op failue / mining failure ? Ignore it and mark the sprTx successful.
     allMinedSuccess: userOpsWithoutCleanup.every(
       (userOp) => userOp.executionStatus === "MINED_SUCCESS"
@@ -87,35 +89,35 @@ export const parseTransactionStatus = async (
   if (statusMap.hasFailedOps) {
     status = "FAILED"
     // Find the first failed userOp to get error details
-    const failedUserOpIndex = userOps.findIndex(
+    const failedUserOpIndex = userOpsWithoutCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
-    const failedUserOp = userOps[failedUserOpIndex]
+    const failedUserOp = userOpsWithoutCleanup[failedUserOpIndex]
     message = `[${failedUserOpIndex}] ${failedUserOp?.executionError || "Transaction failed off-chain"}`
   } else if (statusMap.hasMinedFailOps) {
     status = "MINED_FAIL"
     // Find the first mined-failed userOp to get error details
-    const minedFailUserOpIndex = userOps.findIndex(
+    const minedFailUserOpIndex = userOpsWithoutCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
-    const minedFailUserOp = userOps[minedFailUserOpIndex]
+    const minedFailUserOp = userOpsWithoutCleanup[minedFailUserOpIndex]
     message = `[${minedFailUserOpIndex}] ${minedFailUserOp?.executionError || "Transaction failed on-chain"}`
   } else if (statusMap.hasMiningOps) {
     status = "MINING"
-    const pendingUserOpIndex = userOps.findIndex(
+    const pendingUserOpIndex = userOpsWithoutCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
     message = `[${pendingUserOpIndex}] Transaction is mining, waiting for blockchain confirmation`
   } else if (statusMap.hasPendingOps) {
     status = "PENDING"
-    const pendingUserOpIndex = userOps.findIndex(
+    const pendingUserOpIndex = userOpsWithoutCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
-    const pendingUserOp = userOps[pendingUserOpIndex]
+    const pendingUserOp = userOpsWithoutCleanup[pendingUserOpIndex]
     message = `[${pendingUserOpIndex}] ${pendingUserOp?.executionError || "Transaction is pending, waiting for conditions to be met"}`
   } else if (statusMap.allMinedSuccess) {
     status = "MINED_SUCCESS"
-    const minedSuccessUserOpIndex = userOps.findIndex(
+    const minedSuccessUserOpIndex = userOpsWithoutCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
     message = `[${minedSuccessUserOpIndex}] Transaction executed successfully`

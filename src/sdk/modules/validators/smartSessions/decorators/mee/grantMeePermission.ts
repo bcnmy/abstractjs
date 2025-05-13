@@ -1,7 +1,8 @@
 import type { Address, Prettify } from "viem"
 import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
-import type { ActionData } from "../../../../../constants"
+import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
+import { type ActionData, getSudoPolicy } from "../../../../../constants"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantPermissionResponse,
@@ -20,7 +21,7 @@ export type GrantMeePermissionParams<
     redeemer: Address
     /** Address mapping of the contract to interact with per chain */
     addressMapping: MultichainAddressMapping
-  } & { account?: TModularSmartAccount }
+  } & { account?: TModularSmartAccount } & { feeToken: FeeTokenInfo }
 >
 export type GrantMeePermissionPayload = GrantPermissionResponse[]
 
@@ -31,24 +32,33 @@ export const grantMeePermission = async <
   {
     addressMapping,
     redeemer,
-    actions
+    actions,
+    feeToken
   }: GrantMeePermissionParams<TModularSmartAccount>
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
   const sessionDetails = await Promise.all(
     account.deployments.map((deployment) => {
-      const actionTarget = addressMapping.on(
-        deployment?.client?.chain?.id as number
-      )
+      const chainId = deployment?.client?.chain?.id as number
+      const actionTarget = addressMapping.on(chainId)
       if (!actionTarget) {
-        throw new Error(
-          `No contract address found for chain ${deployment?.client?.chain?.id}`
-        )
+        throw new Error(`No contract address found for chain ${chainId}`)
       }
+      const paymentActionPolicy =
+        feeToken.chainId === chainId
+          ? {
+              actionTarget: feeToken.address,
+              actionTargetSelector: "0xa9059cbb" as Address, // transfer
+              actionPolicies: [getSudoPolicy()]
+            }
+          : undefined
       return grantPermission(undefined as AnyData, {
         account: deployment,
         redeemer,
-        actions: actions.map((action) => ({ ...action, actionTarget }))
+        actions: [
+          ...actions.map((action) => ({ ...action, actionTarget })),
+          ...(paymentActionPolicy ? [paymentActionPolicy] : [])
+        ]
       })
     })
   )

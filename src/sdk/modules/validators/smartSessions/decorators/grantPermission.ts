@@ -52,10 +52,11 @@ export type RequiredSessionParams = RequiredBy<
 export type GrantPermissionParameters<
   TModularSmartAccount extends ModularSmartAccount | undefined
 > = Prettify<
-  RequiredSessionParams & {
-    /** Granter Address */
-    redeemer: Address
-  } & { account?: TModularSmartAccount }
+  Partial<PrettifiedSession> &
+    RequiredSessionParams & {
+      /** Granter Address */
+      redeemer: Address
+    } & { account?: TModularSmartAccount }
 >
 
 // The session details in stringified format.

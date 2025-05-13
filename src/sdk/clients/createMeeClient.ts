@@ -1,7 +1,6 @@
 import type { Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
 import { isStaging } from "../account/utils/Helpers"
-import { inProduction } from "../account/utils/Utils"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
@@ -43,13 +42,6 @@ export type BaseMeeClient = Prettify<
 export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 
 export const createMeeClient = async (params: CreateMeeClientParams) => {
-  inProduction() &&
-    console.warn(`
---------------------------- READ ----------------------------------------------
-  You are using the Developer Preview of the Biconomy MEE. The underlying 
-  contracts are still being audited, and the multichain tokens exported from 
-  this package are yet to be verified.
--------------------------------------------------------------------------------`)
   const {
     account,
     pollingInterval = 1000,

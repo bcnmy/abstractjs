@@ -1,5 +1,17 @@
 # @biconomy/abstractjs
 
+## 1.0.11
+
+### Patch Changes
+
+- auths
+
+## 1.0.10
+
+### Patch Changes
+
+- Fix gasLimit bug
+
 ## 1.0.9
 
 ### Patch Changes

@@ -6,9 +6,14 @@ import {
   type Transport,
   isHex,
   parseUnits,
+  toHex,
   zeroAddress
 } from "viem"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import {
+  type SignAuthorizationReturnType,
+  generatePrivateKey,
+  privateKeyToAccount
+} from "viem/accounts"
 import { gnosisChiado, sepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
@@ -18,7 +23,7 @@ import {
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
-import { mcAUSDC, mcUSDC } from "../constants/tokens"
+import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
 import {
   DEFAULT_MEE_NODE_URL,
   type MeeClient,
@@ -312,7 +317,11 @@ describe("mee.createMeeClient.delegated", async () => {
       accountAddress: eoaAccount.address
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    // The explicit default URL should be removed later.
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: DEFAULT_MEE_NODE_URL
+    })
   })
 
   test("should check if the nexus account is delegated", async () => {
@@ -320,58 +329,102 @@ describe("mee.createMeeClient.delegated", async () => {
     expect(isDelegated).toBeTypeOf("boolean")
   })
 
-  test.runIf(runPaidTests)(
-    "should get a quote for a delegated account",
-    async () => {
-      const balanceBefore = await getBalance(
-        mcNexus.deploymentOn(sepolia.id, true).publicClient,
-        zeroAddress
-      )
-      const quote = await meeClient.getQuote({
-        delegate: true,
-        instructions: [
-          {
-            calls: [
-              {
-                to: zeroAddress,
-                value: 1n
-              }
-            ],
-            chainId: sepolia.id
-          }
-        ],
-        feeToken: {
-          address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // usdc
+  // This test has been fixed and tested multiple times. This is being skipped because of high gas cost.
+  // Funds are draining quickly on test wallets
+  test.skip("should get a quote for a delegated account", async () => {
+    const balanceBefore = await getBalance(
+      mcNexus.deploymentOn(sepolia.id, true).publicClient,
+      zeroAddress
+    )
+    const quote = await meeClient.getQuote({
+      delegate: true,
+      instructions: [
+        {
+          calls: [
+            {
+              to: zeroAddress,
+              value: 1n
+            }
+          ],
           chainId: sepolia.id
         }
-      })
-      expect(quote).toBeDefined()
-
-      const signedQuote = await meeClient.signQuote({ quote })
-      expect(signedQuote).toBeDefined()
-      expect(signedQuote.signature).toBeDefined()
-
-      const { hash } = await meeClient.executeQuote({ quote })
-      expect(hash).toBeDefined()
-      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-      expect(receipt).toBeDefined()
-      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-
-      const balanceAfter = await getBalance(
-        mcNexus.deploymentOn(sepolia.id, true).publicClient,
-        zeroAddress
-      )
-      expect(balanceAfter).toBeGreaterThan(balanceBefore)
-      const isDelegated = await mcNexus.isDelegated()
-      expect(isDelegated).toBe(true)
-
-      if (isDelegated) {
-        const { receipts, status } = await mcNexus.unDelegate()
-        expect(receipts.length).toBeGreaterThan(0)
-        expect(status).toBe("success")
-        const isDelegatedAfter = await mcNexus.isDelegated()
-        expect(isDelegatedAfter).toBe(false)
+      ],
+      feeToken: {
+        address: testnetMcUSDC.addressOn(sepolia.id), // usdc
+        chainId: sepolia.id
       }
+    })
+    expect(quote).toBeDefined()
+
+    const signedQuote = await meeClient.signQuote({ quote })
+    expect(signedQuote).toBeDefined()
+    expect(signedQuote.signature).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+    expect(hash).toBeDefined()
+    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    const balanceAfter = await getBalance(
+      mcNexus.deploymentOn(sepolia.id, true).publicClient,
+      zeroAddress
+    )
+    expect(balanceAfter).toBeGreaterThan(balanceBefore)
+    const isDelegated = await mcNexus.isDelegated()
+    expect(isDelegated).toBe(true)
+
+    if (isDelegated) {
+      const { receipts, status } = await mcNexus.unDelegate()
+      expect(receipts.length).toBeGreaterThan(0)
+      expect(status).toBe("success")
+      const isDelegatedAfter = await mcNexus.isDelegated()
+      expect(isDelegatedAfter).toBe(false)
     }
-  )
+  })
+
+  test("should override the authorization for delegation", async () => {
+    const dummyAuth: SignAuthorizationReturnType = {
+      chainId: sepolia.id,
+      address: zeroAddress,
+      nonce: 1,
+      r: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      s: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      v: 1n,
+      yParity: 1
+    }
+
+    const quote = await meeClient.getQuote({
+      delegate: true,
+      authorization: dummyAuth,
+      instructions: [
+        {
+          calls: [
+            {
+              to: zeroAddress,
+              value: 1n
+            }
+          ],
+          chainId: sepolia.id
+        }
+      ],
+      feeToken: {
+        address: testnetMcUSDC.addressOn(sepolia.id), // usdc
+        chainId: sepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+    expect(quote.paymentInfo.eip7702Auth.chainId).to.equal(
+      toHex(dummyAuth.chainId)
+    )
+    expect(quote.paymentInfo.eip7702Auth.address).to.equal(dummyAuth.address)
+    expect(quote.paymentInfo.eip7702Auth.nonce).to.equal(toHex(dummyAuth.nonce))
+    expect(quote.paymentInfo.eip7702Auth.r).to.equal(dummyAuth.r)
+    expect(quote.paymentInfo.eip7702Auth.s).to.equal(dummyAuth.s)
+    expect(quote.paymentInfo.eip7702Auth.v).to.equal(toHex(dummyAuth.v || 1n))
+    expect(quote.paymentInfo.eip7702Auth.yParity).to.equal(
+      toHex(dummyAuth.yParity || 1)
+    )
+  })
 })

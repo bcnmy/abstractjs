@@ -83,7 +83,7 @@ describe("mee.multichainSmartSessions", () => {
       const installCalls = await mcNexus.build({
         type: "multichain",
         data: {
-          type: "toInstallModuleCalls",
+          type: "toInstallWithSafeSenderCalls",
           parameters: smartSessionsValidator
         }
       })
@@ -125,6 +125,7 @@ describe("mee.multichainSmartSessions", () => {
     const sessionDetails = await sessionMeeClient.grantPermission({
       addressMapping,
       redeemer: redeemerAddress,
+      feeToken,
       actions: [
         {
           actionTargetSelector: "0x273ea3e3",
