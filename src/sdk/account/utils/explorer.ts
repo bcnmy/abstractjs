@@ -29,12 +29,16 @@ export const getExplorerTxLink = (
   hash: Hex,
   chain_: Chain | number | string
 ): Url => {
-  const chain: Chain =
-    typeof chain_ === "number" || typeof chain_ === "string"
-      ? getChain(Number(chain_))
-      : chain_
+  try {
+    const chain: Chain =
+      typeof chain_ === "number" || typeof chain_ === "string"
+        ? getChain(Number(chain_))
+        : chain_
 
-  return `${chain.blockExplorers?.default.url}/tx/${hash}` as Url
+    return `${chain.blockExplorers?.default.url}/tx/${hash}` as Url
+  } catch (error) {
+    return `https://v2.jiffyscan.xyz/tx/${hash}` as Url
+  }
 }
 
 /**
