@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.12
+
+### Patch Changes
+
+- add explorer catch
+
 ## 1.0.11
 
 ### Patch Changes
