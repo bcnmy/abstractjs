@@ -1,20 +1,16 @@
-import type { Chain, Hex, LocalAccount, Transport } from "viem"
-import { beforeAll, describe, expect, test, vi } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { type Url, toClients, toEcosystem } from "ecosystem"
+import { http, type Chain, zeroAddress } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+import { beforeAll, describe, expect, test } from "vitest"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
-import { mcUSDC } from "../../../constants/tokens/__AUTO_GENERATED__"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import { signQuote } from "./signQuote"
-vi.mock("./executeSignedQuote")
 
 describe("mee.executeSignedQuote", () => {
-  let network: NetworkConfig
-  let eoaAccount: LocalAccount
+  const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY!}`)
 
   let feeToken: FeeTokenInfo
   let mcNexus: MultichainSmartAccount
@@ -22,25 +18,50 @@ describe("mee.executeSignedQuote", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
 
   beforeAll(async () => {
-    network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    const ecosystem = await toEcosystem({
+      withMee: true,
+      chainLength: 2,
+      forkUrl:
+        "https://base-sepolia.g.alchemy.com/v2/EX-Rh8dvlZU3i-WJlp9gpK17PjzOWRlL"
+    })
+    const chains = ecosystem.infras.map((infra) => infra.network.chain)
+    const rpcs = ecosystem.infras.map((infra) => infra.network.rpcUrl)
+    const meeUrl = `${ecosystem.meeNode?.url}/v3` as Url
 
-    eoaAccount = network.account!
+    paymentChain = chains[0]
+    targetChain = chains[1]
+
     feeToken = {
-      address: mcUSDC.addressOn(paymentChain.id),
+      address: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
       chainId: paymentChain.id
     }
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: rpcs.map((rpc) => http(rpc)),
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({ account: mcNexus, url: meeUrl })
+
+    const { testClient } = await toClients({
+      rpcUrl: rpcs[0],
+      chain: paymentChain
+    })
+
+    // @ts-ignore
+    await testClient.deal({
+      erc20: feeToken.address,
+      account: mcNexus.addressOn(paymentChain.id),
+      amount: 1000000000n
+    })
+
+    await testClient.setBalance({
+      address: mcNexus.addressOn(paymentChain.id, true),
+      value: 1000000000n
+    })
   })
 
   test("should execute a quote using executeSignedQuote", async () => {
@@ -48,7 +69,7 @@ describe("mee.executeSignedQuote", () => {
       {
         calls: [
           {
-            to: "0x0000000000000000000000000000000000000000",
+            to: zeroAddress,
             gasLimit: 50000n,
             value: 0n
           }
@@ -58,11 +79,6 @@ describe("mee.executeSignedQuote", () => {
     ]
 
     expect(instructions).toBeDefined()
-
-    // Mock the executeSignedQuote function
-    const mockExecuteResponse = { hash: "0x123" as Hex }
-    // Mock implementation for this specific test
-    vi.mocked(executeSignedQuote).mockResolvedValue(mockExecuteResponse)
 
     const quote = await meeClient.getQuote({
       instructions,
@@ -75,10 +91,11 @@ describe("mee.executeSignedQuote", () => {
       signedQuote
     })
 
-    expect(hash).toEqual(mockExecuteResponse.hash)
+    expect(hash).toBeDefined()
 
-    expect(executeSignedQuote).toHaveBeenCalledWith(meeClient, {
-      signedQuote
-    })
+    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })
