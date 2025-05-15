@@ -45,15 +45,13 @@ export const useMeePermission = async (
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
 
-  const instructionsWithSmartSessions = instructions.map((instruction) => ({
-    ...instruction,
-    moduleAddress: SMART_SESSIONS_ADDRESS
-  }))
-
   const quote = await meeClient.getQuote({
-    instructions: instructionsWithSmartSessions,
-    feeToken
+    instructions,
+    feeToken,
+    moduleAddress: SMART_SESSIONS_ADDRESS
   })
+
+  console.log({ quote })
   const signedQuote = await meeClient.signQuote({ quote })
 
   for (const [i, userOpEntry] of signedQuote.userOps.entries()) {

@@ -5,6 +5,7 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
+import { SMART_SESSIONS_ADDRESS } from "../../../constants"
 import type { RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
@@ -65,8 +66,6 @@ export type Instruction = {
   chainId: number
   /** Flag for composable call */
   isComposable?: boolean
-  /** Active module address. Used to fetch the nonce for the active module */
-  moduleAddress?: Address
 }
 
 /**
@@ -171,6 +170,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+  /**
+   * Active module address. Used to fetch the nonce for the active module
+   */
+  moduleAddress?: Address
 } & OneOf<
     | {
         /**
@@ -380,7 +383,8 @@ export const getQuote = async (
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
-    authorization
+    authorization,
+    moduleAddress
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -430,15 +434,16 @@ export const getQuote = async (
     const cleanUpUserOps = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
-      cleanUps
+      cleanUps,
+      moduleAddress
     )
 
     preparedUserOps.push(...cleanUpUserOps)
   }
 
   const hasProcessedInitData: string[] = [feeToken.chainId.toString()]
-  const [nonce, isAccountDeployed, initCode] = await Promise.all([
-    validPaymentAccount.getNonce(),
+  const [{ nonce }, isAccountDeployed, initCode] = await Promise.all([
+    validPaymentAccount.getNonceWithKey({ moduleAddress }),
     validPaymentAccount.isDeployed(),
     validPaymentAccount.getInitCode()
   ])
@@ -509,7 +514,8 @@ export const getQuote = async (
 const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
-  isCleanUpUserOps = false
+  isCleanUpUserOps = false,
+  moduleAddress?: Address
 ) => {
   return await Promise.all(
     instructions.map((userOp) => {
@@ -530,7 +536,7 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey({ moduleAddress: userOp.moduleAddress }),
+        deployment.getNonceWithKey({ moduleAddress }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
@@ -558,7 +564,8 @@ export const userOp = (userOpIndex: number) => {
 const prepareCleanUpUserOps = async (
   account: MultichainSmartAccount,
   userOpsNonceInfo: NonceInfo[],
-  cleanUps: CleanUp[]
+  cleanUps: CleanUp[],
+  moduleAddress?: Address
 ) => {
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
@@ -637,7 +644,8 @@ const prepareCleanUpUserOps = async (
   const cleanUpUserOps = await prepareUserOps(
     account,
     cleanUpInstructions,
-    true
+    true,
+    moduleAddress
   )
 
   return cleanUpUserOps
