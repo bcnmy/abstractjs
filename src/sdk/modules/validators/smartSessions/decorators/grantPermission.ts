@@ -8,7 +8,8 @@ import {
   encodeValidationData,
   getAccount,
   getEnableSessionDetails,
-  getOwnableValidatorMockSignature
+  getOwnableValidatorMockSignature,
+  getSudoPolicy
 } from "@rhinestone/module-sdk"
 import {
   type Address,
@@ -105,7 +106,7 @@ export async function grantPermission<
       owners: [redeemer]
     }),
     salt: generateSalt(),
-    userOpPolicies: [],
+    userOpPolicies: session_?.permitERC4337Paymaster ? [getSudoPolicy()] : [],
     erc7739Policies: { allowedERC7739Content: [], erc1271Policies: [] },
     chainId: bigChainId ?? BigInt(chainIdFromAccount),
     ...session_

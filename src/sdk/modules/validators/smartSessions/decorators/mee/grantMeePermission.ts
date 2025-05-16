@@ -63,7 +63,8 @@ export const grantMeePermission = async <
           ...actions.map((action) => ({ ...action, actionTarget })),
           ...(paymentActionPolicy ? [paymentActionPolicy] : [])
         ],
-        sessionValidator: MEE_VALIDATOR_ADDRESS
+        sessionValidator: MEE_VALIDATOR_ADDRESS,
+        permitERC4337Paymaster: true
       })
     })
   )
