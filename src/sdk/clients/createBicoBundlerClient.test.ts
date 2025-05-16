@@ -1,10 +1,4 @@
-import {
-  http,
-  type Account,
-  type Address,
-  type Chain,
-  LocalAccount
-} from "viem"
+import { http, type Account, type Address, type Chain } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { testnetTest, toNetwork } from "../../test/testSetup"
 import {

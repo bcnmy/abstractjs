@@ -415,16 +415,26 @@ describe("mee.createMeeClient.delegated", async () => {
     })
 
     expect(quote).toBeDefined()
-    expect(quote.paymentInfo.eip7702Auth.chainId).to.equal(
-      toHex(dummyAuth.chainId)
-    )
-    expect(quote.paymentInfo.eip7702Auth.address).to.equal(dummyAuth.address)
-    expect(quote.paymentInfo.eip7702Auth.nonce).to.equal(toHex(dummyAuth.nonce))
-    expect(quote.paymentInfo.eip7702Auth.r).to.equal(dummyAuth.r)
-    expect(quote.paymentInfo.eip7702Auth.s).to.equal(dummyAuth.s)
-    expect(quote.paymentInfo.eip7702Auth.v).to.equal(toHex(dummyAuth.v || 1n))
-    expect(quote.paymentInfo.eip7702Auth.yParity).to.equal(
-      toHex(dummyAuth.yParity || 1)
-    )
+
+    /**
+     * These are only expected the first time a user authorizes a delegate.
+     * If the user has already authorized a delegate, the quote will not contain this information.
+     */
+
+    if (quote.paymentInfo.eip7702Auth) {
+      expect(quote.paymentInfo.eip7702Auth.chainId).to.equal(
+        toHex(dummyAuth.chainId)
+      )
+      expect(quote.paymentInfo.eip7702Auth.address).to.equal(dummyAuth.address)
+      expect(quote.paymentInfo.eip7702Auth.nonce).to.equal(
+        toHex(dummyAuth.nonce)
+      )
+      expect(quote.paymentInfo.eip7702Auth.r).to.equal(dummyAuth.r)
+      expect(quote.paymentInfo.eip7702Auth.s).to.equal(dummyAuth.s)
+      expect(quote.paymentInfo.eip7702Auth.v).to.equal(toHex(dummyAuth.v || 1n))
+      expect(quote.paymentInfo.eip7702Auth.yParity).to.equal(
+        toHex(dummyAuth.yParity || 1)
+      )
+    }
   })
 })
