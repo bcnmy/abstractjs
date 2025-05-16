@@ -31,7 +31,7 @@ export const useMeePermission = async (
     feeToken
   } = parameters
   const meeClient = meeClient_ as MeeClient
-  const mcAccount = meeClient.account
+  // const mcAccount = meeClient.account
 
   const mode =
     mode_ === "ENABLE_AND_USE"
@@ -44,17 +44,40 @@ export const useMeePermission = async (
     moduleAddress: SMART_SESSIONS_ADDRESS
   })
 
-  console.log({ quote })
+  console.log("quote.hash", quote.hash)
+
   const signedQuote = await meeClient.signQuote({ quote })
 
-  for (const [i, userOpEntry] of signedQuote.userOps.entries()) {
-    if (i !== 0) continue // Skip the first user op, as it's the payment user op
+  const modeMap = signedQuote.userOps.reduce(
+    (acc, userOpEntry) => {
+      acc[String(userOpEntry.chainId)] = false
+      return acc
+    },
+    {} as Record<string, boolean>
+  )
+
+  // Then focus on the other user ops
+  for (const [_, userOpEntry] of signedQuote.userOps.entries()) {
+    // If we've iterated over this chainId before, it will never require enable mode again.
+    const alreadyUsed = !!modeMap[userOpEntry.chainId]
+
     const relevantIndex = sessionDetailsArray.findIndex(
       ({ enableSessionData }) =>
         enableSessionData?.enableSession?.sessionToEnable?.chainId ===
         BigInt(userOpEntry.chainId)
     )
-    userOpEntry.sessionDetails = { ...sessionDetailsArray[relevantIndex], mode }
+
+    // Mark the session as used or unused
+    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : mode
+
+    // Set the session details for the user op
+    userOpEntry.sessionDetails = {
+      ...sessionDetailsArray[relevantIndex],
+      mode: dynamicMode
+    }
+
+    // Remember that the mode has now been catered for
+    modeMap[userOpEntry.chainId] = true
   }
 
   return await meeClient.executeSignedQuote({ signedQuote })
