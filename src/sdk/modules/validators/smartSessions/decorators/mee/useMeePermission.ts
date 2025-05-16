@@ -1,5 +1,4 @@
 import type { Hash } from "viem"
-import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
 import type {
   BaseMeeClient,
   MeeClient
@@ -14,7 +13,6 @@ import type { GrantMeePermissionPayload } from "./grantMeePermission"
 
 export type UseMeePermissionParams = {
   sessionDetails: GrantMeePermissionPayload
-  addressMapping: MultichainAddressMapping
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
   feeToken: FeeTokenInfo

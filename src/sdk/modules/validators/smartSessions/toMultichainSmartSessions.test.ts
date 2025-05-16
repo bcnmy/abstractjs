@@ -148,7 +148,6 @@ describe("mee.multichainSmartSessions", () => {
     const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
     const { hash } = await dappSessionClient.usePermission({
-      addressMapping,
       sessionDetails,
       mode: "ENABLE_AND_USE",
       instructions: [
