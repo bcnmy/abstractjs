@@ -15,6 +15,7 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
 import type { BaseMeeClient } from "../../createMeeClient"
+import { addressEquals } from "../../../account/utils/Utils"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -175,24 +176,24 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   moduleAddress?: Address
 } & OneOf<
-    | {
-        /**
-         * Whether to delegate the transaction to the account
-         */
-        delegate?: false
-      }
-    | {
-        /**
-         * Whether to delegate the transaction to the account
-         */
-        delegate: true
-        /**
-         * The authorization data for the transaction. Should be a valid Viem compatible Authorization param on chainId 0
-         * If not provided, the account will be delegated to the implementation address, using chainId 0.
-         */
-        authorization?: SignAuthorizationReturnType
-      }
-  >
+  | {
+    /**
+     * Whether to delegate the transaction to the account
+     */
+    delegate?: false
+  }
+  | {
+    /**
+     * Whether to delegate the transaction to the account
+     */
+    delegate: true
+    /**
+     * The authorization data for the transaction. Should be a valid Viem compatible Authorization param on chainId 0
+     * If not provided, the account will be delegated to the implementation address, using chainId 0.
+     */
+    authorization?: SignAuthorizationReturnType
+  }
+>
 
 export type MeeAuthorization = {
   address: Hex
@@ -381,7 +382,7 @@ export const getQuote = async (
     eoa,
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
-      USEROP_MIN_EXEC_WINDOW_DURATION,
+    USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
     authorization,
     moduleAddress
@@ -389,6 +390,9 @@ export const getQuote = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
+
+  // Smart sessions require a higher verification gas limit
+  const increasedVerificationGasLimit = addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS) ? { verificationGasLimit: "500000" } : undefined;
 
   const validFeeToken =
     validPaymentAccount &&
@@ -453,8 +457,8 @@ export const getQuote = async (
     ? undefined
     : delegate
       ? {
-          eip7702Auth: await validPaymentAccount.toDelegation({ authorization })
-        }
+        eip7702Auth: await validPaymentAccount.toDelegation({ authorization })
+      }
       : { initCode }
 
   const paymentInfo: PaymentInfo = {
@@ -463,7 +467,8 @@ export const getQuote = async (
     nonce: nonce.toString(),
     chainId: feeToken.chainId.toString(),
     ...(eoa ? { eoa } : {}),
-    ...initData
+    ...initData,
+    ...increasedVerificationGasLimit
   }
 
   const userOps = await Promise.all(
@@ -487,8 +492,8 @@ export const getQuote = async (
           hasProcessedInitData.push(chainId)
           initDataOrUndefined = delegate
             ? {
-                eip7702Auth: await nexusAccount.toDelegation({ authorization })
-              }
+              eip7702Auth: await nexusAccount.toDelegation({ authorization })
+            }
             : { initCode }
         }
         return {
@@ -500,7 +505,8 @@ export const getQuote = async (
           nonce: nonce.toString(),
           chainId,
           isCleanUpUserOp,
-          ...initDataOrUndefined
+          ...initDataOrUndefined,
+          ...increasedVerificationGasLimit
         }
       }
     )

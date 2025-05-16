@@ -2,7 +2,11 @@ import type { Address, Prettify } from "viem"
 import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
-import { type ActionData, getSudoPolicy } from "../../../../../constants"
+import {
+  type ActionData,
+  MEE_VALIDATOR_ADDRESS,
+  getSudoPolicy
+} from "../../../../../constants"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantPermissionResponse,
@@ -58,7 +62,8 @@ export const grantMeePermission = async <
         actions: [
           ...actions.map((action) => ({ ...action, actionTarget })),
           ...(paymentActionPolicy ? [paymentActionPolicy] : [])
-        ]
+        ],
+        sessionValidator: MEE_VALIDATOR_ADDRESS
       })
     })
   )

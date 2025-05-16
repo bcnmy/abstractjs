@@ -33,11 +33,6 @@ export const useMeePermission = async (
   const meeClient = meeClient_ as MeeClient
   const mcAccount = meeClient.account
 
-  console.log(
-    "mcAccount",
-    mcAccount.deployments.map(({ chain }) => chain.id)
-  )
-
   const mode =
     mode_ === "ENABLE_AND_USE"
       ? SmartSessionMode.UNSAFE_ENABLE
