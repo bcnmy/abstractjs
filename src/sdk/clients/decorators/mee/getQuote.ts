@@ -396,7 +396,7 @@ export const getQuote = async (
     moduleAddress,
     SMART_SESSIONS_ADDRESS
   )
-    ? { verificationGasLimit: "1000000" }
+    ? { verificationGasLimit: "1500000" }
     : undefined
 
   const validFeeToken =
