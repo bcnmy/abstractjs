@@ -64,6 +64,7 @@ export const grantMeePermission = async <
           ...(paymentActionPolicy ? [paymentActionPolicy] : [])
         ],
         sessionValidator: MEE_VALIDATOR_ADDRESS,
+        sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
         permitERC4337Paymaster: true
       })
     })

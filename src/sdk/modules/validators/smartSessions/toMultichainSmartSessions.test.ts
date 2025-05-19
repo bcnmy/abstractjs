@@ -134,6 +134,9 @@ describe("mee.multichainSmartSessions", () => {
       ]
     })
 
+    //console.log(sessionDetails[0].enableSessionData.enableSession.sessionToEnable)
+    //console.log('redeemer', redeemerAddress)
+
     const dappNexusAccount = await toMultichainNexusAccount({
       accountAddress: mcNexus.addressOn(paymentChain.id),
       chains: [paymentChain, targetChain],
