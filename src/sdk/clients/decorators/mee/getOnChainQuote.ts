@@ -130,8 +130,12 @@ export const getOnChainQuote = async (
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 
+  // It uses the same endpoint (path) for onchain and permit quotes, as currently
+  // the fusion on-chain txn will always be 'approve' and never 'transfer'
+  // so the MEE Node endpoint can be the same for both
+  // there is also just a 'quote' endpoint, which applies to non-fusion superTxns
   const quote = await getQuote(client, {
-    path: "quote-permit", // Use different endpoint for onchain quotes
+    path: "quote-permit",
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     ...(cleanUps ? { cleanUps } : {}),

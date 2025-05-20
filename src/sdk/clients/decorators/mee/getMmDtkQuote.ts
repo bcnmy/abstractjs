@@ -1,5 +1,6 @@
 import {
   type Account,
+  Address,
   type Chain,
   type PublicClient,
   type Transport,
@@ -18,10 +19,10 @@ import type { GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
- * Response payload for a permit-enabled quote request.
- * Combines the standard quote payload with permit-specific trigger information.
+ * Response payload for a MM DTK quote request.
+ * Combines the standard quote payload with MM DTK-specific trigger information.
  */
-export type GetPermitQuotePayload = { quote: GetQuotePayload } & {
+export type GetMmDtkQuotePayload = { quote: GetQuotePayload } & {
   /**
    * Trigger information containing payment token details and total amount
    * (including both the original amount and gas fees)
@@ -33,13 +34,17 @@ export type GetPermitQuotePayload = { quote: GetQuotePayload } & {
 /**
  * Parameters for requesting a permit-enabled quote
  */
-export type GetPermitQuoteParams = GetQuoteParams & {
+export type GetMmDtkQuoteParams = GetQuoteParams & {
   /**
-   * Trigger information for the permit transaction
-   * Must contain a permit-enabled token address
+   * Trigger information for the MM DTK transaction
    * @see {@link Trigger}
    */
   trigger: Trigger
+  /**
+   * The address of the Gator account to use as the sender for the funding userOp
+   * @example "0x..."
+   */
+  gatorAddress: Address
 }
 
 /**
@@ -73,23 +78,25 @@ export type GetPermitQuoteParams = GetQuoteParams & {
  * ```
  *
  * @throws Will throw an error if:
- * - The token does not support ERC20Permit
+ * - TODO: The wallet does not support the MM DTK
  * - The trigger parameters are invalid
  * - The quote request fails
  */
-export const getPermitQuote = async (
+export const getMmDtkQuote = async (
   client: BaseMeeClient,
-  parameters: GetPermitQuoteParams
-): Promise<GetPermitQuotePayload> => {
+  parameters: GetMmDtkQuoteParams
+): Promise<GetMmDtkQuotePayload> => {
+
   const {
     account: account_ = client.account,
     trigger,
     cleanUps,
     instructions,
+    gatorAddress,
     ...rest
   } = parameters
 
-  const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
+  const sender = gatorAddress
   const recipient = account_.addressOn(trigger.chainId, true)
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -97,6 +104,9 @@ export const getPermitQuote = async (
     ({ isComposable }) => isComposable
   )
 
+  // === Build the funding userOp instruction ===
+  // Funding userOp transfers assets invoilved in the desired actions
+  // to the companion account
   const transferFromAmount = trigger.useMaxAvailableAmount
     ? runtimeERC20AllowanceOf({
         owner: sender,
@@ -106,6 +116,7 @@ export const getPermitQuote = async (
       })
     : trigger.amount
 
+  // Funding userOp instruction => transfers 
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
@@ -126,8 +137,11 @@ export const getPermitQuote = async (
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 
+  // using the quote-permit endpoint as the redeemed permission 
+  // will aprove whatever is required to be approved, so the
+  // rest is similar to the regular permit fusion mode
   const quote = await getQuote(client, {
-    path: "quote-permit", // Use different endpoint for permit enabled tokens
+    path: "quote-permit", 
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     ...(cleanUps ? { cleanUps } : {}),
@@ -159,4 +173,4 @@ export const getPermitQuote = async (
   }
 }
 
-export default getPermitQuote
+export default getMmDtkQuote

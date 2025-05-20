@@ -167,6 +167,9 @@ export type GetQuoteParams = SupertransactionLike & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+  /**
+   * Handle 7702 delegation (authorization)
+   */
 } & OneOf<
     | {
         /**

@@ -4,8 +4,11 @@ import {
   type LocalAccount,
   type Transport,
   createPublicClient,
+  createWalletClient,
+  erc20Abi,
   parseUnits,
-  zeroAddress
+  zeroAddress,
+  PublicClient
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
@@ -14,6 +17,7 @@ import {
   type Trigger,
   executeSignedQuote,
   getFusionQuote,
+  getPermitQuote,
   signPermitQuote,
   waitForSupertransactionReceipt
 } from "."
@@ -32,10 +36,16 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
-import getPermitQuote from "./getPermitQuote"
+import getMmDtkQuote from "./getMmDtkQuote"
+import { 
+  Implementation, 
+  toMetaMaskSmartAccount,
+  type MetaMaskSmartAccount
+} from "@metamask/delegation-toolkit";
+import { readContract } from "viem/actions"
 
 
-describe("mee.getPermitQuote", () => {
+describe("mee.getMmDtkQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -48,6 +58,9 @@ describe("mee.getPermitQuote", () => {
   let paymentChain: Chain
   let targetChain: Chain
   let transports: Transport[]
+  let mmDtkAccount: MetaMaskSmartAccount<Implementation.Hybrid>
+  let decimals: number
+  let pubClient: PublicClient
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -59,6 +72,25 @@ describe("mee.getPermitQuote", () => {
       chainId: paymentChain.id
     }
 
+    pubClient = createPublicClient({
+      chain: paymentChain,
+      transport: transports[0]
+    })
+
+    decimals = await pubClient.readContract({
+      address: feeToken.address,
+      abi: erc20Abi,
+      functionName: "decimals"
+    })
+
+    mmDtkAccount = await toMetaMaskSmartAccount({
+      client: pubClient,
+      implementation: Implementation.Hybrid,
+      deployParams: [eoaAccount.address, [], [], []],
+      deploySalt: "0x",
+      signatory: {account: eoaAccount}
+    })
+
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports,
@@ -67,6 +99,30 @@ describe("mee.getPermitQuote", () => {
 
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
+
+    
+    //
+    // === Fund the mmDtkAccount if it has no balance ===
+    //
+    const mmDtkAccountBalance = await getBalance(
+      pubClient,
+      mmDtkAccount.address,
+      tokenAddress
+    )
+
+    if (mmDtkAccountBalance === 0n) {
+      const walletClient = createWalletClient({
+        account: eoaAccount,
+        chain: paymentChain,
+        transport: transports[0]
+      })
+      await walletClient.writeContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [mmDtkAccount.address, parseUnits("0.012345", decimals)]
+      })
+    }
   })
 
   test("should resolve instructions", async () => {
@@ -101,17 +157,18 @@ describe("mee.getPermitQuote", () => {
     expect(instructions).toBeDefined()
     expect(instructions.length).toEqual(2)
 
-    const quote = await getPermitQuote(meeClient, {
+    const quote = await getMmDtkQuote(meeClient, {
       trigger,
       instructions,
-      feeToken
+      feeToken,
+      gatorAddress: mmDtkAccount!.address
     })
 
     expect(quote).toBeDefined()
   })
 
   test("should resolve unresolved instructions", async () => {
-    const fusionQuote = await getPermitQuote(meeClient, {
+    const fusionQuote = await getMmDtkQuote(meeClient, {
       trigger: {
         chainId: paymentChain.id,
         tokenAddress,
@@ -140,7 +197,8 @@ describe("mee.getPermitQuote", () => {
           }
         })
       ],
-      feeToken
+      feeToken,
+      gatorAddress: mmDtkAccount!.address
     })
 
     expect(fusionQuote.quote).toBeDefined()
@@ -149,14 +207,10 @@ describe("mee.getPermitQuote", () => {
   })
 
   test("should reserve gas fees when using max available amount", async () => {
-    const client = createPublicClient({
-      chain: paymentChain,
-      transport: transports[0]
-    })
 
     const totalBalance = await getBalance(
-      client,
-      eoaAccount.address,
+      pubClient,
+      mmDtkAccount.address,
       tokenAddress
     )
 
@@ -182,7 +236,9 @@ describe("mee.getPermitQuote", () => {
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
       instructions: [withdrawal],
-      feeToken
+      feeToken,
+      fusionMode: "mm-dtk",
+      gatorAddress: mmDtkAccount!.address
     })
 
     expect(fusionQuote).toBeDefined()
@@ -195,6 +251,7 @@ describe("mee.getPermitQuote", () => {
     expect(fusionQuote.trigger.amount).toBeGreaterThan(0n)
   })
 
+  // TODO: unskip this once
   // This test uses all available usdc on the eoa on mainnet, so should be skipped
   test.skip("should demo behaviour of max available amount", async () => {
     const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -220,12 +277,14 @@ describe("mee.getPermitQuote", () => {
       }
     })
 
-    const fusionQuote = await meeClient.getPermitQuote({
+    const fusionQuote = await getMmDtkQuote(meeClient, {
       trigger,
       instructions: [transferInstruction], // inx 1 => transferFrom (Runtime) + Dev userOps
-      feeToken
+      feeToken,
+      gatorAddress: mmDtkAccount!.address
     })
 
+    // TODO: Change it to signMmDtkQuote
     const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
@@ -239,7 +298,7 @@ describe("mee.getPermitQuote", () => {
       transport: transports[0]
     })
 
-    const amount = parseUnits("1", 6) // 1 unit of token
+    const amount = parseUnits("0.0295", decimals) // some fraction of the unit of token
     const trigger: Trigger = {
       chainId: paymentChain.id,
       tokenAddress,
@@ -263,7 +322,9 @@ describe("mee.getPermitQuote", () => {
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
       instructions: [withdrawal],
-      feeToken
+      feeToken,
+      fusionMode: "mm-dtk",
+      gatorAddress: mmDtkAccount!.address
     })
 
     expect(fusionQuote).toBeDefined()

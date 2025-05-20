@@ -1,4 +1,6 @@
+import { Address, OneOf } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
+import getMmDtkQuote, { GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
@@ -28,7 +30,22 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
-}
+  /**
+   * Fusion mode to use for the quote
+   * There are 3 modes:
+   * - "on-chain": User signs the on-chain transaction
+   * - "permit": User signs the EIP-2612 permit
+   * - "mm-dtk": User signs the Metamask delegation. Requires a gatorAddress
+   */
+} & OneOf<
+  | {
+      fusionMode?: "on-chain" | "permit"
+    }
+  | {
+      fusionMode: "mm-dtk"
+      gatorAddress: Address
+    }
+>
 
 /**
  * Gets a quote using either permit or standard on-chain transaction based on token capabilities.
@@ -42,6 +59,7 @@ export type GetFusionQuoteParams = GetQuoteParams & {
  * @param parameters.chainId - Target blockchain chain ID
  * @param parameters.walletProvider - Wallet provider to use
  * @param [parameters.gasToken] - Optional token address to use for gas payment
+ * @param [parameters.fusionMode] - Optional explicitly set fusion mode
  *
  * @returns Promise resolving to either a permit quote or on-chain quote payload
  *
@@ -73,7 +91,21 @@ export const getFusionQuote = async (
   client: BaseMeeClient,
   parameters: GetFusionQuoteParams
 ): Promise<GetFusionQuotePayload> => {
+  if (parameters.fusionMode) {
+    switch (parameters.fusionMode) {
+      case "on-chain":
+        return getOnChainQuote(client, parameters)
+      case "permit":
+        return getPermitQuote(client, parameters)
+      case "mm-dtk":
+        return getMmDtkQuote(client, parameters)
+      default:
+        throw new Error(`Invalid fusion mode: ${parameters.fusionMode}`)
+    }
+  }
+  // if no fusion mode is set, we need to check the payment token's permit support
   const { permitEnabled } = await getPaymentToken(client, parameters.trigger)
+  // TODO: Add a check for the wallet's dtk capabilities here and the corresponding branching
   return permitEnabled
     ? getPermitQuote(client, parameters)
     : getOnChainQuote(client, parameters)
