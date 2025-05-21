@@ -1,5 +1,12 @@
+import { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
+import { OneOf } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { getPaymentToken } from "./getPaymentToken"
+import {
+  type SignMmDtkQuoteParams,
+  type SignMmDtkQuotePayload,
+  signMMDtkQuote
+} from "./signMmDtkQuote"
 import signOnChainQuote, {
   type SignOnChainQuotePayload,
   type SignOnChainQuoteParams
@@ -16,6 +23,7 @@ import {
 export type SignFusionQuoteParameters =
   | SignPermitQuoteParams
   | SignOnChainQuoteParams
+  | SignMmDtkQuoteParams
 
 /**
  * Union type for the payload returned by signFusionQuote
@@ -60,6 +68,11 @@ export const signFusionQuote = async (
   client: BaseMeeClient,
   parameters: SignFusionQuoteParameters
 ): Promise<SignFusionQuotePayload> => {
+  if ("delegatorSmartAccount" in parameters) {
+    return signMMDtkQuote(client, parameters as SignMmDtkQuoteParams)
+  }
+
+  // if it is not mm-dtk, then it is permit or on-chain
   const { permitEnabled } = await getPaymentToken(
     client,
     parameters.fusionQuote.trigger

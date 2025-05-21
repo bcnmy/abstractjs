@@ -1,15 +1,21 @@
 import {
+  Implementation,
+  type MetaMaskSmartAccount,
+  toMetaMaskSmartAccount
+} from "@metamask/delegation-toolkit"
+import {
   type Address,
   type Chain,
   type LocalAccount,
+  type PublicClient,
   type Transport,
   createPublicClient,
   createWalletClient,
   erc20Abi,
   parseUnits,
-  zeroAddress,
-  PublicClient
+  zeroAddress
 } from "viem"
+import { readContract } from "viem/actions"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   type FeeTokenInfo,
@@ -37,13 +43,7 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
-import { 
-  Implementation, 
-  toMetaMaskSmartAccount,
-  type MetaMaskSmartAccount
-} from "@metamask/delegation-toolkit";
-import { readContract } from "viem/actions"
-
+import { signMMDtkQuote } from "./signMmDtkQuote"
 
 describe("mee.getMmDtkQuote", () => {
   let network: NetworkConfig
@@ -87,8 +87,8 @@ describe("mee.getMmDtkQuote", () => {
       client: pubClient,
       implementation: Implementation.Hybrid,
       deployParams: [eoaAccount.address, [], [], []],
-      deploySalt: "0x",
-      signatory: {account: eoaAccount}
+      deploySalt: "0x", // ==> 0x81b6A728E32aB3210A45d26c0c1530d8940Feb31
+      signatory: { account: eoaAccount }
     })
 
     mcNexus = await toMultichainNexusAccount({
@@ -97,10 +97,12 @@ describe("mee.getMmDtkQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: process.env.PERSONAL_MEE_API_KEY
+    })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
 
-    
     //
     // === Fund the mmDtkAccount if it has no balance ===
     //
@@ -110,7 +112,7 @@ describe("mee.getMmDtkQuote", () => {
       tokenAddress
     )
 
-    if (mmDtkAccountBalance === 0n) {
+    if (mmDtkAccountBalance < parseUnits("0.1", decimals)) {
       const walletClient = createWalletClient({
         account: eoaAccount,
         chain: paymentChain,
@@ -120,7 +122,7 @@ describe("mee.getMmDtkQuote", () => {
         address: tokenAddress,
         abi: erc20Abi,
         functionName: "transfer",
-        args: [mmDtkAccount.address, parseUnits("0.012345", decimals)]
+        args: [mmDtkAccount.address, parseUnits("0.112345", decimals)]
       })
     }
   })
@@ -161,7 +163,7 @@ describe("mee.getMmDtkQuote", () => {
       trigger,
       instructions,
       feeToken,
-      gatorAddress: mmDtkAccount!.address
+      delegatorSmartAccount: mmDtkAccount
     })
 
     expect(quote).toBeDefined()
@@ -198,7 +200,7 @@ describe("mee.getMmDtkQuote", () => {
         })
       ],
       feeToken,
-      gatorAddress: mmDtkAccount!.address
+      delegatorSmartAccount: mmDtkAccount
     })
 
     expect(fusionQuote.quote).toBeDefined()
@@ -207,7 +209,6 @@ describe("mee.getMmDtkQuote", () => {
   })
 
   test("should reserve gas fees when using max available amount", async () => {
-
     const totalBalance = await getBalance(
       pubClient,
       mmDtkAccount.address,
@@ -237,8 +238,7 @@ describe("mee.getMmDtkQuote", () => {
       trigger,
       instructions: [withdrawal],
       feeToken,
-      fusionMode: "mm-dtk",
-      gatorAddress: mmDtkAccount!.address
+      delegatorSmartAccount: mmDtkAccount
     })
 
     expect(fusionQuote).toBeDefined()
@@ -253,7 +253,7 @@ describe("mee.getMmDtkQuote", () => {
 
   // TODO: unskip this once
   // This test uses all available usdc on the eoa on mainnet, so should be skipped
-  test.skip("should demo behaviour of max available amount", async () => {
+  test("should demo behaviour of max available amount", async () => {
     const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
     const chainId = paymentChain.id
     const mcNexusAddress = mcNexus.addressOn(paymentChain.id, true)
@@ -281,23 +281,23 @@ describe("mee.getMmDtkQuote", () => {
       trigger,
       instructions: [transferInstruction], // inx 1 => transferFrom (Runtime) + Dev userOps
       feeToken,
-      gatorAddress: mmDtkAccount!.address
+      delegatorSmartAccount: mmDtkAccount
     })
 
-    // TODO: Change it to signMmDtkQuote
-    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const signedQuote = await signMMDtkQuote(meeClient, {
+      fusionQuote,
+      delegatorSmartAccount: mmDtkAccount
+    })
+    console.log("signedQuote", signedQuote)
+    /*
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
     const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    */
   })
 
   test("should add gas fees to amount when not using max available amount", async () => {
-    const client = createPublicClient({
-      chain: paymentChain,
-      transport: transports[0]
-    })
-
     const amount = parseUnits("0.0295", decimals) // some fraction of the unit of token
     const trigger: Trigger = {
       chainId: paymentChain.id,
@@ -323,8 +323,7 @@ describe("mee.getMmDtkQuote", () => {
       trigger,
       instructions: [withdrawal],
       feeToken,
-      fusionMode: "mm-dtk",
-      gatorAddress: mmDtkAccount!.address
+      delegatorSmartAccount: mmDtkAccount
     })
 
     expect(fusionQuote).toBeDefined()

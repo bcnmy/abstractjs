@@ -1,6 +1,7 @@
+import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
 import {
   type Account,
-  Address,
+  type Address,
   type Chain,
   type PublicClient,
   type Transport,
@@ -41,10 +42,10 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
   /**
-   * The address of the Gator account to use as the sender for the funding userOp
-   * @example "0x..."
+   * The MetaMask smart account to use for signing
+   * the delegation
    */
-  gatorAddress: Address
+  delegatorSmartAccount: MetaMaskSmartAccount
 }
 
 /**
@@ -78,7 +79,6 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
  * ```
  *
  * @throws Will throw an error if:
- * - TODO: The wallet does not support the MM DTK
  * - The trigger parameters are invalid
  * - The quote request fails
  */
@@ -86,17 +86,16 @@ export const getMmDtkQuote = async (
   client: BaseMeeClient,
   parameters: GetMmDtkQuoteParams
 ): Promise<GetMmDtkQuotePayload> => {
-
   const {
     account: account_ = client.account,
     trigger,
     cleanUps,
     instructions,
-    gatorAddress,
+    delegatorSmartAccount,
     ...rest
   } = parameters
 
-  const sender = gatorAddress
+  const sender = delegatorSmartAccount.address
   const recipient = account_.addressOn(trigger.chainId, true)
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -116,15 +115,15 @@ export const getMmDtkQuote = async (
       })
     : trigger.amount
 
-  // Funding userOp instruction => transfers 
+  // Funding userOp instruction => transfers
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
       tokenAddress: trigger.tokenAddress,
       chainId: trigger.chainId,
       amount: transferFromAmount,
-      recipient,
-      sender
+      sender,
+      recipient
     }
   }
 
@@ -137,11 +136,11 @@ export const getMmDtkQuote = async (
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 
-  // using the quote-permit endpoint as the redeemed permission 
+  // using the quote-permit endpoint as the redeemed permission
   // will aprove whatever is required to be approved, so the
   // rest is similar to the regular permit fusion mode
   const quote = await getQuote(client, {
-    path: "quote-permit", 
+    path: "quote-permit",
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     ...(cleanUps ? { cleanUps } : {}),

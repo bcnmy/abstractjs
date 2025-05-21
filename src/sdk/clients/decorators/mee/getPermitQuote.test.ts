@@ -34,7 +34,6 @@ import {
 } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
 
-
 describe("mee.getPermitQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount

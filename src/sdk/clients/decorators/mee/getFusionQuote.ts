@@ -1,6 +1,7 @@
-import { Address, OneOf } from "viem"
+import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
+import type { Address, OneOf } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
-import getMmDtkQuote, { GetMmDtkQuoteParams } from "./getMmDtkQuote"
+import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
@@ -31,21 +32,12 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    */
   cleanUps?: CleanUp[]
   /**
-   * Fusion mode to use for the quote
-   * There are 3 modes:
-   * - "on-chain": User signs the on-chain transaction
-   * - "permit": User signs the EIP-2612 permit
-   * - "mm-dtk": User signs the Metamask delegation. Requires a gatorAddress
+   * Optional delegator smart account
+   * If not provided, that means the Delegation Toolkit fusion
+   * mode won't be used
    */
-} & OneOf<
-  | {
-      fusionMode?: "on-chain" | "permit"
-    }
-  | {
-      fusionMode: "mm-dtk"
-      gatorAddress: Address
-    }
->
+  delegatorSmartAccount?: MetaMaskSmartAccount
+}
 
 /**
  * Gets a quote using either permit or standard on-chain transaction based on token capabilities.
@@ -91,24 +83,16 @@ export const getFusionQuote = async (
   client: BaseMeeClient,
   parameters: GetFusionQuoteParams
 ): Promise<GetFusionQuotePayload> => {
-  if (parameters.fusionMode) {
-    switch (parameters.fusionMode) {
-      case "on-chain":
-        return getOnChainQuote(client, parameters)
-      case "permit":
-        return getPermitQuote(client, parameters)
-      case "mm-dtk":
-        return getMmDtkQuote(client, parameters)
-      default:
-        throw new Error(`Invalid fusion mode: ${parameters.fusionMode}`)
-    }
-  }
-  // if no fusion mode is set, we need to check the payment token's permit support
+  // if delegator smart account is provided, we use mm-dtk fusion mode
+  if (parameters.delegatorSmartAccount) {
+    return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
+  } 
+  // else we need to check the payment token's permit support
   const { permitEnabled } = await getPaymentToken(client, parameters.trigger)
-  // TODO: Add a check for the wallet's dtk capabilities here and the corresponding branching
   return permitEnabled
     ? getPermitQuote(client, parameters)
     : getOnChainQuote(client, parameters)
+  
 }
 
 export default getFusionQuote
