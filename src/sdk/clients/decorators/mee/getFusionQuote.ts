@@ -86,13 +86,12 @@ export const getFusionQuote = async (
   // if delegator smart account is provided, we use mm-dtk fusion mode
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
-  } 
+  }
   // else we need to check the payment token's permit support
   const { permitEnabled } = await getPaymentToken(client, parameters.trigger)
   return permitEnabled
     ? getPermitQuote(client, parameters)
     : getOnChainQuote(client, parameters)
-  
 }
 
 export default getFusionQuote
