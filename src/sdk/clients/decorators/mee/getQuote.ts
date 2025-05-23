@@ -174,7 +174,16 @@ export type GetQuoteParams = SupertransactionLike & {
   /**
    * Active module address. Used to fetch the nonce for the active module
    */
-  moduleAddress?: Address
+  moduleAddress?: Address,
+  /**
+   * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions 
+   * This flag is set true when the whole superTxn with all entries require short encoding
+   * This is a special case when all the sigs are going to be validated via short flow. For example, 
+   * when the superTxn is signed with session key enabled via Smart Sessions Module.
+   * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156 
+   */
+  shortEncodingSuperTxn?: boolean
 } & OneOf<
     | {
         /**
@@ -229,6 +238,11 @@ type QuoteRequest = {
     eip7702Auth?: MeeAuthorization
     /** Cleanup userop flag - Special user op */
     isCleanUpUserOp?: boolean
+    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions 
+     * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156 
+     **/
+    shortEncoding?: boolean
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -250,6 +264,8 @@ export type PaymentInfo = {
   chainId: string
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
+  /** Short encoding flag @see QuoteRequest.shortEncoding */
+  shortEncoding?: boolean
 }
 
 /**
@@ -316,6 +332,8 @@ export interface MeeFilledUserOpDetails {
   isCleanUpUserOp?: boolean
   /** Optional Session details for redeeming a permission */
   sessionDetails?: GrantPermissionResponse
+  /** Short encoding flag @see QuoteRequest.shortEncoding */
+  shortEncoding?: boolean
 }
 
 /**
@@ -385,12 +403,14 @@ export const getQuote = async (
       USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
     authorization,
-    moduleAddress
+    moduleAddress,
+    shortEncodingSuperTxn = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
   const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
 
+  // TODO: Is there a better way to handle this?
   // Smart sessions require a higher verification gas limit
   const increasedVerificationGasLimit = addressEquals(
     moduleAddress,
@@ -431,7 +451,13 @@ export const getQuote = async (
     )
   }
 
-  const preparedUserOps = await prepareUserOps(account_, resolvedInstructions)
+  // Prepare useful user 
+  const preparedUserOps = await prepareUserOps(
+    account_,
+    resolvedInstructions,
+    false,
+    moduleAddress
+  )
 
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
@@ -450,6 +476,7 @@ export const getQuote = async (
     preparedUserOps.push(...cleanUpUserOps)
   }
 
+  // ==== Prepare payment info => node will build the payment userop with this info ====
   const hasProcessedInitData: string[] = [feeToken.chainId.toString()]
   const [{ nonce }, isAccountDeployed, initCode] = await Promise.all([
     validPaymentAccount.getNonceWithKey({ moduleAddress }),
@@ -473,8 +500,10 @@ export const getQuote = async (
     chainId: feeToken.chainId.toString(),
     ...(eoa ? { eoa } : {}),
     ...initData,
-    ...increasedVerificationGasLimit
+    ...increasedVerificationGasLimit,
+    shortEncoding: shortEncodingSuperTxn
   }
+  // ====== end preparing payment info ======
 
   const userOps = await Promise.all(
     preparedUserOps.map(
@@ -487,7 +516,8 @@ export const getQuote = async (
         callGasLimit,
         chainId,
         isCleanUpUserOp,
-        nexusAccount
+        nexusAccount,
+        shortEncoding
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
         const shouldContainInitData =
@@ -511,7 +541,8 @@ export const getQuote = async (
           chainId,
           isCleanUpUserOp,
           ...initDataOrUndefined,
-          ...increasedVerificationGasLimit
+          ...increasedVerificationGasLimit,
+          shortEncoding: shortEncodingSuperTxn || shortEncoding
         }
       }
     )
@@ -545,6 +576,18 @@ const prepareUserOps = async (
             : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
       }
 
+      // This is the place to set the short encoding flag
+      // It can be based on the module address or on the instruction type
+      // Currently instructions are for the userOps only 
+      // That's why this function is called prepareUserOps
+      // However it is possible that a superTxn consists not of the userOps only
+      // So for example signed EIP-712 data structs or 
+      // ERC-7683 Cross-chain intents can be included in the superTxn
+      // And this function will have to convert them out of instructions
+      // Such 'off-chain' entities will have to be used with short encoding flag
+      // For we just set it to false for now
+      const shortEncoding = false;
+
       return Promise.all([
         callsPromise,
         deployment.getNonceWithKey({ moduleAddress }),
@@ -557,7 +600,8 @@ const prepareUserOps = async (
           .toString(),
         userOp.chainId.toString(),
         isCleanUpUserOps,
-        deployment
+        deployment,
+        shortEncoding
       ])
     })
   )
