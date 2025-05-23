@@ -174,14 +174,14 @@ export type GetQuoteParams = SupertransactionLike & {
   /**
    * Active module address. Used to fetch the nonce for the active module
    */
-  moduleAddress?: Address,
+  moduleAddress?: Address
   /**
-   * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions 
+   * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
    * This flag is set true when the whole superTxn with all entries require short encoding
-   * This is a special case when all the sigs are going to be validated via short flow. For example, 
+   * This is a special case when all the sigs are going to be validated via short flow. For example,
    * when the superTxn is signed with session key enabled via Smart Sessions Module.
    * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
-   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156 
+   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
 } & OneOf<
@@ -238,9 +238,9 @@ type QuoteRequest = {
     eip7702Auth?: MeeAuthorization
     /** Cleanup userop flag - Special user op */
     isCleanUpUserOp?: boolean
-    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions 
+    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
      * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
-     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156 
+     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
      **/
     shortEncoding?: boolean
   }[]
@@ -332,8 +332,14 @@ export interface MeeFilledUserOpDetails {
   isCleanUpUserOp?: boolean
   /** Optional Session details for redeeming a permission */
   sessionDetails?: GrantPermissionResponse
-  /** Short encoding flag @see QuoteRequest.shortEncoding */
-  shortEncoding?: boolean
+  /** Short encoding flag @see QuoteRequest.shortEncoding
+   *  It is expected to be set here because it is returned by the node
+   *  and the node always knows if the given superTxn entry's hash
+   *  was short encoded or not. This flag is then passed to the node
+   *  when signing the quote, so the node can build short or full 
+   *  fusion signature for a given userOp
+  **/
+  shortEncoding: boolean
 }
 
 /**
@@ -451,7 +457,7 @@ export const getQuote = async (
     )
   }
 
-  // Prepare useful user 
+  // Prepare useful user
   const preparedUserOps = await prepareUserOps(
     account_,
     resolvedInstructions,
@@ -578,15 +584,15 @@ const prepareUserOps = async (
 
       // This is the place to set the short encoding flag
       // It can be based on the module address or on the instruction type
-      // Currently instructions are for the userOps only 
+      // Currently instructions are for the userOps only
       // That's why this function is called prepareUserOps
       // However it is possible that a superTxn consists not of the userOps only
-      // So for example signed EIP-712 data structs or 
+      // So for example signed EIP-712 data structs or
       // ERC-7683 Cross-chain intents can be included in the superTxn
       // And this function will have to convert them out of instructions
       // Such 'off-chain' entities will have to be used with short encoding flag
       // For we just set it to false for now
-      const shortEncoding = false;
+      const shortEncoding = false
 
       return Promise.all([
         callsPromise,
