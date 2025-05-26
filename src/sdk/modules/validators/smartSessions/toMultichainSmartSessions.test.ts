@@ -93,11 +93,12 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-      console.log({ receipt })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     } else {
       console.log("Module already installed")
     }
+
+    // ======== At this point the Nexus SA is already installed ==============
 
     const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
     const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
@@ -134,6 +135,10 @@ describe("mee.multichainSmartSessions", () => {
       ]
     })
 
+    // overload account to use the redeemer account as signer
+    // so using this entity one can sign userOps that have userOp.sender = mcNexus.address
+    // with the redeemer account (which is Session Key) as signer
+    // this would be a common pattern for signing userOps with a session key
     const dappNexusAccount = await toMultichainNexusAccount({
       accountAddress: mcNexus.addressOn(paymentChain.id),
       chains: [paymentChain, targetChain],

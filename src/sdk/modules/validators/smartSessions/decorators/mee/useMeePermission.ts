@@ -41,10 +41,9 @@ export const useMeePermission = async (
   const quote = await meeClient.getQuote({
     instructions,
     feeToken,
-    moduleAddress: SMART_SESSIONS_ADDRESS
+    moduleAddress: SMART_SESSIONS_ADDRESS,
+    shortEncodingSuperTxn: true
   })
-
-  console.log("quote.hash", quote.hash)
 
   const signedQuote = await meeClient.signQuote({ quote })
 
