@@ -633,7 +633,7 @@ export const toNexusAccount = async (
     params?: DelegationParams
   ): Promise<MeeAuthorization> {
     const {
-      authorization: authorization_,
+      authorization: manualAuthorization,
       multiChain,
       delegatedContract
     } = params || {}
@@ -641,13 +641,19 @@ export const toNexusAccount = async (
     const contractAddress = delegatedContract || implementationAddress
 
     const authorization: SignAuthorizationReturnType =
-      authorization_ ||
+      manualAuthorization ||
       (await walletClient.signAuthorization({
         contractAddress
       }))
 
+    const chainId = manualAuthorization
+      ? manualAuthorization.chainId
+      : multiChain
+        ? 0
+        : chain.id
+
     const eip7702Auth: MeeAuthorization = {
-      chainId: `0x${(multiChain ? 0 : chain.id).toString(16)}` as Hex,
+      chainId: `0x${(chainId).toString(16)}` as Hex,
       address: authorization.address as Hex,
       nonce: `0x${authorization.nonce.toString(16)}` as Hex,
       r: authorization.r as Hex,
