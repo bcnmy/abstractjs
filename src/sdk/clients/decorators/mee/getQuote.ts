@@ -336,9 +336,9 @@ export interface MeeFilledUserOpDetails {
    *  It is expected to be set here because it is returned by the node
    *  and the node always knows if the given superTxn entry's hash
    *  was short encoded or not. This flag is then passed to the node
-   *  when signing the quote, so the node can build short or full 
+   *  when signing the quote, so the node can build short or full
    *  fusion signature for a given userOp
-  **/
+   **/
   shortEncoding: boolean
 }
 
