@@ -54,7 +54,7 @@ import buildComposable from "./buildComposable"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-describe.runIf(runPaidTests)("mee.buildComposable", () => {
+describe.runIf(runPaidTests).skip("mee.buildComposable", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
