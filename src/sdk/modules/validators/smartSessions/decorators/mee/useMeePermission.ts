@@ -45,8 +45,6 @@ export const useMeePermission = async (
     shortEncodingSuperTxn: true
   })
 
-  console.log("quote.hash", quote.hash)
-
   const signedQuote = await meeClient.signQuote({ quote })
 
   const modeMap = signedQuote.userOps.reduce(

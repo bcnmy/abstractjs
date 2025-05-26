@@ -93,7 +93,6 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-      console.log({ receipt })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     } else {
       console.log("Module already installed")
@@ -135,14 +134,6 @@ describe("mee.multichainSmartSessions", () => {
         }
       ]
     })
-
-    console.log("sessionDetails", sessionDetails)
-    console.log(
-      sessionDetails[0].enableSessionData.enableSession.sessionToEnable
-    )
-    console.log(
-      sessionDetails[1].enableSessionData.enableSession.sessionToEnable
-    )
 
     // overload account to use the redeemer account as signer
     // so using this entity one can sign userOps that have userOp.sender = mcNexus.address
