@@ -181,6 +181,16 @@ export type GetQuoteParams = SupertransactionLike & {
          */
         delegate: true
         /**
+         * multichainAuthorization flag enables multichain authorization with chainId 0.
+         */
+        multichainAuthorization: true
+      }
+    | {
+        /**
+         * Whether to delegate the transaction to the account
+         */
+        delegate: true
+        /**
          * The authorization data for the transaction. Should be a valid Viem compatible Authorization param on chainId 0
          * If not provided, the account will be delegated to the implementation address, using chainId 0.
          */
@@ -375,7 +385,8 @@ export const getQuote = async (
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
-    authorization
+    authorization,
+    multichainAuthorization
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -443,7 +454,10 @@ export const getQuote = async (
     ? undefined
     : delegate
       ? {
-          eip7702Auth: await validPaymentAccount.toDelegation({ authorization })
+          eip7702Auth: await validPaymentAccount.toDelegation({
+            authorization,
+            multiChain: !!multichainAuthorization
+          })
         }
       : { initCode }
 
@@ -477,7 +491,10 @@ export const getQuote = async (
           hasProcessedInitData.push(chainId)
           initDataOrUndefined = delegate
             ? {
-                eip7702Auth: await nexusAccount.toDelegation({ authorization })
+                eip7702Auth: await nexusAccount.toDelegation({
+                  authorization,
+                  multiChain: !!multichainAuthorization
+                })
               }
             : { initCode }
         }

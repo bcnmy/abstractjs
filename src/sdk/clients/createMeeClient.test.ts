@@ -14,7 +14,7 @@ import {
   generatePrivateKey,
   privateKeyToAccount
 } from "viem/accounts"
-import { gnosisChiado, sepolia } from "viem/chains"
+import { baseSepolia, gnosisChiado } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
@@ -307,13 +307,12 @@ describe("mee.createMeeClient.delegated", async () => {
   let meeClient: MeeClient
 
   const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
-  const rpc = `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`
 
   beforeAll(async () => {
     mcNexus = await toMultichainNexusAccount({
-      chains: [sepolia],
+      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(rpc)],
+      transports: [http()],
       accountAddress: eoaAccount.address
     })
 
@@ -331,9 +330,9 @@ describe("mee.createMeeClient.delegated", async () => {
 
   // This test has been fixed and tested multiple times. This is being skipped because of high gas cost.
   // Funds are draining quickly on test wallets
-  test.skip("should get a quote for a delegated account", async () => {
+  test("should get a quote for a delegated account", async () => {
     const balanceBefore = await getBalance(
-      mcNexus.deploymentOn(sepolia.id, true).publicClient,
+      mcNexus.deploymentOn(baseSepolia.id, true).publicClient,
       zeroAddress
     )
     const quote = await meeClient.getQuote({
@@ -346,12 +345,12 @@ describe("mee.createMeeClient.delegated", async () => {
               value: 1n
             }
           ],
-          chainId: sepolia.id
+          chainId: baseSepolia.id
         }
       ],
       feeToken: {
-        address: testnetMcUSDC.addressOn(sepolia.id), // usdc
-        chainId: sepolia.id
+        address: zeroAddress, // eth
+        chainId: baseSepolia.id
       }
     })
     expect(quote).toBeDefined()
@@ -367,7 +366,7 @@ describe("mee.createMeeClient.delegated", async () => {
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
 
     const balanceAfter = await getBalance(
-      mcNexus.deploymentOn(sepolia.id, true).publicClient,
+      mcNexus.deploymentOn(baseSepolia.id, true).publicClient,
       zeroAddress
     )
     expect(balanceAfter).toBeGreaterThan(balanceBefore)
@@ -385,7 +384,7 @@ describe("mee.createMeeClient.delegated", async () => {
 
   test("should override the authorization for delegation", async () => {
     const dummyAuth: SignAuthorizationReturnType = {
-      chainId: sepolia.id,
+      chainId: baseSepolia.id,
       address: zeroAddress,
       nonce: 1,
       r: "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -405,12 +404,12 @@ describe("mee.createMeeClient.delegated", async () => {
               value: 1n
             }
           ],
-          chainId: sepolia.id
+          chainId: baseSepolia.id
         }
       ],
       feeToken: {
-        address: testnetMcUSDC.addressOn(sepolia.id), // usdc
-        chainId: sepolia.id
+        address: zeroAddress, // eth
+        chainId: baseSepolia.id
       }
     })
 
@@ -436,5 +435,86 @@ describe("mee.createMeeClient.delegated", async () => {
         toHex(dummyAuth.yParity || 1)
       )
     }
+  })
+
+  test("Authorization should have a targetted chain id by default", async () => {
+    const quote = await meeClient.getQuote({
+      delegate: true,
+      instructions: [
+        {
+          calls: [
+            {
+              to: zeroAddress,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ],
+      feeToken: {
+        address: zeroAddress, // eth
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    /**
+     * These are only expected the first time a user authorizes a delegate.
+     * If the user has already authorized a delegate, the quote will not contain this information.
+     */
+
+    if (quote.paymentInfo.eip7702Auth) {
+      expect(quote.paymentInfo.eip7702Auth.chainId).to.equal(
+        toHex(baseSepolia.id)
+      )
+    }
+  })
+
+  test("Authorization should have a zero chain id when multichain option is specified", async () => {
+    const quote = await meeClient.getQuote({
+      delegate: true,
+      multichainAuthorization: true,
+      instructions: [
+        {
+          calls: [
+            {
+              to: zeroAddress,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ],
+      feeToken: {
+        address: zeroAddress, // eth
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    /**
+     * These are only expected the first time a user authorizes a delegate.
+     * If the user has already authorized a delegate, the quote will not contain this information.
+     */
+
+    if (quote.paymentInfo.eip7702Auth) {
+      expect(quote.paymentInfo.eip7702Auth.chainId).to.equal(toHex(0))
+    }
+  })
+
+  test("toDelegation should have targetted chain id by default", async () => {
+    const delegation = await mcNexus.toDelegation()
+
+    expect(delegation).toBeDefined()
+    expect(delegation.chainId).to.equal(toHex(baseSepolia.id))
+  })
+
+  test("toDelegation should have zero chain id when multichain option is specified ", async () => {
+    const delegation = await mcNexus.toDelegation({ multiChain: true })
+
+    expect(delegation).toBeDefined()
+    expect(delegation.chainId).to.equal(toHex(0))
   })
 })

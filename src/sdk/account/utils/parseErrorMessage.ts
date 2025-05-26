@@ -39,8 +39,15 @@ const extractRevertError = (message: string): string | null => {
 
 const handleErrorsArray = (errors: AnyData[]): string => {
   // Handle array of error objects with msg and path properties
-  if (typeof errors[0] === "object" && errors[0].msg) {
-    return errors.map(({ msg, path }: AnyData) => `${path}: ${msg}`).join("\n")
+  if (typeof errors[0] === "object" && (errors[0].msg || errors[0].message)) {
+    return errors
+      .map((error: AnyData) => {
+        const message = error.message || error.msg
+        return error.path && error.path !== ""
+          ? `${error.path}: ${message}`
+          : message
+      })
+      .join("\n")
   }
 
   const errorMessage = String(errors[0])

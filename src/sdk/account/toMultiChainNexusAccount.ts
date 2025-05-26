@@ -320,8 +320,8 @@ export async function toMultichainNexusAccount(
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
   // The specific deployment doesn't matter here because chainId = 0
-  const toDelegation = async () =>
-    await deployments[0].toDelegation({ multiChain: true })
+  const toDelegation = async (params?: Pick<DelegationParams, "multiChain">) =>
+    await deployments[0].toDelegation({ multiChain: !!params?.multiChain })
 
   return {
     ...baseAccount,
