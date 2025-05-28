@@ -73,7 +73,6 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-
   /**
    * This test doesn't utilise Fusion =>  there is not trigger Txn,
    * and Nexus is NOT prefunded before userOp =>
