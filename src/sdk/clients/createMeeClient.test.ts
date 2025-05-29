@@ -73,7 +73,7 @@ describe("mee.createMeeClient", async () => {
   test.concurrent(
     "should fail if the account is not supported by the MEE node",
     async () => {
-      const transports = [http(), http(), http()]
+      const transports = [http("https://optimism.drpc.org"), http(), http()]
       const invalidMcNexus = await toMultichainNexusAccount({
         chains: [paymentChain, targetChain, gnosisChiado],
         transports,
