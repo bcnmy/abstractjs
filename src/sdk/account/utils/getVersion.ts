@@ -1,7 +1,7 @@
-import type { Hex } from "viem"
-import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
-import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
 import { UnionType } from "typescript"
+import type { Hex } from "viem"
+import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
+import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -182,9 +182,9 @@ export const isVersionNewer = (
 
 export type AddressConfigsAdditions = {
   "1.0.2": {
-    attesters?: Hex[],
-    k1FactoryAddress?: Hex,
-    k1ValidatorAddress?: Hex,
+    attesters?: Hex[]
+    k1FactoryAddress?: Hex
+    k1ValidatorAddress?: Hex
   }
 }
 
@@ -199,7 +199,8 @@ export type BaseAddressConfig = {
   implementationAddress: Hex
 }
 
-export type AddressConfig = BaseAddressConfig & AddressConfigsAdditions[keyof AddressConfigsAdditions]
+export type AddressConfig = BaseAddressConfig &
+  AddressConfigsAdditions[keyof AddressConfigsAdditions]
 
 /**
  * Returns the appropriate configuration based on the SDK version
@@ -208,13 +209,15 @@ export type AddressConfig = BaseAddressConfig & AddressConfigsAdditions[keyof Ad
  * @throws Error if the version is not supported
  */
 export function getConfigFromNexusVersion(
-  nexusVersion: Required<NonNullable<ToNexusSmartAccountParameters["nexusVersion"]>>
+  nexusVersion: Required<
+    NonNullable<ToNexusSmartAccountParameters["nexusVersion"]>
+  >
 ): AddressConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
   if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
     return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]
   }
-  
+
   // If the version is not explicitly listed, find the closest compatible version
   // Sort the available versions in descending order
   const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION).sort(

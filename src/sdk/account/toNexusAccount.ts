@@ -57,6 +57,7 @@ import type {
   ComposableCall
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
+import { toLegacyK1Module } from "../modules/validators/legacyk1/toLegacyK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import { getFactoryData, getInitData } from "./decorators/getFactoryData"
 import { getNexusAddress } from "./decorators/getNexusAddress"
@@ -77,11 +78,14 @@ import {
   isNullOrUndefined,
   typeToString
 } from "./utils/Utils"
+import {
+  type AddressConfigsAdditions,
+  getConfigFromNexusVersion,
+  isVersionOlder
+} from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
-import { AddressConfigsAdditions, getConfigFromNexusVersion, isVersionOlder } from "./utils/getVersion"
-import { toLegacyK1Module } from "../modules/validators/legacyk1/toLegacyK1Module"
 
 /**
  * Base module configuration type
@@ -140,19 +144,19 @@ export type ToNexusSmartAccountParameters = {
   implementationAddress?: Address
   /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
   nexusVersion?: `${number}.${number}.${number}`
-} & AddressConfigsAdditions[keyof AddressConfigsAdditions]
-& Prettify<
-  Pick<
-    ClientConfig<Transport, Chain, Account, RpcSchema>,
-    | "account"
-    | "cacheTime"
-    | "chain"
-    | "key"
-    | "name"
-    | "pollingInterval"
-    | "rpcSchema"
+} & AddressConfigsAdditions[keyof AddressConfigsAdditions] &
+  Prettify<
+    Pick<
+      ClientConfig<Transport, Chain, Account, RpcSchema>,
+      | "account"
+      | "cacheTime"
+      | "chain"
+      | "key"
+      | "name"
+      | "pollingInterval"
+      | "rpcSchema"
+    >
   >
->
 /**
  * Nexus Smart Account type
  */
@@ -290,7 +294,7 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    nexusVersion,
+    nexusVersion
   } = parameters
 
   let {
@@ -298,23 +302,23 @@ export const toNexusAccount = async (
     factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
     bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
     implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
-    // those params are undefined by default and are defined only if explicitly provided 
+    // those params are undefined by default and are defined only if explicitly provided
     // or if nexus version is provided
     attesters,
-    k1ValidatorAddress ,
-    k1FactoryAddress,
+    k1ValidatorAddress,
+    k1FactoryAddress
   } = parameters
 
   // if nexus version earlier than 1.2.0 is provided, use the config from the constants
   if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
     ;({
-        factoryAddress, 
-        bootStrapAddress, 
-        implementationAddress, 
-        attesters, 
-        k1ValidatorAddress,
-        k1FactoryAddress 
-      } = getConfigFromNexusVersion(nexusVersion))
+      factoryAddress,
+      bootStrapAddress,
+      implementationAddress,
+      attesters,
+      k1ValidatorAddress,
+      k1FactoryAddress
+    } = getConfigFromNexusVersion(nexusVersion))
   }
 
   const signer = await toSigner({ signer: _signer })
@@ -341,7 +345,7 @@ export const toNexusAccount = async (
   // Prepare validator modules
   const validators = customValidators || []
 
-  let k1Validator: Validator | undefined = undefined;
+  let k1Validator: Validator | undefined = undefined
 
   if (k1ValidatorAddress) {
     k1Validator = toLegacyK1Module({

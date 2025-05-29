@@ -44,7 +44,10 @@ describe("modules.toLegacyK1Module", () => {
 
     const { testClient } = await toClients(infra.network)
 
-    legacyK1Module = toLegacyK1Module({ signer: eoaAccount, module: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa" })
+    legacyK1Module = toLegacyK1Module({
+      signer: eoaAccount,
+      module: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa"
+    })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
@@ -97,7 +100,9 @@ describe("modules.toLegacyK1Module", () => {
   })
 
   test("should generate a valid signature", async () => {
-    const signature = await legacyK1Module.signer.signMessage({ message: "test" })
+    const signature = await legacyK1Module.signer.signMessage({
+      message: "test"
+    })
     expect(signature).toMatchInlineSnapshot(
       `"0xf755d9a72d5b7386765e7f0e833af68795b739a267122dae933f41b781b5aed0626ce3263308ebd4c37bed84319b66da2794368771046825bd89b98ba68c4e871b"`
     )
