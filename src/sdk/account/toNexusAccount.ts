@@ -80,6 +80,8 @@ import {
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+import { AddressConfigsAdditions, getConfigFromNexusVersion, isVersionOlder } from "./utils/getVersion"
+import { toLegacyK1Module } from "../modules/validators/legacyk1/toLegacyK1Module"
 
 /**
  * Base module configuration type
@@ -136,7 +138,10 @@ export type ToNexusSmartAccountParameters = {
   bootStrapAddress?: Address
   /** Optional implementation address */
   implementationAddress?: Address
-} & Prettify<
+  /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
+  nexusVersion?: `${number}.${number}.${number}`
+} & AddressConfigsAdditions[keyof AddressConfigsAdditions]
+& Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
     | "account"
@@ -285,10 +290,32 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
+    nexusVersion,
+  } = parameters
+
+  let {
+    // those params are 1.2.0 by default
     factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
     bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS
+    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
+    // those params are undefined by default and are defined only if explicitly provided 
+    // or if nexus version is provided
+    attesters,
+    k1ValidatorAddress ,
+    k1FactoryAddress,
   } = parameters
+
+  // if nexus version earlier than 1.2.0 is provided, use the config from the constants
+  if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
+    ;({
+        factoryAddress, 
+        bootStrapAddress, 
+        implementationAddress, 
+        attesters, 
+        k1ValidatorAddress,
+        k1FactoryAddress 
+      } = getConfigFromNexusVersion(nexusVersion))
+  }
 
   const signer = await toSigner({ signer: _signer })
   const walletClient = toWalletClient({
@@ -314,8 +341,17 @@ export const toNexusAccount = async (
   // Prepare validator modules
   const validators = customValidators || []
 
-  // The default validator should be the defaultValidator unless custom validators have been set
-  let module = customValidators?.[0] || defaultValidator
+  let k1Validator: Validator | undefined = undefined;
+
+  if (k1ValidatorAddress) {
+    k1Validator = toLegacyK1Module({
+      signer,
+      module: k1ValidatorAddress
+    })
+  }
+
+  // The default validator should be the defaultValidator unless custom validators have been set or k1Validator is set
+  let module = k1Validator || customValidators?.[0] || defaultValidator
 
   // Prepare executor modules
   const executors = customExecutors || []
@@ -694,6 +730,9 @@ export const toNexusAccount = async (
     })
   }
 
+  // ================================================
+  //        Return the Nexus Account
+  // ================================================
   return toSmartAccount({
     client: publicClient,
     entryPoint: {
@@ -746,6 +785,8 @@ export const toNexusAccount = async (
       return await module.signUserOpHash(hash)
     },
     getNonce,
+
+    // TODO: extend depending of version
     extend: {
       isDelegated,
       toDelegation,
