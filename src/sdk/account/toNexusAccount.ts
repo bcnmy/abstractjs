@@ -16,14 +16,12 @@ import {
   type TypedDataDefinition,
   type UnionPartialBy,
   type WalletClient,
-  concat,
   concatHex,
   createPublicClient,
   domainSeparator,
   encodeAbiParameters,
   encodeFunctionData,
   encodePacked,
-  getContract,
   keccak256,
   parseAbi,
   parseAbiParameters,
@@ -60,6 +58,10 @@ import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import type { Validator } from "../modules/validators/toValidator"
 import { getFactoryData, getInitData } from "./decorators/getFactoryData"
 import { getNexusAddress } from "./decorators/getNexusAddress"
+import {
+  getDefaultNonceKey,
+  getNonceWithKeyUtil
+} from "./decorators/getNonceWithKey"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -196,8 +198,8 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     /** Gets the init code for the account */
     getInitCode: () => Hex
 
-    /** Gets the init code for the account */
-    getNonceWithKey: () => Promise<NonceInfo>
+    /** Gets the nonce with key for the account */
+    getNonceWithKey: (accountAddress: Address) => Promise<NonceInfo>
 
     /** Encodes a single call for execution */
     encodeExecute: (call: Call) => Promise<Hex>
@@ -271,8 +273,6 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 export const toNexusAccount = async (
   parameters: ToNexusSmartAccountParameters
 ): Promise<NexusAccount> => {
-  let isNonceKeyBeingCalculated = false
-
   const {
     chain,
     transport: transportConfig,
@@ -298,15 +298,6 @@ export const toNexusAccount = async (
     transport: transportConfig
   })
   const publicClient = createPublicClient({ chain, transport: transportConfig })
-
-  const entryPointContract = getContract({
-    address: ENTRY_POINT_ADDRESS,
-    abi: EntrypointAbi,
-    client: {
-      public: publicClient,
-      wallet: walletClient
-    }
-  })
 
   // Prepare default validator module
   const defaultValidator = toDefaultModule({ signer })
@@ -472,57 +463,32 @@ export const toNexusAccount = async (
     })
   }
 
-  // This function always make sure to provide a unique nonce key with respect to timestamps.
-  // This is helpful to reduce nonce collusion
-  const getDefaultNonceKey = async (): Promise<bigint> => {
-    while (isNonceKeyBeingCalculated) {
-      await new Promise((resolve) => setTimeout(resolve, 1)) // wait for 1 ms if another key is being calculated
-    }
-
-    isNonceKeyBeingCalculated = true
-    const key = BigInt(Date.now())
-
-    await new Promise((resolve) => setTimeout(resolve, 1)) // ensure next call is in the next millisecond
-    isNonceKeyBeingCalculated = false
-
-    return key
-  }
-
   /**
    * @description Gets the nonce for the account along with modified key
    * @param parameters - Optional parameters for getting the nonce
    * @returns The nonce and the key
    */
-  const getNonceWithKey = async (parameters?: {
-    key?: bigint
-    validationMode?: "0x00" | "0x01" | "0x02"
-    moduleAddress?: Address
-  }): Promise<NonceInfo> => {
-    const TIMESTAMP_ADJUSTMENT = 16777215n
-    const defaultNonceKey = await getDefaultNonceKey()
+  const getNonceWithKey = async (
+    accountAddress: Address,
+    parameters?: {
+      key?: bigint
+      validationMode?: "0x00" | "0x01" | "0x02"
+      moduleAddress?: Address
+    }
+  ): Promise<NonceInfo> => {
+    const defaultNonceKey = await getDefaultNonceKey(accountAddress, chain.id)
+
     const {
-      key: key_ = defaultNonceKey,
+      key = defaultNonceKey,
       validationMode = "0x00",
       moduleAddress = module.module
     } = parameters ?? {}
-    try {
-      const adjustedKey = BigInt(key_) % TIMESTAMP_ADJUSTMENT
-      const key: string = concat([
-        toHex(adjustedKey, { size: 3 }),
-        validationMode,
-        moduleAddress
-      ])
-      const accountAddress = await getAddress()
 
-      const nonce = await entryPointContract.read.getNonce([
-        accountAddress,
-        BigInt(key)
-      ])
-
-      return { nonceKey: BigInt(key), nonce }
-    } catch (e) {
-      return { nonceKey: 0n, nonce: 0n }
-    }
+    return getNonceWithKeyUtil(publicClient, accountAddress, {
+      key,
+      validationMode,
+      moduleAddress
+    })
   }
 
   /**
@@ -535,7 +501,9 @@ export const toNexusAccount = async (
     validationMode?: "0x00" | "0x01" | "0x02"
     moduleAddress?: Address
   }): Promise<bigint> => {
-    const { nonce } = await getNonceWithKey(parameters)
+    const accountAddress = await getAddress()
+
+    const { nonce } = await getNonceWithKey(accountAddress, parameters)
     return nonce
   }
 

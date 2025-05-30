@@ -1,6 +1,18 @@
-import type { Address, Hex, OneOf } from "viem"
+import {
+  http,
+  type Address,
+  type Hex,
+  type OneOf,
+  createPublicClient,
+  zeroAddress
+} from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getChain } from "../../../account"
 import { buildComposable } from "../../../account/decorators"
+import {
+  getDefaultNonceKey,
+  getNonceWithKeyUtil
+} from "../../../account/decorators/getNonceWithKey"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
@@ -12,7 +24,12 @@ import {
   runtimeERC20BalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
-import type { BaseMeeClient } from "../../createMeeClient"
+import {
+  type BaseMeeClient,
+  DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
+  DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
+  DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+} from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -93,7 +110,7 @@ export type SupertransactionLike = {
   /** Array of instructions in various formats */
   instructions: InstructionLike[]
   /** Token to be used for paying fees */
-  feeToken: FeeTokenInfo
+  feeToken?: FeeTokenInfo
 }
 
 /**
@@ -140,13 +157,18 @@ export type CleanUp = {
 /**
  * Parameters for a sponsorship
  */
-export type SponsorshipParams = {
+export type SponsorshipOptionsParams = {
+  /**
+   * this flag can be used to enable sponsorship
+   * @example true
+   */
+  enable: boolean
   /**
    * Sponsorship url for requesting sponsorship
    * @example http://dapp-backend/sponsor-supertx
    */
-  url: string
-  gasTank: {
+  url?: string
+  gasTank?: {
     /**
      * The chainId to use
      * @example 1 // Ethereum Mainnet
@@ -197,9 +219,13 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   cleanUps?: CleanUp[]
   /**
-   * token cleanup option to pull the funds on failure or dust cleanup
+   * sponsorship flag to enable the sponsored super transactions.
    */
-  sponsorship?: SponsorshipParams
+  sponsorship: boolean
+  /**
+   * Sponsorship options for overrides
+   */
+  sponsorshipOptions?: SponsorshipOptionsParams
 } & OneOf<
     | {
         /**
@@ -400,9 +426,7 @@ export const getQuote = async (
     account: account_ = client.account,
     instructions,
     cleanUps,
-    feeToken,
     path = "quote",
-    eoa,
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
@@ -411,13 +435,6 @@ export const getQuote = async (
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
-  const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
-
-  const validFeeToken =
-    validPaymentAccount &&
-    client.info.supportedGasTokens
-      .map(({ chainId }) => +chainId)
-      .includes(feeToken.chainId)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
@@ -427,16 +444,6 @@ export const getQuote = async (
         .includes(userOp.chainId)
   )
 
-  if (!validFeeToken) {
-    throw Error(
-      `Fee token ${feeToken.address} is not supported on this chain: ${feeToken.chainId}`
-    )
-  }
-  if (!validPaymentAccount) {
-    throw Error(
-      `Account is not deployed on necessary chain(s) ${feeToken.chainId}`
-    )
-  }
   if (!validUserOps) {
     throw Error(
       `User operation chain(s) not supported by the node: ${resolvedInstructions
@@ -444,6 +451,14 @@ export const getQuote = async (
         .join(", ")}`
     )
   }
+
+  const hasProcessedInitData: string[] = []
+  const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
+    client,
+    parameters
+  )
+
+  if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
 
   const preparedUserOps = await prepareUserOps(account_, resolvedInstructions)
 
@@ -461,31 +476,6 @@ export const getQuote = async (
     )
 
     preparedUserOps.push(...cleanUpUserOps)
-  }
-
-  const hasProcessedInitData: string[] = [feeToken.chainId.toString()]
-  const [nonce, isAccountDeployed, initCode] = await Promise.all([
-    validPaymentAccount.getNonce(),
-    validPaymentAccount.isDeployed(),
-    validPaymentAccount.getInitCode()
-  ])
-
-  // Do authorization only if required as it requires signing
-  const initData: InitDataOrUndefined = isAccountDeployed
-    ? undefined
-    : delegate
-      ? {
-          eip7702Auth: await validPaymentAccount.toDelegation({ authorization })
-        }
-      : { initCode }
-
-  const paymentInfo: PaymentInfo = {
-    sender: validPaymentAccount.address,
-    token: feeToken.address,
-    nonce: nonce.toString(),
-    chainId: feeToken.chainId.toString(),
-    ...(eoa ? { eoa } : {}),
-    ...initData
   }
 
   const userOps = await Promise.all(
@@ -513,6 +503,7 @@ export const getQuote = async (
               }
             : { initCode }
         }
+
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
           upperBoundTimestamp: upperBoundTimestamp_,
@@ -533,6 +524,120 @@ export const getQuote = async (
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 
+const preparePaymentInfo = async (
+  client: BaseMeeClient,
+  parameters: GetQuoteParams
+) => {
+  const {
+    account: account_ = client.account,
+    eoa,
+    feeToken,
+    delegate = false,
+    authorization,
+    sponsorship,
+    sponsorshipOptions
+  } = parameters
+
+  let paymentInfo: PaymentInfo | undefined = undefined
+  let isInitDataProcessed = false
+
+  if (sponsorship) {
+    if (sponsorshipOptions !== undefined) {
+      throw new Error("Sponsorship options are not supported yet.")
+    }
+
+    const chainId = DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+    const accountAddress = account_.addressOn(chainId, true)
+
+    const client = createPublicClient({
+      transport: http(),
+      chain: getChain(chainId)
+    })
+
+    const defaultNonceKey = await getDefaultNonceKey(accountAddress, chainId)
+
+    const { nonce } = await getNonceWithKeyUtil(client, accountAddress, {
+      key: defaultNonceKey,
+      // Sponsorship always uses default K1 validation module as validator
+      validationMode: "0x00",
+      moduleAddress: zeroAddress
+    })
+
+    paymentInfo = {
+      // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
+      sender: DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
+      token: DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
+      nonce: nonce.toString(),
+      chainId: chainId.toString(),
+      ...(eoa ? { eoa } : {}),
+      // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
+      // So initCode will be always 0x
+      initCode: "0x"
+    }
+
+    // Init code / authorization list will not be added to payment userOp in the case of sponsorship. It will be added in the
+    // first developer defined userOp. To make this happen, this field should be false
+    isInitDataProcessed = false
+  } else {
+    if (!feeToken) throw Error(`Fee token should be configured`)
+
+    const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
+
+    if (!validPaymentAccount) {
+      throw Error(
+        `Account is not deployed on necessary chain(s) ${feeToken.chainId}`
+      )
+    }
+
+    // TODO: Check the correctness of this while testing. This is a old logic
+    const validFeeToken =
+      validPaymentAccount &&
+      client.info.supportedGasTokens
+        .map(({ chainId }) => +chainId)
+        .includes(feeToken.chainId)
+
+    if (!validFeeToken) {
+      throw Error(
+        `Fee token ${feeToken.address} is not supported on this chain: ${feeToken.chainId}`
+      )
+    }
+
+    const [nonce, isAccountDeployed, initCode] = await Promise.all([
+      validPaymentAccount.getNonce(),
+      validPaymentAccount.isDeployed(),
+      validPaymentAccount.getInitCode()
+    ])
+
+    // Do authorization only if required as it requires signing
+    const initData: InitDataOrUndefined = isAccountDeployed
+      ? undefined
+      : delegate
+        ? {
+            eip7702Auth: await validPaymentAccount.toDelegation({
+              authorization
+            })
+          }
+        : { initCode }
+
+    paymentInfo = {
+      sender: validPaymentAccount.address,
+      token: feeToken.address,
+      nonce: nonce.toString(),
+      chainId: feeToken.chainId.toString(),
+      ...(eoa ? { eoa } : {}),
+      ...initData
+    }
+
+    // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
+    // in developer defined userOps, this field must be true
+    isInitDataProcessed = true
+  }
+
+  if (!paymentInfo) throw new Error("Failed to generate payment info")
+
+  return { paymentInfo, isInitDataProcessed }
+}
+
 const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
@@ -541,6 +646,7 @@ const prepareUserOps = async (
   return await Promise.all(
     instructions.map((userOp) => {
       const deployment = account.deploymentOn(userOp.chainId, true)
+      const accountAddress = account.addressOn(userOp.chainId, true)
 
       let callsPromise: Promise<Hex>
 
@@ -557,7 +663,7 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey(),
+        deployment.getNonceWithKey(accountAddress),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
