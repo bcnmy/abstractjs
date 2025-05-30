@@ -138,6 +138,34 @@ export type CleanUp = {
 }
 
 /**
+ * Parameters for a sponsorship
+ */
+export type SponsorshipParams = {
+  /**
+   * Sponsorship url for requesting sponsorship
+   * @example http://dapp-backend/sponsor-supertx
+   */
+  url: string
+  gasTank: {
+    /**
+     * The chainId to use
+     * @example 1 // Ethereum Mainnet
+     */
+    chainId: number
+    /**
+     * The gas tank address for sponshorship
+     * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+     */
+    address: Address
+    /**
+     * The token address for sponshorship
+     * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+     */
+    token: Address
+  }
+}
+
+/**
  * Parameters required for requesting a quote from the MEE service
  */
 export type GetQuoteParams = SupertransactionLike & {
@@ -168,6 +196,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+  /**
+   * token cleanup option to pull the funds on failure or dust cleanup
+   */
+  sponsorship?: SponsorshipParams
 } & OneOf<
     | {
         /**

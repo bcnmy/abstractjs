@@ -153,7 +153,7 @@ export function erc7579Actions() {
 }
 
 export type CallFn = (...args: AnyData[]) => Promise<Call[]>
-export type ReadFn = (...args: AnyData[]) => Promise<any>
+export type ReadFn = (...args: AnyData[]) => Promise<AnyData>
 export type CallDictionary = Record<string, CallFn>
 export type ReadDictionary = Record<string, ReadFn>
 
