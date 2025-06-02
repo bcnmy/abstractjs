@@ -1,5 +1,5 @@
 import { UnionType } from "typescript"
-import type { Hex } from "viem"
+import type { Hex, OneOf } from "viem"
 import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
 import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 
@@ -182,21 +182,24 @@ export const isVersionNewer = (
 
 export type AddressConfigsAdditions = {
   "1.0.2": {
-    attesters?: Hex[]
+    registryAddress?: Hex,
+    attesters?: Hex[],
+    attesterThreshold?: number,
     k1FactoryAddress?: Hex
-    k1ValidatorAddress?: Hex
+    k1ValidatorAddress?: Hex,
+    useK1Config?: boolean
   }
 }
 
 export type BaseAddressConfig = {
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
   accountId: `biconomy.nexus.${number}.${number}.${number}`
-  /** The factory address for the account */
-  factoryAddress: Hex
-  /** The bootstrap address for the account */
-  bootStrapAddress: Hex
   /** The implementation address for the account */
   implementationAddress: Hex
+  /** The bootstrap address for the account */
+  bootStrapAddress: Hex,
+  /** The factory address for the account */
+  factoryAddress: Hex
 }
 
 export type AddressConfig = BaseAddressConfig &

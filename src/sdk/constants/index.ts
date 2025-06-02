@@ -1,5 +1,6 @@
 import {
   GLOBAL_CONSTANTS,
+  REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
 import type { Hex } from "viem"
@@ -37,8 +38,9 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
     implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
     k1ValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa", // K1 validator address
+    k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc",
     attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-    k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc"
+    registryAddress: REGISTRY_ADDRESS
   }
 }
 

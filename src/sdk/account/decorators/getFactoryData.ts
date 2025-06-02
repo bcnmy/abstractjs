@@ -1,6 +1,7 @@
 import {
   type Address,
   type Hex,
+  OneOf,
   encodeAbiParameters,
   encodeFunctionData,
   pad,
@@ -8,22 +9,79 @@ import {
   toHex
 } from "viem"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
+import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
 
-export type GetFactoryDataParams = {
-  /** Hex string of the validator init data */
-  initData: Hex
-  /** Account index for deterministic deployment */
+// ============ K1 Factory section ============
+
+/**
+ * Parameters for generating K1 factory initialization data
+ * @property signerAddress - {@link Address} The address of the EOA signer
+ * @property index - Account index as BigInt for deterministic deployment
+ * @property attesters - Array of {@link Address} attester addresses for account verification
+ * @property attesterThreshold - Minimum number of attesters required for validation
+ */
+export type GetK1FactoryDataParams = {
+  signerAddress: Address
   index: bigint
+  attesters: Address[]
+  attesterThreshold: number
 }
 
-export const getFactoryData = ({
-  initData,
-  index
-}: GetFactoryDataParams): Hex => {
+/**
+ * Generates encoded factory data for K1 account creation
+ *
+ * @param params - {@link GetK1FactoryDataParams} Parameters for K1 account creation
+ * @param params.signerAddress - The address of the EOA signer
+ * @param params.index - Account index for deterministic deployment
+ * @param params.attesters - Array of attester addresses
+ * @param params.attesterThreshold - Minimum number of attesters required
+ *
+ * @returns Promise resolving to {@link Hex} encoded function data for account creation
+ *
+ * @example
+ * const factoryData = await getK1FactoryData({
+ *   signerAddress: "0x123...",
+ *   index: BigInt(0),
+ *   attesters: ["0xabc...", "0xdef..."],
+ *   attesterThreshold: 2
+ * });
+ */
+export const getK1FactoryData = ({
+  signerAddress,
+  index,
+  attesters,
+  attesterThreshold
+}: GetK1FactoryDataParams): Hex =>
+  encodeFunctionData({
+    abi: parseAbi([
+      "function createAccount(address eoaOwner, uint256 index, address[] attesters, uint8 threshold) external returns (address)"
+    ]),
+    functionName: "createAccount",
+    args: [signerAddress, index, attesters, attesterThreshold]
+  })
+
+
+
+// =================================================
+// ============ Account Factory section ============
+// =================================================
+
+export type GetFactoryDataParams = {
+  /** Account index for deterministic deployment */
+  index: bigint    
+  initData: Hex
+}
+
+export const getFactoryData = (parameters: GetFactoryDataParams): Hex => {
+  const {
+    index,
+    initData
+  } = parameters
+  
   const salt = pad(toHex(index), { size: 32 })
 
   return encodeFunctionData({
@@ -35,27 +93,102 @@ export const getFactoryData = ({
   })
 }
 
-export type ModuleConfig = {
-  module: Address
-  data: Hex
+export type GetInitDataParams = {
+    defaultValidator: GenericModuleConfig
+    prevalidationHooks: PrevalidationHookModuleConfig[]
+    validators: GenericModuleConfig[]
+    executors: GenericModuleConfig[]
+    hook: GenericModuleConfig
+    fallbacks: GenericModuleConfig[]
+    bootStrapAddress: Address
+    registryAddress?: Address
+    attesters?: Address[]
+    attesterThreshold?: number
 }
 
-export type GetInitDataParams = {
+export const getInitData = (parameters: GetInitDataParams): Hex => {
+  const {
+    registryAddress,
+    attesters,
+    attesterThreshold,
+    defaultValidator,
+    prevalidationHooks,
+    validators,
+    executors,
+    hook,
+    fallbacks,
+    bootStrapAddress,
+  } = parameters
+  
+  return (registryAddress && attesters && attesterThreshold) ? 
+    getInitDataWithRegistry({
+      bootStrapAddress,
+      validators,
+      registryAddress,
+      attesters,
+      attesterThreshold
+    }) : 
+    getInitDataNoRegistry({
+      defaultValidator,
+      prevalidationHooks,
+      validators,
+      executors,
+      hook,
+      fallbacks,
+      bootStrapAddress
+    })
+}
+
+export type GetInitDataWithRegistryParams = {
+  bootStrapAddress: Address
+  validators: GenericModuleConfig[]
+  registryAddress: Address
+  attesters: Address[]
+  attesterThreshold: number
+}
+
+// Nexus 1.0.2 case: initializing it with single validator (validators[0]) and registry
+export const getInitDataWithRegistry = (params: GetInitDataWithRegistryParams): Hex => {
+  return encodeAbiParameters(
+    [
+      { name: "bootstrap", type: "address" },
+      { name: "bootstrapData", type: "bytes" }
+    ],
+    [
+      params.bootStrapAddress,
+      encodeFunctionData({
+        abi: NexusBootstrapAbi,
+        functionName: "initNexusWithSingleValidator",
+        args: [
+          params.validators[0].module,
+          params.validators[0].data,
+          {
+            registry: params.registryAddress,
+            attesters: params.attesters,
+            threshold: params.attesterThreshold
+          }
+        ]
+      })
+    ]
+  )
+}
+
+export type GetInitDataNoRegistryParams = {
   defaultValidator: GenericModuleConfig
   prevalidationHooks: PrevalidationHookModuleConfig[]
   validators: GenericModuleConfig[]
   executors: GenericModuleConfig[]
   hook: GenericModuleConfig
   fallbacks: GenericModuleConfig[]
-  registryAddress: Address
   bootStrapAddress: Address
 }
 
-export const getInitData = (params: GetInitDataParams): Hex =>
-  encodeAbiParameters(
+// Nexus 1.2.0 case
+export const getInitDataNoRegistry = (params: GetInitDataNoRegistryParams): Hex => {
+  return encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },
-      { name: "initData", type: "bytes" }
+      { name: "bootstrapData", type: "bytes" }
     ],
     [
       params.bootStrapAddress,
@@ -73,3 +206,4 @@ export const getInitData = (params: GetInitDataParams): Hex =>
       })
     ]
   )
+}
