@@ -573,8 +573,8 @@ const preparePaymentInfo = async (
       chainId: chainId.toString(),
       ...(eoa ? { eoa } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
-      // So initCode will be always 0x00 / undefined
-      initCode: "0x00"
+      // So initCode will be always undefined
+      initCode: undefined
     }
 
     // Init code / authorization list will not be added to payment userOp in the case of sponsorship. It will be added in the
