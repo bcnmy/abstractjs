@@ -182,11 +182,11 @@ export const isVersionNewer = (
 
 export type AddressConfigsAdditions = {
   "1.0.2": {
-    registryAddress?: Hex,
-    attesters?: Hex[],
-    attesterThreshold?: number,
+    registryAddress?: Hex
+    attesters?: Hex[]
+    attesterThreshold?: number
     k1FactoryAddress?: Hex
-    k1ValidatorAddress?: Hex,
+    k1ValidatorAddress?: Hex
     useK1Config?: boolean
   }
 }
@@ -197,7 +197,7 @@ export type BaseAddressConfig = {
   /** The implementation address for the account */
   implementationAddress: Hex
   /** The bootstrap address for the account */
-  bootStrapAddress: Hex,
+  bootStrapAddress: Hex
   /** The factory address for the account */
   factoryAddress: Hex
 }

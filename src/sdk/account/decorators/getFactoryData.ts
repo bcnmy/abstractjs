@@ -64,24 +64,19 @@ export const getK1FactoryData = ({
     args: [signerAddress, index, attesters, attesterThreshold]
   })
 
-
-
 // =================================================
 // ============ Account Factory section ============
 // =================================================
 
 export type GetFactoryDataParams = {
   /** Account index for deterministic deployment */
-  index: bigint    
+  index: bigint
   initData: Hex
 }
 
 export const getFactoryData = (parameters: GetFactoryDataParams): Hex => {
-  const {
-    index,
-    initData
-  } = parameters
-  
+  const { index, initData } = parameters
+
   const salt = pad(toHex(index), { size: 32 })
 
   return encodeFunctionData({
@@ -94,16 +89,16 @@ export const getFactoryData = (parameters: GetFactoryDataParams): Hex => {
 }
 
 export type GetInitDataParams = {
-    defaultValidator: GenericModuleConfig
-    prevalidationHooks: PrevalidationHookModuleConfig[]
-    validators: GenericModuleConfig[]
-    executors: GenericModuleConfig[]
-    hook: GenericModuleConfig
-    fallbacks: GenericModuleConfig[]
-    bootStrapAddress: Address
-    registryAddress?: Address
-    attesters?: Address[]
-    attesterThreshold?: number
+  defaultValidator: GenericModuleConfig
+  prevalidationHooks: PrevalidationHookModuleConfig[]
+  validators: GenericModuleConfig[]
+  executors: GenericModuleConfig[]
+  hook: GenericModuleConfig
+  fallbacks: GenericModuleConfig[]
+  bootStrapAddress: Address
+  registryAddress?: Address
+  attesters?: Address[]
+  attesterThreshold?: number
 }
 
 export const getInitData = (parameters: GetInitDataParams): Hex => {
@@ -117,26 +112,26 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     executors,
     hook,
     fallbacks,
-    bootStrapAddress,
+    bootStrapAddress
   } = parameters
-  
-  return (registryAddress && attesters && attesterThreshold) ? 
-    getInitDataWithRegistry({
-      bootStrapAddress,
-      validators,
-      registryAddress,
-      attesters,
-      attesterThreshold
-    }) : 
-    getInitDataNoRegistry({
-      defaultValidator,
-      prevalidationHooks,
-      validators,
-      executors,
-      hook,
-      fallbacks,
-      bootStrapAddress
-    })
+
+  return registryAddress && attesters && attesterThreshold
+    ? getInitDataWithRegistry({
+        bootStrapAddress,
+        validators,
+        registryAddress,
+        attesters,
+        attesterThreshold
+      })
+    : getInitDataNoRegistry({
+        defaultValidator,
+        prevalidationHooks,
+        validators,
+        executors,
+        hook,
+        fallbacks,
+        bootStrapAddress
+      })
 }
 
 export type GetInitDataWithRegistryParams = {
@@ -148,7 +143,9 @@ export type GetInitDataWithRegistryParams = {
 }
 
 // Nexus 1.0.2 case: initializing it with single validator (validators[0]) and registry
-export const getInitDataWithRegistry = (params: GetInitDataWithRegistryParams): Hex => {
+export const getInitDataWithRegistry = (
+  params: GetInitDataWithRegistryParams
+): Hex => {
   return encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },
@@ -184,7 +181,9 @@ export type GetInitDataNoRegistryParams = {
 }
 
 // Nexus 1.2.0 case
-export const getInitDataNoRegistry = (params: GetInitDataNoRegistryParams): Hex => {
+export const getInitDataNoRegistry = (
+  params: GetInitDataNoRegistryParams
+): Hex => {
   return encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },

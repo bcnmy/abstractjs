@@ -63,16 +63,15 @@ export const getNexusAddress = async (
  * @property attesterThreshold - {@link number} The threshold for the attesters
  * @property index - Optional BigInt index for deterministic deployment (defaults to 0)
  */
-export type GetK1NexusAddressParams<
-  ExtendedPublicClient extends PublicClient
-> = {
-  k1FactoryAddress: Address
-  publicClient: ExtendedPublicClient
-  ownerAddress: Address
-  attesters: Address[]
-  attesterThreshold: number
-  index: bigint
-}
+export type GetK1NexusAddressParams<ExtendedPublicClient extends PublicClient> =
+  {
+    k1FactoryAddress: Address
+    publicClient: ExtendedPublicClient
+    ownerAddress: Address
+    attesters: Address[]
+    attesterThreshold: number
+    index: bigint
+  }
 
 export const getK1NexusAddress = async (
   params: GetK1NexusAddressParams<PublicClient>
