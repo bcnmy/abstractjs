@@ -221,7 +221,7 @@ export type GetQuoteParams = SupertransactionLike & {
   /**
    * sponsorship flag to enable the sponsored super transactions.
    */
-  sponsorship: boolean
+  sponsorship?: boolean
   /**
    * Sponsorship options for overrides
    */
@@ -339,6 +339,8 @@ export interface MeeFilledUserOp {
   paymasterAndData: Hex
   /** Gas required before operation verification */
   preVerificationGas: string
+  /** UserOp signature signed by paymaster for sponsorship  */
+  signature?: Hex
 }
 
 /**
@@ -571,15 +573,15 @@ const preparePaymentInfo = async (
       chainId: chainId.toString(),
       ...(eoa ? { eoa } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
-      // So initCode will be always 0x
-      initCode: "0x"
+      // So initCode will be always 0x00 / undefined
+      initCode: "0x00"
     }
 
     // Init code / authorization list will not be added to payment userOp in the case of sponsorship. It will be added in the
     // first developer defined userOp. To make this happen, this field should be false
     isInitDataProcessed = false
   } else {
-    if (!feeToken) throw Error(`Fee token should be configured`)
+    if (!feeToken) throw Error("Fee token should be configured")
 
     const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
 
