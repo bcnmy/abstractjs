@@ -54,6 +54,9 @@ describe("nexus.client", async () => {
     network = await toNetwork()
 
     chain = network.chain
+
+    console.log("Chain", chain)
+
     bundlerUrl = network.bundlerUrl
     eoaAccount = getTestAccount(0)
     recipientAccount = getTestAccount(1)
@@ -81,7 +84,59 @@ describe("nexus.client", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test("should deploy smart account if not deployed", async () => {
+  test("should deploy latest Nexus smart account if not deployed", async () => {
+    const isDeployed = await nexusClient.account.isDeployed()
+
+    if (!isDeployed) {
+      // Fund the account first
+      await topUp(testClient, nexusAccountAddress, parseEther("0.01"))
+
+      const hash = await nexusClient.sendTransaction({
+        calls: [
+          {
+            to: nexusAccountAddress,
+            value: 0n,
+            data: "0x"
+          }
+        ]
+      })
+      const { status } = await nexusClient.waitForTransactionReceipt({
+        hash
+      })
+      expect(status).toBe("success")
+
+      const isNowDeployed = await nexusClient.account.isDeployed()
+      expect(isNowDeployed).toBe(true)
+    } else {
+      console.log("Smart account already deployed")
+    }
+
+    // Verify the account is now deployed
+    const finalDeploymentStatus = await nexusClient.account.isDeployed()
+    expect(finalDeploymentStatus).toBe(true)
+  })
+
+  test("should deploy Nexus 1.0.2 smart account if not deployed", async () => {
+    privKey = generatePrivateKey()
+    const account = privateKeyToAccount(privKey)
+
+    const nexusAccount = await toNexusAccount({
+      signer: account,
+      chain,
+      transport: http(),
+      useK1Config: true,
+      nexusVersion: "1.0.2"
+    })
+
+    nexusClient = createSmartAccountClient({
+      bundlerUrl,
+      account: nexusAccount,
+      mock: true
+    })
+    nexusAccountAddress = await nexusAccount.getAddress()
+
+    console.log("Nexus 1.0.2 account address", nexusAccountAddress)
+
     const isDeployed = await nexusClient.account.isDeployed()
 
     if (!isDeployed) {

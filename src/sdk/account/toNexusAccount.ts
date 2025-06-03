@@ -461,12 +461,6 @@ export const toNexusAccount = async (
     throw new Error("Failed to get account address")
   }
 
-  const isDeployed = async () => {
-    const accountAddress = await getAddress()
-    const code = await publicClient.getCode({ address: accountAddress })
-    return !!code && code !== "0x" && code.length > 2
-  }
-
   /**
    * @description Calculates the hash of a user operation
    * @param userOp - The user operation
@@ -850,7 +844,6 @@ export const toNexusAccount = async (
       unDelegate,
       entryPointAddress: entryPoint07Address,
       getAddress,
-      isDeployed,
       accountId,
       getInitCode,
       getNonceWithKey,
