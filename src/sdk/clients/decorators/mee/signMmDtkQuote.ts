@@ -136,20 +136,22 @@ export const signMMDtkQuote = async (
   const environment = delegatorSmartAccount.environment
   const caveatBuilder = createCaveatBuilder(environment)
 
+  const approvedCallData = concatHex([
+    encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [
+        account_.addressOn(trigger.chainId, true), // spender
+        trigger.amount // amount
+      ]
+    }),
+    quote.hash // SuperTxn Hash
+  ])
+
   const caveats = caveatBuilder.addCaveat("exactExecution", {
     target: trigger.tokenAddress,
     value: 0n, // 0 ETH
-    callData: concatHex([
-      encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [
-          account_.addressOn(trigger.chainId, true), // spender
-          trigger.amount // amount
-        ]
-      }),
-      quote.hash // SuperTxn Hash
-    ])
+    callData: approvedCallData
   })
 
   const openRootDelegation = createOpenDelegation({
@@ -164,6 +166,12 @@ export const signMMDtkQuote = async (
   })
 
   const delegationManager = getDelegationManager(trigger.chainId)
+
+  const redeemDelegationErc7579ExecutionCalldata = concatHex([
+    trigger.tokenAddress, // to
+    "0x00", // value
+    approvedCallData // data
+  ])
 
   const encodedSignature = encodeAbiParameters(
     [
@@ -187,7 +195,8 @@ export const signMMDtkQuote = async (
           { name: "salt", type: "uint256" },
           { name: "signature", type: "bytes" }
         ]
-      }
+      },
+      { name: "redeemDelegationErc7579ExecutionCalldata", type: "bytes" }
     ],
     [
       delegationManager,
@@ -205,7 +214,8 @@ export const signMMDtkQuote = async (
             ? BigInt(0)
             : BigInt(openRootDelegation.salt),
         signature: signature
-      }
+      },
+      redeemDelegationErc7579ExecutionCalldata
     ]
   )
 
