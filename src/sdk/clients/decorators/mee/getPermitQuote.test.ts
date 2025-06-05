@@ -34,6 +34,7 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 
 describe("mee.getPermitQuote", () => {
   let network: NetworkConfig
@@ -155,7 +156,7 @@ describe("mee.getPermitQuote", () => {
       amount: 1n
     }
 
-    const transfer = mcNexus.build({
+    const transfer = await mcNexus.build({
       type: "transfer",
       data: {
         tokenAddress,
@@ -178,10 +179,20 @@ describe("mee.getPermitQuote", () => {
     expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
       DEFAULT_GAS_LIMIT.toString()
     )
+
+    const gasLimit = transfer[0].calls.reduce((acc, call) => {
+      const gas = call?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
+      return gas + acc
+    }, 0n)
+
+    expect(fusionQuote.quote.userOps[1]).toBeDefined()
+    expect(fusionQuote.quote.userOps[1].userOp.callGasLimit).to.eq(
+      (DEFAULT_GAS_LIMIT + gasLimit).toString()
+    )
   })
 
   test("should trigger have a custom gas limit", async () => {
-    const customGasLimit = 10_000n
+    const customGasLimit = 100_000n
 
     const trigger: Trigger = {
       chainId: paymentChain.id,
@@ -190,7 +201,7 @@ describe("mee.getPermitQuote", () => {
       gasLimit: customGasLimit
     }
 
-    const transfer = mcNexus.build({
+    const transfer = await mcNexus.build({
       type: "transfer",
       data: {
         tokenAddress,
@@ -212,6 +223,16 @@ describe("mee.getPermitQuote", () => {
 
     expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
       customGasLimit.toString()
+    )
+
+    const gasLimit = transfer[0].calls.reduce((acc, call) => {
+      const gas = call?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
+      return gas + acc
+    }, 0n)
+
+    expect(fusionQuote.quote.userOps[1]).toBeDefined()
+    expect(fusionQuote.quote.userOps[1].userOp.callGasLimit).to.eq(
+      (customGasLimit + gasLimit).toString()
     )
   })
 

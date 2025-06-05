@@ -82,6 +82,7 @@ export const getOnChainQuote = async (
     trigger,
     cleanUps,
     instructions,
+    gasLimit,
     ...rest
   } = parameters
 
@@ -132,7 +133,7 @@ export const getOnChainQuote = async (
     path: "quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,
     instructions: batchedInstructions,
-    gasLimit: triggerGasLimit,
+    gasLimit: gasLimit || triggerGasLimit,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
