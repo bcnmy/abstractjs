@@ -1,4 +1,5 @@
 import {
+  http,
   type Address,
   type Chain,
   type LocalAccount,
@@ -7,6 +8,7 @@ import {
   parseUnits,
   zeroAddress
 } from "viem"
+import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   type FeeTokenInfo,
@@ -22,16 +24,12 @@ import type { NetworkConfig } from "../../../../test/testUtils"
 import { getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { mcUSDC } from "../../../constants/tokens"
+import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
-import {
-  DEFAULT_MEE_NODE_URL,
-  type MeeClient,
-  createMeeClient
-} from "../../createMeeClient"
+import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
 
 describe("mee.getPermitQuote", () => {
@@ -148,58 +146,76 @@ describe("mee.getPermitQuote", () => {
   })
 
   test("should reserve gas fees when using max available amount", async () => {
-    const client = createPublicClient({
-      chain: paymentChain,
-      transport: transports[0]
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      transports: [http()],
+      signer: eoaAccount
     })
 
-    const totalAmount = 6000n
+    const meeClient = await createMeeClient({ account: mcNexus })
+
+    const client = createPublicClient({
+      chain: baseSepolia,
+      transport: http()
+    })
+
     const trigger: Trigger = {
-      chainId: paymentChain.id,
-      tokenAddress,
-      amount: totalAmount,
-      includeFee: true
+      chainId: baseSepolia.id,
+      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+      useMaxAvailableFunds: true
     }
 
     // withdraw
     const withdrawal = mcNexus.buildComposable({
       type: "withdrawal",
       data: {
-        tokenAddress,
+        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
         amount: runtimeERC20BalanceOf({
-          targetAddress: mcNexus.addressOn(paymentChain.id, true),
-          tokenAddress
+          targetAddress: mcNexus.addressOn(baseSepolia.id, true),
+          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
         }),
-        chainId: paymentChain.id
+        chainId: baseSepolia.id
       }
     })
 
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
       instructions: [withdrawal],
-      feeToken
+      feeToken: {
+        address: testnetMcUSDC.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
     })
 
     expect(fusionQuote).toBeDefined()
     expect(fusionQuote.trigger).toBeDefined()
 
-    // The final amount should be the total balance
-    expect(fusionQuote.trigger.amount).toBe(totalAmount)
+    // EOA balance maximum available balance fetch
+    const maxAvailableBalance = await getBalance(
+      client,
+      eoaAccount.address,
+      trigger.tokenAddress
+    )
 
-    // Verify that the amount is usable (not negative)
-    expect(fusionQuote.trigger.amount).toBeGreaterThan(0n)
+    // The final amount should be the total balance
+    expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
   })
 
   // This test uses available usdc on the eoa on mainnet, so should be skipped
   test.skip("should demo behaviour of max available amount", async () => {
+    const client = createPublicClient({
+      chain: paymentChain,
+      transport: transports[0]
+    })
+
     const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
     const chainId = paymentChain.id
     const mcNexusAddress = mcNexus.addressOn(paymentChain.id, true)
+
     const trigger: Trigger = {
       chainId,
       tokenAddress,
-      amount: 6000n,
-      includeFee: true
+      useMaxAvailableFunds: true
     }
 
     const transferInstruction = await mcNexus.buildComposable({
@@ -221,6 +237,19 @@ describe("mee.getPermitQuote", () => {
       instructions: [transferInstruction], // inx 1 => transferFrom (Runtime) + Dev userOps
       feeToken
     })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+
+    // EOA balance maximum available balance fetch
+    const maxAvailableBalance = await getBalance(
+      client,
+      mcNexus.signer.address,
+      trigger.tokenAddress
+    )
+
+    // The final amount should be the total balance
+    expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
 
     const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })

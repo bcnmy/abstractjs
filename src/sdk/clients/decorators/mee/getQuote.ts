@@ -159,16 +159,11 @@ export type CleanUp = {
  */
 export type SponsorshipOptionsParams = {
   /**
-   * this flag can be used to enable sponsorship
-   * @example true
-   */
-  enable: boolean
-  /**
    * Sponsorship url for requesting sponsorship
    * @example http://dapp-backend/sponsor-supertx
    */
-  url?: string
-  gasTank?: {
+  url: string
+  gasTank: {
     /**
      * The chainId to use
      * @example 1 // Ethereum Mainnet
@@ -221,7 +216,7 @@ export type GetQuoteParams = SupertransactionLike & {
   /**
    * sponsorship flag to enable the sponsored super transactions.
    */
-  sponsorship?: boolean
+  sponsorship?: true
   /**
    * Sponsorship options for overrides
    */
@@ -301,6 +296,8 @@ export type PaymentInfo = {
   chainId: string
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
+  /** Sponsorship flag  */
+  sponsored?: boolean
 }
 
 /**
@@ -544,6 +541,7 @@ const preparePaymentInfo = async (
   let isInitDataProcessed = false
 
   if (sponsorship) {
+    // TODO: Self hosted sponsorship is not supported yet. Remove this once the support is added
     if (sponsorshipOptions !== undefined) {
       throw new Error("Sponsorship options are not supported yet.")
     }
@@ -566,6 +564,7 @@ const preparePaymentInfo = async (
     })
 
     paymentInfo = {
+      sponsored: true,
       // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
       sender: DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
       token: DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
@@ -622,6 +621,7 @@ const preparePaymentInfo = async (
         : { initCode }
 
     paymentInfo = {
+      sponsored: false,
       sender: validPaymentAccount.address,
       token: feeToken.address,
       nonce: nonce.toString(),
