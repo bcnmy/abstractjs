@@ -20,7 +20,7 @@ import {
 } from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
-import { getBalance } from "../../../../test/testUtils"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
@@ -34,7 +34,6 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 
 describe("mee.getPermitQuote", () => {
   let network: NetworkConfig
