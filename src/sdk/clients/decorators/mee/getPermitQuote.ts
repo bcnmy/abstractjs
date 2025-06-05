@@ -90,7 +90,7 @@ export const getPermitQuote = async (
     ({ isComposable }) => isComposable
   )
 
-  const transferFromAmount = trigger.includeFee
+  const transferFromAmount = trigger.addFee
     ? runtimeERC20AllowanceOf({
         owner: sender,
         spender: recipient,
@@ -128,9 +128,9 @@ export const getPermitQuote = async (
     ...rest
   })
 
-  const amount = trigger.includeFee
-    ? BigInt(trigger.amount)
-    : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+  const amount = trigger.addFee
+    ? BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+    : BigInt(trigger.amount)
 
   return {
     quote,

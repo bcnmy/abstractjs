@@ -158,7 +158,7 @@ describe("mee.getPermitQuote", () => {
       chainId: paymentChain.id,
       tokenAddress,
       amount: totalAmount,
-      includeFee: true
+      addFee: true
     }
 
     // withdraw
@@ -199,7 +199,7 @@ describe("mee.getPermitQuote", () => {
       chainId,
       tokenAddress,
       amount: 6000n,
-      includeFee: true
+      addFee: true
     }
 
     const transferInstruction = await mcNexus.buildComposable({

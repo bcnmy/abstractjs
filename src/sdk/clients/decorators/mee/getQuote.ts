@@ -457,7 +457,7 @@ export const getQuote = async (
     )
   }
 
-  // Prepare useful user
+  // Prepare useful user ops
   const preparedUserOps = await prepareUserOps(
     account_,
     resolvedInstructions,
