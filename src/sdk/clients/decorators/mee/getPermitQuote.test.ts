@@ -9,6 +9,7 @@ import {
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
+  DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
   type Trigger,
@@ -145,6 +146,73 @@ describe("mee.getPermitQuote", () => {
     expect(fusionQuote.quote).toBeDefined()
     expect(fusionQuote.trigger).toBeDefined()
     expect([3, 4].includes(fusionQuote.quote.userOps.length)).toBe(true) // 3 or 4 depending on if bridging is needed
+  })
+
+  test("should trigger have a default gas limit as 75K gas", async () => {
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress,
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+    expect(fusionQuote.trigger.gasLimit).toBe(DEFAULT_GAS_LIMIT)
+
+    expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
+      DEFAULT_GAS_LIMIT.toString()
+    )
+  })
+
+  test("should trigger have a custom gas limit", async () => {
+    const customGasLimit = 10_000n
+
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n,
+      gasLimit: customGasLimit
+    }
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress,
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+    expect(fusionQuote.trigger.gasLimit).toBe(customGasLimit)
+
+    expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
+      customGasLimit.toString()
+    )
   })
 
   test("should reserve gas fees when using max available amount", async () => {

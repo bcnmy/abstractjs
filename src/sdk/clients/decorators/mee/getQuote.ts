@@ -16,6 +16,8 @@ import type { BaseMeeClient } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
+export const DEFAULT_GAS_LIMIT = 75_000n
+
 /**
  * Represents an abstract call to be executed in the transaction.
  * Each call specifies a target contract and optional parameters.
@@ -165,6 +167,10 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   upperBoundTimestamp?: number
   /**
+   * gasLimit option to override the default payment gas limit
+   */
+  gasLimit?: bigint
+  /**
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
@@ -243,6 +249,8 @@ export type PaymentInfo = {
   chainId: string
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
+  /** Payment userop callGasLimit */
+  callGasLimit?: bigint
 }
 
 /**
@@ -369,6 +377,7 @@ export const getQuote = async (
     instructions,
     cleanUps,
     feeToken,
+    gasLimit,
     path = "quote",
     eoa,
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
@@ -451,6 +460,7 @@ export const getQuote = async (
     sender: validPaymentAccount.address,
     token: feeToken.address,
     nonce: nonce.toString(),
+    callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
     chainId: feeToken.chainId.toString(),
     ...(eoa ? { eoa } : {}),
     ...initData

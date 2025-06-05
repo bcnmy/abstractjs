@@ -33,6 +33,10 @@ export type Trigger = {
    */
   amount: bigint
   /**
+   * custom gas limit can be added to override the default 50_000 gas limit
+   */
+  gasLimit?: bigint
+  /**
    * Whether to include the fee in the amount, or to add the fee to the amount.
    * default is false
    */

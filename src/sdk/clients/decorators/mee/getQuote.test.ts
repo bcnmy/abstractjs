@@ -6,7 +6,12 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import {
+  DEFAULT_GAS_LIMIT,
+  type FeeTokenInfo,
+  type Instruction,
+  getQuote
+} from "./getQuote"
 
 describe("mee.getQuote", () => {
   let network: NetworkConfig
@@ -99,5 +104,50 @@ describe("mee.getQuote", () => {
     })
 
     expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
+  })
+
+  test("should payment info have a default gas limit", async () => {
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await getQuote(meeClient, {
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.paymentInfo.callGasLimit).toBe(DEFAULT_GAS_LIMIT.toString())
+  })
+
+  test("should payment info have a custom gas limit", async () => {
+    const customGasLimit = 100_000n
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await getQuote(meeClient, {
+      instructions: [transfer],
+      gasLimit: customGasLimit,
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.paymentInfo.callGasLimit).toBe(customGasLimit.toString())
   })
 })
