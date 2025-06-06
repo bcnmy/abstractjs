@@ -54,9 +54,6 @@ describe("nexus.client", async () => {
     network = await toNetwork()
 
     chain = network.chain
-
-    console.log("Chain", chain)
-
     bundlerUrl = network.bundlerUrl
     eoaAccount = getTestAccount(0)
     recipientAccount = getTestAccount(1)
@@ -117,54 +114,64 @@ describe("nexus.client", async () => {
   })
 
   test("should deploy Nexus 1.0.2 smart account if not deployed", async () => {
-    privKey = generatePrivateKey()
-    const account = privateKeyToAccount(privKey)
+    // fork base sepolia as it has all the 1.0.2 infra (nexus, registry, modules, attesters) deployed and configured
+    const network_1_0_2 = await toNetwork(
+      "BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA"
+    )
+    const chain_1_0_2 = network_1_0_2.chain
 
-    const nexusAccount = await toNexusAccount({
-      signer: account,
-      chain,
+    const testClient_1_0_2 = toTestClient(chain_1_0_2, getTestAccount(5))
+
+    const privKey_1_0_2 = generatePrivateKey()
+    const account_1_0_2 = privateKeyToAccount(privKey_1_0_2)
+
+    const nexusAccount_1_0_2 = await toNexusAccount({
+      signer: account_1_0_2,
+      chain: chain_1_0_2,
       transport: http(),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
 
-    nexusClient = createSmartAccountClient({
-      bundlerUrl,
-      account: nexusAccount,
+    const nexusClient_1_0_2 = createSmartAccountClient({
+      bundlerUrl: network_1_0_2.bundlerUrl,
+      account: nexusAccount_1_0_2,
       mock: true
     })
-    nexusAccountAddress = await nexusAccount.getAddress()
+    const nexusAccountAddress_1_0_2 = await nexusAccount_1_0_2.getAddress()
 
-    console.log("Nexus 1.0.2 account address", nexusAccountAddress)
-
-    const isDeployed = await nexusClient.account.isDeployed()
+    const isDeployed = await nexusClient_1_0_2.account.isDeployed()
 
     if (!isDeployed) {
       // Fund the account first
-      await topUp(testClient, nexusAccountAddress, parseEther("0.01"))
+      await topUp(
+        testClient_1_0_2,
+        nexusAccountAddress_1_0_2,
+        parseEther("0.01")
+      )
 
-      const hash = await nexusClient.sendTransaction({
+      const hash = await nexusClient_1_0_2.sendTransaction({
         calls: [
           {
-            to: nexusAccountAddress,
+            to: nexusAccountAddress_1_0_2,
             value: 0n,
             data: "0x"
           }
         ]
       })
-      const { status } = await nexusClient.waitForTransactionReceipt({
+      const { status } = await nexusClient_1_0_2.waitForTransactionReceipt({
         hash
       })
       expect(status).toBe("success")
 
-      const isNowDeployed = await nexusClient.account.isDeployed()
+      const isNowDeployed = await nexusClient_1_0_2.account.isDeployed()
       expect(isNowDeployed).toBe(true)
     } else {
       console.log("Smart account already deployed")
     }
 
     // Verify the account is now deployed
-    const finalDeploymentStatus = await nexusClient.account.isDeployed()
+    const finalDeploymentStatus = await nexusClient_1_0_2.account.isDeployed()
     expect(finalDeploymentStatus).toBe(true)
   })
 
