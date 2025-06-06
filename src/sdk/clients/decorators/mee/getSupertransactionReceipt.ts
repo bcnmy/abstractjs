@@ -13,13 +13,13 @@ import {
 } from "../../../account/utils/explorer"
 import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
+import type { AnyData } from "../../../modules"
 import type { Url } from "../../createHttpClient"
 import {
   type BaseMeeClient,
   DEFAULT_PATHFINDER_URL
 } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
-import { type AnyData } from "../../../modules"
 
 /**
  * Parameters for waiting for a supertransaction receipt
