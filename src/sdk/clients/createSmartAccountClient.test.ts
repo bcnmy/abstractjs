@@ -1,4 +1,4 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
+import { COUNTER_ADDRESS, MEE_VALIDATOR_ADDRESS } from "@biconomy/ecosystem"
 import { Wallet, ethers } from "ethers"
 import {
   http,
@@ -35,6 +35,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 
 describe("nexus.client", async () => {
   let network: NetworkConfig
@@ -125,54 +126,79 @@ describe("nexus.client", async () => {
     const privKey_1_0_2 = generatePrivateKey()
     const account_1_0_2 = privateKeyToAccount(privKey_1_0_2)
 
-    const nexusAccount_1_0_2 = await toNexusAccount({
+    const nexusAccount_1_0_2_with_k1 = await toNexusAccount({
       signer: account_1_0_2,
       chain: chain_1_0_2,
       transport: http(),
       useK1Config: true,
-      nexusVersion: "1.0.2"
+      nexusVersion: "1.0.2",
     })
 
-    const nexusClient_1_0_2 = createSmartAccountClient({
+    const nexusClient_1_0_2_with_k1 = createSmartAccountClient({
       bundlerUrl: network_1_0_2.bundlerUrl,
-      account: nexusAccount_1_0_2,
+      account: nexusAccount_1_0_2_with_k1,
       mock: true
     })
-    const nexusAccountAddress_1_0_2 = await nexusAccount_1_0_2.getAddress()
+    
+    const nexusAccount_1_0_2_custom_validator = await toNexusAccount({
+      signer: account_1_0_2,
+      chain: chain_1_0_2,
+      transport: http(),
+      useK1Config: false,
+      nexusVersion: "1.0.2",
+      validators: [
+        toMeeK1Module({ signer: account_1_0_2, module: MEE_VALIDATOR_ADDRESS })
+      ]
+    })
 
-    const isDeployed = await nexusClient_1_0_2.account.isDeployed()
+    const nexusClient_1_0_2_custom_validator = createSmartAccountClient({
+      bundlerUrl: network_1_0_2.bundlerUrl,
+      account: nexusAccount_1_0_2_custom_validator,
+      mock: true
+    })
 
-    if (!isDeployed) {
-      // Fund the account first
-      await topUp(
-        testClient_1_0_2,
-        nexusAccountAddress_1_0_2,
-        parseEther("0.01")
-      )
+    const clients = [
+      nexusClient_1_0_2_with_k1,
+      nexusClient_1_0_2_custom_validator
+    ]
 
-      const hash = await nexusClient_1_0_2.sendTransaction({
-        calls: [
-          {
-            to: nexusAccountAddress_1_0_2,
-            value: 0n,
-            data: "0x"
-          }
-        ]
-      })
-      const { status } = await nexusClient_1_0_2.waitForTransactionReceipt({
-        hash
-      })
-      expect(status).toBe("success")
+    for (const client of clients) {
+      const accountAddress = await client.account.getAddress()
+      console.log("Account address expected:", accountAddress)
+      const isDeployed = await client.account.isDeployed()
+      if (!isDeployed) {
+        // Fund the account first
+        await topUp(
+          testClient_1_0_2,
+          accountAddress,
+          parseEther("0.01")
+        )
 
-      const isNowDeployed = await nexusClient_1_0_2.account.isDeployed()
-      expect(isNowDeployed).toBe(true)
-    } else {
-      console.log("Smart account already deployed")
+        const hash = await client.sendTransaction({
+          calls: [
+            {
+              to: accountAddress,
+              value: 0n,
+              data: "0x"
+            }
+          ]
+        })
+        const { status } = await client.waitForTransactionReceipt({
+          hash
+        })
+        expect(status).toBe("success")
+
+        const isNowDeployed = await client.account.isDeployed()
+        expect(isNowDeployed).toBe(true)
+      } else {
+        console.log("Smart account already deployed")
+      }
+
+      // Verify the account is now deployed
+      const finalDeploymentStatus = await client.account.isDeployed()
+      expect(finalDeploymentStatus).toBe(true)
+      console.log("Smart account deployed at ", accountAddress)
     }
-
-    // Verify the account is now deployed
-    const finalDeploymentStatus = await nexusClient_1_0_2.account.isDeployed()
-    expect(finalDeploymentStatus).toBe(true)
   })
 
   test("should fund the smart account", async () => {

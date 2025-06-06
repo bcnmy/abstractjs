@@ -14,6 +14,7 @@ import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
+import { isVersionOlder } from ".."
 
 // ============ K1 Factory section ============
 
@@ -99,6 +100,7 @@ export type GetInitDataParams = {
   registryAddress?: Address
   attesters?: Address[]
   attesterThreshold?: number
+  nexusVersion?: `${number}.${number}.${number}`
 }
 
 export const getInitData = (parameters: GetInitDataParams): Hex => {
@@ -112,7 +114,8 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     executors,
     hook,
     fallbacks,
-    bootStrapAddress
+    bootStrapAddress,
+    nexusVersion = "1.2.0"
   } = parameters
 
   return registryAddress && attesters && attesterThreshold
@@ -121,7 +124,8 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
         validators,
         registryAddress,
         attesters,
-        attesterThreshold
+        attesterThreshold,
+        nexusVersion
       })
     : getInitDataNoRegistry({
         defaultValidator,
@@ -140,12 +144,39 @@ export type GetInitDataWithRegistryParams = {
   registryAddress: Address
   attesters: Address[]
   attesterThreshold: number
+  nexusVersion: `${number}.${number}.${number}`
 }
 
 // Nexus 1.0.2 case: initializing it with single validator (validators[0]) and registry
 export const getInitDataWithRegistry = (
   params: GetInitDataWithRegistryParams
 ): Hex => {
+  const bootstrapData = isVersionOlder(params.nexusVersion, "1.2.0") ? 
+    encodeFunctionData({
+      abi: NexusLegacyBootstrapAbi,
+      functionName: "initNexusWithSingleValidator",
+      args: [
+        params.validators[0].module,
+        params.validators[0].data,
+        params.registryAddress,
+        params.attesters,
+        params.attesterThreshold
+      ]
+    }) :
+    encodeFunctionData({
+      abi: NexusBootstrapAbi,
+      functionName: "initNexusWithSingleValidator",
+      args: [
+        params.validators[0].module,
+        params.validators[0].data,
+        { 
+          registry: params.registryAddress,
+          attesters: params.attesters,
+          threshold: params.attesterThreshold
+        }
+      ]
+    })
+
   return encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },
@@ -153,19 +184,7 @@ export const getInitDataWithRegistry = (
     ],
     [
       params.bootStrapAddress,
-      encodeFunctionData({
-        abi: NexusBootstrapAbi,
-        functionName: "initNexusWithSingleValidator",
-        args: [
-          params.validators[0].module,
-          params.validators[0].data,
-          {
-            registry: params.registryAddress,
-            attesters: params.attesters,
-            threshold: params.attesterThreshold
-          }
-        ]
-      })
+      bootstrapData
     ]
   )
 }

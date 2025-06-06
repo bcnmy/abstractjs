@@ -58,7 +58,7 @@ import type {
   ComposableCall
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
-import { toLegacyK1Module } from "../modules/validators/legacyk1/toLegacyK1Module"
+import { toLegacyK1Module } from "../modules/validators/legacyK1/toLegacyK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
   getFactoryData,
@@ -406,7 +406,8 @@ export const toNexusAccount = async (
         bootStrapAddress,
         registryAddress,
         attesters,
-        attesterThreshold
+        attesterThreshold,
+        nexusVersion
       })
       factoryData = getFactoryData({ initData, index })
     }
