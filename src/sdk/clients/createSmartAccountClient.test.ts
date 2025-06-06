@@ -31,11 +31,11 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
-import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 
 describe("nexus.client", async () => {
   let network: NetworkConfig
@@ -131,7 +131,7 @@ describe("nexus.client", async () => {
       chain: chain_1_0_2,
       transport: http(),
       useK1Config: true,
-      nexusVersion: "1.0.2",
+      nexusVersion: "1.0.2"
     })
 
     const nexusClient_1_0_2_with_k1 = createSmartAccountClient({
@@ -139,7 +139,7 @@ describe("nexus.client", async () => {
       account: nexusAccount_1_0_2_with_k1,
       mock: true
     })
-    
+
     const nexusAccount_1_0_2_custom_validator = await toNexusAccount({
       signer: account_1_0_2,
       chain: chain_1_0_2,
@@ -164,15 +164,10 @@ describe("nexus.client", async () => {
 
     for (const client of clients) {
       const accountAddress = await client.account.getAddress()
-      console.log("Account address expected:", accountAddress)
       const isDeployed = await client.account.isDeployed()
       if (!isDeployed) {
         // Fund the account first
-        await topUp(
-          testClient_1_0_2,
-          accountAddress,
-          parseEther("0.01")
-        )
+        await topUp(testClient_1_0_2, accountAddress, parseEther("0.01"))
 
         const hash = await client.sendTransaction({
           calls: [
@@ -197,7 +192,6 @@ describe("nexus.client", async () => {
       // Verify the account is now deployed
       const finalDeploymentStatus = await client.account.isDeployed()
       expect(finalDeploymentStatus).toBe(true)
-      console.log("Smart account deployed at ", accountAddress)
     }
   })
 

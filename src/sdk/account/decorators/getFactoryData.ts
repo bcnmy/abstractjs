@@ -8,13 +8,13 @@ import {
   parseAbi,
   toHex
 } from "viem"
+import { isVersionOlder } from ".."
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
-import { isVersionOlder } from ".."
 
 // ============ K1 Factory section ============
 
@@ -151,41 +151,38 @@ export type GetInitDataWithRegistryParams = {
 export const getInitDataWithRegistry = (
   params: GetInitDataWithRegistryParams
 ): Hex => {
-  const bootstrapData = isVersionOlder(params.nexusVersion, "1.2.0") ? 
-    encodeFunctionData({
-      abi: NexusLegacyBootstrapAbi,
-      functionName: "initNexusWithSingleValidator",
-      args: [
-        params.validators[0].module,
-        params.validators[0].data,
-        params.registryAddress,
-        params.attesters,
-        params.attesterThreshold
-      ]
-    }) :
-    encodeFunctionData({
-      abi: NexusBootstrapAbi,
-      functionName: "initNexusWithSingleValidator",
-      args: [
-        params.validators[0].module,
-        params.validators[0].data,
-        { 
-          registry: params.registryAddress,
-          attesters: params.attesters,
-          threshold: params.attesterThreshold
-        }
-      ]
-    })
+  const bootstrapData = isVersionOlder(params.nexusVersion, "1.2.0")
+    ? encodeFunctionData({
+        abi: NexusLegacyBootstrapAbi,
+        functionName: "initNexusWithSingleValidator",
+        args: [
+          params.validators[0].module,
+          params.validators[0].data,
+          params.registryAddress,
+          params.attesters,
+          params.attesterThreshold
+        ]
+      })
+    : encodeFunctionData({
+        abi: NexusBootstrapAbi,
+        functionName: "initNexusWithSingleValidator",
+        args: [
+          params.validators[0].module,
+          params.validators[0].data,
+          {
+            registry: params.registryAddress,
+            attesters: params.attesters,
+            threshold: params.attesterThreshold
+          }
+        ]
+      })
 
   return encodeAbiParameters(
     [
       { name: "bootstrap", type: "address" },
       { name: "bootstrapData", type: "bytes" }
     ],
-    [
-      params.bootStrapAddress,
-      bootstrapData
-    ]
+    [params.bootStrapAddress, bootstrapData]
   )
 }
 

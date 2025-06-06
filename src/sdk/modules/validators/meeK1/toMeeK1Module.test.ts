@@ -45,7 +45,10 @@ describe("modules.toMeeK1Module", () => {
 
     const { testClient } = await toClients(infra.network)
 
-    meeModule = toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
+    meeModule = toMeeK1Module({
+      signer: eoaAccount,
+      module: MEE_VALIDATOR_ADDRESS
+    })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
