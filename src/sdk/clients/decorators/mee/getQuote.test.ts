@@ -2,6 +2,7 @@ import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC } from "../../../constants/tokens"
@@ -13,7 +14,6 @@ import {
   type Instruction,
   getQuote
 } from "./getQuote"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 
 describe("mee.getQuote", () => {
   let network: NetworkConfig
