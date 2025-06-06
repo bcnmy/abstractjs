@@ -19,6 +19,7 @@ import {
   DEFAULT_PATHFINDER_URL
 } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
+import { type AnyData } from "../../../modules"
 
 /**
  * Parameters for waiting for a supertransaction receipt
@@ -178,7 +179,7 @@ export async function getSupertransactionReceipt(
 
                   const receipt = await receiptResponse.json()
 
-                  return formatTransactionReceipt(receipt)
+                  return formatTransactionReceipt(receipt as AnyData)
                 } catch {
                   throw new Error("Failed to fetch sponsored userOp receipt")
                 }
