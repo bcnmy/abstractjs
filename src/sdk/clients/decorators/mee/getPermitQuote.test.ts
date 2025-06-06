@@ -157,8 +157,7 @@ describe("mee.getPermitQuote", () => {
     const trigger: Trigger = {
       chainId: paymentChain.id,
       tokenAddress,
-      amount: totalAmount,
-      addFee: true
+      amount: totalAmount
     }
 
     // withdraw
@@ -198,8 +197,7 @@ describe("mee.getPermitQuote", () => {
     const trigger: Trigger = {
       chainId,
       tokenAddress,
-      amount: 6000n,
-      addFee: true
+      amount: 6000n
     }
 
     const transferInstruction = await mcNexus.buildComposable({

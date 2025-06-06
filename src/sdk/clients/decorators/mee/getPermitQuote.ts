@@ -1,3 +1,10 @@
+import {
+  type Account,
+  type Chain,
+  type PublicClient,
+  type Transport,
+  erc20Abi
+} from "viem"
 import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
@@ -82,7 +89,7 @@ export const getPermitQuote = async (
     ...rest
   } = parameters
 
-  const sender = account_.signer.address
+  const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
   const recipient = account_.addressOn(trigger.chainId, true)
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -90,7 +97,7 @@ export const getPermitQuote = async (
     ({ isComposable }) => isComposable
   )
 
-  const transferFromAmount = trigger.addFee
+  const transferFromAmount = trigger.includeFee
     ? runtimeERC20AllowanceOf({
         owner: sender,
         spender: recipient,
@@ -128,9 +135,9 @@ export const getPermitQuote = async (
     ...rest
   })
 
-  const amount = trigger.addFee
-    ? BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-    : BigInt(trigger.amount)
+  const amount = trigger.includeFee
+    ? BigInt(trigger.amount)
+    : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
 
   return {
     quote,

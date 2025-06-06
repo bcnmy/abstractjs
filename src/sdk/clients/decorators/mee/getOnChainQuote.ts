@@ -90,11 +90,11 @@ export const getOnChainQuote = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
-  const isComposable = resolvedInstructions.some(
-    ({ isComposable }) => isComposable
-  )
+  const isComposable =
+    trigger.includeFee ||
+    resolvedInstructions.some(({ isComposable }) => isComposable)
 
-  const transferFromAmount = trigger.addFee
+  const transferFromAmount = trigger.includeFee
     ? runtimeERC20AllowanceOf({
         owner: sender,
         spender: recipient,
@@ -132,9 +132,9 @@ export const getOnChainQuote = async (
     ...rest
   })
 
-  const amount = trigger.addFee
-    ? BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-    : BigInt(trigger.amount)
+  const amount = trigger.includeFee
+    ? BigInt(trigger.amount)
+    : BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
 
   return {
     quote,

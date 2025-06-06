@@ -33,9 +33,9 @@ export type Trigger = {
    */
   amount: bigint
   /**
-   * Whether to add the fee to the amount
+   * Whether to include the fee in the amount, or to add the fee to the amount.
    */
-  addFee?: true
+  includeFee?: true
 }
 /**
  * Parameters for signing a permit quote

@@ -63,11 +63,13 @@ export const prepareForPermissions = async (
     client.account.deployments.map(async (deployment) => {
       //sanity check
       const chainId = deployment.client.chain?.id
+      console.log("chainId", chainId)
       if (!chainId) {
         throw new Error("Chain ID is not set")
       }
 
       const isDeployed = await deployment.isDeployed()
+      console.log("isDeployed", isDeployed)
       const isModuleInstalled_ = await isModuleInstalled(
         deployment.client as Client<
           Transport,
@@ -104,6 +106,9 @@ export const prepareForPermissions = async (
   )
 
   const hasInstallInstructions = installInstructions.some(Boolean)
+
+  console.log("hasInstallInstructions", hasInstallInstructions)
+
   // if there are install instructions or additional instructions,
   // or trigger is provided,
   // are going to create a prepare superTx
@@ -131,12 +136,16 @@ export const prepareForPermissions = async (
 
     // check if trigger is provided => use fusion flow
     if (parameters.trigger) {
+      console.log("trigger is provided")
+
       const quote = await getFusionQuote(client, {
         ...parameters,
         instructions: completeInstructionsList,
         feeToken: parameters.feeToken!,
         trigger: parameters.trigger
       } as GetFusionQuoteParams)
+
+      console.log("quote", quote)
 
       return await executeFusionQuote(client, {
         fusionQuote: quote,
