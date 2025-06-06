@@ -6,7 +6,7 @@ import {
   publicActions
 } from "viem"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -16,6 +16,10 @@ import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
+  DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
+  DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+  DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+  DEFAULT_STAGING_PATHFINDER_URL,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -123,7 +127,7 @@ describe("mee.getQuote", () => {
     expect([2, 3].includes(quote.userOps.length)).toBe(true) // 2 or 3 depending on if bridging is needed
   })
 
-  test("Should get quote for sponsored super transaction", async () => {
+  test("Should get quote for sponsored super transaction (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
@@ -134,7 +138,111 @@ describe("mee.getQuote", () => {
     const meeClient = await createMeeClient({
       account: mcNexus,
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: "https://staging-network.biconomy.io/v1"
+      url: DEFAULT_STAGING_PATHFINDER_URL
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: DEFAULT_STAGING_PATHFINDER_URL,
+        gasTank: {
+          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+        }
+      },
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ]
+    })
+
+    expect(quote).toBeDefined()
+    expect(quote.paymentInfo.sender).to.eq(
+      DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT
+    )
+    expect(quote.paymentInfo.chainId).to.eq(
+      String(DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID)
+    )
+    expect(quote.paymentInfo.token).to.eq(
+      DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS
+    )
+
+    expect(quote.userOps[0].userOp.sender).to.eq(
+      DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT
+    )
+    expect(quote.userOps[0].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[0].userOp.signature).toBeDefined()
+
+    for (const meeUserOp of quote.userOps.slice(1)) {
+      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(baseSepolia.id))
+      expect(meeUserOp.userOp.signature).not.toBeDefined()
+    }
+  })
+
+  test("Should get quote for sponsored super transaction fail for unsupported sponshorship url", async () => {
+    try {
+      const mcNexus = await toMultichainNexusAccount({
+        chains: [baseSepolia],
+        signer: eoaAccount,
+        transports: [http()]
+      })
+
+      // TODO: Remove the url and API key once everything is moved into production
+      const meeClient = await createMeeClient({
+        account: mcNexus,
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
+        url: DEFAULT_STAGING_PATHFINDER_URL
+      })
+
+      await meeClient.getQuote({
+        sponsorship: true,
+        sponsorshipOptions: {
+          url: "https://www.google.com",
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: baseSepolia.id
+          }
+        ]
+      })
+    } catch (error) {
+      expect(error.message).to.eq(
+        "Self hosted sponsorship is not supported yet."
+      )
+    }
+  })
+
+  test("Should get quote for sponsored super transaction (Mainnet)", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [paymentChain],
+      signer: eoaAccount,
+      transports: [http()]
+    })
+
+    // TODO: Remove the url and API key once everything is moved into production
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
+      url: DEFAULT_STAGING_PATHFINDER_URL
     })
 
     const quote = await meeClient.getQuote({
@@ -147,7 +255,7 @@ describe("mee.getQuote", () => {
               value: 1n
             }
           ],
-          chainId: baseSepolia.id
+          chainId: paymentChain.id
         }
       ]
     })
@@ -168,14 +276,14 @@ describe("mee.getQuote", () => {
     expect(quote.userOps[0].userOp.signature).toBeDefined()
 
     for (const meeUserOp of quote.userOps.slice(1)) {
-      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(baseSepolia.id))
+      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(paymentChain.id))
       expect(meeUserOp.userOp.signature).not.toBeDefined()
     }
   })
 
   test("Should get quote for sponsored super transaction with init code on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
+      chains: [paymentChain],
       signer: eoaAccount,
       transports: [http()],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
@@ -185,7 +293,7 @@ describe("mee.getQuote", () => {
     const meeClient = await createMeeClient({
       account: mcNexus,
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: "https://staging-network.biconomy.io/v1"
+      url: DEFAULT_STAGING_PATHFINDER_URL
     })
 
     const quote = await meeClient.getQuote({
@@ -198,7 +306,7 @@ describe("mee.getQuote", () => {
               value: 1n
             }
           ],
-          chainId: baseSepolia.id
+          chainId: paymentChain.id
         }
       ]
     })
@@ -220,20 +328,20 @@ describe("mee.getQuote", () => {
 
     expect(quote.userOps[1].userOp.initCode).not.eq("0x")
     expect(quote.userOps[1].userOp.sender).to.eq(
-      mcNexus.addressOn(baseSepolia.id)
+      mcNexus.addressOn(paymentChain.id)
     )
     expect(quote.userOps[1].userOp.signature).not.toBeDefined()
 
     for (const meeUserOp of quote.userOps.slice(2)) {
       expect(meeUserOp.userOp.initCode).to.eq("0x")
-      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(baseSepolia.id))
+      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(paymentChain.id))
       expect(meeUserOp.userOp.signature).not.toBeDefined()
     }
   })
 
   test("Should get quote for sponsored super transaction with authorization list on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
+      chains: [paymentChain],
       signer: eoaAccount,
       transports: [http()],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
@@ -243,7 +351,7 @@ describe("mee.getQuote", () => {
     const meeClient = await createMeeClient({
       account: mcNexus,
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: "https://staging-network.biconomy.io/v1"
+      url: DEFAULT_STAGING_PATHFINDER_URL
     })
 
     const quote = await meeClient.getQuote({
@@ -257,7 +365,7 @@ describe("mee.getQuote", () => {
               value: 1n
             }
           ],
-          chainId: baseSepolia.id
+          chainId: paymentChain.id
         }
       ]
     })
@@ -289,21 +397,21 @@ describe("mee.getQuote", () => {
     expect(quote.userOps[1].eip7702Auth?.yParity).toBeDefined()
 
     expect(quote.userOps[1].userOp.sender).to.eq(
-      mcNexus.addressOn(baseSepolia.id)
+      mcNexus.addressOn(paymentChain.id)
     )
     expect(quote.userOps[1].userOp.signature).not.toBeDefined()
 
     for (const meeUserOp of quote.userOps.slice(2)) {
       expect(meeUserOp.userOp.initCode).to.eq("0x")
       expect(quote.userOps[1].eip7702Auth).not.toBeDefined()
-      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(baseSepolia.id))
+      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(paymentChain.id))
       expect(meeUserOp.userOp.signature).not.toBeDefined()
     }
   })
 
   test("Should get quote for sponsored fusion super transaction with init code on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
+      chains: [paymentChain],
       signer: eoaAccount,
       transports: [http()],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
@@ -313,7 +421,7 @@ describe("mee.getQuote", () => {
     const meeClient = await createMeeClient({
       account: mcNexus,
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: "https://staging-network.biconomy.io/v1"
+      url: DEFAULT_STAGING_PATHFINDER_URL
     })
 
     const amountToTrigger = 1n
@@ -322,8 +430,8 @@ describe("mee.getQuote", () => {
       sponsorship: true,
       trigger: {
         amount: amountToTrigger,
-        chainId: baseSepolia.id,
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+        chainId: paymentChain.id,
+        tokenAddress: mcUSDC.addressOn(paymentChain.id)
       },
       instructions: [
         {
@@ -333,7 +441,7 @@ describe("mee.getQuote", () => {
               value: 1n
             }
           ],
-          chainId: baseSepolia.id
+          chainId: paymentChain.id
         }
       ]
     })
@@ -361,16 +469,113 @@ describe("mee.getQuote", () => {
 
     expect(fusionQuote.quote.userOps[1].userOp.initCode).not.eq("0x")
     expect(fusionQuote.quote.userOps[1].userOp.sender).to.eq(
-      mcNexus.addressOn(baseSepolia.id)
+      mcNexus.addressOn(paymentChain.id)
     )
     expect(fusionQuote.quote.userOps[1].userOp.signature).not.toBeDefined()
 
     for (const meeUserOp of fusionQuote.quote.userOps.slice(2)) {
       expect(meeUserOp.userOp.initCode).to.eq("0x")
-      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(baseSepolia.id))
+      expect(meeUserOp.userOp.sender).to.eq(mcNexus.addressOn(paymentChain.id))
       expect(meeUserOp.userOp.signature).not.toBeDefined()
     }
   })
+
+  test.runIf(runPaidTests)(
+    "Should execute quote for sponsored super transaction (Testnet)",
+    async () => {
+      const mcNexus = await toMultichainNexusAccount({
+        chains: [baseSepolia],
+        signer: eoaAccount,
+        transports: [http()]
+      })
+
+      // TODO: Remove the url and API key once everything is moved into production
+      const meeClient = await createMeeClient({
+        account: mcNexus,
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
+        url: DEFAULT_STAGING_PATHFINDER_URL
+      })
+
+      const quote = await meeClient.getQuote({
+        sponsorship: true,
+        sponsorshipOptions: {
+          url: DEFAULT_STAGING_PATHFINDER_URL,
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 0n
+              }
+            ],
+            chainId: baseSepolia.id
+          }
+        ]
+      })
+
+      expect(quote).toBeDefined()
+
+      const { hash } = await meeClient.executeQuote({ quote })
+
+      expect(hash).toBeDefined()
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash
+      })
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    }
+  )
+
+  test.runIf(runPaidTests)(
+    "Should execute quote for sponsored super transaction (Mainnet)",
+    async () => {
+      const mcNexus = await toMultichainNexusAccount({
+        chains: [paymentChain],
+        signer: eoaAccount,
+        transports: [http()]
+      })
+
+      // TODO: Remove the url and API key once everything is moved into production
+      const meeClient = await createMeeClient({
+        account: mcNexus,
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
+        url: DEFAULT_STAGING_PATHFINDER_URL
+      })
+
+      const quote = await meeClient.getQuote({
+        sponsorship: true,
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 0n
+              }
+            ],
+            chainId: paymentChain.id
+          }
+        ]
+      })
+
+      expect(quote).toBeDefined()
+
+      const { hash } = await meeClient.executeQuote({ quote })
+
+      expect(hash).toBeDefined()
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    }
+  )
 
   test.runIf(runPaidTests)(
     "Should execute quote for sponsored super transaction for undeployed SCA case",
@@ -390,11 +595,19 @@ describe("mee.getQuote", () => {
       const meeClient = await createMeeClient({
         account: mcNexus,
         apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: "https://staging-network.biconomy.io/v1"
+        url: DEFAULT_STAGING_PATHFINDER_URL
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
+        sponsorshipOptions: {
+          url: DEFAULT_STAGING_PATHFINDER_URL,
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
         instructions: [
           {
             calls: [
@@ -454,11 +667,19 @@ describe("mee.getQuote", () => {
       const meeClient = await createMeeClient({
         account: mcNexus,
         apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: "https://staging-network.biconomy.io/v1"
+        url: DEFAULT_STAGING_PATHFINDER_URL
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
+        sponsorshipOptions: {
+          url: DEFAULT_STAGING_PATHFINDER_URL,
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
         delegate: true,
         instructions: [
           {
@@ -525,11 +746,19 @@ describe("mee.getQuote", () => {
       const meeClient = await createMeeClient({
         account: mcNexus,
         apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: "https://staging-network.biconomy.io/v1"
+        url: DEFAULT_STAGING_PATHFINDER_URL
       })
 
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
+        sponsorshipOptions: {
+          url: DEFAULT_STAGING_PATHFINDER_URL,
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
         trigger: {
           amount: amountToTransfer,
           chainId: baseSepolia.id,
@@ -549,8 +778,6 @@ describe("mee.getQuote", () => {
       })
 
       expect(quote).toBeDefined()
-
-      console.log(quote.quote.hash)
 
       const { hash } = await meeClient.executeFusionQuote({
         fusionQuote: quote
@@ -599,7 +826,7 @@ describe("mee.getQuote", () => {
       const meeClient = await createMeeClient({
         account: mcNexus,
         apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: "https://staging-network.biconomy.io/v1"
+        url: DEFAULT_STAGING_PATHFINDER_URL
       })
 
       const transferInx = await mcNexus.build({
@@ -614,6 +841,14 @@ describe("mee.getQuote", () => {
 
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
+        sponsorshipOptions: {
+          url: DEFAULT_STAGING_PATHFINDER_URL,
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
         trigger: {
           amount: amountToTransfer,
           chainId: baseSepolia.id,
@@ -623,8 +858,6 @@ describe("mee.getQuote", () => {
       })
 
       expect(quote).toBeDefined()
-
-      console.log(quote.quote.hash)
 
       const { hash } = await meeClient.executeFusionQuote({
         fusionQuote: quote

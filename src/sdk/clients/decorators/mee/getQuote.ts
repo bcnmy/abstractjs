@@ -1,18 +1,6 @@
-import {
-  http,
-  type Address,
-  type Hex,
-  type OneOf,
-  createPublicClient,
-  zeroAddress
-} from "viem"
+import { type Address, type Hex, type OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { getChain } from "../../../account"
 import { buildComposable } from "../../../account/decorators"
-import {
-  getDefaultNonceKey,
-  getNonceWithKeyUtil
-} from "../../../account/decorators/getNonceWithKey"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
@@ -28,8 +16,11 @@ import {
   type BaseMeeClient,
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
-  DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+  DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
+  DEFAULT_PATHFINDER_URL,
+  DEFAULT_STAGING_PATHFINDER_URL
 } from "../../createMeeClient"
+import { getChain } from "../../../account"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -541,34 +532,56 @@ const preparePaymentInfo = async (
   let isInitDataProcessed = false
 
   if (sponsorship) {
-    // TODO: Self hosted sponsorship is not supported yet. Remove this once the support is added
-    if (sponsorshipOptions !== undefined) {
-      throw new Error("Sponsorship options are not supported yet.")
+    // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
+    let sender = DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
+    let token = DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+    let chainId = DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+
+    if (sponsorshipOptions) {
+      // TODO: Only biconomy hosted sponsorship is supported right now. Remove this when self hosted is supported
+      if (
+        sponsorshipOptions.url !== DEFAULT_PATHFINDER_URL &&
+        sponsorshipOptions.url !== DEFAULT_STAGING_PATHFINDER_URL
+      ) {
+        throw new Error("Self hosted sponsorship is not supported yet.")
+      }
+
+      sender = sponsorshipOptions.gasTank.address
+      token = sponsorshipOptions.gasTank.token
+      chainId = sponsorshipOptions.gasTank.chainId
     }
 
-    const chainId = DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
-    const accountAddress = account_.addressOn(chainId, true)
+    const nonceUrl = `${DEFAULT_PATHFINDER_URL}/sponsorship/nonce/${chainId}/${sender}`
 
-    const client = createPublicClient({
-      transport: http(),
-      chain: getChain(chainId)
-    })
+    let nonce: string | undefined
 
-    const defaultNonceKey = await getDefaultNonceKey(accountAddress, chainId)
+    try {
+      const nonceInfoResponse = await fetch(nonceUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
 
-    const { nonce } = await getNonceWithKeyUtil(client, accountAddress, {
-      key: defaultNonceKey,
-      // Sponsorship always uses default K1 validation module as validator
-      validationMode: "0x00",
-      moduleAddress: zeroAddress
-    })
+      const nonceInfo = (await nonceInfoResponse.json()) as {
+        nonce: string
+        nonceKey: string
+      }
+
+      nonce = nonceInfo.nonce
+    } catch {
+      throw new Error("Failed to fetch nonce for sponsorship")
+    }
+
+    if (!nonce || nonce === "") {
+      throw new Error("Failed to fetch nonce for sponsorship")
+    }
 
     paymentInfo = {
       sponsored: true,
-      // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
-      sender: DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
-      token: DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
-      nonce: nonce.toString(),
+      sender,
+      token,
+      nonce,
       chainId: chainId.toString(),
       ...(eoa ? { eoa } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
