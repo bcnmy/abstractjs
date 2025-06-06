@@ -1,8 +1,8 @@
 import {
-  formatTransactionReceipt,
   type GetTransactionReceiptParameters,
   type Hex,
-  type TransactionReceipt
+  type TransactionReceipt,
+  formatTransactionReceipt
 } from "viem"
 import { getTransactionReceipt as getTransactionReceiptFromViem } from "viem/actions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -15,8 +15,8 @@ import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { Url } from "../../createHttpClient"
 import {
-  DEFAULT_PATHFINDER_URL,
-  type BaseMeeClient
+  type BaseMeeClient,
+  DEFAULT_PATHFINDER_URL
 } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 

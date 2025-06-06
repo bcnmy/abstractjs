@@ -1,4 +1,4 @@
-import { type Address, type Hex, type OneOf } from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -20,7 +20,6 @@ import {
   DEFAULT_PATHFINDER_URL,
   DEFAULT_STAGING_PATHFINDER_URL
 } from "../../createMeeClient"
-import { getChain } from "../../../account"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
