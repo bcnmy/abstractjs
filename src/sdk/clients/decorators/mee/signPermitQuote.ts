@@ -34,6 +34,7 @@ export type Trigger = {
   amount: bigint
   /**
    * Whether to include the fee in the amount, or to add the fee to the amount.
+   * default is false
    */
   includeFee?: true
 }
