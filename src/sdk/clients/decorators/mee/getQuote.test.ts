@@ -6,7 +6,7 @@ import {
   publicActions
 } from "viem"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test, inject } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
