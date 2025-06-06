@@ -16,6 +16,9 @@ import type { BaseMeeClient } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
+export const CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION =
+  USEROP_MIN_EXEC_WINDOW_DURATION / 2
+
 export const DEFAULT_GAS_LIMIT = 75_000n
 
 /**
@@ -127,6 +130,11 @@ export type CleanUp = {
    * @example 1000000n // 1 USDC (6 decimals)
    */
   amount?: bigint
+  /**
+   * Custom gas limit for cleanup userOp
+   * @example 1n
+   */
+  gasLimit?: bigint
   /**
    * The address of the receiver where the token to cleanup
    * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // EVM address
@@ -493,7 +501,10 @@ export const getQuote = async (
         }
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
-          upperBoundTimestamp: upperBoundTimestamp_,
+          upperBoundTimestamp: isCleanUpUserOp
+            ? upperBoundTimestamp_ +
+              CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION
+            : upperBoundTimestamp_,
           sender,
           callData,
           callGasLimit,
@@ -586,7 +597,8 @@ const prepareCleanUpUserOps = async (
             recipient: cleanUp.recipientAddress,
             tokenAddress: cleanUp.tokenAddress,
             amount,
-            chainId: cleanUp.chainId
+            chainId: cleanUp.chainId,
+            ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
           }
         }
       )

@@ -7,11 +7,13 @@ import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAcco
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import {
+  CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION,
   DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
   getQuote
 } from "./getQuote"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 
 describe("mee.getQuote", () => {
   let network: NetworkConfig
@@ -149,5 +151,77 @@ describe("mee.getQuote", () => {
     expect(quote).toBeDefined()
 
     expect(quote.paymentInfo.callGasLimit).toBe(customGasLimit.toString())
+  })
+
+  test("Cleanup userOp should have extra time window", async () => {
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await getQuote(meeClient, {
+      instructions: [transfer],
+      cleanUps: [
+        {
+          tokenAddress: mcUSDC.addressOn(paymentChain.id),
+          chainId: paymentChain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+
+    // userOp 1 => user defined
+    // userOp 2 => cleanup which has 50% additional execution window from default execution window
+    expect(
+      quote.userOps[1].upperBoundTimestamp +
+        CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION
+    ).to.eq(quote.userOps[2].upperBoundTimestamp)
+
+    // If no custom gasLimit for userOp ? Default large gas limit will be used
+    expect(quote.userOps[2].userOp.callGasLimit).to.eq(
+      LARGE_DEFAULT_GAS_LIMIT.toString()
+    )
+  })
+
+  test("Cleanup userOp should have custom gas limit", async () => {
+    const customGasLimit = 100_000n
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await getQuote(meeClient, {
+      instructions: [transfer],
+      cleanUps: [
+        {
+          tokenAddress: mcUSDC.addressOn(paymentChain.id),
+          chainId: paymentChain.id,
+          recipientAddress: eoaAccount.address,
+          gasLimit: customGasLimit
+        }
+      ],
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+
+    // userOp 2 => cleanup userOp
+    expect(quote.userOps[2].userOp.callGasLimit).to.eq(
+      customGasLimit.toString()
+    )
   })
 })
