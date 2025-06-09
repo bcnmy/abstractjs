@@ -77,8 +77,11 @@ export const useMeePermission = async (
 
     // Remember that the mode has now been catered for
     modeMap[userOpEntry.chainId] = true
+  }
 
-    console.log("userOpEntry", userOpEntry)
+  console.log("signedQuote", signedQuote)
+  for (const userOp of signedQuote.userOps) {
+    console.log("userOp", userOp)
   }
 
   return await meeClient.executeSignedQuote({ signedQuote })

@@ -1,4 +1,4 @@
-import type { Address, Hex, OneOf } from "viem"
+import { type Address, type Hex, type OneOf, zeroAddress } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -576,7 +576,8 @@ const preparePaymentInfo = async (
     authorization,
     sponsorship,
     sponsorshipOptions,
-    shortEncodingSuperTxn
+    shortEncodingSuperTxn,
+    moduleAddress = zeroAddress as Address
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
@@ -669,10 +670,14 @@ const preparePaymentInfo = async (
     }
 
     const [nonce, isAccountDeployed, initCode] = await Promise.all([
-      validPaymentAccount.getNonce(),
+      validPaymentAccount.getNonceWithKey(validPaymentAccount.address, {
+        moduleAddress
+      }),
       validPaymentAccount.isDeployed(),
       validPaymentAccount.getInitCode()
     ])
+
+    console.log("nonce", nonce)
 
     // Do authorization only if required as it requires signing
     const initData: InitDataOrUndefined = isAccountDeployed
@@ -689,7 +694,7 @@ const preparePaymentInfo = async (
       sponsored: false,
       sender: validPaymentAccount.address,
       token: feeToken.address,
-      nonce: nonce.toString(),
+      nonce: nonce.nonce.toString(),
       chainId: feeToken.chainId.toString(),
       ...(eoa ? { eoa } : {}),
       ...initData,
