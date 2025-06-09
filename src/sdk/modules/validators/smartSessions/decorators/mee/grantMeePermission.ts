@@ -17,13 +17,16 @@ export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]
 }
 
+/**
+ * no feeToken should be provided for the sponsored mode
+ */
 export type GrantMeePermissionParams<
   TModularSmartAccount extends ModularSmartAccount | undefined
 > = Prettify<
   MultichainActionData & {
     /** Granter Address */
     redeemer: Address
-  } & { account?: TModularSmartAccount } & { feeToken: FeeTokenInfo }
+  } & { account?: TModularSmartAccount } & { feeToken?: FeeTokenInfo }
 >
 export type GrantMeePermissionPayload = GrantPermissionResponse[]
 
@@ -47,7 +50,7 @@ export const grantMeePermission = async <
       )
 
       const paymentActionPolicy =
-        feeToken.chainId === chainId
+        feeToken && feeToken.chainId === chainId
           ? {
               actionTarget: feeToken.address,
               actionTargetSelector: "0xa9059cbb" as Address, // transfer
