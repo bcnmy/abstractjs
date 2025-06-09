@@ -1,11 +1,5 @@
-import type { Address, Chain, Client, Prettify, Transport } from "viem"
-import { SmartAccount } from "viem/account-abstraction"
-import { readContract } from "viem/actions"
+import type { Chain, Client, Transport } from "viem"
 import { build } from "../../../../../account/decorators/build"
-import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
-import buildDefaultInstructions, {
-  BuildDefaultParameters
-} from "../../../../../account/decorators/instructions/buildDefaultInstructions"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
 import { isModuleInstalled } from "../../../../../clients/decorators/erc7579/isModuleInstalled"
@@ -23,12 +17,7 @@ import type {
   GetQuoteParams,
   InstructionLike
 } from "../../../../../clients/decorators/mee/getQuote"
-import {
-  type ActionData,
-  MEE_VALIDATOR_ADDRESS,
-  getSudoPolicy
-} from "../../../../../constants"
-import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
+import type { ModularSmartAccount } from "../../../../utils/Types"
 import type { Validator } from "../../../toValidator"
 
 // omit instructions, feeToken and trigger to make them optional
@@ -63,30 +52,30 @@ export const prepareForPermissions = async (
     client.account.deployments.map(async (deployment) => {
       //sanity check
       const chainId = deployment.client.chain?.id
-      console.log("chainId", chainId)
       if (!chainId) {
         throw new Error("Chain ID is not set")
       }
 
-      const isDeployed = await deployment.isDeployed()
-      console.log("isDeployed", isDeployed)
-      const isModuleInstalled_ = await isModuleInstalled(
-        deployment.client as Client<
-          Transport,
-          Chain | undefined,
-          ModularSmartAccount
-        >,
-        {
-          account: deployment,
-          module: {
-            address: parameters.smartSessionsValidator.address,
-            initData: "0x",
-            type: parameters.smartSessionsValidator.type
-          }
-        }
-      )
+      const isModuleInstalled_ = (await deployment.isDeployed())
+        ? await isModuleInstalled(
+            deployment.client as Client<
+              Transport,
+              Chain | undefined,
+              ModularSmartAccount
+            >,
+            {
+              account: deployment,
+              module: {
+                address: parameters.smartSessionsValidator.address,
+                initData: "0x",
+                type: parameters.smartSessionsValidator.type
+              }
+            }
+          )
+        : false
 
-      if (!isDeployed && !isModuleInstalled_) {
+      // it will also include the deployment instruction if needed
+      if (!isModuleInstalled_) {
         return build(
           { account: client.account },
           {
@@ -107,13 +96,12 @@ export const prepareForPermissions = async (
 
   const hasInstallInstructions = installInstructions.some(Boolean)
 
-  console.log("hasInstallInstructions", hasInstallInstructions)
-
   // if there are install instructions or additional instructions,
   // or trigger is provided,
-  // are going to create a prepare superTx
+  // we are going to create a superTx that prepares accounts
+  // for usage with smart sessions (deploy, install module, fund etc)
   // that means we need to know the feeToken
-  // tyhen we'll use one of the MEE flows: fusion or standard
+  // then we'll use one of the MEE flows: fusion or standard
   if (
     hasInstallInstructions ||
     parameters.additionalInstructions ||
@@ -136,8 +124,6 @@ export const prepareForPermissions = async (
 
     // check if trigger is provided => use fusion flow
     if (parameters.trigger) {
-      console.log("trigger is provided")
-
       const quote = await getFusionQuote(client, {
         ...parameters,
         instructions: completeInstructionsList,
@@ -145,14 +131,13 @@ export const prepareForPermissions = async (
         trigger: parameters.trigger
       } as GetFusionQuoteParams)
 
-      console.log("quote", quote)
-
       return await executeFusionQuote(client, {
         fusionQuote: quote,
         account: client.account
       })
-      // otherwise use standard flow
     }
+
+    // otherwise use standard flow
     return await execute(client, {
       ...parameters,
       instructions: completeInstructionsList,

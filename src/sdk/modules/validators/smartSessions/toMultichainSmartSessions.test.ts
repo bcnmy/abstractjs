@@ -1,24 +1,23 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { getSudoPolicy } from "@rhinestone/module-sdk"
-import type { Address, Chain, LocalAccount, Transport } from "viem"
+import type { Address, Chain, Client, LocalAccount, Transport } from "viem"
+import { http, createPublicClient, erc20Abi } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { arbitrum } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
-import type { MultichainAddressMapping } from "../../../account/decorators/buildBridgeInstructions"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { toNexusAccount } from "../../../account/toNexusAccount"
 import {
   DEFAULT_MEE_NODE_URL,
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
+import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleInstalled"
 import type { FeeTokenInfo } from "../../../clients/decorators/mee"
 import { mcUSDC } from "../../../constants/tokens"
+import type { ModularSmartAccount } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
@@ -96,7 +95,7 @@ describe("mee.multichainSmartSessions", () => {
     expect(prepareForPermissionsPayload).toBeUndefined()
   })
 
-  it("should prepare the account for permissions", async () => {
+  it("should prepare the undeployed account for permissions", async () => {
     const freshNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports,
@@ -112,19 +111,71 @@ describe("mee.multichainSmartSessions", () => {
     const sessionMeeClient = freshMeeClient.extend(meeSessionActions)
 
     const transferToNexusTrigger = {
-      tokenAddress: mcUSDC.addressOn(arbitrum.id), // The USDC token address on Base chain
+      tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Base chain
       amount: 1n, // 1*10^-6 usdc
-      chainId: arbitrum.id // Which chain this trigger executes on
+      chainId: paymentChain.id // Which chain this trigger executes on
     }
 
-    const prepareForPermissionsPayload =
-      await sessionMeeClient.prepareForPermissions({
-        smartSessionsValidator,
-        feeToken,
-        trigger: transferToNexusTrigger
-      })
+    // make random address
+    const aliceAddress = privateKeyToAccount(generatePrivateKey()).address
 
-    console.log(prepareForPermissionsPayload)
+    const additionalInstructions = await freshNexus.build({
+      type: "approve",
+      data: {
+        tokenAddress: mcUSDC.addressOn(targetChain.id),
+        amount: 12345n,
+        chainId: targetChain.id,
+        spender: aliceAddress
+      }
+    })
+
+    const preparePayload = await sessionMeeClient.prepareForPermissions({
+      smartSessionsValidator,
+      feeToken,
+      trigger: transferToNexusTrigger,
+      additionalInstructions
+    })
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash: preparePayload?.hash!
+    })
+
+    for (const receipt_ of receipt.receipts) {
+      expect(receipt_.status).toBe("success")
+      expect(receipt_.logs).toBeDefined()
+    }
+
+    for (const deployment of freshNexus.deployments) {
+      expect(await deployment.isDeployed()).toBe(true)
+      const isInstalled = await isModuleInstalled(
+        deployment.client as Client<
+          Transport,
+          Chain | undefined,
+          ModularSmartAccount
+        >,
+        {
+          account: deployment,
+          module: {
+            address: smartSessionsValidator.address,
+            initData: "0x",
+            type: smartSessionsValidator.type
+          }
+        }
+      )
+      expect(isInstalled).toBe(true)
+    }
+    // check approved amount on the target chain
+    const client = createPublicClient({
+      chain: targetChain,
+      transport: http()
+    })
+    const approvedAmount = await client.readContract({
+      address: mcUSDC.addressOn(targetChain.id),
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [freshNexus.addressOn(targetChain.id)!, aliceAddress]
+    })
+    expect(approvedAmount).toBe(12345n)
   })
 
   it("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
