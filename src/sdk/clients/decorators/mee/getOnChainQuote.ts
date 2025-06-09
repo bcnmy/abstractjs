@@ -90,10 +90,6 @@ export const getOnChainQuote = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
-  const isComposable = resolvedInstructions.some(
-    ({ isComposable }) => isComposable
-  )
-
   const transferFromAmount = trigger.includeFee
     ? runtimeERC20AllowanceOf({
         owner: sender,
@@ -114,6 +110,10 @@ export const getOnChainQuote = async (
       gasLimit: 50_000n
     }
   }
+
+  const isComposable =
+    trigger.includeFee ||
+    resolvedInstructions.some(({ isComposable }) => isComposable)
 
   const triggerTransfer = await (isComposable
     ? account_.buildComposable(params)

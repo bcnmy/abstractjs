@@ -13,18 +13,16 @@ import {
   grantPermission
 } from "../grantPermission"
 
-export type RequiredSessionParamsWithNoTarget = {
-  actions: Omit<ActionData, "actionTarget">[]
+export type MultichainActionData = {
+  actions: (ActionData & { chainId: number })[]
 }
 
 export type GrantMeePermissionParams<
   TModularSmartAccount extends ModularSmartAccount | undefined
 > = Prettify<
-  RequiredSessionParamsWithNoTarget & {
+  MultichainActionData & {
     /** Granter Address */
     redeemer: Address
-    /** Address mapping of the contract to interact with per chain */
-    addressMapping: MultichainAddressMapping
   } & { account?: TModularSmartAccount } & { feeToken: FeeTokenInfo }
 >
 export type GrantMeePermissionPayload = GrantPermissionResponse[]
@@ -34,7 +32,6 @@ export const grantMeePermission = async <
 >(
   baseMeeClient: BaseMeeClient,
   {
-    addressMapping,
     redeemer,
     actions,
     feeToken
@@ -42,12 +39,13 @@ export const grantMeePermission = async <
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
   const sessionDetails = await Promise.all(
-    account.deployments.map((deployment) => {
-      const chainId = deployment?.client?.chain?.id as number
-      const actionTarget = addressMapping.on(chainId)
-      if (!actionTarget) {
-        throw new Error(`No contract address found for chain ${chainId}`)
-      }
+    actions.map((action) => {
+      const chainId = action.chainId
+      const actionTarget = action.actionTarget
+      const deployment = account.deployments.find(
+        (deployment) => deployment?.client?.chain?.id === chainId
+      )
+
       const paymentActionPolicy =
         feeToken.chainId === chainId
           ? {
@@ -56,6 +54,7 @@ export const grantMeePermission = async <
               actionPolicies: [getSudoPolicy()]
             }
           : undefined
+
       return grantPermission(undefined as AnyData, {
         account: deployment,
         redeemer,

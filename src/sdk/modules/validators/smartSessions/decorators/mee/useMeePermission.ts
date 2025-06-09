@@ -12,10 +12,12 @@ import {
 import type { GrantMeePermissionPayload } from "./grantMeePermission"
 
 export type UseMeePermissionParams = {
-  sessionDetails: GrantMeePermissionPayload
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
   feeToken: FeeTokenInfo
+  // this is optional because the session details are not needed for the USE mode
+  // so if(!sessionDetails) => separate flow with just USE mode
+  sessionDetails?: GrantMeePermissionPayload
 }
 
 export type UseMeePermissionPayload = { hash: Hash }

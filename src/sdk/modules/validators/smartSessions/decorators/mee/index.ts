@@ -6,6 +6,11 @@ import {
   grantMeePermission
 } from "./grantMeePermission"
 import {
+  type PrepareForPermissionsParams,
+  type PrepareForPermissionsPayload,
+  prepareForPermissions
+} from "./prepareForPermissions"
+import {
   type UseMeePermissionParams,
   type UseMeePermissionPayload,
   useMeePermission
@@ -15,6 +20,9 @@ import {
  * Collection of MEE (Multi-chain Execution Environment) actions for transaction handling
  */
 export type MeeSessionActions = {
+  prepareForPermissions: (
+    params: PrepareForPermissionsParams
+  ) => Promise<PrepareForPermissionsPayload>
   grantPermission: <
     TModularSmartAccount extends ModularSmartAccount | undefined
   >(
@@ -34,6 +42,8 @@ export const meeSessionActions = (
   meeClient: BaseMeeClient
 ): MeeSessionActions => {
   return {
+    prepareForPermissions: (params: PrepareForPermissionsParams) =>
+      prepareForPermissions(meeClient, params),
     grantPermission: (params: GrantMeePermissionParams<ModularSmartAccount>) =>
       grantMeePermission(meeClient, params),
     usePermission: (params: UseMeePermissionParams) =>
@@ -43,3 +53,4 @@ export const meeSessionActions = (
 
 export { grantMeePermission } from "./grantMeePermission"
 export { useMeePermission } from "./useMeePermission"
+export { prepareForPermissions } from "./prepareForPermissions"
