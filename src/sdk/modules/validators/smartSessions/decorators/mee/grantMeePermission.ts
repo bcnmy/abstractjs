@@ -49,6 +49,8 @@ export const grantMeePermission = async <
         (deployment) => deployment?.client?.chain?.id === chainId
       )
 
+      // if no fee token is provided, the payment action policy is not added
+      // as it is not needed for the sponsored mode
       const paymentActionPolicy =
         feeToken && feeToken.chainId === chainId
           ? {
