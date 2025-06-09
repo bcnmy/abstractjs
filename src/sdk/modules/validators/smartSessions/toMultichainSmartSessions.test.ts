@@ -196,7 +196,7 @@ describe("mee.multichainSmartSessions", () => {
     const sessionDetails = await sessionMeeClient.grantPermission({
       redeemer: redeemerAddress,
       feeToken,
-      // TODO: Could add a helper function to build the actions,
+      // Could add a helper function to build the actions array,
       // this architecture allows for more flexibility and customizations
       actions: [
         {

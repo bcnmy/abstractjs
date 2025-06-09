@@ -15,7 +15,14 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
-import type { BaseMeeClient } from "../../createMeeClient"
+import {
+  type BaseMeeClient,
+  DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
+  DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
+  DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
+  DEFAULT_PATHFINDER_URL,
+  DEFAULT_STAGING_PATHFINDER_URL
+} from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -96,7 +103,7 @@ export type SupertransactionLike = {
   /** Array of instructions in various formats */
   instructions: InstructionLike[]
   /** Token to be used for paying fees */
-  feeToken: FeeTokenInfo
+  feeToken?: FeeTokenInfo
 }
 
 /**
@@ -138,6 +145,34 @@ export type CleanUp = {
    * @example [userOp(1)]
    */
   dependsOn?: number[]
+}
+
+/**
+ * Parameters for a sponsorship
+ */
+export type SponsorshipOptionsParams = {
+  /**
+   * Sponsorship url for requesting sponsorship
+   * @example http://dapp-backend/sponsor-supertx
+   */
+  url: string
+  gasTank: {
+    /**
+     * The chainId to use
+     * @example 1 // Ethereum Mainnet
+     */
+    chainId: number
+    /**
+     * The gas tank address for sponshorship
+     * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+     */
+    address: Address
+    /**
+     * The token address for sponshorship
+     * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+     */
+    token: Address
+  }
 }
 
 /**
@@ -184,6 +219,14 @@ export type GetQuoteParams = SupertransactionLike & {
    * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
+  /**
+   * sponsorship flag to enable the sponsored super transactions.
+   */
+  sponsorship?: true
+  /**
+   * Sponsorship options for overrides
+   */
+  sponsorshipOptions?: SponsorshipOptionsParams
 } & OneOf<
     | {
         /**
@@ -266,6 +309,8 @@ export type PaymentInfo = {
   eip7702Auth?: MeeAuthorization
   /** Short encoding flag @see QuoteRequest.shortEncoding */
   shortEncoding?: boolean
+  /** Sponsorship flag  */
+  sponsored?: boolean
 }
 
 /**
@@ -304,6 +349,8 @@ export interface MeeFilledUserOp {
   paymasterAndData: Hex
   /** Gas required before operation verification */
   preVerificationGas: string
+  /** UserOp signature signed by paymaster for sponsorship  */
+  signature?: Hex
 }
 
 /**
@@ -401,9 +448,7 @@ export const getQuote = async (
     account: account_ = client.account,
     instructions,
     cleanUps,
-    feeToken,
     path = "quote",
-    eoa,
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
@@ -413,23 +458,14 @@ export const getQuote = async (
     shortEncodingSuperTxn = false
   } = parameters
 
-  const resolvedInstructions = await resolveInstructions(instructions)
-  const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
-
-  // TODO: Is there a better way to handle this?
-  // Smart sessions require a higher verification gas limit
   const increasedVerificationGasLimit = addressEquals(
     moduleAddress,
     SMART_SESSIONS_ADDRESS
   )
-    ? { verificationGasLimit: "1500000" }
+    ? { verificationGasLimit: "1000000" }
     : undefined
 
-  const validFeeToken =
-    validPaymentAccount &&
-    client.info.supportedGasTokens
-      .map(({ chainId }) => +chainId)
-      .includes(feeToken.chainId)
+  const resolvedInstructions = await resolveInstructions(instructions)
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
@@ -439,16 +475,6 @@ export const getQuote = async (
         .includes(userOp.chainId)
   )
 
-  if (!validFeeToken) {
-    throw Error(
-      `Fee token ${feeToken.address} is not supported on this chain: ${feeToken.chainId}`
-    )
-  }
-  if (!validPaymentAccount) {
-    throw Error(
-      `Account is not deployed on necessary chain(s) ${feeToken.chainId}`
-    )
-  }
   if (!validUserOps) {
     throw Error(
       `User operation chain(s) not supported by the node: ${resolvedInstructions
@@ -457,7 +483,14 @@ export const getQuote = async (
     )
   }
 
-  // Prepare useful user ops
+  const hasProcessedInitData: string[] = []
+  const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
+    client,
+    parameters
+  )
+
+  if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
+
   const preparedUserOps = await prepareUserOps(
     account_,
     resolvedInstructions,
@@ -481,35 +514,6 @@ export const getQuote = async (
 
     preparedUserOps.push(...cleanUpUserOps)
   }
-
-  // ==== Prepare payment info => node will build the payment userop with this info ====
-  const hasProcessedInitData: string[] = [feeToken.chainId.toString()]
-  const [{ nonce }, isAccountDeployed, initCode] = await Promise.all([
-    validPaymentAccount.getNonceWithKey({ moduleAddress }),
-    validPaymentAccount.isDeployed(),
-    validPaymentAccount.getInitCode()
-  ])
-
-  // Do authorization only if required as it requires signing
-  const initData: InitDataOrUndefined = isAccountDeployed
-    ? undefined
-    : delegate
-      ? {
-          eip7702Auth: await validPaymentAccount.toDelegation({ authorization })
-        }
-      : { initCode }
-
-  const paymentInfo: PaymentInfo = {
-    sender: validPaymentAccount.address,
-    token: feeToken.address,
-    nonce: nonce.toString(),
-    chainId: feeToken.chainId.toString(),
-    ...(eoa ? { eoa } : {}),
-    ...initData,
-    ...increasedVerificationGasLimit,
-    shortEncoding: shortEncodingSuperTxn
-  }
-  // ====== end preparing payment info ======
 
   const userOps = await Promise.all(
     preparedUserOps.map(
@@ -537,6 +541,7 @@ export const getQuote = async (
               }
             : { initCode }
         }
+
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
           upperBoundTimestamp: upperBoundTimestamp_,
@@ -559,6 +564,148 @@ export const getQuote = async (
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 
+const preparePaymentInfo = async (
+  client: BaseMeeClient,
+  parameters: GetQuoteParams
+) => {
+  const {
+    account: account_ = client.account,
+    eoa,
+    feeToken,
+    delegate = false,
+    authorization,
+    sponsorship,
+    sponsorshipOptions,
+    shortEncodingSuperTxn
+  } = parameters
+
+  let paymentInfo: PaymentInfo | undefined = undefined
+  let isInitDataProcessed = false
+
+  if (sponsorship) {
+    // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
+    let sender = DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
+    let token = DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+    let chainId = DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+
+    if (sponsorshipOptions) {
+      // TODO: Only biconomy hosted sponsorship is supported right now. Remove this when self hosted is supported
+      if (
+        sponsorshipOptions.url !== DEFAULT_PATHFINDER_URL &&
+        sponsorshipOptions.url !== DEFAULT_STAGING_PATHFINDER_URL
+      ) {
+        throw new Error("Self hosted sponsorship is not supported yet.")
+      }
+
+      sender = sponsorshipOptions.gasTank.address
+      token = sponsorshipOptions.gasTank.token
+      chainId = sponsorshipOptions.gasTank.chainId
+    }
+
+    const nonceUrl = `${DEFAULT_PATHFINDER_URL}/sponsorship/nonce/${chainId}/${sender}`
+
+    let nonce: string | undefined
+
+    try {
+      const nonceInfoResponse = await fetch(nonceUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+
+      const nonceInfo = (await nonceInfoResponse.json()) as {
+        nonce: string
+        nonceKey: string
+      }
+
+      nonce = nonceInfo.nonce
+    } catch {
+      throw new Error("Failed to fetch nonce for sponsorship")
+    }
+
+    if (!nonce || nonce === "") {
+      throw new Error("Failed to fetch nonce for sponsorship")
+    }
+
+    paymentInfo = {
+      sponsored: true,
+      sender,
+      token,
+      nonce,
+      chainId: chainId.toString(),
+      ...(eoa ? { eoa } : {}),
+      // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
+      // So initCode will be always undefined
+      initCode: undefined,
+      shortEncoding: shortEncodingSuperTxn
+    }
+
+    // Init code / authorization list will not be added to payment userOp in the case of sponsorship. It will be added in the
+    // first developer defined userOp. To make this happen, this field should be false
+    isInitDataProcessed = false
+  } else {
+    if (!feeToken) throw Error("Fee token should be configured")
+
+    const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
+
+    if (!validPaymentAccount) {
+      throw Error(
+        `Account is not deployed on necessary chain(s) ${feeToken.chainId}`
+      )
+    }
+
+    // TODO: Check the correctness of this while testing. This is a old logic
+    const validFeeToken =
+      validPaymentAccount &&
+      client.info.supportedGasTokens
+        .map(({ chainId }) => +chainId)
+        .includes(feeToken.chainId)
+
+    if (!validFeeToken) {
+      throw Error(
+        `Fee token ${feeToken.address} is not supported on this chain: ${feeToken.chainId}`
+      )
+    }
+
+    const [nonce, isAccountDeployed, initCode] = await Promise.all([
+      validPaymentAccount.getNonce(),
+      validPaymentAccount.isDeployed(),
+      validPaymentAccount.getInitCode()
+    ])
+
+    // Do authorization only if required as it requires signing
+    const initData: InitDataOrUndefined = isAccountDeployed
+      ? undefined
+      : delegate
+        ? {
+            eip7702Auth: await validPaymentAccount.toDelegation({
+              authorization
+            })
+          }
+        : { initCode }
+
+    paymentInfo = {
+      sponsored: false,
+      sender: validPaymentAccount.address,
+      token: feeToken.address,
+      nonce: nonce.toString(),
+      chainId: feeToken.chainId.toString(),
+      ...(eoa ? { eoa } : {}),
+      ...initData,
+      shortEncoding: shortEncodingSuperTxn
+    }
+
+    // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
+    // in developer defined userOps, this field must be true
+    isInitDataProcessed = true
+  }
+
+  if (!paymentInfo) throw new Error("Failed to generate payment info")
+
+  return { paymentInfo, isInitDataProcessed }
+}
+
 const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
@@ -568,6 +715,7 @@ const prepareUserOps = async (
   return await Promise.all(
     instructions.map((userOp) => {
       const deployment = account.deploymentOn(userOp.chainId, true)
+      const accountAddress = account.addressOn(userOp.chainId, true)
 
       let callsPromise: Promise<Hex>
 
@@ -596,7 +744,7 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey({ moduleAddress }),
+        deployment.getNonceWithKey(accountAddress, { moduleAddress }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
