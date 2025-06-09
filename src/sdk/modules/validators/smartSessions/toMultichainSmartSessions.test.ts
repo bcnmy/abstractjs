@@ -61,7 +61,7 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      url: DEFAULT_MEE_NODE_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
   })
@@ -232,6 +232,69 @@ describe("mee.multichainSmartSessions", () => {
     const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
     const { hash } = await dappSessionClient.usePermission({
+      sessionDetails,
+      mode: "ENABLE_AND_USE",
+      instructions: [
+        {
+          calls: [
+            {
+              to: COUNTER_ON_OPTIMISM,
+              data: "0x273ea3e3"
+            }
+          ],
+          chainId: paymentChain.id
+        }
+      ],
+      feeToken
+    })
+  })
+
+  it("should grant and use multichain permissions with sponsorship", async () => {
+    const sessionMeeClient = meeClient.extend(meeSessionActions)
+
+    const prepareForPermissionsPayload =
+      await sessionMeeClient.prepareForPermissions({
+        smartSessionsValidator,
+        feeToken
+      })
+    expect(prepareForPermissionsPayload).toBeUndefined()
+
+    const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
+    const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
+
+    const sessionDetails = await sessionMeeClient.grantPermission({
+      redeemer: redeemerAddress,
+      actions: [
+        {
+          actionTargetSelector: "0x273ea3e3",
+          actionPolicies: [getSudoPolicy()],
+          chainId: paymentChain.id,
+          actionTarget: COUNTER_ON_OPTIMISM
+        },
+        {
+          actionTargetSelector: "0x273ea3e3",
+          actionPolicies: [getSudoPolicy()],
+          chainId: targetChain.id,
+          actionTarget: COUNTER_ON_BASE
+        }
+      ]
+    })
+
+    const dappNexusAccount = await toMultichainNexusAccount({
+      accountAddress: mcNexus.addressOn(paymentChain.id),
+      chains: [paymentChain, targetChain],
+      transports,
+      signer: redeemerAccount
+    })
+
+    const dappMeeClient = await createMeeClient({
+      account: dappNexusAccount,
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+    })
+    const dappSessionClient = dappMeeClient.extend(meeSessionActions)
+
+    const { hash } = await dappSessionClient.usePermission({
+      sponsorship: true,
       sessionDetails,
       mode: "ENABLE_AND_USE",
       instructions: [
