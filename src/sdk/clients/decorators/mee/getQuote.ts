@@ -486,7 +486,10 @@ export const getQuote = async (
   const hasProcessedInitData: string[] = []
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
     client,
-    parameters
+    {
+      ...parameters,
+      increasedVerificationGasLimit
+    }
   )
 
   if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
@@ -566,7 +569,9 @@ export const getQuote = async (
 
 const preparePaymentInfo = async (
   client: BaseMeeClient,
-  parameters: GetQuoteParams
+  parameters: GetQuoteParams & {
+    increasedVerificationGasLimit?: { verificationGasLimit: string }
+  }
 ) => {
   const {
     account: account_ = client.account,
@@ -577,7 +582,8 @@ const preparePaymentInfo = async (
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
-    moduleAddress = zeroAddress as Address
+    moduleAddress = zeroAddress as Address,
+    increasedVerificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
@@ -638,8 +644,9 @@ const preparePaymentInfo = async (
       ...(eoa ? { eoa } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
       // So initCode will be always undefined
-      initCode: undefined,
-      shortEncoding: shortEncodingSuperTxn
+      initCode: undefined
+      // no short encodings
+      // no increased verification gas limit
     }
 
     // Init code / authorization list will not be added to payment userOp in the case of sponsorship. It will be added in the
@@ -677,8 +684,6 @@ const preparePaymentInfo = async (
       validPaymentAccount.getInitCode()
     ])
 
-    console.log("nonce", nonce)
-
     // Do authorization only if required as it requires signing
     const initData: InitDataOrUndefined = isAccountDeployed
       ? undefined
@@ -698,7 +703,8 @@ const preparePaymentInfo = async (
       chainId: feeToken.chainId.toString(),
       ...(eoa ? { eoa } : {}),
       ...initData,
-      shortEncoding: shortEncodingSuperTxn
+      shortEncoding: shortEncodingSuperTxn,
+      ...increasedVerificationGasLimit
     }
 
     // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
