@@ -1,4 +1,4 @@
-import type { Prettify } from "viem"
+import type { Address, Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
 import { isStaging } from "../account/utils/Helpers"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
@@ -11,11 +11,34 @@ export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
 /**
  * Default URL for the MEE node service
  */
-const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
+export const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
 const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
-const DEFAULT_STAGING_PATHFINDER_URL = "https://staging-network.biconomy.io/v1"
+export const DEFAULT_STAGING_PATHFINDER_URL =
+  "https://staging-network.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
+
+/**
+ * Constants for sponshorshipxw
+ */
+
+// Sponsorship Nexus Account Address
+export const DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT: Address =
+  "0x18eAc826f3dD77d065E75E285d3456B751AC80d5"
+// Base
+export const DEFAULT_MEE_SPONSORSHIP_CHAIN_ID = 8453
+// USDC
+export const DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS: Address =
+  "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+
+// Sponsorship Nexus Account Address
+export const DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT: Address =
+  "0x18eAc826f3dD77d065E75E285d3456B751AC80d5"
+// Base Sepolia
+export const DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID = 84532
+// USDC
+export const DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS: Address =
+  "0x036cbd53842c5426634e7929541ec2318f3dcf7e"
 
 /**
  * Parameters for creating a Mee client

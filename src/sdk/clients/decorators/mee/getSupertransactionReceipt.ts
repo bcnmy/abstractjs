@@ -1,7 +1,8 @@
-import type {
-  GetTransactionReceiptParameters,
-  Hex,
-  TransactionReceipt
+import {
+  type GetTransactionReceiptParameters,
+  type Hex,
+  type TransactionReceipt,
+  formatTransactionReceipt
 } from "viem"
 import { getTransactionReceipt as getTransactionReceiptFromViem } from "viem/actions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -12,8 +13,12 @@ import {
 } from "../../../account/utils/explorer"
 import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
+import type { AnyData } from "../../../modules"
 import type { Url } from "../../createHttpClient"
-import type { BaseMeeClient } from "../../createMeeClient"
+import {
+  type BaseMeeClient,
+  DEFAULT_PATHFINDER_URL
+} from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 
 /**
@@ -143,6 +148,9 @@ export async function getSupertransactionReceipt(
     }
     case "MINED_SUCCESS": {
       if (waitForReceipts) {
+        const isSponsoredSupertransaction =
+          explorerResponse.paymentInfo.sponsored
+
         receipts = await Promise.all(
           explorerResponse.userOps
             .filter((userOp) => {
@@ -155,12 +163,37 @@ export async function getSupertransactionReceipt(
 
               return true
             })
-            .map(({ chainId, executionData }) =>
-              getTransactionReceiptFromViem(
+            .map(async ({ chainId, executionData }, index) => {
+              // If sponsored tx ? the receipt for sponsored payment userOp needs to be fetched from
+              // sponsorship backend
+              if (isSponsoredSupertransaction && index === 0) {
+                try {
+                  const receiptUrl = `${DEFAULT_PATHFINDER_URL}/sponsorship/receipt/${chainId}/${executionData}`
+
+                  const receiptResponse = await fetch(receiptUrl, {
+                    method: "GET",
+                    headers: {
+                      "Content-Type": "application/json"
+                    }
+                  })
+
+                  const receipt = await receiptResponse.json()
+
+                  return formatTransactionReceipt(receipt as AnyData)
+                } catch {
+                  throw new Error("Failed to fetch sponsored userOp receipt")
+                }
+              }
+
+              return getTransactionReceiptFromViem(
                 account.deploymentOn(Number(chainId), true).publicClient,
-                { confirmations, ...parameters, hash: executionData }
+                {
+                  confirmations,
+                  ...parameters,
+                  hash: executionData
+                }
               )
-            )
+            })
         )
       }
       break
