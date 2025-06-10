@@ -8,12 +8,8 @@ import {
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
-import {
-  CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION,
-  DEFAULT_GAS_LIMIT
-} from "./getQuote"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
@@ -28,6 +24,10 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
+import {
+  CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION,
+  DEFAULT_GAS_LIMIT
+} from "./getQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 
 const getRandomAccountIndex = (min: number, max: number) => {
