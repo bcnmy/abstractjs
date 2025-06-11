@@ -9,11 +9,9 @@ import {
   type PublicClient,
   type TransactionReceipt,
   createPublicClient,
-  encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
   fromBytes,
-  numberToHex,
   parseAbi,
   parseEventLogs,
   parseUnits,
@@ -30,7 +28,6 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import {
-  getSupertransactionReceipt,
   userOp
 } from "../../../clients/decorators/mee"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
@@ -42,7 +39,6 @@ import { testnetMcUSDC } from "../../../constants/tokens"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf,
-  runtimeEncodeAbiParameters
 } from "../../../modules"
 import {
   type MultichainSmartAccount,
@@ -50,6 +46,7 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
+import { waitForTransactionReceipt } from "viem/actions"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

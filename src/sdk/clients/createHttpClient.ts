@@ -1,6 +1,6 @@
 import { type Prettify, stringify } from "viem"
 import { parseErrorMessage } from "../account/utils/parseErrorMessage"
-import { type AnyData, stringifyToNumber } from "../modules"
+import { type AnyData } from "../modules"
 
 /**
  * Parameters for initializing a Http client
