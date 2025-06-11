@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.15
+
+### Patch Changes
+
+- Added support for custom gas limit for payment and cleanup userops and increased the cleanup execution window
+
 ## 1.0.14
 
 ### Patch Changes
