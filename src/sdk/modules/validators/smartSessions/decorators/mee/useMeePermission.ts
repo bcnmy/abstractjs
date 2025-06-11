@@ -3,7 +3,10 @@ import type {
   BaseMeeClient,
   MeeClient
 } from "../../../../../clients/createMeeClient"
-import type { Instruction } from "../../../../../clients/decorators/mee"
+import type {
+  Instruction,
+  SponsorshipOptionsParams
+} from "../../../../../clients/decorators/mee"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   SMART_SESSIONS_ADDRESS,
@@ -16,6 +19,8 @@ export type UseMeePermissionParams = {
   instructions: Instruction[]
   feeToken: FeeTokenInfo
   sessionDetails: GrantMeePermissionPayload
+  sponsorship?: true
+  sponsorshipOptions?: SponsorshipOptionsParams
 }
 
 export type UseMeePermissionPayload = { hash: Hash }
@@ -28,7 +33,9 @@ export const useMeePermission = async (
     sessionDetails: sessionDetailsArray,
     mode: mode_,
     instructions,
-    feeToken
+    feeToken,
+    sponsorship,
+    sponsorshipOptions
   } = parameters
   const meeClient = meeClient_ as MeeClient
   // const mcAccount = meeClient.account
@@ -42,7 +49,9 @@ export const useMeePermission = async (
     instructions,
     feeToken,
     moduleAddress: SMART_SESSIONS_ADDRESS,
-    shortEncodingSuperTxn: true
+    shortEncodingSuperTxn: true,
+    sponsorship,
+    sponsorshipOptions
   })
 
   const signedQuote = await meeClient.signQuote({ quote })
