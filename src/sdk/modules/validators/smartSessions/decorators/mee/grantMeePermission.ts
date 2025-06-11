@@ -36,10 +36,10 @@ export type GrantMeePermissionPayload = GrantPermissionResponse[]
  * If the superTxn is sponsored, the payment action policy is not added
  * as it is not needed for the sponsored mode
  * If the superTxn is not sponsored, the payment action policy is added
- * 
+ *
  * Attention: actions for the cleanup userOps are not added automatically
  * and should be provided explicitly in the actions array
- * 
+ *
  * @param baseMeeClient - The base MeeClient
  * @param params - The parameters for the grantMeePermission function
  * @returns The session details

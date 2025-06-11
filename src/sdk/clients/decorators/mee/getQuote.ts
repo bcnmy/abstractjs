@@ -472,7 +472,7 @@ export const getQuote = async (
     authorization,
     moduleAddress,
     shortEncodingSuperTxn = false,
-    sponsorship = false,
+    sponsorship = false
   } = parameters
 
   const increasedVerificationGasLimit = addressEquals(
@@ -501,7 +501,13 @@ export const getQuote = async (
   }
 
   const hasProcessedInitData: string[] = []
-  const paymentVerificationGasLimit = moduleAddress ? resolveVerificationGasLimit({moduleAddress, sponsorship, isPaymentUserOp: true}) : undefined
+  const paymentVerificationGasLimit = moduleAddress
+    ? resolveVerificationGasLimit({
+        moduleAddress,
+        sponsorship,
+        isPaymentUserOp: true
+      })
+    : undefined
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
     client,
     {
@@ -539,18 +545,21 @@ export const getQuote = async (
   // complete the userOps including cleanup ones
   const userOps = await Promise.all(
     preparedUserOps.map(
-      async ([
-        callData,
-        { nonce },
-        isAccountDeployed,
-        initCode,
-        sender,
-        callGasLimit,
-        chainId,
-        isCleanUpUserOp,
-        nexusAccount,
-        shortEncoding
-      ], index) => {
+      async (
+        [
+          callData,
+          { nonce },
+          isAccountDeployed,
+          initCode,
+          sender,
+          callGasLimit,
+          chainId,
+          isCleanUpUserOp,
+          nexusAccount,
+          shortEncoding
+        ],
+        index
+      ) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
         const shouldContainInitData =
           !hasProcessedInitData.includes(chainId) && !isAccountDeployed
@@ -564,7 +573,14 @@ export const getQuote = async (
             : { initCode }
         }
 
-        const verificationGasLimit = moduleAddress ? resolveVerificationGasLimit({moduleAddress, sponsorship, isPaymentUserOp: false, index}) : undefined
+        const verificationGasLimit = moduleAddress
+          ? resolveVerificationGasLimit({
+              moduleAddress,
+              sponsorship,
+              isPaymentUserOp: false,
+              index
+            })
+          : undefined
 
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
@@ -591,29 +607,31 @@ export const getQuote = async (
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 
-/** 
+/**
  * Parameters for the resolveVerificationGasLimit function
  * @param moduleAddress - The address of the module
  * @param index - The index of the userOp during the userOps completion process
  * @param sponsorship - Whether the superTxn is sponsored
-*/
+ */
 export type resolveVerificationGasLimitParams = {
   moduleAddress: Address
   sponsorship: boolean
-}
-  & OneOf<
-  |{
-    isPaymentUserOp: true
-  } | {
-    isPaymentUserOp: false
-    index: number
-  }>
-
+} & OneOf<
+  | {
+      isPaymentUserOp: true
+    }
+  | {
+      isPaymentUserOp: false
+      index: number
+    }
+>
 
 /**
  * Returns the verification gas limit for the userOp, to be spread
  */
-export type resolveVerificationGasLimitPayload = { verificationGasLimit: string }
+export type resolveVerificationGasLimitPayload = {
+  verificationGasLimit: string
+}
 
 /**
  * Returns the verification gas limit for the userOp or paymentInfo
@@ -622,11 +640,13 @@ export type resolveVerificationGasLimitPayload = { verificationGasLimit: string 
  * returns undefined if there's no special gas limit required for a given case
  * 'undefined' means the node will apply the default verification gas limit
  */
-const resolveVerificationGasLimit = (parameters: resolveVerificationGasLimitParams) : resolveVerificationGasLimitPayload | undefined => {
+const resolveVerificationGasLimit = (
+  parameters: resolveVerificationGasLimitParams
+): resolveVerificationGasLimitPayload | undefined => {
   const { moduleAddress, sponsorship } = parameters
 
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
-    if ('isPaymentUserOp' in parameters && parameters.isPaymentUserOp) {
+    if ("isPaymentUserOp" in parameters && parameters.isPaymentUserOp) {
       if (!sponsorship) {
         // return increased verification gas limit for payment userOp
         // in a non-sponsored superTxn
@@ -636,7 +656,7 @@ const resolveVerificationGasLimit = (parameters: resolveVerificationGasLimitPara
       // and node will apply the default verification gas limit
     } else {
       // for non payment userOps
-      if (sponsorship && 'index' in parameters && parameters.index === 0) {
+      if (sponsorship && "index" in parameters && parameters.index === 0) {
         // return increased verification gas limit for the first non-payment userOp
         // as it this userOp will be enabling the permission => requires more gas
         return { verificationGasLimit: "1000000" }
