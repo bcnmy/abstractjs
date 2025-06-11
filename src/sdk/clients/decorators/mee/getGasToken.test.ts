@@ -50,20 +50,12 @@ describe("mee.getGasToken", () => {
   })
 
   test("should throw error for invalid chain id", async () => {
+    const chainId = Math.floor(Math.random() * 1000000)
     await expect(
       meeClient.getGasToken({
-        chainId: 999,
+        chainId,
         address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
       })
-    ).rejects.toThrow("Gas token not found for chain 999")
-  })
-
-  test("should throw error for invalid chain id", async () => {
-    await expect(
-      meeClient.getGasToken({
-        chainId: 999,
-        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-      })
-    ).rejects.toThrow("Gas token not found for chain 999")
+    ).rejects.toThrow(`Gas token not found for chain ${chainId}`)
   })
 })

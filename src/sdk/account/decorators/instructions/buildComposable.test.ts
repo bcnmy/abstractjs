@@ -1217,9 +1217,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-  // This take long time to complete and also has conflict while running with others.
-  // Works when individually executed. Will skip this test
-  it.skip("should composable cleanup execute when main userops fails", async () => {
+  it("should composable cleanup execute when main userops fails", async () => {
     const amountToSupply = parseUnits("0.1", 6)
     const amountToTransfer = parseUnits("1", 6)
 
