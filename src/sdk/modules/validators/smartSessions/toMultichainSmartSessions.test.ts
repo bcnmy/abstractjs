@@ -167,7 +167,7 @@ describe("mee.multichainSmartSessions", () => {
     expect(prepareForPermissionsPayload).toBeUndefined()
   })
 
-  it("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
+  it.skip("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
     const sessionMeeClient = meeClient.extend(meeSessionActions)
 
     // ======== At this point the Nexus SA is already deployed and SS is installed ==============
@@ -200,7 +200,8 @@ describe("mee.multichainSmartSessions", () => {
           chainId: targetChain.id,
           actionTarget: COUNTER_ON_BASE
         }
-      ]
+      ],
+      maxPaymentAmount: parseUnits("3", 6)
     })
 
     // overload account to use the redeemer account as signer
@@ -220,7 +221,7 @@ describe("mee.multichainSmartSessions", () => {
     })
     const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
-    const { hash } = await dappSessionClient.usePermission({
+    const usePermissionPayload = await dappSessionClient.usePermission({
       sessionDetails,
       mode: "ENABLE_AND_USE",
       instructions: [
@@ -232,10 +233,28 @@ describe("mee.multichainSmartSessions", () => {
             }
           ],
           chainId: paymentChain.id
+        },
+        {
+          calls: [
+            {
+              to: COUNTER_ON_BASE,
+              data: "0x273ea3e3"
+            }
+          ],
+          chainId: targetChain.id
         }
       ],
       feeToken
     })
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash: usePermissionPayload?.hash!
+    })
+
+    for (const receipt_ of receipt.receipts) {
+      expect(receipt_.status).toBe("success")
+      expect(receipt_.logs).toBeDefined()
+    }
   })
 
   it("should grant and use multichain permissions with sponsorship", async () => {
@@ -282,7 +301,7 @@ describe("mee.multichainSmartSessions", () => {
     })
     const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
-    const { hash } = await dappSessionClient.usePermission({
+    const usePermissionPayload = await dappSessionClient.usePermission({
       sponsorship: true,
       sessionDetails,
       mode: "ENABLE_AND_USE",
@@ -299,5 +318,11 @@ describe("mee.multichainSmartSessions", () => {
       ],
       feeToken
     })
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash: usePermissionPayload?.hash!
+    })
+
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })

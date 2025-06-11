@@ -1,12 +1,13 @@
 import type { Address, Prettify } from "viem"
-import type { MultichainAddressMapping } from "../../../../../account/decorators/buildBridgeInstructions"
+import { http, createPublicClient, erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   type ActionData,
   MEE_VALIDATOR_ADDRESS,
-  getSudoPolicy
+  getSpendingLimitsPolicy
 } from "../../../../../constants"
+
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantPermissionResponse,
@@ -26,7 +27,9 @@ export type GrantMeePermissionParams<
   MultichainActionData & {
     /** Granter Address */
     redeemer: Address
-  } & { account?: TModularSmartAccount } & { feeToken?: FeeTokenInfo }
+  } & { account?: TModularSmartAccount } & { feeToken?: FeeTokenInfo } & {
+    maxPaymentAmount?: bigint
+  }
 >
 export type GrantMeePermissionPayload = GrantPermissionResponse[]
 
@@ -51,10 +54,35 @@ export const grantMeePermission = async <
   {
     redeemer,
     actions,
-    feeToken
+    feeToken,
+    maxPaymentAmount
   }: GrantMeePermissionParams<TModularSmartAccount>
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
+
+  // make some reliable maxPaymentAmount
+  if (feeToken && !maxPaymentAmount) {
+    //find chain for feeToken
+    const chain = baseMeeClient.account.deployments.find(
+      (deployment) => deployment.client.chain?.id === feeToken?.chainId
+    )?.client.chain
+
+    const publicClient = createPublicClient({
+      chain,
+      transport: http(chain!.rpcUrls.default[0])
+    })
+
+    // get decimals of the fee token
+    const decimals = await publicClient.readContract({
+      address: feeToken.address,
+      abi: erc20Abi,
+      functionName: "decimals"
+    })
+
+    // set proper maxPaymentAmount with proper decimals
+    maxPaymentAmount = parseUnits("5", decimals)
+  }
+
   const sessionDetails = await Promise.all(
     actions.map((action) => {
       const chainId = action.chainId
@@ -70,7 +98,9 @@ export const grantMeePermission = async <
           ? {
               actionTarget: feeToken.address,
               actionTargetSelector: "0xa9059cbb" as Address, // transfer
-              actionPolicies: [getSudoPolicy()]
+              actionPolicies: [
+                getPolicyForPayment(maxPaymentAmount!, feeToken.address)
+              ]
             }
           : undefined
 
@@ -88,4 +118,8 @@ export const grantMeePermission = async <
     })
   )
   return sessionDetails
+}
+
+const getPolicyForPayment = (maxPaymentAmount: bigint, token: Address) => {
+  return getSpendingLimitsPolicy([{ limit: maxPaymentAmount, token }])
 }
