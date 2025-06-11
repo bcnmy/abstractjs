@@ -30,6 +30,20 @@ export type GrantMeePermissionParams<
 >
 export type GrantMeePermissionPayload = GrantPermissionResponse[]
 
+/**
+ * Grants a permission to the redeemer for the actions
+ * Automatically adds the payment action policy if a fee token is provided
+ * If the superTxn is sponsored, the payment action policy is not added
+ * as it is not needed for the sponsored mode
+ * If the superTxn is not sponsored, the payment action policy is added
+ * 
+ * Attention: actions for the cleanup userOps are not added automatically
+ * and should be provided explicitly in the actions array
+ * 
+ * @param baseMeeClient - The base MeeClient
+ * @param params - The parameters for the grantMeePermission function
+ * @returns The session details
+ */
 export const grantMeePermission = async <
   TModularSmartAccount extends ModularSmartAccount | undefined
 >(

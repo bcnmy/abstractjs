@@ -38,7 +38,6 @@ export const useMeePermission = async (
     sponsorshipOptions
   } = parameters
   const meeClient = meeClient_ as MeeClient
-  // const mcAccount = meeClient.account
 
   const mode =
     mode_ === "ENABLE_AND_USE"
