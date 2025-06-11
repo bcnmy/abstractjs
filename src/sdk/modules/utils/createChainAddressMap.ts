@@ -1,5 +1,5 @@
 import type { Address } from "viem"
-import { type AnyData } from "./Types"
+import type { AnyData } from "./Types"
 
 /**
  * Creates a type-safe mapping from chain IDs to addresses with runtime safety utilities
@@ -11,7 +11,7 @@ export function createChainAddressMap<
 >(
   entries: T
 ): {
-  readonly [K in T[number][0]]: Extract<T[number], readonly [K, any]>[1]
+  readonly [K in T[number][0]]: Extract<T[number], readonly [K, AnyData]>[1]
 } & {
   get(chainId: number): Address | undefined
   has(chainId: number): boolean
