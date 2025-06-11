@@ -7,7 +7,7 @@ import {
   runtimeERC20AllowanceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { type GetQuotePayload, getQuote } from "./getQuote"
+import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
@@ -83,6 +83,7 @@ export const getOnChainQuote = async (
     trigger,
     cleanUps,
     instructions,
+    gasLimit,
     sponsorship,
     ...rest
   } = parameters
@@ -128,6 +129,10 @@ export const getOnChainQuote = async (
       })
     : triggerAmount
 
+  const triggerGasLimit = trigger.gasLimit
+    ? trigger.gasLimit
+    : DEFAULT_GAS_LIMIT
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
@@ -136,7 +141,7 @@ export const getOnChainQuote = async (
       amount: transferFromAmount,
       recipient,
       sender,
-      gasLimit: 50_000n
+      gasLimit: triggerGasLimit
     }
   }
 
@@ -153,6 +158,7 @@ export const getOnChainQuote = async (
     path: "quote-permit", // Use different endpoint for onchain quotes
     eoa: account_.signer.address,
     instructions: batchedInstructions,
+    gasLimit: gasLimit || triggerGasLimit,
     sponsorship,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
@@ -176,7 +182,8 @@ export const getOnChainQuote = async (
     trigger: {
       tokenAddress: trigger.tokenAddress,
       chainId: trigger.chainId,
-      amount
+      amount,
+      gasLimit: triggerGasLimit
     }
   }
 }

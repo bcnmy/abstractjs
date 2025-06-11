@@ -11,6 +11,7 @@ import {
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
+  DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
   type Trigger,
@@ -20,8 +21,8 @@ import {
   waitForSupertransactionReceipt
 } from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testUtils"
-import { getBalance } from "../../../../test/testUtils"
+import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
@@ -143,6 +144,93 @@ describe("mee.getPermitQuote", () => {
     expect(fusionQuote.quote).toBeDefined()
     expect(fusionQuote.trigger).toBeDefined()
     expect([3, 4].includes(fusionQuote.quote.userOps.length)).toBe(true) // 3 or 4 depending on if bridging is needed
+  })
+
+  test("should trigger have a default gas limit as 75K gas", async () => {
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    const transfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress,
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+    expect(fusionQuote.trigger.gasLimit).toBe(DEFAULT_GAS_LIMIT)
+
+    expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
+      DEFAULT_GAS_LIMIT.toString()
+    )
+
+    const gasLimit = transfer[0].calls.reduce((acc, call) => {
+      const gas = call?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
+      return gas + acc
+    }, 0n)
+
+    expect(fusionQuote.quote.userOps[1]).toBeDefined()
+    expect(fusionQuote.quote.userOps[1].userOp.callGasLimit).to.eq(
+      (DEFAULT_GAS_LIMIT + gasLimit).toString()
+    )
+  })
+
+  test("should trigger have a custom gas limit", async () => {
+    const customGasLimit = 100_000n
+
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n,
+      gasLimit: customGasLimit
+    }
+
+    const transfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress,
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+    expect(fusionQuote.trigger.gasLimit).toBe(customGasLimit)
+
+    expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
+      customGasLimit.toString()
+    )
+
+    const gasLimit = transfer[0].calls.reduce((acc, call) => {
+      const gas = call?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
+      return gas + acc
+    }, 0n)
+
+    expect(fusionQuote.quote.userOps[1]).toBeDefined()
+    expect(fusionQuote.quote.userOps[1].userOp.callGasLimit).to.eq(
+      (customGasLimit + gasLimit).toString()
+    )
   })
 
   test("should reserve gas fees when using max available amount", async () => {
