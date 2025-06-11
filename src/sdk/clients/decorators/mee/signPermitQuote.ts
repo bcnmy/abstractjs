@@ -33,6 +33,10 @@ export type Trigger = {
    */
   amount?: bigint
   /**
+   * custom gas limit can be added to override the default 50_000 gas limit
+   */
+  gasLimit?: bigint
+  /**
    * Whether to use max available funds from the EOA wallet to be pulled into SCA after fee deduction.
    * default is false
    */

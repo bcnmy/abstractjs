@@ -1005,6 +1005,285 @@ describe.runIf(runPaidTests).skip("mee.buildComposable", () => {
     expect(nexusUSDCBalance).to.eq(0n)
   })
 
+  it("should execute composable cleanup for composable call", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.08", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const transferFundsInstructions: Instruction[] =
+      await mcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: runtimeTransferAddress,
+          abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+          functionName: "transferFunds",
+          args: [
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress: testnetMcUSDC.addressOn(chain.id)
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction, ...transferFundsInstructions],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      if (userOp.isCleanUpUserOp) {
+        expect(userOp.executionStatus).to.be.oneOf([
+          "MINED_FAIL",
+          "PENDING",
+          "MINING",
+          "MINED_SUCCESS"
+        ])
+      } else {
+        expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+      }
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should execute composable cleanup for non composable call", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.08", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      if (userOp.isCleanUpUserOp) {
+        expect(userOp.executionStatus).to.be.oneOf([
+          "MINED_FAIL",
+          "PENDING",
+          "MINING",
+          "MINED_SUCCESS"
+        ])
+      } else {
+        expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+      }
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should composable cleanup fail for no dust/funds", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.1", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    // payment userops
+    expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
+
+    // actual dev defined userops
+    expect(userOps[1].executionStatus).to.be.eq("MINED_SUCCESS")
+
+    // cleanup userops - SDK doesn't wait for cleanup userOp status
+    expect(userOps[2].executionStatus).to.be.oneOf([
+      "MINED_FAIL",
+      "PENDING",
+      "MINING",
+      "MINED_SUCCESS"
+    ])
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should composable cleanup execute when main userops fails", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("1", 6)
+
+    const tx = await mcNexus
+      .deploymentOn(chain.id)
+      ?.walletClient.writeContract({
+        address: testnetMcUSDC.addressOn(chain.id),
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [mcNexus.addressOn(chain.id, true), amountToSupply],
+        chain
+      })
+
+    await waitForTransactionReceipt(publicClient, {
+      hash: tx as Hex,
+      confirmations: 2
+    })
+
+    const transferInstruction = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      cleanUps: [
+        {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address
+        }
+      ],
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const { hash } = await meeClient.executeQuote({
+      quote: quote
+    })
+
+    console.log(getMeeScanLink(hash))
+
+    try {
+      const { transactionStatus, explorerLinks, userOps } =
+        await meeClient.waitForSupertransactionReceipt({ hash })
+
+      expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+      // payment userops
+      expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
+
+      // actual dev defined userops
+      expect(userOps[1].executionStatus).to.be.eq("MINED_FAIL")
+
+      // cleanup userops - SDK doesn't wait for cleanup userOp status
+      expect(userOps[2].executionStatus).to.be.oneOf([
+        "MINED_FAIL",
+        "PENDING",
+        "MINING",
+        "MINED_SUCCESS"
+      ])
+
+      console.log({ explorerLinks, hash })
+    } catch (error) {
+      // UserOp one always reverts
+      expect(error.message).to.be.eq("[1] UserOperation reverted")
+    }
+  })
+
   it("should multiple composable cleanup execute", async () => {
     const amountToSupply = parseUnits("0.1", 6)
     const amountToTransfer = parseUnits("0.06", 6)
