@@ -72,7 +72,7 @@ describe("mee.multichainSmartSessions", () => {
 
     const transferToNexusTrigger = {
       tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Base chain
-      amount: parseUnits("0.02", 6), // 0.02 usdc => so Nexus is able to pay for the next SuperTxn
+      amount: parseUnits("0.07", 6), // 0.07 usdc => so Nexus is able to pay for the next SuperTxns
       chainId: paymentChain.id // Which chain this trigger executes on
     }
 
@@ -167,7 +167,7 @@ describe("mee.multichainSmartSessions", () => {
     expect(prepareForPermissionsPayload).toBeUndefined()
   })
 
-  it.skip("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
+  it("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
     const sessionMeeClient = meeClient.extend(meeSessionActions)
 
     // ======== At this point the Nexus SA is already deployed and SS is installed ==============

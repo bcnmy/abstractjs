@@ -494,13 +494,11 @@ export const getQuote = async (
   }
 
   const hasProcessedInitData: string[] = []
-  const paymentVerificationGasLimit = moduleAddress
-    ? resolveVerificationGasLimit({
-        moduleAddress,
-        sponsorship,
-        isPaymentUserOp: true
-      })
-    : undefined
+  const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
+    moduleAddress,
+    sponsorship
+  })
+
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
     client,
     {
@@ -536,24 +534,26 @@ export const getQuote = async (
   }
 
   // complete the userOps including cleanup ones
+  const indexPerChainId = new Map<string, number>()
   const userOps = await Promise.all(
     preparedUserOps.map(
-      async (
-        [
-          callData,
-          { nonce },
-          isAccountDeployed,
-          initCode,
-          sender,
-          callGasLimit,
-          chainId,
-          isCleanUpUserOp,
-          nexusAccount,
-          shortEncoding
-        ],
-        index
-      ) => {
+      async ([
+        callData,
+        { nonce },
+        isAccountDeployed,
+        initCode,
+        sender,
+        callGasLimit,
+        chainId,
+        isCleanUpUserOp,
+        nexusAccount,
+        shortEncoding
+      ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
+        if (!indexPerChainId.has(chainId)) {
+          indexPerChainId.set(chainId, 0)
+        }
+
         const shouldContainInitData =
           !hasProcessedInitData.includes(chainId) && !isAccountDeployed
 
@@ -566,14 +566,15 @@ export const getQuote = async (
             : { initCode }
         }
 
-        const verificationGasLimit = moduleAddress
-          ? resolveVerificationGasLimit({
-              moduleAddress,
-              sponsorship,
-              isPaymentUserOp: false,
-              index
-            })
-          : undefined
+        const verificationGasLimit = resolveVerificationGasLimit({
+          moduleAddress,
+          sponsorship,
+          index: indexPerChainId.get(chainId)!,
+          paymentChainId: paymentInfo.chainId,
+          currentChainId: chainId
+        })
+
+        indexPerChainId.set(chainId, indexPerChainId.get(chainId)! + 1)
 
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
@@ -598,64 +599,6 @@ export const getQuote = async (
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
-}
-
-/**
- * Parameters for the resolveVerificationGasLimit function
- * @param moduleAddress - The address of the module
- * @param index - The index of the userOp during the userOps completion process
- * @param sponsorship - Whether the superTxn is sponsored
- */
-export type resolveVerificationGasLimitParams = {
-  moduleAddress: Address
-  sponsorship: boolean
-} & OneOf<
-  | {
-      isPaymentUserOp: true
-    }
-  | {
-      isPaymentUserOp: false
-      index: number
-    }
->
-
-/**
- * Returns the verification gas limit for the userOp, to be spread
- */
-export type resolveVerificationGasLimitPayload = {
-  verificationGasLimit: string
-}
-
-/**
- * Returns the verification gas limit for the userOp or paymentInfo
- * @param parameters - The parameters for the resolveVerificationGasLimit function
- * @returns The verification gas limit for the userOp/paymentInfo
- * returns undefined if there's no special gas limit required for a given case
- * 'undefined' means the node will apply the default verification gas limit
- */
-const resolveVerificationGasLimit = (
-  parameters: resolveVerificationGasLimitParams
-): resolveVerificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship } = parameters
-
-  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
-    if ("isPaymentUserOp" in parameters && parameters.isPaymentUserOp) {
-      if (!sponsorship) {
-        // return increased verification gas limit for payment userOp
-        // in a non-sponsored superTxn
-        return { verificationGasLimit: "1000000" }
-      }
-      // undefined will be returned for payment userOp in a sponsored superTxn
-      // and node will apply the default verification gas limit
-    } else {
-      // for non payment userOps
-      if (sponsorship && "index" in parameters && parameters.index === 0) {
-        // return increased verification gas limit for the first non-payment userOp
-        // as it this userOp will be enabling the permission => requires more gas
-        return { verificationGasLimit: "1000000" }
-      }
-    }
-  }
 }
 
 const preparePaymentInfo = async (
@@ -964,5 +907,133 @@ const prepareCleanUpUserOps = async (
 
   return cleanUpUserOps
 }
+
+// ============ resolve verification gas limit functions ============
+/**
+ * Parameters for the resolveVerificationGasLimit function
+ * @param moduleAddress - The address of the module
+ * @param index - The index of the userOp during the userOps completion process
+ * @param sponsorship - Whether the superTxn is sponsored
+ */
+export type resolveVerificationGasLimitParams = {
+  moduleAddress?: Address
+  sponsorship: boolean
+  index: number
+}
+
+/**
+ * Returns the verification gas limit for the userOp, to be spread
+ */
+export type verificationGasLimitPayload = {
+  verificationGasLimit: string
+}
+
+/**
+ * Returns the verification gas limit for the userOp
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the userOp/paymentInfo
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolveVerificationGasLimit = (
+  parameters: resolveVerificationGasLimitParams & {
+    paymentChainId: string
+    currentChainId: string
+  }
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, sponsorship, index, paymentChainId, currentChainId } =
+    parameters
+  if (currentChainId === paymentChainId) {
+    return resolveVerificationGasLimitForPaymentChain({
+      moduleAddress,
+      sponsorship,
+      index
+    })
+  }
+  return resolveVerificationGasLimitForNonPaymentChain({ moduleAddress, index })
+}
+
+/**
+ * Returns the verification gas limit for the userOp on the payment chain
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the userOp
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolveVerificationGasLimitForPaymentChain = (
+  parameters: resolveVerificationGasLimitParams
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, sponsorship, index } = parameters
+  // if module address is not provided, the default verification gas limit will be applied
+  if (!moduleAddress) {
+    return undefined
+  }
+  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    if (sponsorship) {
+      if (index === 0) {
+        // return increased verification gas limit for the first userOp
+        // as it this userOp will be enabling the permission => requires more gas
+        return { verificationGasLimit: "1000000" }
+      }
+    }
+    // return slighly increased verification gas limit
+    // for USE session userOps
+    return { verificationGasLimit: "250000" }
+  }
+}
+
+/**
+ * Returns the verification gas limit for the userOp on a non-payment chain
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the userOp
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolveVerificationGasLimitForNonPaymentChain = (
+  parameters: Omit<resolveVerificationGasLimitParams, "sponsorship">
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, index } = parameters
+  // if module address is not provided, the default verification gas limit will be applied
+  if (!moduleAddress) {
+    return undefined
+  }
+  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    if (index === 0) {
+      // return increased verification gas limit for payment userOp
+      // in a non-sponsored superTxn
+      return { verificationGasLimit: "1000000" }
+    }
+    // for all other userOps, return USE session verification gas limit
+    return { verificationGasLimit: "250000" }
+  }
+}
+
+/**
+ * Returns the verification gas limit for the payment userOp
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the payment userOp
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolvePaymentUserOpVerificationGasLimit = (
+  parameters: Omit<resolveVerificationGasLimitParams, "index">
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, sponsorship } = parameters
+  // if module address is not provided, the default verification gas limit will be applied
+  if (!moduleAddress) {
+    return undefined
+  }
+  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    if (!sponsorship) {
+      // return increased verification gas limit for payment userOp
+      // in a non-sponsored superTxn
+      return { verificationGasLimit: "1000000" }
+    }
+    // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
+    // so doesn't need any custom verification gas limit
+  }
+}
+
+// ====================================================
 
 export default getQuote
