@@ -18,6 +18,7 @@ import {
   toBytes,
   zeroAddress
 } from "viem"
+import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
@@ -27,26 +28,20 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
-import {
-  userOp
-} from "../../../clients/decorators/mee"
+import { userOp } from "../../../clients/decorators/mee"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
 import {
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
 } from "../../../constants"
 import { testnetMcUSDC } from "../../../constants/tokens"
-import {
-  greaterThanOrEqualTo,
-  runtimeERC20BalanceOf,
-} from "../../../modules"
+import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
-import { waitForTransactionReceipt } from "viem/actions"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
