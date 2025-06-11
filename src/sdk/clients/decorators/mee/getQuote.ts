@@ -475,13 +475,6 @@ export const getQuote = async (
     sponsorship = false
   } = parameters
 
-  const increasedVerificationGasLimit = addressEquals(
-    moduleAddress,
-    SMART_SESSIONS_ADDRESS
-  )
-    ? { verificationGasLimit: "1000000" }
-    : undefined
-
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const validUserOps = resolvedInstructions.every(

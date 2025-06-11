@@ -53,6 +53,11 @@ export const useMeePermission = async (
     sponsorshipOptions
   })
 
+  console.log("quote", quote)
+  for (const userOp of quote.userOps) {
+    console.log("userOp", userOp)
+  }
+
   const signedQuote = await meeClient.signQuote({ quote })
 
   const modeMap = signedQuote.userOps.reduce(
