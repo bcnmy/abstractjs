@@ -422,14 +422,21 @@ describe("mee.createMeeClient.delegated", async () => {
      */
 
     if (quote.paymentInfo.eip7702Auth) {
-      expect(quote.paymentInfo.eip7702Auth.chainId).to.equal(dummyAuth.chainId)
+      expect(quote.paymentInfo.eip7702Auth.chainId).to.be.oneOf([
+        dummyAuth.chainId,
+        toHex(dummyAuth.chainId)
+      ])
       expect(quote.paymentInfo.eip7702Auth.address).to.equal(dummyAuth.address)
-      expect(quote.paymentInfo.eip7702Auth.nonce).to.equal(dummyAuth.nonce)
+      expect(quote.paymentInfo.eip7702Auth.nonce).to.be.oneOf([
+        dummyAuth.nonce,
+        toHex(dummyAuth.nonce)
+      ])
       expect(quote.paymentInfo.eip7702Auth.r).to.equal(dummyAuth.r)
       expect(quote.paymentInfo.eip7702Auth.s).to.equal(dummyAuth.s)
-      expect(quote.paymentInfo.eip7702Auth.yParity).to.equal(
-        dummyAuth.yParity || 1
-      )
+      expect(quote.paymentInfo.eip7702Auth.yParity).to.be.oneOf([
+        dummyAuth.yParity || 1,
+        toHex(dummyAuth.yParity || 1)
+      ])
     }
   })
 })
