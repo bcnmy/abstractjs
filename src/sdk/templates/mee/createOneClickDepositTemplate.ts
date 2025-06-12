@@ -50,6 +50,28 @@ type OneClickDepositTemplate = {
  * @param params.bridgeInstructions - The instructions for the bridge
  * @param params.destChainInstructions - The instructions for the destination chain
  * @returns A function that returns the instructions for the template
+ *
+ * @example
+ *  const morphoToAave = createOneClickDepositTemplate({
+ *   sourceChainInstructions: async ({ chain, amount }) => {
+ *     ...
+ *   },
+ *   bridgeInstructions: async ({ sourceChain, destChain, amount }) => {
+ *     ...
+ *   },
+ *   destChainInstructions: async ({ chain, amount }) => {
+ *     ...
+ *   }
+ * })
+ * const instructions = await morphoToAave({
+ *   sourceChain: paymentChain,
+ *   destChain: targetChain,
+ *   amount: amountConsumed
+ * })
+ * const fusionQuote = await meeClient.getFusionQuote({
+ *   instructions,
+ *   ...
+ * })
  */
 export const createOneClickDepositTemplate = (
   params: OneClickDepositTemplate

@@ -149,7 +149,8 @@ describe("createOneClickDepositTemplate", () => {
       amount: parseUnits("1", 6)
     })
     expect(sourceInstructions).toHaveBeenCalledWith({
-      chain: sourceChain
+      chain: sourceChain,
+      amount: parseUnits("1", 6)
     })
     expect(bridgeInstructions).toHaveBeenCalledWith({
       sourceChain,
@@ -157,7 +158,8 @@ describe("createOneClickDepositTemplate", () => {
       amount: parseUnits("1", 6)
     })
     expect(destinationInstructions).toHaveBeenCalledWith({
-      chain: destinationChain
+      chain: destinationChain,
+      amount: parseUnits("1", 6)
     })
   })
 })
