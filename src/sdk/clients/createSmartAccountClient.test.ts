@@ -305,6 +305,9 @@ describe("nexus.client", async () => {
       mock: true
     })
 
+    //fund the account
+    await topUp(testClient, ethersAccount.address, parseEther("0.1"))
+
     const hash = await ethersNexusClient.sendUserOperation({
       calls: [
         {

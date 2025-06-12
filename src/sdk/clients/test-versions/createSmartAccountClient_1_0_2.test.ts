@@ -31,12 +31,12 @@ import {
   makeInstallDataAndHash
 } from "../../account/utils/Utils"
 import { getChain } from "../../account/utils/getChain"
+import { toSigner } from "../../account/utils/toSigner"
 import { toMeeK1Module } from "../../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../createBicoBundlerClient"
-import { toSigner } from "../../account/utils/toSigner"
 
 describe("nexus.client.1.0.2", async () => {
   let network_1_0_2: NetworkConfig
@@ -116,13 +116,18 @@ describe("nexus.client.1.0.2", async () => {
     await killNetwork([network_1_0_2?.rpcPort, network_1_0_2?.bundlerPort])
   })
 
+  test("should fund the smart account", async () => {
+    for (const [, accountAddress] of clientToAddress.entries()) {
+      await topUp(testClient_1_0_2, accountAddress, parseEther("1"))
+      const balance = await getBalance(testClient_1_0_2, accountAddress)
+      expect(balance > 0)
+    }
+  })
+
   test("should deploy Nexus 1.0.2 smart account if not deployed", async () => {
     for (const [client, accountAddress] of clientToAddress.entries()) {
       const isDeployed = await client.account.isDeployed()
       if (!isDeployed) {
-        // Fund the account first
-        await topUp(testClient_1_0_2, accountAddress, parseEther("0.1"))
-
         const hash = await client.sendTransaction({
           calls: [
             {
@@ -149,16 +154,8 @@ describe("nexus.client.1.0.2", async () => {
     }
   })
 
-  test("should fund the smart account", async () => {
-    for (const [, accountAddress] of clientToAddress.entries()) {
-      await topUp(testClient_1_0_2, accountAddress, parseEther("0.01"))
-      const balance = await getBalance(testClient_1_0_2, accountAddress)
-      expect(balance > 0)
-    }
-  })
-
   test("should have account addresses", async () => {
-    for (const [client, ] of clientToAddress.entries()) {
+    for (const [client] of clientToAddress.entries()) {
       const addresses = await Promise.all([
         eoaAccount.address,
         client.account.getAddress()
@@ -169,7 +166,7 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should estimate gas for writing to a contract", async () => {
-    for (const [client, ] of clientToAddress.entries()) {
+    for (const [client] of clientToAddress.entries()) {
       const encodedCall = encodeFunctionData({
         abi: CounterAbi,
         functionName: "incrementNumber"
@@ -227,9 +224,9 @@ describe("nexus.client.1.0.2", async () => {
       })
 
       const estimatedGas = await client.estimateUserOperationGas(userOp)
-        expect(estimatedGas.verificationGasLimit).toBeTruthy()
-        expect(estimatedGas.callGasLimit).toBeTruthy()
-        expect(estimatedGas.preVerificationGas).toBeTruthy()
+      expect(estimatedGas.verificationGasLimit).toBeTruthy()
+      expect(estimatedGas.callGasLimit).toBeTruthy()
+      expect(estimatedGas.preVerificationGas).toBeTruthy()
     }
   }, 30000)
 
@@ -305,106 +302,140 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should compare signatures of viem and ethers signer", async () => {
-    
-      const viemSigner = privateKeyToAccount(privKey_1_0_2)
-      const wallet = new Wallet(privKey_1_0_2)
-
-      const ethersAccount = await toNexusAccount({
-        signer: wallet as EthersWallet,
-        chain: chain_1_0_2,
-        transport: http(),
-        useK1Config: true,
-        nexusVersion: "1.0.2"
-      })
-
-      const ethersNexusClient = createSmartAccountClient({
-        bundlerUrl: bundlerUrl_1_0_2,
-        account: ethersAccount,
-        mock: true
-      })
-
-      const ethersAccount2 = await toNexusAccount({
-        signer: wallet as EthersWallet,
-        chain: chain_1_0_2,
-        transport: http(),
-        useK1Config: false,
-        nexusVersion: "1.0.2",
-        validators: [
-          toMeeK1Module({ signer: await toSigner({signer: wallet as EthersWallet}), module: MEE_VALIDATOR_ADDRESS })
-        ]
-      })
-
-      const ethersNexusClient2 = createSmartAccountClient({
-        bundlerUrl: bundlerUrl_1_0_2,
-        account: ethersAccount2,
-        mock: true
-      }) 
-
-      const sig1 = await nexusClient_1_0_2_with_k1.signMessage({ message: "123" })
-      const sig2 = await nexusClient_1_0_2_custom_validator.signMessage({ message: "123" })
-      const sig3 = await ethersNexusClient.signMessage({ message: "123" })
-      const sig4 = await ethersNexusClient2.signMessage({ message: "123" })
-
-      expect(sig1).toBe(sig3)
-      expect(sig2).toBe(sig4)
-  })
-
-  test.skip("should send user operation using ethers Wallet", async () => {
-    const ethersWallet = new ethers.Wallet(privKey)
+    const viemSigner = privateKeyToAccount(privKey_1_0_2)
+    const wallet = new Wallet(privKey_1_0_2)
 
     const ethersAccount = await toNexusAccount({
-      signer: ethersWallet as EthersWallet,
-      chain,
-      transport: http()
+      signer: wallet as EthersWallet,
+      chain: chain_1_0_2,
+      transport: http(),
+      useK1Config: true,
+      nexusVersion: "1.0.2"
     })
 
     const ethersNexusClient = createSmartAccountClient({
-      bundlerUrl,
+      bundlerUrl: bundlerUrl_1_0_2,
       account: ethersAccount,
       mock: true
     })
 
-    const hash = await ethersNexusClient.sendUserOperation({
-      calls: [
-        {
-          to: recipientAddress,
-          data: "0x"
-          // todo: add value?
-        }
+    const ethersAccount2 = await toNexusAccount({
+      signer: wallet as EthersWallet,
+      chain: chain_1_0_2,
+      transport: http(),
+      useK1Config: false,
+      nexusVersion: "1.0.2",
+      validators: [
+        toMeeK1Module({
+          signer: await toSigner({ signer: wallet as EthersWallet }),
+          module: MEE_VALIDATOR_ADDRESS
+        })
       ]
     })
-    const receipt = await ethersNexusClient.waitForUserOperationReceipt({
-      hash
+
+    const ethersNexusClient2 = createSmartAccountClient({
+      bundlerUrl: bundlerUrl_1_0_2,
+      account: ethersAccount2,
+      mock: true
     })
-    expect(receipt.success).toBe(true)
+
+    const sig1 = await nexusClient_1_0_2_with_k1.signMessage({ message: "123" })
+    const sig2 = await nexusClient_1_0_2_custom_validator.signMessage({
+      message: "123"
+    })
+    const sig3 = await ethersNexusClient.signMessage({ message: "123" })
+    const sig4 = await ethersNexusClient2.signMessage({ message: "123" })
+
+    expect(sig1).toBe(sig3)
+    expect(sig2).toBe(sig4)
   })
 
-  test.skip("should send sequential user ops", async () => {
-    const start = performance.now()
-    const receipts: UserOperationReceipt[] = []
-    for (let i = 0; i < 3; i++) {
-      const hash = await nexusClient.sendUserOperation({
+  test("should send user operation using ethers Wallet", async () => {
+    const ethersWallet = new ethers.Wallet(privKey_1_0_2)
+
+    const ethersAccount = await toNexusAccount({
+      signer: ethersWallet as EthersWallet,
+      chain: chain_1_0_2,
+      transport: http(),
+      useK1Config: true,
+      nexusVersion: "1.0.2"
+    })
+
+    const ethersNexusClient = createSmartAccountClient({
+      bundlerUrl: bundlerUrl_1_0_2,
+      account: ethersAccount,
+      mock: true
+    })
+
+    const etherAccountCustomValidator = await toNexusAccount({
+      signer: ethersWallet as EthersWallet,
+      chain: chain_1_0_2,
+      transport: http(),
+      useK1Config: false,
+      nexusVersion: "1.0.2",
+      validators: [
+        toMeeK1Module({
+          signer: await toSigner({ signer: ethersWallet as EthersWallet }),
+          module: MEE_VALIDATOR_ADDRESS
+        })
+      ]
+    })
+
+    const ethersNexusClient2 = createSmartAccountClient({
+      bundlerUrl: bundlerUrl_1_0_2,
+      account: etherAccountCustomValidator,
+      mock: true
+    })
+
+    //fund the account
+    await topUp(testClient_1_0_2, ethersAccount.address, parseEther("0.1"))
+    await topUp(
+      testClient_1_0_2,
+      etherAccountCustomValidator.address,
+      parseEther("0.1")
+    )
+
+    const clients = [ethersNexusClient, ethersNexusClient2]
+
+    for (const client of clients) {
+      const hash = await client.sendUserOperation({
         calls: [
           {
             to: recipientAddress,
+            data: "0x",
             value: 1n
           }
         ]
       })
-      const receipt = await nexusClient.waitForUserOperationReceipt({ hash })
-      receipts.push(receipt)
+      const receipt = await ethersNexusClient.waitForUserOperationReceipt({
+        hash
+      })
+      expect(receipt.success).toBe(true)
     }
-    expect(receipts.every((receipt) => receipt.success)).toBeTruthy()
-    const end = performance.now()
-    Logger.log(`Time taken: ${end - start} milliseconds`)
   })
 
-  test.skip("should send parallel user ops", async () => {
-    const start = performance.now()
-    const userOpPromises: Promise<`0x${string}`>[] = []
-    for (let i = 0; i < 3; i++) {
-      userOpPromises.push(
-        nexusClient.sendUserOperation({
+  test("should send a single user operation", async () => {
+    for (const [client] of clientToAddress.entries()) {
+      const hash = await client.sendUserOperation({
+        calls: [
+          {
+            to: recipientAddress,
+            data: "0x",
+            value: 1n
+          }
+        ]
+      })
+      const receipt = await client.waitForUserOperationReceipt({ hash })
+      expect(receipt.success).toBe(true)
+    }
+  })
+
+  test("should send sequential user ops", async () => {
+    for (const [client] of clientToAddress.entries()) {
+      const start = performance.now()
+      const receipts: UserOperationReceipt[] = []
+      for (let i = 0; i < 3; i++) {
+        const hash = await client.sendUserOperation({
           calls: [
             {
               to: recipientAddress,
@@ -412,15 +443,39 @@ describe("nexus.client.1.0.2", async () => {
             }
           ]
         })
-      )
+        const receipt = await client.waitForUserOperationReceipt({ hash })
+        receipts.push(receipt)
+      }
+      expect(receipts.every((receipt) => receipt.success)).toBeTruthy()
+      const end = performance.now()
+      Logger.log(`Time taken: ${end - start} milliseconds`)
     }
-    const hashes = await Promise.all(userOpPromises)
-    expect(hashes.length).toBe(3)
-    const receipts = await Promise.all(
-      hashes.map((hash) => nexusClient.waitForUserOperationReceipt({ hash }))
-    )
-    expect(receipts.every((receipt) => receipt.success)).toBeTruthy()
-    const end = performance.now()
-    Logger.log(`Time taken: ${end - start} milliseconds`)
+  })
+
+  test("should send parallel user ops", async () => {
+    for (const [client] of clientToAddress.entries()) {
+      const start = performance.now()
+      const userOpPromises: Promise<`0x${string}`>[] = []
+      for (let i = 0; i < 3; i++) {
+        userOpPromises.push(
+          client.sendUserOperation({
+            calls: [
+              {
+                to: recipientAddress,
+                value: 1n
+              }
+            ]
+          })
+        )
+      }
+      const hashes = await Promise.all(userOpPromises)
+      expect(hashes.length).toBe(3)
+      const receipts = await Promise.all(
+        hashes.map((hash) => client.waitForUserOperationReceipt({ hash }))
+      )
+      expect(receipts.every((receipt) => receipt.success)).toBeTruthy()
+      const end = performance.now()
+      Logger.log(`Time taken: ${end - start} milliseconds`)
+    }
   })
 })
