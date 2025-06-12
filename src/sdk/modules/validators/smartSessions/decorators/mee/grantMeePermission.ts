@@ -1,5 +1,5 @@
 import type { Address, Prettify, PublicClient } from "viem"
-import { http, createPublicClient, erc20Abi, parseUnits } from "viem"
+import { erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {

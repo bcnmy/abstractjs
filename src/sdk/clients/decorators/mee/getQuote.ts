@@ -980,6 +980,7 @@ const resolveVerificationGasLimitForPaymentChain = (
     // for USE session userOps
     return { verificationGasLimit: "250000" }
   }
+  return undefined
 }
 
 /**
@@ -1006,6 +1007,7 @@ const resolveVerificationGasLimitForNonPaymentChain = (
     // for all other userOps, return USE session verification gas limit
     return { verificationGasLimit: "250000" }
   }
+  return undefined
 }
 
 /**
@@ -1032,6 +1034,7 @@ const resolvePaymentUserOpVerificationGasLimit = (
     // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
     // so doesn't need any custom verification gas limit
   }
+  return undefined
 }
 
 // ====================================================

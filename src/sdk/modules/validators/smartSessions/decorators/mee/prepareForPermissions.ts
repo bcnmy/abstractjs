@@ -34,10 +34,7 @@ export type PrepareForPermissionsParams = Omit<
 /**
  * Returns undefined if there was no need to prepare the superTx
  */
-export type PrepareForPermissionsPayload =
-  | ExecuteSignedQuotePayload
-  | ExecuteSignedQuotePayload
-  | undefined
+export type PrepareForPermissionsPayload = ExecuteSignedQuotePayload | undefined
 
 export const prepareForPermissions = async (
   client: BaseMeeClient,
@@ -91,6 +88,7 @@ export const prepareForPermissions = async (
           }
         )
       }
+      return undefined
     })
   )
 
@@ -145,4 +143,5 @@ export const prepareForPermissions = async (
       trigger: parameters.trigger
     } as GetQuoteParams)
   }
+  return undefined
 }
