@@ -87,7 +87,9 @@ import {
   typeToString
 } from "./utils/Utils"
 import {
+  type NexusAccountId,
   type AddressConfigsAdditions,
+  type NexusVersion,
   getConfigFromNexusVersion,
   isVersionNewer,
   isVersionOlder
@@ -148,7 +150,7 @@ export type ToNexusSmartAccountParameters = {
   /** Optional implementation address */
   implementationAddress?: Address
   /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
-  nexusVersion?: `${number}.${number}.${number}`
+  nexusVersion?: NexusVersion
   /** Optional factory address */
   factoryAddress?: Address
   /** Optional init data */
@@ -422,13 +424,13 @@ export const toNexusAccount = async (
 
   let _accountAddress: Address | undefined = accountAddress_
 
-  const accountId: `biconomy.nexus.${number}.${number}.${number}` =
+  const accountId: NexusAccountId =
     (await publicClient.readContract({
       address: implementationAddress,
       abi: parseAbi(["function accountId() public view returns (string)"]),
       functionName: "accountId",
       args: []
-    })) as `biconomy.nexus.${number}.${number}.${number}`
+    })) as NexusAccountId
 
   /**
    * @description Gets the counterfactual address of the account

@@ -17,5 +17,6 @@ export const toDefaultModule = (
     address: zeroAddress,
     module: zeroAddress,
     type: "validator",
+    // TODO: make this signature dependent on the mode and numbers of userOps => proof size
     getStubSignature: async () => DUMMY_SIGNATURE
   })

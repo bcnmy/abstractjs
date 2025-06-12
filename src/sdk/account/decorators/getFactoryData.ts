@@ -15,6 +15,7 @@ import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
+import type { NexusVersion } from "../utils/getVersion"
 
 // ============ K1 Factory section ============
 
@@ -100,7 +101,7 @@ export type GetInitDataParams = {
   registryAddress?: Address
   attesters?: Address[]
   attesterThreshold?: number
-  nexusVersion?: `${number}.${number}.${number}`
+  nexusVersion?: NexusVersion
 }
 
 export const getInitData = (parameters: GetInitDataParams): Hex => {
@@ -144,7 +145,7 @@ export type GetInitDataWithRegistryParams = {
   registryAddress: Address
   attesters: Address[]
   attesterThreshold: number
-  nexusVersion: `${number}.${number}.${number}`
+  nexusVersion: NexusVersion
 }
 
 // Nexus 1.0.2 case: initializing it with single validator (validators[0]) and registry

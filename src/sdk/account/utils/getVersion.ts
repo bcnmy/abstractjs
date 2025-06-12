@@ -191,9 +191,13 @@ export type AddressConfigsAdditions = {
   }
 }
 
+export type NexusVersion = `${number}.${number}.${number}` 
+
+export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
+
 export type BaseAddressConfig = {
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
-  accountId: `biconomy.nexus.${number}.${number}.${number}`
+  accountId: NexusAccountId
   /** The implementation address for the account */
   implementationAddress: Hex
   /** The bootstrap address for the account */
