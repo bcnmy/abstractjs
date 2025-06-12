@@ -292,7 +292,7 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token.toLowerCase).to.eq(
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
       DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS
     )
 
