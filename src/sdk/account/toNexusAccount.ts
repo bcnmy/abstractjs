@@ -199,7 +199,14 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     getInitCode: () => Hex
 
     /** Gets the nonce with key for the account */
-    getNonceWithKey: (accountAddress: Address) => Promise<NonceInfo>
+    getNonceWithKey: (
+      accountAddress: Address,
+      parameters?: {
+        key?: bigint
+        validationMode?: "0x00" | "0x01" | "0x02"
+        moduleAddress?: Address
+      }
+    ) => Promise<NonceInfo>
 
     /** Encodes a single call for execution */
     encodeExecute: (call: Call) => Promise<Hex>

@@ -85,7 +85,7 @@ export const getPermitQuote = async (
     ...rest
   } = parameters
 
-  const sender = account_.signer.address
+  const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
   const recipient = account_.addressOn(trigger.chainId, true)
 
   let triggerAmount = 0n

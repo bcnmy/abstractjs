@@ -1,10 +1,12 @@
-import type { Address, Hex, OneOf } from "viem"
+import { type Address, type Hex, type OneOf, zeroAddress } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
+import { addressEquals } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
+import { SMART_SESSIONS_ADDRESS } from "../../../constants"
 import type { RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
@@ -12,6 +14,7 @@ import {
   runtimeERC20BalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
+import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
 import {
   type BaseMeeClient,
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
@@ -218,6 +221,19 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   cleanUps?: CleanUp[]
   /**
+   * Active module address. Used to fetch the nonce for the active module
+   */
+  moduleAddress?: Address
+  /**
+   * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
+   * This flag is set true when the whole superTxn with all entries require short encoding
+   * This is a special case when all the sigs are going to be validated via short flow. For example,
+   * when the superTxn is signed with session key enabled via Smart Sessions Module.
+   * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
+   */
+  shortEncodingSuperTxn?: boolean
+  /**
    * sponsorship flag to enable the sponsored super transactions.
    */
   sponsorship?: true
@@ -279,6 +295,11 @@ type QuoteRequest = {
     eip7702Auth?: MeeAuthorization
     /** Cleanup userop flag - Special user op */
     isCleanUpUserOp?: boolean
+    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
+     * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
+     **/
+    shortEncoding?: boolean
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -300,6 +321,8 @@ export type PaymentInfo = {
   chainId: string
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
+  /** Short encoding flag @see QuoteRequest.shortEncoding */
+  shortEncoding?: boolean
   /** Payment userop callGasLimit */
   callGasLimit?: bigint
   /** Sponsorship flag  */
@@ -370,6 +393,16 @@ export interface MeeFilledUserOpDetails {
   eip7702Auth?: MeeAuthorization
   /** Cleanup userop flag - Special user op */
   isCleanUpUserOp?: boolean
+  /** Optional Session details for redeeming a permission */
+  sessionDetails?: GrantPermissionResponse
+  /** Short encoding flag @see QuoteRequest.shortEncoding
+   *  It is expected to be set here because it is returned by the node
+   *  and the node always knows if the given superTxn entry's hash
+   *  was short encoded or not. This flag is then passed to the node
+   *  when signing the quote, so the node can build short or full
+   *  fusion signature for a given userOp
+   **/
+  shortEncoding: boolean
 }
 
 /**
@@ -436,7 +469,10 @@ export const getQuote = async (
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
-    authorization
+    authorization,
+    moduleAddress,
+    shortEncodingSuperTxn = false,
+    sponsorship = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -458,14 +494,27 @@ export const getQuote = async (
   }
 
   const hasProcessedInitData: string[] = []
+  const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
+    moduleAddress,
+    sponsorship
+  })
+
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
     client,
-    parameters
+    {
+      ...parameters,
+      paymentVerificationGasLimit
+    }
   )
 
   if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
 
-  const preparedUserOps = await prepareUserOps(account_, resolvedInstructions)
+  const preparedUserOps = await prepareUserOps(
+    account_,
+    resolvedInstructions,
+    false,
+    moduleAddress
+  )
 
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
@@ -477,12 +526,15 @@ export const getQuote = async (
     const cleanUpUserOps = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
-      cleanUps
+      cleanUps,
+      moduleAddress
     )
 
     preparedUserOps.push(...cleanUpUserOps)
   }
 
+  // complete the userOps including cleanup ones
+  const indexPerChainId = new Map<string, number>()
   const userOps = await Promise.all(
     preparedUserOps.map(
       async ([
@@ -494,9 +546,14 @@ export const getQuote = async (
         callGasLimit,
         chainId,
         isCleanUpUserOp,
-        nexusAccount
+        nexusAccount,
+        shortEncoding
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
+        if (!indexPerChainId.has(chainId)) {
+          indexPerChainId.set(chainId, 0)
+        }
+
         const shouldContainInitData =
           !hasProcessedInitData.includes(chainId) && !isAccountDeployed
 
@@ -508,6 +565,16 @@ export const getQuote = async (
               }
             : { initCode }
         }
+
+        const verificationGasLimit = resolveVerificationGasLimit({
+          moduleAddress,
+          sponsorship,
+          index: indexPerChainId.get(chainId)!,
+          paymentChainId: paymentInfo.chainId,
+          currentChainId: chainId
+        })
+
+        indexPerChainId.set(chainId, indexPerChainId.get(chainId)! + 1)
 
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
@@ -521,7 +588,9 @@ export const getQuote = async (
           nonce: nonce.toString(),
           chainId,
           isCleanUpUserOp,
-          ...initDataOrUndefined
+          ...initDataOrUndefined,
+          ...verificationGasLimit,
+          shortEncoding: shortEncodingSuperTxn || shortEncoding
         }
       }
     )
@@ -534,7 +603,9 @@ export const getQuote = async (
 
 const preparePaymentInfo = async (
   client: BaseMeeClient,
-  parameters: GetQuoteParams
+  parameters: GetQuoteParams & {
+    paymentVerificationGasLimit?: { verificationGasLimit: string }
+  }
 ) => {
   const {
     account: account_ = client.account,
@@ -544,7 +615,10 @@ const preparePaymentInfo = async (
     gasLimit,
     authorization,
     sponsorship,
-    sponsorshipOptions
+    sponsorshipOptions,
+    shortEncodingSuperTxn,
+    moduleAddress = zeroAddress as Address,
+    paymentVerificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
@@ -607,6 +681,7 @@ const preparePaymentInfo = async (
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
       // So initCode will be always undefined
       initCode: undefined
+      // no short encodings
     }
 
     // Init code / authorization list will not be added to payment userOp in the case of sponsorship. It will be added in the
@@ -637,7 +712,9 @@ const preparePaymentInfo = async (
     }
 
     const [nonce, isAccountDeployed, initCode] = await Promise.all([
-      validPaymentAccount.getNonce(),
+      validPaymentAccount.getNonceWithKey(validPaymentAccount.address, {
+        moduleAddress
+      }),
       validPaymentAccount.isDeployed(),
       validPaymentAccount.getInitCode()
     ])
@@ -657,11 +734,13 @@ const preparePaymentInfo = async (
       sponsored: false,
       sender: validPaymentAccount.address,
       token: feeToken.address,
-      nonce: nonce.toString(),
+      nonce: nonce.nonce.toString(),
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       chainId: feeToken.chainId.toString(),
       ...(eoa ? { eoa } : {}),
-      ...initData
+      ...initData,
+      shortEncoding: shortEncodingSuperTxn,
+      ...paymentVerificationGasLimit
     }
 
     // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
@@ -677,7 +756,8 @@ const preparePaymentInfo = async (
 const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
-  isCleanUpUserOps = false
+  isCleanUpUserOps = false,
+  moduleAddress?: Address
 ) => {
   return await Promise.all(
     instructions.map((userOp) => {
@@ -697,9 +777,21 @@ const prepareUserOps = async (
             : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
       }
 
+      // This is the place to set the short encoding flag
+      // It can be based on the module address or on the instruction type
+      // Currently instructions are for the userOps only
+      // That's why this function is called prepareUserOps
+      // However it is possible that a superTxn consists not of the userOps only
+      // So for example signed EIP-712 data structs or
+      // ERC-7683 Cross-chain intents can be included in the superTxn
+      // And this function will have to convert them out of instructions
+      // Such 'off-chain' entities will have to be used with short encoding flag
+      // For we just set it to false for now
+      const shortEncoding = false
+
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey(accountAddress),
+        deployment.getNonceWithKey(accountAddress, { moduleAddress }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
@@ -709,7 +801,8 @@ const prepareUserOps = async (
           .toString(),
         userOp.chainId.toString(),
         isCleanUpUserOps,
-        deployment
+        deployment,
+        shortEncoding
       ])
     })
   )
@@ -727,7 +820,8 @@ export const userOp = (userOpIndex: number) => {
 const prepareCleanUpUserOps = async (
   account: MultichainSmartAccount,
   userOpsNonceInfo: NonceInfo[],
-  cleanUps: CleanUp[]
+  cleanUps: CleanUp[],
+  moduleAddress?: Address
 ) => {
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
@@ -807,10 +901,142 @@ const prepareCleanUpUserOps = async (
   const cleanUpUserOps = await prepareUserOps(
     account,
     cleanUpInstructions,
-    true
+    true,
+    moduleAddress
   )
 
   return cleanUpUserOps
 }
+
+// ============ resolve verification gas limit functions ============
+/**
+ * Parameters for the resolveVerificationGasLimit function
+ * @param moduleAddress - The address of the module
+ * @param index - The index of the userOp during the userOps completion process
+ * @param sponsorship - Whether the superTxn is sponsored
+ */
+export type resolveVerificationGasLimitParams = {
+  moduleAddress?: Address
+  sponsorship: boolean
+  index: number
+}
+
+/**
+ * Returns the verification gas limit for the userOp, to be spread
+ */
+export type verificationGasLimitPayload = {
+  verificationGasLimit: string
+}
+
+/**
+ * Returns the verification gas limit for the userOp
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the userOp/paymentInfo
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolveVerificationGasLimit = (
+  parameters: resolveVerificationGasLimitParams & {
+    paymentChainId: string
+    currentChainId: string
+  }
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, sponsorship, index, paymentChainId, currentChainId } =
+    parameters
+  if (currentChainId === paymentChainId) {
+    return resolveVerificationGasLimitForPaymentChain({
+      moduleAddress,
+      sponsorship,
+      index
+    })
+  }
+  return resolveVerificationGasLimitForNonPaymentChain({ moduleAddress, index })
+}
+
+/**
+ * Returns the verification gas limit for the userOp on the payment chain
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the userOp
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolveVerificationGasLimitForPaymentChain = (
+  parameters: resolveVerificationGasLimitParams
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, sponsorship, index } = parameters
+  // if module address is not provided, the default verification gas limit will be applied
+  if (!moduleAddress) {
+    return undefined
+  }
+  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    if (sponsorship) {
+      if (index === 0) {
+        // return increased verification gas limit for the first userOp
+        // as it this userOp will be enabling the permission => requires more gas
+        return { verificationGasLimit: "1000000" }
+      }
+    }
+    // return slighly increased verification gas limit
+    // for USE session userOps
+    return { verificationGasLimit: "250000" }
+  }
+  return undefined
+}
+
+/**
+ * Returns the verification gas limit for the userOp on a non-payment chain
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the userOp
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolveVerificationGasLimitForNonPaymentChain = (
+  parameters: Omit<resolveVerificationGasLimitParams, "sponsorship">
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, index } = parameters
+  // if module address is not provided, the default verification gas limit will be applied
+  if (!moduleAddress) {
+    return undefined
+  }
+  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    if (index === 0) {
+      // return increased verification gas limit for payment userOp
+      // in a non-sponsored superTxn
+      return { verificationGasLimit: "1000000" }
+    }
+    // for all other userOps, return USE session verification gas limit
+    return { verificationGasLimit: "250000" }
+  }
+  return undefined
+}
+
+/**
+ * Returns the verification gas limit for the payment userOp
+ * @param parameters - The parameters for the resolveVerificationGasLimit function
+ * @returns The verification gas limit for the payment userOp
+ * returns undefined if there's no special gas limit required for a given case
+ * 'undefined' means the node will apply the default verification gas limit
+ */
+const resolvePaymentUserOpVerificationGasLimit = (
+  parameters: Omit<resolveVerificationGasLimitParams, "index">
+): verificationGasLimitPayload | undefined => {
+  const { moduleAddress, sponsorship } = parameters
+  // if module address is not provided, the default verification gas limit will be applied
+  if (!moduleAddress) {
+    return undefined
+  }
+  if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    if (!sponsorship) {
+      // return increased verification gas limit for payment userOp
+      // in a non-sponsored superTxn
+      return { verificationGasLimit: "1000000" }
+    }
+    // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
+    // so doesn't need any custom verification gas limit
+  }
+  return undefined
+}
+
+// ====================================================
 
 export default getQuote

@@ -8,7 +8,8 @@ import {
   encodeValidationData,
   getAccount,
   getEnableSessionDetails,
-  getOwnableValidatorMockSignature
+  getOwnableValidatorMockSignature,
+  getSudoPolicy
 } from "@rhinestone/module-sdk"
 import {
   type Address,
@@ -52,10 +53,11 @@ export type RequiredSessionParams = RequiredBy<
 export type GrantPermissionParameters<
   TModularSmartAccount extends ModularSmartAccount | undefined
 > = Prettify<
-  RequiredSessionParams & {
-    /** Granter Address */
-    redeemer: Address
-  } & { account?: TModularSmartAccount }
+  Partial<PrettifiedSession> &
+    RequiredSessionParams & {
+      /** Granter Address */
+      redeemer: Address
+    } & { account?: TModularSmartAccount }
 >
 
 // The session details in stringified format.
@@ -104,7 +106,7 @@ export async function grantPermission<
       owners: [redeemer]
     }),
     salt: generateSalt(),
-    userOpPolicies: [],
+    userOpPolicies: session_?.permitERC4337Paymaster ? [getSudoPolicy()] : [],
     erc7739Policies: { allowedERC7739Content: [], erc1271Policies: [] },
     chainId: bigChainId ?? BigInt(chainIdFromAccount),
     ...session_
