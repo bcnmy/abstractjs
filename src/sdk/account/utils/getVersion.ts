@@ -191,7 +191,7 @@ export type AddressConfigsAdditions = {
   }
 }
 
-export type NexusVersion = `${number}.${number}.${number}` 
+export type NexusVersion = `${number}.${number}.${number}`
 
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 

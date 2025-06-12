@@ -23,7 +23,7 @@ import {
   topUp
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
-import { NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
+import { type NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
 import { Logger } from "../../account/utils/Logger"
 import {
   type EthersWallet,
@@ -58,7 +58,6 @@ describe("nexus.client.1.0.2", async () => {
   // TODO mapping => client with addresses
 
   beforeAll(async () => {
- 
     // fork base sepolia as it has all the 1.0.2 infra (nexus, registry, modules, attesters) deployed and configured
     network_1_0_2 = await toNetwork(
       "BESPOKE_ANVIL_NETWORK_FORKING_BASE_SEPOLIA"
@@ -106,15 +105,12 @@ describe("nexus.client.1.0.2", async () => {
       mock: true
     })
 
-    clients = [
-      nexusClient_1_0_2_with_k1,
-      nexusClient_1_0_2_custom_validator
-    ]
+    clients = [nexusClient_1_0_2_with_k1, nexusClient_1_0_2_custom_validator]
 
-    nexusAccount_1_0_2_with_k1_Address = await nexusAccount_1_0_2_with_k1.getAddress()
-    nexusAccount_1_0_2_custom_validator_Address = await nexusAccount_1_0_2_custom_validator.getAddress()
-    
-    
+    nexusAccount_1_0_2_with_k1_Address =
+      await nexusAccount_1_0_2_with_k1.getAddress()
+    nexusAccount_1_0_2_custom_validator_Address =
+      await nexusAccount_1_0_2_custom_validator.getAddress()
   })
   afterAll(async () => {
     await killNetwork([network_1_0_2?.rpcPort, network_1_0_2?.bundlerPort])
@@ -155,12 +151,12 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should fund the smart account", async () => {
-    for (const client of clients) { 
+    for (const client of clients) {
       await topUp(testClient_1_0_2, __client.address__, parseEther("0.01"))
 
       const balance = await getBalance(testClient_1_0_2, _client_address_)
       expect(balance > 0)
-   }
+    }
   })
 
   test("should have account addresses", async () => {
@@ -356,7 +352,7 @@ describe("nexus.client.1.0.2", async () => {
         {
           to: recipientAddress,
           data: "0x"
-          // todo: add value? 
+          // todo: add value?
         }
       ]
     })

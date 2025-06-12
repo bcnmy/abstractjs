@@ -87,8 +87,8 @@ import {
   typeToString
 } from "./utils/Utils"
 import {
-  type NexusAccountId,
   type AddressConfigsAdditions,
+  type NexusAccountId,
   type NexusVersion,
   getConfigFromNexusVersion,
   isVersionNewer,
@@ -424,13 +424,12 @@ export const toNexusAccount = async (
 
   let _accountAddress: Address | undefined = accountAddress_
 
-  const accountId: NexusAccountId =
-    (await publicClient.readContract({
-      address: implementationAddress,
-      abi: parseAbi(["function accountId() public view returns (string)"]),
-      functionName: "accountId",
-      args: []
-    })) as NexusAccountId
+  const accountId: NexusAccountId = (await publicClient.readContract({
+    address: implementationAddress,
+    abi: parseAbi(["function accountId() public view returns (string)"]),
+    functionName: "accountId",
+    args: []
+  })) as NexusAccountId
 
   /**
    * @description Gets the counterfactual address of the account
