@@ -1,3 +1,4 @@
+import { randomBytes } from "ethers"
 import { type Hex, concatHex, zeroAddress } from "viem"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
@@ -50,6 +51,9 @@ export const getMeeK1ModuleStubSignature = (
       "0x0000000000000000000000000000000000000000000000000000000000000100"
     ])
   }
+  // for permmit and on-chain mode, we imitate the sig structure
+  // hex values are taken from a real signature for an according fusion mode
+  // stub signatures are used to estimate gas and are not expected to be valid
   if (mode === "permit") {
     prefix = "0x177eee01"
     mockModePayload = concatHex([
@@ -67,18 +71,18 @@ export const getMeeK1ModuleStubSignature = (
     ])
   }
 
-  // format as hex bytes32
+  // use random 32 bytes as leaves
+  const leaves = Array.from({ length: proofSize }, () => randomBytes(32))
   const proofPayload = concatHex([
     `0x${proofSize.toString(16).padStart(64, "0")}` as Hex,
-    "0x557a3d38f00c9f5c5ed03769fef315840e79ae24d8deb43b28f3c37d8ec3b465",
-    "0x04a7ba9431342a47dbe629d7a6042d08d7271b20eb1762e5976e514841d6beb0"
+    ...leaves.map((leaf) => `0x${Buffer.from(leaf).toString("hex")}` as Hex)
   ])
 
   return concatHex([
     prefix,
     mockModePayload,
     proofPayload,
-    "0x0000000000000000000000000000000000000000000000000000000000000041",
+    "0x0000000000000000000000000000000000000000000000000000000000000041", // length
     DUMMY_SIGNATURE
   ])
 }
