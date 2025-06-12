@@ -1,4 +1,4 @@
-import { type Hex, zeroAddress } from "viem"
+import { type Hex, concatHex, zeroAddress } from "viem"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type Validator,
@@ -6,6 +6,8 @@ import {
   toValidator
 } from "../toValidator"
 
+const MOCK_SUPERTXN_HASH_AND_TIMESTAMPS: Hex =
+  "0x9e1cce57126e9205fe085888ed6b5ca0033f168e26b8927adb1c6da566cf7c5100000000000000000000000000000000000000000000000000000000642622800000000000000000000000000000000000000000000000000000000064262668"
 export const toDefaultModule = (
   parameters: Omit<ValidatorParameters, "module" | "initData"> & {
     mode?: "simple" | "no_mee" | "permit" | "on-chain"
@@ -21,10 +23,8 @@ export const toDefaultModule = (
     address: zeroAddress,
     module: zeroAddress,
     type: "validator",
-    // TODO: make this signature dependent on the mode and numbers of userOps => proof size
-    getStubSignature: async (): Promise<Hex> => {
-      return getMeeK1ModuleStubSignature(mode, superTxEntriesCount)
-    }
+    getStubSignature: async () =>
+      getMeeK1ModuleStubSignature(mode, superTxEntriesCount)
   })
 }
 
@@ -36,9 +36,49 @@ export const getMeeK1ModuleStubSignature = (
   const leafCount = superTxEntriesCount + 1
   const proofSize = Math.ceil(Math.log2(leafCount))
 
-  const proofPayload = "0x"
+  let prefix: Hex = "0x"
+  let mockModePayload: Hex = "0x"
 
-  const signature = proofPayload + DUMMY_SIGNATURE
+  if (mode === "no_mee") {
+    return DUMMY_SIGNATURE
+  }
+  if (mode === "simple") {
+    prefix = "0x177eee00"
+    mockModePayload = concatHex([
+      MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
+      "0x00000000000000000000000000000000000000000000000000000000000000a0",
+      "0x0000000000000000000000000000000000000000000000000000000000000100"
+    ])
+  }
+  if (mode === "permit") {
+    prefix = "0x177eee01"
+    mockModePayload = concatHex([
+      "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b0000000000000000000000000000000000000000000000003782dace9d9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027d5730e3c64852e56f4f10c0c27a8d96651193fd13663c1dd652b5f18677458",
+      MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
+      "0x00000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000250e2ad6bd90d6121dc5166dc6968f23ba43497594de5c7ca655f58e96d31775d"
+    ])
+  }
+  if (mode === "on-chain") {
+    prefix = "0x177eee02"
+    mockModePayload = concatHex([
+      "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b000000000000000000000000000000000000000000000001158e460913d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
+      "0x000000000000000000000000000000000000000000000000000000000000000568f7d0137aa459fc3d87c0405f9df08008c9b97b3da85ef4f663b0e4fc910b518146837426fd3167918049cae2bc9fdf90aabc1e9db16244b56a12463711c2d500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    ])
+  }
 
-  return signature as `0x${string}`
+  // format as hex bytes32
+  const proofPayload = concatHex([
+    `0x${proofSize.toString(16).padStart(64, "0")}` as Hex,
+    "0x557a3d38f00c9f5c5ed03769fef315840e79ae24d8deb43b28f3c37d8ec3b465",
+    "0x04a7ba9431342a47dbe629d7a6042d08d7271b20eb1762e5976e514841d6beb0"
+  ])
+
+  return concatHex([
+    prefix,
+    mockModePayload,
+    proofPayload,
+    "0x0000000000000000000000000000000000000000000000000000000000000041",
+    DUMMY_SIGNATURE
+  ])
 }

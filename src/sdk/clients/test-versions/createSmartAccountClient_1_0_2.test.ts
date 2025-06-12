@@ -53,9 +53,8 @@ describe("nexus.client.1.0.2", async () => {
   let nexusClient_1_0_2_custom_validator: NexusClient
   let privKey_1_0_2: Hex
   let clients: NexusClient[]
-  let nexusAccount_1_0_2_with_k1_Address: Address
-  let nexusAccount_1_0_2_custom_validator_Address: Address
   // TODO mapping => client with addresses
+  const clientToAddress: Map<NexusClient, Address> = new Map()
 
   beforeAll(async () => {
     // fork base sepolia as it has all the 1.0.2 infra (nexus, registry, modules, attesters) deployed and configured
@@ -107,10 +106,14 @@ describe("nexus.client.1.0.2", async () => {
 
     clients = [nexusClient_1_0_2_with_k1, nexusClient_1_0_2_custom_validator]
 
-    nexusAccount_1_0_2_with_k1_Address =
+    clientToAddress.set(
+      nexusClient_1_0_2_with_k1,
       await nexusAccount_1_0_2_with_k1.getAddress()
-    nexusAccount_1_0_2_custom_validator_Address =
+    )
+    clientToAddress.set(
+      nexusClient_1_0_2_custom_validator,
       await nexusAccount_1_0_2_custom_validator.getAddress()
+    )
   })
   afterAll(async () => {
     await killNetwork([network_1_0_2?.rpcPort, network_1_0_2?.bundlerPort])
@@ -152,9 +155,10 @@ describe("nexus.client.1.0.2", async () => {
 
   test("should fund the smart account", async () => {
     for (const client of clients) {
-      await topUp(testClient_1_0_2, __client.address__, parseEther("0.01"))
+      const accountAddress = clientToAddress.get(client)
+      await topUp(testClient_1_0_2, accountAddress!, parseEther("0.01"))
 
-      const balance = await getBalance(testClient_1_0_2, _client_address_)
+      const balance = await getBalance(testClient_1_0_2, accountAddress!)
       expect(balance > 0)
     }
   })
