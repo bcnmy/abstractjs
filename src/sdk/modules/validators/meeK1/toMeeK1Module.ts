@@ -1,6 +1,4 @@
-import { zeroAddress } from "viem"
 import { getMeeK1ModuleStubSignature } from "../default/toDefaultModule"
-import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type Validator,
   type ValidatorParameters,

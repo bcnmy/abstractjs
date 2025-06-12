@@ -1,5 +1,4 @@
-import { UnionType } from "typescript"
-import type { Hex, OneOf } from "viem"
+import type { Hex } from "viem"
 import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
 import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 

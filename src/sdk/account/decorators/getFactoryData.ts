@@ -1,7 +1,6 @@
 import {
   type Address,
   type Hex,
-  OneOf,
   encodeAbiParameters,
   encodeFunctionData,
   pad,

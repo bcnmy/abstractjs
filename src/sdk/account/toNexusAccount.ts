@@ -39,7 +39,6 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { readContract } from "viem/actions"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
@@ -93,7 +92,6 @@ import {
   type NexusAccountId,
   type NexusVersion,
   getConfigFromNexusVersion,
-  isVersionNewer,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
