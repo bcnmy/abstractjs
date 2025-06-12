@@ -1,4 +1,4 @@
-import type { Prettify } from "viem"
+import { type Prettify, stringify } from "viem"
 import { parseErrorMessage } from "../account/utils/parseErrorMessage"
 import type { AnyData } from "../modules"
 
@@ -63,7 +63,7 @@ export const createHttpClient = (url: Url, apiKey?: string): HttpClient => {
         "Content-Type": "application/json",
         ...(apiKey ? { "x-api-key": apiKey } : {})
       },
-      ...(body ? { body: JSON.stringify(body) } : {})
+      ...(body ? { body: stringify(body) } : {})
     })
 
     const json = (await result.json()) as AnyData

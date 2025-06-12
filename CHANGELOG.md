@@ -1,5 +1,23 @@
 # @biconomy/abstractjs
 
+## 1.0.16
+
+### Patch Changes
+
+- Improved error handling and added a utility function chainToAddressMap
+
+## 1.0.15
+
+### Patch Changes
+
+- Added support for custom gas limit for payment and cleanup userops and increased the cleanup execution window
+
+## 1.0.14
+
+### Patch Changes
+
+- Added support for MEE biconomy hosted sponsorship and enhanced the max fund usage in trigger (include fee -> useMaxAvailableFunds)
+
 ## 1.0.13
 
 ### Patch Changes

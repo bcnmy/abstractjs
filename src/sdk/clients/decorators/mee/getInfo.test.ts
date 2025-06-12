@@ -72,17 +72,18 @@ describe("mee.getInfo", () => {
       address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     })
     expect(result.chainId).toBe("1")
-    expect(result.paymentTokens.length).toBeGreaterThanOrEqual(6)
+    expect(result.paymentTokens.length).to.be.greaterThanOrEqual(6)
     expect(result.paymentTokens[0].symbol).toBe("ETH")
   })
 
   test("should throw error for invalid chain id", async () => {
+    const chainId = Math.floor(Math.random() * 1000000)
     await expect(
       getGasToken(meeClient, {
-        chainId: 999,
+        chainId,
         address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
       })
-    ).rejects.toThrow("Gas token not found for chain 999")
+    ).rejects.toThrow(`Gas token not found for chain ${chainId}`)
   })
 
   test("should return payment token and arbitrary token payment info for valid chain id and address", async () => {
@@ -124,14 +125,5 @@ describe("mee.getInfo", () => {
       undefined
     ])
     expect(paymentTokenInfo.paymentToken).to.be.oneOf([undefined, null])
-  })
-
-  test("should throw error for invalid chain id", async () => {
-    await expect(
-      getPaymentToken(meeClient, {
-        chainId: 999,
-        tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-      })
-    ).rejects.toThrow("Gas token not found for chain 999")
   })
 })

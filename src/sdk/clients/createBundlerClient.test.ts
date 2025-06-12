@@ -73,6 +73,12 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
+  /**
+   * This test doesn't utilise Fusion =>  there is not trigger Txn,
+   * and Nexus is NOT prefunded before userOp =>
+   * => Nexus account SHOULD have its own USDC balance
+   * Otherwise the test will fail
+   */
   test("should send a transaction through the MeeNode", async () => {
     const usdcBalance = await createPublicClient({
       chain: baseSepolia,
