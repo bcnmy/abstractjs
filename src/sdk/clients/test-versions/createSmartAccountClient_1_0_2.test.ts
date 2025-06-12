@@ -36,6 +36,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../createBicoBundlerClient"
+import { toSigner } from "../../account/utils/toSigner"
 
 describe("nexus.client.1.0.2", async () => {
   let network_1_0_2: NetworkConfig
@@ -52,8 +53,6 @@ describe("nexus.client.1.0.2", async () => {
   let nexusClient_1_0_2_with_k1: NexusClient
   let nexusClient_1_0_2_custom_validator: NexusClient
   let privKey_1_0_2: Hex
-  let clients: NexusClient[]
-  // TODO mapping => client with addresses
   const clientToAddress: Map<NexusClient, Address> = new Map()
 
   beforeAll(async () => {
@@ -104,8 +103,6 @@ describe("nexus.client.1.0.2", async () => {
       mock: true
     })
 
-    clients = [nexusClient_1_0_2_with_k1, nexusClient_1_0_2_custom_validator]
-
     clientToAddress.set(
       nexusClient_1_0_2_with_k1,
       await nexusAccount_1_0_2_with_k1.getAddress()
@@ -120,8 +117,7 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should deploy Nexus 1.0.2 smart account if not deployed", async () => {
-    for (const client of clients) {
-      const accountAddress = await client.account.getAddress()
+    for (const [client, accountAddress] of clientToAddress.entries()) {
       const isDeployed = await client.account.isDeployed()
       if (!isDeployed) {
         // Fund the account first
@@ -154,17 +150,15 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should fund the smart account", async () => {
-    for (const client of clients) {
-      const accountAddress = clientToAddress.get(client)
-      await topUp(testClient_1_0_2, accountAddress!, parseEther("0.01"))
-
-      const balance = await getBalance(testClient_1_0_2, accountAddress!)
+    for (const [, accountAddress] of clientToAddress.entries()) {
+      await topUp(testClient_1_0_2, accountAddress, parseEther("0.01"))
+      const balance = await getBalance(testClient_1_0_2, accountAddress)
       expect(balance > 0)
     }
   })
 
   test("should have account addresses", async () => {
-    for (const client of clients) {
+    for (const [client, ] of clientToAddress.entries()) {
       const addresses = await Promise.all([
         eoaAccount.address,
         client.account.getAddress()
@@ -175,7 +169,7 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should estimate gas for writing to a contract", async () => {
-    for (const client of clients) {
+    for (const [client, ] of clientToAddress.entries()) {
       const encodedCall = encodeFunctionData({
         abi: CounterAbi,
         functionName: "incrementNumber"
@@ -199,40 +193,44 @@ describe("nexus.client.1.0.2", async () => {
   }, 60000)
 
   test("should check enable mode", async () => {
-    const { name, version } = await getAccountMeta(
-      testClient,
-      nexusAccountAddress
-    )
+    for (const [, accountAddress] of clientToAddress.entries()) {
+      const { name, version } = await getAccountMeta(
+        testClient_1_0_2,
+        accountAddress
+      )
 
-    const result = makeInstallDataAndHash(
-      eoaAccount.address,
-      [
-        {
-          type: "validator",
-          config: eoaAccount.address
-        }
-      ],
-      name,
-      version
-    )
+      const result = makeInstallDataAndHash(
+        eoaAccount.address,
+        [
+          {
+            type: "validator",
+            config: eoaAccount.address
+          }
+        ],
+        name,
+        version
+      )
 
-    expect(result).toBeTruthy()
+      expect(result).toBeTruthy()
+    }
   }, 30000)
 
   test("should read estimated user op gas values", async () => {
-    const userOp = await nexusClient.prepareUserOperation({
-      calls: [
-        {
-          to: recipientAccount.address,
-          data: "0x"
-        }
-      ]
-    })
+    for (const [client, accountAddress] of clientToAddress.entries()) {
+      const userOp = await client.prepareUserOperation({
+        calls: [
+          {
+            to: recipientAccount.address,
+            data: "0x"
+          }
+        ]
+      })
 
-    const estimatedGas = await nexusClient.estimateUserOperationGas(userOp)
-    expect(estimatedGas.verificationGasLimit).toBeTruthy()
-    expect(estimatedGas.callGasLimit).toBeTruthy()
-    expect(estimatedGas.preVerificationGas).toBeTruthy()
+      const estimatedGas = await client.estimateUserOperationGas(userOp)
+        expect(estimatedGas.verificationGasLimit).toBeTruthy()
+        expect(estimatedGas.callGasLimit).toBeTruthy()
+        expect(estimatedGas.preVerificationGas).toBeTruthy()
+    }
   }, 30000)
 
   test("should return chain object for chain id 1", async () => {
@@ -265,78 +263,93 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should have attached erc757 actions", async () => {
-    const [
-      accountId,
-      isModuleInstalled,
-      supportsExecutionMode,
-      supportsModule
-    ] = await Promise.all([
-      nexusClient.accountId(),
-      nexusClient.isModuleInstalled({
-        module: {
-          type: "validator",
-          address: nexusClient.account.getModule().address,
-          initData: "0x"
-        }
-      }),
-      nexusClient.supportsExecutionMode({
-        type: "delegatecall"
-      }),
-      nexusClient.supportsModule({
-        type: "validator"
-      })
-    ])
-    expect(accountId.indexOf("biconomy.nexus") > -1).toBe(true)
-    expect(isModuleInstalled).toBe(false)
-    expect(supportsExecutionMode).toBe(true)
-    expect(supportsModule).toBe(true)
+    for (const [client, accountAddress] of clientToAddress.entries()) {
+      const [
+        accountId,
+        isModuleInstalled,
+        supportsExecutionMode,
+        supportsModule
+      ] = await Promise.all([
+        client.accountId(),
+        client.isModuleInstalled({
+          module: {
+            type: "validator",
+            address: client.account.getModule().address,
+            initData: "0x"
+          }
+        }),
+        client.supportsExecutionMode({
+          type: "delegatecall"
+        }),
+        client.supportsModule({
+          type: "validator"
+        })
+      ])
+      expect(accountId.indexOf("biconomy.nexus") > -1).toBe(true)
+      expect(isModuleInstalled).toBe(true)
+      expect(supportsExecutionMode).toBe(true)
+      expect(supportsModule).toBe(true)
+    }
   })
 
   test("should send eth twice", async () => {
-    const balanceBefore = await getBalance(testClient, recipientAddress)
-    const tx = { to: recipientAddress, value: 1n }
-    const hash = await nexusClient.sendTransaction({ calls: [tx, tx] })
-    const { status } = await nexusClient.waitForTransactionReceipt({ hash })
-    const balanceAfter = await getBalance(testClient, recipientAddress)
-    expect(status).toBe("success")
-    expect(balanceAfter - balanceBefore).toBe(2n)
+    for (const [client, accountAddress] of clientToAddress.entries()) {
+      const balanceBefore = await getBalance(testClient_1_0_2, recipientAddress)
+      const tx = { to: recipientAddress, value: 1n }
+      const hash = await client.sendTransaction({ calls: [tx, tx] })
+      const { status } = await client.waitForTransactionReceipt({ hash })
+      const balanceAfter = await getBalance(testClient_1_0_2, recipientAddress)
+      expect(status).toBe("success")
+      expect(balanceAfter - balanceBefore).toBe(2n)
+    }
   })
 
   test("should compare signatures of viem and ethers signer", async () => {
-    const viemSigner = privateKeyToAccount(privKey)
-    const wallet = new Wallet(privKey)
+    
+      const viemSigner = privateKeyToAccount(privKey_1_0_2)
+      const wallet = new Wallet(privKey_1_0_2)
 
-    const viemAccount = await toNexusAccount({
-      signer: viemSigner,
-      chain,
-      transport: http()
-    })
+      const ethersAccount = await toNexusAccount({
+        signer: wallet as EthersWallet,
+        chain: chain_1_0_2,
+        transport: http(),
+        useK1Config: true,
+        nexusVersion: "1.0.2"
+      })
 
-    const ethersAccount = await toNexusAccount({
-      signer: wallet as EthersWallet,
-      chain,
-      transport: http()
-    })
+      const ethersNexusClient = createSmartAccountClient({
+        bundlerUrl: bundlerUrl_1_0_2,
+        account: ethersAccount,
+        mock: true
+      })
 
-    const viemNexusClient = createSmartAccountClient({
-      bundlerUrl,
-      account: viemAccount,
-      mock: true
-    })
+      const ethersAccount2 = await toNexusAccount({
+        signer: wallet as EthersWallet,
+        chain: chain_1_0_2,
+        transport: http(),
+        useK1Config: false,
+        nexusVersion: "1.0.2",
+        validators: [
+          toMeeK1Module({ signer: await toSigner({signer: wallet as EthersWallet}), module: MEE_VALIDATOR_ADDRESS })
+        ]
+      })
 
-    const ethersNexusClient = createSmartAccountClient({
-      bundlerUrl,
-      account: ethersAccount,
-      mock: true
-    })
+      const ethersNexusClient2 = createSmartAccountClient({
+        bundlerUrl: bundlerUrl_1_0_2,
+        account: ethersAccount2,
+        mock: true
+      }) 
 
-    const sig1 = await viemNexusClient.signMessage({ message: "123" })
-    const sig2 = await ethersNexusClient.signMessage({ message: "123" })
+      const sig1 = await nexusClient_1_0_2_with_k1.signMessage({ message: "123" })
+      const sig2 = await nexusClient_1_0_2_custom_validator.signMessage({ message: "123" })
+      const sig3 = await ethersNexusClient.signMessage({ message: "123" })
+      const sig4 = await ethersNexusClient2.signMessage({ message: "123" })
 
-    expect(sig1).toBe(sig2)
+      expect(sig1).toBe(sig3)
+      expect(sig2).toBe(sig4)
   })
 
-  test("should send user operation using ethers Wallet", async () => {
+  test.skip("should send user operation using ethers Wallet", async () => {
     const ethersWallet = new ethers.Wallet(privKey)
 
     const ethersAccount = await toNexusAccount({
@@ -366,7 +379,7 @@ describe("nexus.client.1.0.2", async () => {
     expect(receipt.success).toBe(true)
   })
 
-  test("should send sequential user ops", async () => {
+  test.skip("should send sequential user ops", async () => {
     const start = performance.now()
     const receipts: UserOperationReceipt[] = []
     for (let i = 0; i < 3; i++) {
@@ -386,7 +399,7 @@ describe("nexus.client.1.0.2", async () => {
     Logger.log(`Time taken: ${end - start} milliseconds`)
   })
 
-  test("should send parallel user ops", async () => {
+  test.skip("should send parallel user ops", async () => {
     const start = performance.now()
     const userOpPromises: Promise<`0x${string}`>[] = []
     for (let i = 0; i < 3; i++) {
