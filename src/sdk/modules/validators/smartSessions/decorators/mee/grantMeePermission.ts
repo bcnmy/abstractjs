@@ -1,4 +1,4 @@
-import type { Address, Prettify } from "viem"
+import type { Address, Prettify, PublicClient } from "viem"
 import { http, createPublicClient, erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
@@ -62,23 +62,18 @@ export const grantMeePermission = async <
 
   // make some reliable maxPaymentAmount
   if (feeToken && !maxPaymentAmount) {
-    //find chain for feeToken
-    const chain = baseMeeClient.account.deployments.find(
-      (deployment) => deployment.client.chain?.id === feeToken?.chainId
-    )?.client.chain
-
-    const publicClient = createPublicClient({
-      chain,
-      transport: http(chain!.rpcUrls.default[0])
-    })
-
+    const deploymentOnPaymentChain = baseMeeClient.account.deploymentOn(
+      feeToken.chainId,
+      true
+    )
+    const paymentChainpublicClient =
+      deploymentOnPaymentChain.client as PublicClient
     // get decimals of the fee token
-    const decimals = await publicClient.readContract({
+    const decimals = await paymentChainpublicClient.readContract({
       address: feeToken.address,
       abi: erc20Abi,
       functionName: "decimals"
     })
-
     // set proper maxPaymentAmount with proper decimals
     maxPaymentAmount = parseUnits("5", decimals)
   }
