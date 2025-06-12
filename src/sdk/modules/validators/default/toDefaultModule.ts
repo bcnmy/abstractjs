@@ -72,10 +72,14 @@ export const getMeeK1ModuleStubSignature = (
   }
 
   // use random 32 bytes as leaves
-  const leaves = Array.from({ length: proofSize }, () => randomBytes(32))
+  const leaves = Array.from(
+    { length: proofSize },
+    () =>
+      "0x3239aa7c79368121ae1a0e73b662a9fd8f0c7f6aa1a7dfdc2eebdbeb2f9b070c" as Hex
+  )
   const proofPayload = concatHex([
     `0x${proofSize.toString(16).padStart(64, "0")}` as Hex,
-    ...leaves.map((leaf) => `0x${Buffer.from(leaf).toString("hex")}` as Hex)
+    ...leaves
   ])
 
   return concatHex([
