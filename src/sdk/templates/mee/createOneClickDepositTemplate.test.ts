@@ -137,16 +137,16 @@ describe("createOneClickDepositTemplate", () => {
   })
   it("should call the source/bridge/destination instructions", async () => {
     // mock the source/bridge/destination instructions
-    const sourceInstructions = vi.fn()
+    const sourceChainInstructions = vi.fn()
     const bridgeInstructions = vi.fn()
-    const destinationInstructions = vi.fn()
+    const destChainInstructions = vi.fn()
     const aaveToMorpho = createOneClickDepositTemplate<{
       amount: bigint
       slippage: number
     }>({
-      sourceChainInstructions: sourceInstructions,
-      bridgeInstructions: bridgeInstructions,
-      destChainInstructions: destinationInstructions
+      sourceChainInstructions,
+      bridgeInstructions,
+      destChainInstructions
     })
     await aaveToMorpho({
       sourceChain,
