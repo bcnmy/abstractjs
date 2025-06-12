@@ -10,14 +10,20 @@ type OneClickDepositParams = {
 /**
  * The return type of sourceChainInstructions/bridgeInstructions/destChainInstructions
  * can be either a single instruction or an array of instructions in case of multiple steps per template funciton
+ * @example
+ * instructions: `mcAaveV3Pool.build` returns a single instruction
+ * instructions[]: `nexus.build` returns an array of instructions
+ * instructions[][]: `[nexus.build, nexus.build]` add multiple `nexus.build` calls inside one template function
  */
-type TemplateFunctionReturnType = Instruction[] | Instruction[][]
+type TemplateFunctionReturnType = Instruction | Instruction[] | Instruction[][]
 
 type OneClickDepositTemplate = {
   sourceChainInstructions?: ({
-    chain
+    chain,
+    amount
   }: {
     chain: Chain
+    amount: bigint
   }) => Promise<TemplateFunctionReturnType>
   bridgeInstructions?: ({
     sourceChain,
@@ -29,9 +35,11 @@ type OneClickDepositTemplate = {
     amount: bigint
   }) => Promise<TemplateFunctionReturnType>
   destChainInstructions?: ({
-    chain
+    chain,
+    amount
   }: {
     chain: Chain
+    amount: bigint
   }) => Promise<TemplateFunctionReturnType>
 }
 
@@ -50,7 +58,8 @@ export const createOneClickDepositTemplate = (
     const { sourceChain, destChain, amount } = depositParams
 
     const sourceInstructions = await params.sourceChainInstructions?.({
-      chain: sourceChain
+      chain: sourceChain,
+      amount
     })
 
     const bridgeInstructions = await params.bridgeInstructions?.({
@@ -60,15 +69,32 @@ export const createOneClickDepositTemplate = (
     })
 
     const destInstructions = await params.destChainInstructions?.({
-      chain: destChain
+      chain: destChain,
+      amount
     })
 
-    // Combine all instructions
-    const allInstructions = [
-      ...(sourceInstructions || []).flat(),
-      ...(bridgeInstructions || []).flat(),
-      ...(destInstructions || []).flat()
-    ]
+    const allInstructions: Instruction[] = []
+    if (sourceInstructions) {
+      if (Array.isArray(sourceInstructions)) {
+        allInstructions.push(...sourceInstructions.flat())
+      } else {
+        allInstructions.push(sourceInstructions)
+      }
+    }
+    if (bridgeInstructions) {
+      if (Array.isArray(bridgeInstructions)) {
+        allInstructions.push(...bridgeInstructions.flat())
+      } else {
+        allInstructions.push(bridgeInstructions)
+      }
+    }
+    if (destInstructions) {
+      if (Array.isArray(destInstructions)) {
+        allInstructions.push(...destInstructions.flat())
+      } else {
+        allInstructions.push(destInstructions)
+      }
+    }
 
     return allInstructions
   }
