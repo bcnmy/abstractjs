@@ -292,7 +292,7 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
       DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS
     )
 
@@ -388,7 +388,9 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS)
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+    )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
       DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
@@ -439,7 +441,9 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS)
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+    )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
       DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
@@ -498,7 +502,9 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS)
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+    )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
       DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
@@ -578,7 +584,7 @@ describe("mee.getQuote", () => {
     expect(fusionQuote.quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(fusionQuote.quote.paymentInfo.token).to.eq(
+    expect(fusionQuote.quote.paymentInfo.token.toLowerCase()).to.eq(
       DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
     )
 
