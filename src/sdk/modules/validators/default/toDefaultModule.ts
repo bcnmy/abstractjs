@@ -1,4 +1,3 @@
-import { randomBytes } from "ethers"
 import { type Hex, concatHex, zeroAddress } from "viem"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
