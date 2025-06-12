@@ -1,11 +1,10 @@
 import type { Chain } from "viem"
 import type { Instruction } from "../../clients/decorators/mee"
 
-type OneClickDepositParams = {
+type OneClickDepositParams<TParams = object> = {
   sourceChain: Chain
   destChain: Chain
-  amount: bigint
-}
+} & TParams
 
 /**
  * The return type of sourceChainInstructions/bridgeInstructions/destChainInstructions
@@ -17,34 +16,35 @@ type OneClickDepositParams = {
  */
 type TemplateFunctionReturnType = Instruction | Instruction[] | Instruction[][]
 
-type OneClickDepositTemplate = {
+type OneClickDepositTemplate<TParams = object> = {
   sourceChainInstructions?: ({
-    chain,
-    amount
-  }: {
-    chain: Chain
-    amount: bigint
-  }) => Promise<TemplateFunctionReturnType>
-  bridgeInstructions?: ({
     sourceChain,
     destChain,
-    amount
+    ...params
   }: {
     sourceChain: Chain
     destChain: Chain
-    amount: bigint
-  }) => Promise<TemplateFunctionReturnType>
-  destChainInstructions?: ({
-    chain,
-    amount
+  } & TParams) => Promise<TemplateFunctionReturnType>
+  bridgeInstructions?: ({
+    sourceChain,
+    destChain,
+    ...params
   }: {
-    chain: Chain
-    amount: bigint
-  }) => Promise<TemplateFunctionReturnType>
+    sourceChain: Chain
+    destChain: Chain
+  } & TParams) => Promise<TemplateFunctionReturnType>
+  destChainInstructions?: ({
+    sourceChain,
+    destChain,
+    ...params
+  }: {
+    sourceChain: Chain
+    destChain: Chain
+  } & TParams) => Promise<TemplateFunctionReturnType>
 }
 
 /**
- * Create a one click deposit template
+ * Create a one click deposit template. Can be customized with type parameters to add additional parameters to the template.
  * @param params - The parameters for the template
  * @param params.sourceChainInstructions - The instructions for the source chain
  * @param params.bridgeInstructions - The instructions for the bridge
@@ -52,18 +52,18 @@ type OneClickDepositTemplate = {
  * @returns A function that returns the instructions for the template
  *
  * @example
- *  const morphoToAave = createOneClickDepositTemplate({
- *   sourceChainInstructions: async ({ chain, amount }) => {
+ *  const oneClick = createOneClickDepositTemplate<{ amount: bigint }>({
+ *   sourceChainInstructions: async ({ sourceChain, destChain, amount }) => {
  *     ...
  *   },
  *   bridgeInstructions: async ({ sourceChain, destChain, amount }) => {
  *     ...
  *   },
- *   destChainInstructions: async ({ chain, amount }) => {
+ *   destChainInstructions: async ({ sourceChain, destChain, amount }) => {
  *     ...
  *   }
  * })
- * const instructions = await morphoToAave({
+ * const instructions = await oneClick({
  *   sourceChain: paymentChain,
  *   destChain: targetChain,
  *   amount: amountConsumed
@@ -73,26 +73,29 @@ type OneClickDepositTemplate = {
  *   ...
  * })
  */
-export const createOneClickDepositTemplate = (
-  params: OneClickDepositTemplate
+export const createOneClickDepositTemplate = <TParams = object>(
+  params: OneClickDepositTemplate<TParams>
 ) => {
-  return async (depositParams: OneClickDepositParams) => {
-    const { sourceChain, destChain, amount } = depositParams
+  return async (depositParams: OneClickDepositParams<TParams>) => {
+    const { sourceChain, destChain, ...restParams } = depositParams
+    const typedRestParams = restParams as TParams
 
     const sourceInstructions = await params.sourceChainInstructions?.({
-      chain: sourceChain,
-      amount
+      sourceChain,
+      destChain,
+      ...typedRestParams
     })
 
     const bridgeInstructions = await params.bridgeInstructions?.({
       sourceChain,
       destChain,
-      amount
+      ...typedRestParams
     })
 
     const destInstructions = await params.destChainInstructions?.({
-      chain: destChain,
-      amount
+      sourceChain,
+      destChain,
+      ...typedRestParams
     })
 
     const allInstructions: Instruction[] = []

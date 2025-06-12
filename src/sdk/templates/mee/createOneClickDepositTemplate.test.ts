@@ -62,16 +62,18 @@ describe("createOneClickDepositTemplate", () => {
   })
 
   it("should aggregate transactions", async () => {
-    const aaveToMorpho = createOneClickDepositTemplate({
-      sourceChainInstructions: async ({ chain }) => {
+    const aaveToMorpho = createOneClickDepositTemplate<{
+      amount: bigint
+    }>({
+      sourceChainInstructions: async ({ sourceChain }) => {
         return mcNexus.buildComposable({
           // dummy transaction
           type: "default",
           data: {
             to: zeroAddress,
             abi: AavePoolAbi,
-            args: [testnetMcUSDC.addressOn(chain.id), 100, zeroAddress],
-            chainId: chain.id,
+            args: [testnetMcUSDC.addressOn(sourceChain.id), 100, zeroAddress],
+            chainId: sourceChain.id,
             functionName: "withdraw"
           }
         })
@@ -87,17 +89,17 @@ describe("createOneClickDepositTemplate", () => {
           }
         })
       },
-      destChainInstructions: async ({ chain }) => {
+      destChainInstructions: async ({ sourceChain, destChain }) => {
         // dummy instructions
         const approveAAVEtoSpendUSDC = await mcNexus.buildComposable({
           type: "approve",
           data: {
-            chainId: chain.id,
-            tokenAddress: testnetMcUSDC.addressOn(chain.id),
+            chainId: destChain.id,
+            tokenAddress: testnetMcUSDC.addressOn(destChain.id),
             spender: zeroAddress,
             amount: runtimeERC20BalanceOf({
               tokenAddress: zeroAddress,
-              targetAddress: mcNexus.addressOn(chain.id, true)
+              targetAddress: mcNexus.addressOn(destChain.id, true)
             })
           }
         })
@@ -106,15 +108,15 @@ describe("createOneClickDepositTemplate", () => {
           data: {
             abi: AavePoolAbi,
             to: zeroAddress,
-            chainId: chain.id,
+            chainId: destChain.id,
             functionName: "supply",
             args: [
-              testnetMcUSDC.addressOn(chain.id),
+              testnetMcUSDC.addressOn(destChain.id),
               runtimeERC20BalanceOf({
-                tokenAddress: testnetMcUSDC.addressOn(chain.id),
-                targetAddress: mcNexus.addressOn(chain.id, true)
+                tokenAddress: testnetMcUSDC.addressOn(destChain.id),
+                targetAddress: mcNexus.addressOn(destChain.id, true)
               }),
-              mcNexus.addressOn(chain.id, true),
+              mcNexus.addressOn(destChain.id, true),
               0
             ]
           }
@@ -138,7 +140,10 @@ describe("createOneClickDepositTemplate", () => {
     const sourceInstructions = vi.fn()
     const bridgeInstructions = vi.fn()
     const destinationInstructions = vi.fn()
-    const aaveToMorpho = createOneClickDepositTemplate({
+    const aaveToMorpho = createOneClickDepositTemplate<{
+      amount: bigint
+      slippage: number
+    }>({
       sourceChainInstructions: sourceInstructions,
       bridgeInstructions: bridgeInstructions,
       destChainInstructions: destinationInstructions
@@ -146,20 +151,26 @@ describe("createOneClickDepositTemplate", () => {
     await aaveToMorpho({
       sourceChain,
       destChain: destinationChain,
-      amount: parseUnits("1", 6)
+      amount: parseUnits("1", 6),
+      slippage: 0.01
     })
     expect(sourceInstructions).toHaveBeenCalledWith({
-      chain: sourceChain,
-      amount: parseUnits("1", 6)
+      sourceChain,
+      destChain: destinationChain,
+      amount: parseUnits("1", 6),
+      slippage: 0.01
     })
     expect(bridgeInstructions).toHaveBeenCalledWith({
       sourceChain,
       destChain: destinationChain,
-      amount: parseUnits("1", 6)
+      amount: parseUnits("1", 6),
+      slippage: 0.01
     })
     expect(destinationInstructions).toHaveBeenCalledWith({
-      chain: destinationChain,
-      amount: parseUnits("1", 6)
+      sourceChain,
+      destChain: destinationChain,
+      amount: parseUnits("1", 6),
+      slippage: 0.01
     })
   })
 })
