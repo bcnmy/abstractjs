@@ -37,10 +37,7 @@ export const useMeePermission = async (
   const {
     sessionDetails: sessionDetailsArray,
     mode: mode_,
-    instructions,
-    feeToken,
-    sponsorship,
-    sponsorshipOptions
+    instructions
   } = parameters
   const meeClient = meeClient_ as MeeClient
 
@@ -51,11 +48,14 @@ export const useMeePermission = async (
 
   const quote = await meeClient.getQuote({
     instructions,
-    feeToken,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
-    sponsorship,
-    sponsorshipOptions
+    ...(parameters.sponsorship
+      ? {
+          sponsorship: parameters.sponsorship,
+          sponsorshipOptions: parameters.sponsorshipOptions
+        }
+      : { feeToken: parameters.feeToken })
   })
 
   const signedQuote = await meeClient.signQuote({ quote })
