@@ -17,7 +17,6 @@ import type { GrantMeePermissionPayload } from "./grantMeePermission"
 export type UseMeePermissionParams = {
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
-  feeToken: FeeTokenInfo
   sessionDetails: GrantMeePermissionPayload
 } & OneOf<
   | {
