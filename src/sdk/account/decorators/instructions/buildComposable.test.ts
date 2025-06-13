@@ -28,8 +28,8 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import {
-  userOp,
-  type Instruction
+  type Instruction,
+  userOp
 } from "../../../clients/decorators/mee/getQuote"
 import {
   UniswapSwapRouterAbi,
