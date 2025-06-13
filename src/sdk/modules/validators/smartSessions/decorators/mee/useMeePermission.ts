@@ -1,4 +1,4 @@
-import type { Hash } from "viem"
+import type { Hash, OneOf } from "viem"
 import type {
   BaseMeeClient,
   MeeClient
@@ -19,9 +19,15 @@ export type UseMeePermissionParams = {
   instructions: Instruction[]
   feeToken: FeeTokenInfo
   sessionDetails: GrantMeePermissionPayload
-  sponsorship?: true
-  sponsorshipOptions?: SponsorshipOptionsParams
-}
+} & OneOf<
+  | {
+      feeToken: FeeTokenInfo
+    }
+  | {
+      sponsorship: true
+      sponsorshipOptions?: SponsorshipOptionsParams
+    }
+>
 
 export type UseMeePermissionPayload = { hash: Hash }
 
@@ -55,13 +61,10 @@ export const useMeePermission = async (
 
   const signedQuote = await meeClient.signQuote({ quote })
 
-  const modeMap = signedQuote.userOps.reduce(
-    (acc, userOpEntry) => {
-      acc[String(userOpEntry.chainId)] = false
-      return acc
-    },
-    {} as Record<string, boolean>
-  )
+  const modeMap = signedQuote.userOps.reduce((acc, userOpEntry) => {
+    acc[String(userOpEntry.chainId)] = false
+    return acc
+  }, {} as Record<string, boolean>)
 
   // Then focus on the other user ops
   for (const [_, userOpEntry] of signedQuote.userOps.entries()) {

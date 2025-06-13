@@ -241,6 +241,9 @@ export type GetQuoteParams = SupertransactionLike & {
         feeToken: FeeTokenInfo
       }
     | {
+        /**
+         * sponsorship flag to enable the sponsored super transactions.
+         */
         sponsorship: true
         /**
          * Sponsorship options for overrides
