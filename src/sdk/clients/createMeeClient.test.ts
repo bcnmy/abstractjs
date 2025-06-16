@@ -24,11 +24,7 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
-import {
-  DEFAULT_MEE_NODE_URL,
-  type MeeClient,
-  createMeeClient
-} from "./createMeeClient"
+import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
 // @ts-ignore
@@ -319,8 +315,7 @@ describe("mee.createMeeClient.delegated", async () => {
 
     // The explicit default URL should be removed later.
     meeClient = await createMeeClient({
-      account: mcNexus,
-      url: DEFAULT_MEE_NODE_URL
+      account: mcNexus
     })
   })
 

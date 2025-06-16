@@ -403,6 +403,8 @@ export interface MeeFilledUserOpDetails {
    *  fusion signature for a given userOp
    **/
   shortEncoding: boolean
+  /** Userop signature signed by sponsorship service */
+  signature?: Hex
 }
 
 /**

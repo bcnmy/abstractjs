@@ -5,14 +5,14 @@ import {
   type Transport,
   publicActions
 } from "viem"
-import { baseSepolia } from "viem/chains"
+import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
+import { LARGE_DEFAULT_GAS_LIMIT, getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { mcUSDC, mcUSDT, testnetMcUSDC } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -1008,4 +1008,49 @@ describe("mee.getQuote", () => {
       expect(balanceAfter).to.eq(balanceBefore)
     }
   )
+
+  // This is a mainnet onchain fusion flow test. Still the SDK doesn't have fund setup for non permit tokens.
+  // Will be skipped for now
+  test.skip("On chain fusion flow token transfer", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [base],
+      signer: eoaAccount,
+      transports: [http()]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const amountToTransfer = 1n
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDT.addressOn(base.id),
+        amount: amountToTransfer,
+        chainId: base.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        amount: amountToTransfer,
+        chainId: base.id,
+        tokenAddress: mcUSDT.addressOn(base.id)
+      },
+      instructions: [transfer],
+      feeToken: {
+        address: mcUSDT.addressOn(base.id),
+        chainId: base.id
+      }
+    })
+
+    console.log(getMeeScanLink(quote.quote.hash))
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
+
+    await meeClient.waitForSupertransactionReceipt({ hash })
+  })
 })

@@ -1,5 +1,5 @@
-import type { Address, Hex } from "viem"
-import type { BaseMeeClient } from "../../createMeeClient"
+import type { Address } from "viem"
+import type { MultichainSmartAccount } from ".."
 
 /**
  * Parameters for retrieving gas tank address
@@ -10,11 +10,6 @@ export type GetGasTankAddressParams = {
    * @example 1 // ETH
    */
   chainId: number
-  /**
-   * The private key of the gas tank
-   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-   */
-  privateKey: Hex
 }
 
 /**
@@ -29,12 +24,12 @@ export type GetGasTankAddressPayload = {
 }
 
 export const getGasTankAddress = async (
-  _client: BaseMeeClient,
-  _parameters: GetGasTankAddressParams
+  mcNexus: MultichainSmartAccount,
+  parameters: GetGasTankAddressParams
 ): Promise<GetGasTankAddressPayload> => {
-  return {
-    address: "" as Address
-  }
+  const { chainId } = parameters
+
+  return { address: mcNexus.addressOn(chainId, true) }
 }
 
 export default getGasTankAddress

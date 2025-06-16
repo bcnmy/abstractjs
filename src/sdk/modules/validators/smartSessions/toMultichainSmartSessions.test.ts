@@ -10,7 +10,6 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import {
-  DEFAULT_MEE_NODE_URL,
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
@@ -227,8 +226,7 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       const dappMeeClient = await createMeeClient({
-        account: dappNexusAccount,
-        url: DEFAULT_MEE_NODE_URL
+        account: dappNexusAccount
       })
       const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
