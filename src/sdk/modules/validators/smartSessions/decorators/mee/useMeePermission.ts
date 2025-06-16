@@ -50,9 +50,9 @@ export const useMeePermission = async (
     instructions,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
-    ...(parameters.sponsorship
+    ...(parameters.isSponsored
       ? {
-          isSponsored: parameters.sponsorship,
+          isSponsored: parameters.isSponsored,
           sponsorshipOptions: parameters.sponsorshipOptions
         }
       : { feeToken: parameters.feeToken })
