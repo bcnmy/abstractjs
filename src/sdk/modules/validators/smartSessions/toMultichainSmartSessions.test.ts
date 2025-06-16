@@ -316,7 +316,7 @@ describe("mee.multichainSmartSessions", () => {
       const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
       const usePermissionPayload = await dappSessionClient.usePermission({
-        sponsorship: true,
+        isSponsored: true,
         sessionDetails,
         mode: "ENABLE_AND_USE",
         instructions: [

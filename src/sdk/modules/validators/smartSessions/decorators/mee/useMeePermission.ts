@@ -23,7 +23,7 @@ export type UseMeePermissionParams = {
       feeToken: FeeTokenInfo
     }
   | {
-      sponsorship: true
+      isSponsored: true
       sponsorshipOptions?: SponsorshipOptionsParams
     }
 >
@@ -52,7 +52,7 @@ export const useMeePermission = async (
     shortEncodingSuperTxn: true,
     ...(parameters.sponsorship
       ? {
-          sponsorship: parameters.sponsorship,
+          isSponsored: parameters.sponsorship,
           sponsorshipOptions: parameters.sponsorshipOptions
         }
       : { feeToken: parameters.feeToken })

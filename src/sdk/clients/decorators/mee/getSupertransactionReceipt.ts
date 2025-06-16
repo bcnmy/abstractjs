@@ -149,7 +149,7 @@ export async function getSupertransactionReceipt(
     case "MINED_SUCCESS": {
       if (waitForReceipts) {
         const isSponsoredSupertransaction =
-          explorerResponse.paymentInfo.sponsored
+          explorerResponse.paymentInfo.isSponsored
 
         receipts = await Promise.all(
           explorerResponse.userOps

@@ -263,7 +263,7 @@ describe("mee.getQuote", () => {
     })
 
     const quote = await meeClient.getQuote({
-      sponsorship: true,
+      isSponsored: true,
       sponsorshipOptions: {
         url: DEFAULT_STAGING_PATHFINDER_URL,
         gasTank: {
@@ -324,7 +324,7 @@ describe("mee.getQuote", () => {
       })
 
       await meeClient.getQuote({
-        sponsorship: true,
+        isSponsored: true,
         sponsorshipOptions: {
           url: "https://www.google.com",
           gasTank: {
@@ -367,7 +367,7 @@ describe("mee.getQuote", () => {
     })
 
     const quote = await meeClient.getQuote({
-      sponsorship: true,
+      isSponsored: true,
       instructions: [
         {
           calls: [
@@ -420,7 +420,7 @@ describe("mee.getQuote", () => {
     })
 
     const quote = await meeClient.getQuote({
-      sponsorship: true,
+      isSponsored: true,
       instructions: [
         {
           calls: [
@@ -480,7 +480,7 @@ describe("mee.getQuote", () => {
     })
 
     const quote = await meeClient.getQuote({
-      sponsorship: true,
+      isSponsored: true,
       delegate: true,
       instructions: [
         {
@@ -554,7 +554,7 @@ describe("mee.getQuote", () => {
     const amountToTrigger = 1n
 
     const fusionQuote = await meeClient.getFusionQuote({
-      sponsorship: true,
+      isSponsored: true,
       trigger: {
         amount: amountToTrigger,
         chainId: paymentChain.id,
@@ -624,7 +624,7 @@ describe("mee.getQuote", () => {
       })
 
       const quote = await meeClient.getQuote({
-        sponsorship: true,
+        isSponsored: true,
         sponsorshipOptions: {
           url: DEFAULT_STAGING_PATHFINDER_URL,
           gasTank: {
@@ -676,7 +676,7 @@ describe("mee.getQuote", () => {
       })
 
       const quote = await meeClient.getQuote({
-        sponsorship: true,
+        isSponsored: true,
         instructions: [
           {
             calls: [
@@ -726,7 +726,7 @@ describe("mee.getQuote", () => {
       })
 
       const quote = await meeClient.getQuote({
-        sponsorship: true,
+        isSponsored: true,
         sponsorshipOptions: {
           url: DEFAULT_STAGING_PATHFINDER_URL,
           gasTank: {
@@ -798,7 +798,7 @@ describe("mee.getQuote", () => {
       })
 
       const quote = await meeClient.getQuote({
-        sponsorship: true,
+        isSponsored: true,
         sponsorshipOptions: {
           url: DEFAULT_STAGING_PATHFINDER_URL,
           gasTank: {
@@ -877,7 +877,7 @@ describe("mee.getQuote", () => {
       })
 
       const quote = await meeClient.getFusionQuote({
-        sponsorship: true,
+        isSponsored: true,
         sponsorshipOptions: {
           url: DEFAULT_STAGING_PATHFINDER_URL,
           gasTank: {
@@ -967,7 +967,7 @@ describe("mee.getQuote", () => {
       })
 
       const quote = await meeClient.getFusionQuote({
-        sponsorship: true,
+        isSponsored: true,
         sponsorshipOptions: {
           url: DEFAULT_STAGING_PATHFINDER_URL,
           gasTank: {

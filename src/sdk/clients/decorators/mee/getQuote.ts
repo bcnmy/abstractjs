@@ -244,7 +244,7 @@ export type GetQuoteParams = SupertransactionLike & {
         /**
          * sponsorship flag to enable the sponsored super transactions.
          */
-        sponsorship: true
+        isSponsored: true
         /**
          * Sponsorship options for overrides
          */
@@ -336,7 +336,7 @@ export type PaymentInfo = {
   /** Payment userop callGasLimit */
   callGasLimit?: bigint
   /** Sponsorship flag  */
-  sponsored?: boolean
+  isSponsored?: boolean
 }
 
 /**
@@ -681,7 +681,7 @@ const preparePaymentInfo = async (
     }
 
     paymentInfo = {
-      sponsored: true,
+      isSponsored: true,
       sender,
       token,
       nonce,
@@ -741,7 +741,7 @@ const preparePaymentInfo = async (
       : { initCode }
 
     paymentInfo = {
-      sponsored: false,
+      isSponsored: false,
       sender: validPaymentAccount.address,
       token: feeToken.address,
       nonce: nonce.nonce.toString(),
@@ -927,7 +927,7 @@ const prepareCleanUpUserOps = async (
  */
 export type resolveVerificationGasLimitParams = {
   moduleAddress?: Address
-  sponsorship: boolean
+  isSponsored: boolean
   index: number
 }
 

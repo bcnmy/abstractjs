@@ -168,7 +168,7 @@ export const getOnChainQuote = async (
     ? 0n
     : BigInt(quote.paymentInfo.tokenWeiAmount)
 
-  if (rest.sponsorship) {
+  if (rest.isSponsored) {
     // For sponsorship, user will never pay fee. So the trigger amount never include fees
     fees = 0n
   }
