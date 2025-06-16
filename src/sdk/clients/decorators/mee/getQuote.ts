@@ -1001,7 +1001,7 @@ const resolveVerificationGasLimitForPaymentChain = (
  * 'undefined' means the node will apply the default verification gas limit
  */
 const resolveVerificationGasLimitForNonPaymentChain = (
-  parameters: Omit<resolveVerificationGasLimitParams, "sponsorship">
+  parameters: Omit<resolveVerificationGasLimitParams, "isSponsored">
 ): verificationGasLimitPayload | undefined => {
   const { moduleAddress, index } = parameters
   // if module address is not provided, the default verification gas limit will be applied
