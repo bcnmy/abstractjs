@@ -91,7 +91,7 @@ describe("createOneClickDepositTemplate", () => {
       },
       destChainInstructions: async ({ sourceChain, destChain }) => {
         // dummy instructions
-        const approveAAVEtoSpendUSDC = await mcNexus.buildComposable({
+        const approveMorphoToSpendUSDC = await mcNexus.buildComposable({
           type: "approve",
           data: {
             chainId: destChain.id,
@@ -103,7 +103,7 @@ describe("createOneClickDepositTemplate", () => {
             })
           }
         })
-        const supplyUsdcToAAVE = await mcNexus.buildComposable({
+        const supplyUsdcToMorpho = await mcNexus.buildComposable({
           type: "default",
           data: {
             abi: AavePoolAbi,
@@ -121,7 +121,7 @@ describe("createOneClickDepositTemplate", () => {
             ]
           }
         })
-        return [approveAAVEtoSpendUSDC, supplyUsdcToAAVE]
+        return [approveMorphoToSpendUSDC, supplyUsdcToMorpho]
       }
     })
     const instructions = await aaveToMorpho({
@@ -154,7 +154,7 @@ describe("createOneClickDepositTemplate", () => {
       amount: parseUnits("1", 6),
       slippage: 0.01
     })
-    expect(sourceInstructions).toHaveBeenCalledWith({
+    expect(sourceChainInstructions).toHaveBeenCalledWith({
       sourceChain,
       destChain: destinationChain,
       amount: parseUnits("1", 6),
@@ -166,7 +166,7 @@ describe("createOneClickDepositTemplate", () => {
       amount: parseUnits("1", 6),
       slippage: 0.01
     })
-    expect(destinationInstructions).toHaveBeenCalledWith({
+    expect(destChainInstructions).toHaveBeenCalledWith({
       sourceChain,
       destChain: destinationChain,
       amount: parseUnits("1", 6),
