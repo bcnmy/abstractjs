@@ -1,6 +1,12 @@
-import { type Hex, concatHex, encodeAbiParameters } from "viem"
+import { type Hex, concatHex, encodeAbiParameters, zeroAddress } from "viem"
+import { encodeFunctionData } from "viem"
+import { parseAbi } from "viem/utils"
 import type { BuildApproveParameters } from "../../../account/decorators/instructions/buildApprove"
+import type { BuildDefaultParameters } from "../../../account/decorators/instructions/buildDefaultInstructions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import { FORWARDER_ADDRESS } from "../../../constants"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
+import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
@@ -51,19 +57,47 @@ export const signOnChainQuote = async (
     address: spender
   } = account_.deploymentOn(trigger.chainId, true)
 
-  const [
-    {
-      calls: [triggerCall]
-    }
-  ] = await account_.build({
-    type: "approve",
-    data: {
-      spender,
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      amount: trigger.amount
-    } as BuildApproveParameters
-  })
+  let triggerCall: AbstractCall | ComposableCall
+  if (trigger.tokenAddress === zeroAddress) {
+    const forwardCalldata = encodeFunctionData({
+      abi: ForwarderAbi,
+      functionName: "forward",
+      args: [spender]
+    })
+    const [
+      {
+        calls: [ethForwardCall]
+      }
+    ] = await account_.build({
+      type: "default",
+      data: {
+        calls: [
+          {
+            to: FORWARDER_ADDRESS,
+            data: forwardCalldata,
+            value: trigger.amount
+          }
+        ],
+        chainId: trigger.chainId
+      } as BuildDefaultParameters
+    })
+    triggerCall = ethForwardCall
+  } else {
+    const [
+      {
+        calls: [approveCall]
+      }
+    ] = await account_.build({
+      type: "approve",
+      data: {
+        spender,
+        tokenAddress: trigger.tokenAddress,
+        chainId: trigger.chainId,
+        amount: trigger.amount
+      } as BuildApproveParameters
+    })
+    triggerCall = approveCall
+  }
 
   // This will be always a non composable transaction, so don't worry about the composability
   const dataOrPrefix =
