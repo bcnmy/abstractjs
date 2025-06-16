@@ -182,7 +182,7 @@ export async function toGasTankAccount(
       chainId: chain.id,
       tokenAddress: params.tokenAddress,
       recipient: params.recipient,
-      amount: params.amount as any,
+      amount: params.amount,
       confirmations: params.confirmations || 2
     })
 
