@@ -57,6 +57,8 @@ export const signOnChainQuote = async (
   } = account_.deploymentOn(trigger.chainId, true)
 
   let triggerCall: AbstractCall | ComposableCall
+
+  // If the token address is zero address, we need to send eth via the ETH forwarder
   if (trigger.tokenAddress === zeroAddress) {
     const forwardCalldata = encodeFunctionData({
       abi: ForwarderAbi,
@@ -82,6 +84,7 @@ export const signOnChainQuote = async (
     })
     triggerCall = ethForwardCall
   } else {
+    // erc20 trigger
     const [
       {
         calls: [approveCall]
