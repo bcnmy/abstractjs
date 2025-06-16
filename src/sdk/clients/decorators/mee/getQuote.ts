@@ -482,7 +482,7 @@ export const getQuote = async (
     authorization,
     moduleAddress,
     shortEncodingSuperTxn = false,
-    sponsorship = false
+    isSponsored = false
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -506,7 +506,7 @@ export const getQuote = async (
   const hasProcessedInitData: string[] = []
   const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
     moduleAddress,
-    sponsorship
+    isSponsored
   })
 
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
@@ -578,7 +578,7 @@ export const getQuote = async (
 
         const verificationGasLimit = resolveVerificationGasLimit({
           moduleAddress,
-          sponsorship,
+          isSponsored,
           index: indexPerChainId.get(chainId)!,
           paymentChainId: paymentInfo.chainId,
           currentChainId: chainId
@@ -624,7 +624,7 @@ const preparePaymentInfo = async (
     delegate = false,
     gasLimit,
     authorization,
-    sponsorship,
+    isSponsored,
     sponsorshipOptions,
     shortEncodingSuperTxn,
     moduleAddress = zeroAddress as Address,
@@ -634,7 +634,7 @@ const preparePaymentInfo = async (
   let paymentInfo: PaymentInfo | undefined = undefined
   let isInitDataProcessed = false
 
-  if (sponsorship) {
+  if (isSponsored) {
     // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
     let sender = DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
     let token = DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
@@ -951,12 +951,12 @@ const resolveVerificationGasLimit = (
     currentChainId: string
   }
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship, index, paymentChainId, currentChainId } =
+  const { moduleAddress, isSponsored, index, paymentChainId, currentChainId } =
     parameters
   if (currentChainId === paymentChainId) {
     return resolveVerificationGasLimitForPaymentChain({
       moduleAddress,
-      sponsorship,
+      isSponsored,
       index
     })
   }
@@ -973,13 +973,13 @@ const resolveVerificationGasLimit = (
 const resolveVerificationGasLimitForPaymentChain = (
   parameters: resolveVerificationGasLimitParams
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship, index } = parameters
+  const { moduleAddress, isSponsored, index } = parameters
   // if module address is not provided, the default verification gas limit will be applied
   if (!moduleAddress) {
     return undefined
   }
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
-    if (sponsorship) {
+    if (isSponsored) {
       if (index === 0) {
         // return increased verification gas limit for the first userOp
         // as it this userOp will be enabling the permission => requires more gas
@@ -1030,13 +1030,13 @@ const resolveVerificationGasLimitForNonPaymentChain = (
 const resolvePaymentUserOpVerificationGasLimit = (
   parameters: Omit<resolveVerificationGasLimitParams, "index">
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship } = parameters
+  const { moduleAddress, isSponsored } = parameters
   // if module address is not provided, the default verification gas limit will be applied
   if (!moduleAddress) {
     return undefined
   }
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
-    if (!sponsorship) {
+    if (!isSponsored) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
       return { verificationGasLimit: "1000000" }
