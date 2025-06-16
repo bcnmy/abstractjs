@@ -1,6 +1,5 @@
 import { type Hex, concatHex, encodeAbiParameters, zeroAddress } from "viem"
 import { encodeFunctionData } from "viem"
-import { parseAbi } from "viem/utils"
 import type { BuildApproveParameters } from "../../../account/decorators/instructions/buildApprove"
 import type { BuildDefaultParameters } from "../../../account/decorators/instructions/buildDefaultInstructions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
