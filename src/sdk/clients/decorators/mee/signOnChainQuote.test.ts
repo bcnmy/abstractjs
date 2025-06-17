@@ -1,23 +1,21 @@
 import {
-  http,
   type Chain,
   type Hex,
   type LocalAccount,
   type Transport,
+  http,
   isHex,
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { waitForTransactionReceipt } from "viem/actions"
-import { base, optimism } from "viem/chains"
-import { beforeAll, describe, expect, inject, test, vi } from "vitest"
+import { optimism } from "viem/chains"
+import { beforeAll, describe, expect, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { getAllowance } from "../../../account/utils/Utils"
 import { FORWARDER_ADDRESS } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
@@ -280,5 +278,70 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       expect(signedQuote.signature).toBeDefined()
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
     })
+  })
+})
+
+describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
+  let network: NetworkConfig
+  let eoaAccount: LocalAccount
+
+  let mcNexus: MultichainSmartAccount
+  let meeClient: MeeClient
+
+  let chain: Chain
+
+  beforeAll(async () => {
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    eoaAccount = network.account!
+    chain = network.chain
+    mcNexus = await toMultichainNexusAccount({
+      chains: [chain],
+      transports: [http()],
+      signer: eoaAccount,
+      index: 1n
+    })
+
+    meeClient = await createMeeClient({
+      account: mcNexus
+    })
+  })
+
+  test("should succeed with native coin trigger", async () => {
+    const trigger = {
+      chainId: network.chain.id,
+      tokenAddress: zeroAddress,
+      amount: 1n
+    }
+
+    const fusionQuote = await meeClient.getOnChainQuote({
+      trigger,
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            chainId: network.chain.id,
+            calls: [
+              {
+                // dummy transfer to an address
+                to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
+                value: 1n
+              }
+            ]
+          }
+        })
+      ],
+      feeToken: {
+        chainId: network.chain.id,
+        address: zeroAddress
+      }
+    })
+    // Execute the quote
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote
+    })
+
+    // Wait for the transaction to complete
+    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })
