@@ -233,15 +233,25 @@ export type GetQuoteParams = SupertransactionLike & {
    * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
-  /**
-   * sponsorship flag to enable the sponsored super transactions.
-   */
-  sponsorship?: true
-  /**
-   * Sponsorship options for overrides
-   */
-  sponsorshipOptions?: SponsorshipOptionsParams
 } & OneOf<
+    | {
+        /**
+         * Token to be used for paying transaction fees
+         */
+        feeToken: FeeTokenInfo
+      }
+    | {
+        /**
+         * sponsorship flag to enable the sponsored super transactions.
+         */
+        sponsorship: true
+        /**
+         * Sponsorship options for overrides
+         */
+        sponsorshipOptions?: SponsorshipOptionsParams
+      }
+  > &
+  OneOf<
     | {
         /**
          * Whether to delegate the transaction to the account
@@ -723,12 +733,12 @@ const preparePaymentInfo = async (
     const initData: InitDataOrUndefined = isAccountDeployed
       ? undefined
       : delegate
-        ? {
-            eip7702Auth: await validPaymentAccount.toDelegation({
-              authorization
-            })
-          }
-        : { initCode }
+      ? {
+          eip7702Auth: await validPaymentAccount.toDelegation({
+            authorization
+          })
+        }
+      : { initCode }
 
     paymentInfo = {
       sponsored: false,
