@@ -9,7 +9,7 @@ import {
   concatHex,
   encodeAbiParameters,
   encodeFunctionData,
-  erc20Abi,
+  erc20Abi
 } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"

@@ -17,29 +17,26 @@ import {
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
+  DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
   type Trigger,
-  getFusionQuote,
-  DEFAULT_GAS_LIMIT
+  getFusionQuote
 } from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import { getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { mcUSDC } from "../../../constants/tokens"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
-import {
-  type MeeClient,
-  createMeeClient
-} from "../../createMeeClient"
+import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
 import { signMMDtkQuote } from "./signMmDtkQuote"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 
 describe("mee.getMmDtkQuote", () => {
   let network: NetworkConfig
@@ -362,7 +359,7 @@ describe("mee.getMmDtkQuote", () => {
 
     const fusionQuote = await getMmDtkQuote(meeClient, {
       trigger,
-      instructions: [transferInstruction], 
+      instructions: [transferInstruction],
       feeToken,
       delegatorSmartAccount: mmDtkAccount
     })

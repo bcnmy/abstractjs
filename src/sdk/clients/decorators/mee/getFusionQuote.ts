@@ -87,7 +87,7 @@ export const getFusionQuote = async (
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
-  
+
   const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
 
   let permitEnabled = false
