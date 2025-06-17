@@ -4,7 +4,6 @@ import { isStaging } from "../account/utils/Helpers"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
-export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v3"
 /**
   const STAKEPOOL_MEE_NODE_URL = "https://mainnet.mee.stakepool.dev.br/v3"
 */
