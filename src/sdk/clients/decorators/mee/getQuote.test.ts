@@ -1068,8 +1068,9 @@ describe("mee.getQuote", () => {
 
     const { hash } = await meeClient.executeQuote({ quote: quote })
 
-    const { transactionStatus } = await meeClient.waitForSupertransactionReceipt({ hash })
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
 
-    expect(transactionStatus).to.to.eq("MINED_SUCCESS");
+    expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
 })

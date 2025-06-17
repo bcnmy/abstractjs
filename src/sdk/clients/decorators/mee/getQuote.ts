@@ -15,6 +15,7 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
+import createHttpClient, { type Url } from "../../createHttpClient"
 import {
   type BaseMeeClient,
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
@@ -23,7 +24,6 @@ import {
   DEFAULT_PATHFINDER_URL,
   DEFAULT_STAGING_PATHFINDER_URL
 } from "../../createMeeClient"
-import createHttpClient, { type Url } from "../../createHttpClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
