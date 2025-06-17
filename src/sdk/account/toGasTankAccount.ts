@@ -1,4 +1,10 @@
-import type { Chain, Hex, Transport } from "viem"
+import {
+  createPublicClient,
+  type Chain,
+  type Hex,
+  type PublicClient,
+  type Transport
+} from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { type NonceInfo, toMultichainNexusAccount } from "."
 import type { Url } from "../clients/createHttpClient"
@@ -52,6 +58,11 @@ export type GasTankAccountParams = {
  * Represents a gas tank smart account
  */
 export type GasTankAccount = {
+  /**
+   * Viem PublicClient for gas tank account
+   * @returns Promise resolving to the gas tank public client
+   */
+  publicClient: PublicClient
   /**
    * Get a gas tank deployment status
    * @returns Promise resolving to the gas tank deployment status
@@ -135,6 +146,11 @@ export async function toGasTankAccount(
     transports: [transport]
   })
 
+  const publicClient = createPublicClient({
+    chain,
+    transport
+  })
+
   const meeClient = await createMeeClient({
     account: mcNexus,
     ...(options?.mee?.url ? { url: options.mee.url } : {}),
@@ -187,6 +203,7 @@ export async function toGasTankAccount(
     })
 
   return {
+    publicClient,
     isDeployed,
     getAddress,
     getBalance,
