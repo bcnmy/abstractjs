@@ -1,9 +1,9 @@
 import {
-  createPublicClient,
   type Chain,
   type Hex,
   type PublicClient,
-  type Transport
+  type Transport,
+  createPublicClient
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { type NonceInfo, toMultichainNexusAccount } from "."
