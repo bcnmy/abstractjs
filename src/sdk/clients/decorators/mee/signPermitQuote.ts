@@ -16,7 +16,7 @@ import type { AbstractCall, GetQuotePayload } from "./getQuote"
 /**
  * Custom trigger for arbitrary calls
  */
-type CustomTrigger = {
+export type CustomTrigger = {
   /**
    * The call to execute
    * @see {@link AbstractCall}
@@ -27,7 +27,7 @@ type CustomTrigger = {
 /**
  * Parameters for a token trigger
  */
-type TokenTrigger = {
+export type TokenTrigger = {
   /**
    * The address of the token to use on the relevant chain
    * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
@@ -119,6 +119,11 @@ export const signPermitQuote = async (
     account: account_ = client.account,
     fusionQuote: { quote, trigger }
   } = parameters
+
+  // Type guard to ensure we have a TokenTrigger
+  if ("call" in trigger) {
+    throw new Error("Custom triggers are not supported for permit quotes")
+  }
 
   const signer = account_.signer
 

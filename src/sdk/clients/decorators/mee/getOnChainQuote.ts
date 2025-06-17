@@ -9,7 +9,7 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import type { CustomTrigger, TokenTrigger, Trigger } from "./signPermitQuote"
 
 /**
  * Payload returned when requesting an on-chain quote.
@@ -26,13 +26,31 @@ export type GetOnChainQuotePayload = { quote: GetQuotePayload } & {
 /**
  * Parameters for requesting an on-chain quote
  */
-export type GetOnChainQuoteParams = GetQuoteParams & {
-  /**
-   * Trigger information for the transaction
-   * @see {@link Trigger}
-   */
-  trigger: Trigger
-}
+export type GetOnChainQuoteParams = GetQuoteParams &
+  (
+    | {
+        /**
+         * Trigger information for the transaction
+         * @see {@link Trigger}
+         */
+        trigger: CustomTrigger
+        /**
+         * Sponsorship is required for custom triggers
+         */
+        sponsorship: true
+      }
+    | {
+        /**
+         * Trigger information for the transaction
+         * @see {@link Trigger}
+         */
+        trigger: TokenTrigger
+        /**
+         * Optional sponsorship flag
+         */
+        sponsorship?: boolean
+      }
+  )
 
 /**
  * Gets a quote for an on-chain transaction from the MEE service.
@@ -87,6 +105,46 @@ export const getOnChainQuote = async (
     ...rest
   } = parameters
 
+  const resolvedInstructions = await resolveInstructions(instructions)
+
+  if ("call" in trigger) {
+    const params: BuildInstructionTypes = {
+      type: "default",
+      data: {
+        calls: [trigger.call],
+        chainId: trigger.call.chainId
+      }
+    }
+
+    const triggerTransfer = await account_.build(params)
+
+    const batchedInstructions = await batchInstructions({
+      account: account_,
+      instructions: [...triggerTransfer, ...resolvedInstructions]
+    })
+    console.log("batchedInstructions", batchedInstructions[0], {
+      path: "quote-permit", // Use different endpoint for onchain quotes
+      eoa: account_.signer.address,
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    })
+    const quote = await getQuote(client, {
+      path: "quote-permit", // Use different endpoint for onchain quotes
+      eoa: account_.signer.address,
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    })
+
+    return {
+      quote,
+      trigger
+    }
+  }
+
   const recipient = account_.deploymentOn(trigger.chainId, true).address
   const sender = account_.signer.address
 
@@ -109,8 +167,6 @@ export const getOnChainQuote = async (
 
     triggerAmount = trigger.amount
   }
-
-  const resolvedInstructions = await resolveInstructions(instructions)
 
   const isComposable = resolvedInstructions.some(
     ({ isComposable }) => isComposable

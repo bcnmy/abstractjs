@@ -60,10 +60,13 @@ export const useMeePermission = async (
 
   const signedQuote = await meeClient.signQuote({ quote })
 
-  const modeMap = signedQuote.userOps.reduce((acc, userOpEntry) => {
-    acc[String(userOpEntry.chainId)] = false
-    return acc
-  }, {} as Record<string, boolean>)
+  const modeMap = signedQuote.userOps.reduce(
+    (acc, userOpEntry) => {
+      acc[String(userOpEntry.chainId)] = false
+      return acc
+    },
+    {} as Record<string, boolean>
+  )
 
   // Then focus on the other user ops
   for (const [_, userOpEntry] of signedQuote.userOps.entries()) {

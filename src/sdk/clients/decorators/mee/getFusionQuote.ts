@@ -74,6 +74,10 @@ export const getFusionQuote = async (
   client: BaseMeeClient,
   parameters: GetFusionQuoteParams
 ): Promise<GetFusionQuotePayload> => {
+  if ("call" in parameters.trigger) {
+    return getOnChainQuote(client, parameters)
+  }
+
   const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
 
   let permitEnabled = false

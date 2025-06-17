@@ -607,7 +607,7 @@ export const getQuote = async (
   )
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
-
+  console.log("quoteRequest", quoteRequest)
   return await client.request<GetQuotePayload>({ path, body: quoteRequest })
 }
 
