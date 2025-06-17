@@ -167,6 +167,13 @@ export type SponsorshipOptionsParams = {
    * @example http://dapp-backend/sponsor-supertx
    */
   url: Url
+  /**
+   * Custom headers to be passed to self hosted sponsorship backends.
+   */
+  customHeaders?: Record<string, string>
+  /**
+   * Gas tank parameters
+   */
   gasTank: {
     /**
      * The chainId to use
@@ -619,7 +626,10 @@ export const getQuote = async (
       quote = await selfHostedClient.request<GetQuotePayload>({
         path: `sponsorship/sign/${sponsorshipOptions.gasTank.chainId}/${sponsorshipOptions.gasTank.address}`,
         method: "POST",
-        body: quote
+        body: quote,
+        ...(sponsorshipOptions.customHeaders
+          ? { headers: sponsorshipOptions.customHeaders }
+          : {})
       })
     }
   }
@@ -671,7 +681,10 @@ const preparePaymentInfo = async (
       nonceKey: string
     }>({
       path: `sponsorship/nonce/${chainId}/${sender}`,
-      method: "GET"
+      method: "GET",
+      ...(sponsorshipOptions?.customHeaders
+        ? { headers: sponsorshipOptions.customHeaders }
+        : {})
     })
 
     paymentInfo = {

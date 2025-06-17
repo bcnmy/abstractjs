@@ -1047,6 +1047,9 @@ describe("mee.getQuote", () => {
       sponsorship: true,
       sponsorshipOptions: {
         url: "http://localhost:3004/v1",
+        customHeaders: {
+          hello: "world"
+        },
         gasTank: {
           address: "0xC2461985dE59CcA97eBAcBBF1eDBe904ea859c84",
           token: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
