@@ -11,12 +11,23 @@ import { PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
-import type { GetQuotePayload } from "./getQuote"
+import type { AbstractCall, GetQuotePayload } from "./getQuote"
+
+/**
+ * Custom trigger for arbitrary calls
+ */
+type CustomTrigger = {
+  /**
+   * The call to execute
+   * @see {@link AbstractCall}
+   */
+  call: AbstractCall & { chainId: number }
+}
 
 /**
  * Parameters for a token trigger
  */
-export type Trigger = {
+type TokenTrigger = {
   /**
    * The address of the token to use on the relevant chain
    * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
@@ -42,6 +53,9 @@ export type Trigger = {
    */
   useMaxAvailableFunds?: true
 }
+
+export type Trigger = TokenTrigger | CustomTrigger
+
 /**
  * Parameters for signing a permit quote
  */

@@ -61,6 +61,10 @@ export const signFusionQuote = async (
   client: BaseMeeClient,
   parameters: SignFusionQuoteParameters
 ): Promise<SignFusionQuotePayload> => {
+  if ("call" in parameters.fusionQuote.trigger) {
+    return signOnChainQuote(client, parameters)
+  }
+
   const paymentTokenInfo = await getPaymentToken(
     client,
     parameters.fusionQuote.trigger
