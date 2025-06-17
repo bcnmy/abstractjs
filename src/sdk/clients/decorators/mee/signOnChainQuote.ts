@@ -26,7 +26,7 @@ export type SignOnChainQuoteParams = {
   confirmations?: number
 }
 
-const ON_CHAIN_PREFIX = "0x177eee01"
+export const ON_CHAIN_PREFIX = "0x177eee01"
 
 /**
  * Signs a fusion quote with a tx send client side.
