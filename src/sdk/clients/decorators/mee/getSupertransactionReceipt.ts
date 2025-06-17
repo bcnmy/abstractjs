@@ -14,7 +14,7 @@ import {
 import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { AnyData } from "../../../modules"
-import type { Url } from "../../createHttpClient"
+import { createHttpClient, type Url } from "../../createHttpClient"
 import {
   type BaseMeeClient,
   DEFAULT_PATHFINDER_URL
@@ -167,22 +167,16 @@ export async function getSupertransactionReceipt(
               // If sponsored tx ? the receipt for sponsored payment userOp needs to be fetched from
               // sponsorship backend
               if (isSponsoredSupertransaction && index === 0) {
-                try {
-                  const receiptUrl = `${DEFAULT_PATHFINDER_URL}/sponsorship/receipt/${chainId}/${executionData}`
+                const sponsorshipClient = createHttpClient(
+                  DEFAULT_PATHFINDER_URL
+                )
 
-                  const receiptResponse = await fetch(receiptUrl, {
-                    method: "GET",
-                    headers: {
-                      "Content-Type": "application/json"
-                    }
-                  })
+                const receipt = await sponsorshipClient.request({
+                  path: `sponsorship/receipt/${chainId}/${executionData}`,
+                  method: "GET"
+                })
 
-                  const receipt = await receiptResponse.json()
-
-                  return formatTransactionReceipt(receipt as AnyData)
-                } catch {
-                  throw new Error("Failed to fetch sponsored userOp receipt")
-                }
+                return formatTransactionReceipt(receipt as AnyData)
               }
 
               return getTransactionReceiptFromViem(

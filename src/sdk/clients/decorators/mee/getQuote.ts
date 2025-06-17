@@ -23,6 +23,7 @@ import {
   DEFAULT_PATHFINDER_URL,
   DEFAULT_STAGING_PATHFINDER_URL
 } from "../../createMeeClient"
+import createHttpClient, { type Url } from "../../createHttpClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -165,7 +166,7 @@ export type SponsorshipOptionsParams = {
    * Sponsorship url for requesting sponsorship
    * @example http://dapp-backend/sponsor-supertx
    */
-  url: string
+  url: Url
   gasTank: {
     /**
      * The chainId to use
@@ -474,7 +475,8 @@ export const getQuote = async (
     authorization,
     moduleAddress,
     shortEncodingSuperTxn = false,
-    sponsorship = false
+    sponsorship = false,
+    sponsorshipOptions
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -600,7 +602,29 @@ export const getQuote = async (
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
-  return await client.request<GetQuotePayload>({ path, body: quoteRequest })
+  let quote = await client.request<GetQuotePayload>({
+    path,
+    body: quoteRequest
+  })
+
+  if (sponsorship && sponsorshipOptions) {
+    const isSelfHostedSponsorship = ![
+      DEFAULT_PATHFINDER_URL,
+      DEFAULT_STAGING_PATHFINDER_URL
+    ].includes(sponsorshipOptions.url)
+
+    if (isSelfHostedSponsorship) {
+      const selfHostedClient = createHttpClient(sponsorshipOptions.url)
+
+      quote = await selfHostedClient.request<GetQuotePayload>({
+        path: `sponsorship/sign/${sponsorshipOptions.gasTank.chainId}/${sponsorshipOptions.gasTank.address}`,
+        method: "POST",
+        body: quote
+      })
+    }
+  }
+
+  return quote
 }
 
 const preparePaymentInfo = async (
@@ -631,46 +655,24 @@ const preparePaymentInfo = async (
     let sender = DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
     let token = DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
     let chainId = DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+    let sponsorshipUrl: Url = DEFAULT_PATHFINDER_URL
 
     if (sponsorshipOptions) {
-      // TODO: Only biconomy hosted sponsorship is supported right now. Remove this when self hosted is supported
-      if (
-        sponsorshipOptions.url !== DEFAULT_PATHFINDER_URL &&
-        sponsorshipOptions.url !== DEFAULT_STAGING_PATHFINDER_URL
-      ) {
-        throw new Error("Self hosted sponsorship is not supported yet.")
-      }
-
       sender = sponsorshipOptions.gasTank.address
       token = sponsorshipOptions.gasTank.token
       chainId = sponsorshipOptions.gasTank.chainId
+      sponsorshipUrl = sponsorshipOptions.url
     }
 
-    const nonceUrl = `${DEFAULT_PATHFINDER_URL}/sponsorship/nonce/${chainId}/${sender}`
+    const sponsorshipClient = createHttpClient(sponsorshipUrl)
 
-    let nonce: string | undefined
-
-    try {
-      const nonceInfoResponse = await fetch(nonceUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-
-      const nonceInfo = (await nonceInfoResponse.json()) as {
-        nonce: string
-        nonceKey: string
-      }
-
-      nonce = nonceInfo.nonce
-    } catch {
-      throw new Error("Failed to fetch nonce for sponsorship")
-    }
-
-    if (!nonce || nonce === "") {
-      throw new Error("Failed to fetch nonce for sponsorship")
-    }
+    const { nonce } = await sponsorshipClient.request<{
+      nonce: string
+      nonceKey: string
+    }>({
+      path: `sponsorship/nonce/${chainId}/${sender}`,
+      method: "GET"
+    })
 
     paymentInfo = {
       sponsored: true,
@@ -952,7 +954,10 @@ const resolveVerificationGasLimit = (
       index
     })
   }
-  return resolveVerificationGasLimitForNonPaymentChain({ moduleAddress, index })
+  return resolveVerificationGasLimitForNonPaymentChain({
+    moduleAddress,
+    index
+  })
 }
 
 /**
