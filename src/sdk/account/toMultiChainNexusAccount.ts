@@ -5,6 +5,7 @@ import type {
 } from "../clients/decorators/mee/getQuote"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
+  type DelegationParams,
   type ToNexusSmartAccountParameters,
   toNexusAccount
 } from "./toNexusAccount"
@@ -30,6 +31,10 @@ import {
   type IsDelegatedPayload,
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
+import multichainRead, {
+  type MultichainReadParameters,
+  type MultiChainReadPayload
+} from "./decorators/multichainRead"
 import {
   type BridgeQueryResult,
   type QueryBridgeParams,
@@ -188,13 +193,21 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     parameters: WaitForTransactionReceiptParameters
   ) => Promise<WaitForTransactionReceiptPayload>
   /**
+   * Function to read data across all deployments
+   * @param params - The parameters for the read
+   * @returns The read data
+   */
+  read: <T>(
+    params: MultichainReadParameters
+  ) => Promise<MultiChainReadPayload<T>[]>
+  /**
    * Function to get the delegation data for the account.
    * The chainId will be 0 for multi-chain authorization.
    * @returns The delegation data.
    * @example
    * const delegation = await mcAccount.toDelegation()
    */
-  toDelegation: () => Promise<MeeAuthorization>
+  toDelegation: (params?: DelegationParams) => Promise<MeeAuthorization>
 }
 
 /**
@@ -318,8 +331,14 @@ export async function toMultichainNexusAccount(
   ) =>
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
+  const read = <T>(params: MultichainReadParameters) =>
+    multichainRead({ account: baseAccount }, params) as Promise<
+      MultiChainReadPayload<T>[]
+    >
+
   // The specific deployment doesn't matter here because chainId = 0
-  const toDelegation = async () => await deployments[0].toDelegation(true)
+  const toDelegation = async () =>
+    await deployments[0].toDelegation({ multiChain: true })
 
   return {
     ...baseAccount,
@@ -331,6 +350,7 @@ export async function toMultichainNexusAccount(
     isDelegated,
     unDelegate,
     waitForTransactionReceipts,
+    read,
     toDelegation
   }
 }

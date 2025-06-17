@@ -1,4 +1,4 @@
-import { type Address, pad, toHex } from "viem"
+import { type Address, pad, parseAbi, toHex } from "viem"
 import type { PublicClient } from "viem"
 import { NEXUS_ACCOUNT_FACTORY_ADDRESS } from "../../constants"
 import { AccountFactoryAbi } from "../../constants/abi/AccountFactory"
@@ -52,5 +52,45 @@ export const getNexusAddress = async (
     abi: AccountFactoryAbi,
     functionName: "computeAccountAddress",
     args: [initData, salt]
+  })
+}
+
+/**
+ * Parameters for getting the counterfactual address via K1 Factory
+ * @property publicClient - {@link PublicClient} The public client to use for the read contract
+ * @property ownerAddress - {@link Address} The address of the EOA signer
+ * @property attesters - {@link Address[]} The addresses of the attesters
+ * @property attesterThreshold - {@link number} The threshold for the attesters
+ * @property index - Optional BigInt index for deterministic deployment (defaults to 0)
+ */
+export type GetK1NexusAddressParams<ExtendedPublicClient extends PublicClient> =
+  {
+    k1FactoryAddress: Address
+    publicClient: ExtendedPublicClient
+    ownerAddress: Address
+    attesters: Address[]
+    attesterThreshold: number
+    index: bigint
+  }
+
+export const getK1NexusAddress = async (
+  params: GetK1NexusAddressParams<PublicClient>
+): Promise<Address> => {
+  const {
+    publicClient,
+    k1FactoryAddress,
+    ownerAddress,
+    attesters,
+    attesterThreshold,
+    index = 0n
+  } = params
+
+  return await publicClient.readContract({
+    address: k1FactoryAddress,
+    abi: parseAbi([
+      "function computeAccountAddress(address owner, uint256 index, address[] attesters, uint8 threshold) public view returns (address)"
+    ]),
+    functionName: "computeAccountAddress",
+    args: [ownerAddress, index, attesters, attesterThreshold]
   })
 }

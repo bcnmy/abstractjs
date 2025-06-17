@@ -1,4 +1,6 @@
 import type { Hex } from "viem"
+import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
+import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -177,17 +179,61 @@ export const isVersionNewer = (
   return comparison > 0
 }
 
-export type AddressConfig = {
-  /** The factory address for the account */
-  factoryAddress: Hex
-  /** The bootstrap address for the account */
-  bootStrapAddress: Hex
-  /** The validator address for the account */
-  validatorAddress: Hex
+export type AddressConfigsAdditions = {
+  "1.0.2": {
+    registryAddress?: Hex
+    attesters?: Hex[]
+    attesterThreshold?: number
+    k1FactoryAddress?: Hex
+    k1ValidatorAddress?: Hex
+    useK1Config?: boolean
+  }
+}
+
+export type NexusVersion = `${number}.${number}.${number}`
+
+export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
+
+export type BaseAddressConfig = {
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
-  accountId: `biconomy.nexus.${number}.${number}.${number}`
+  accountId: NexusAccountId
   /** The implementation address for the account */
   implementationAddress: Hex
-  /** The execution module address for the account */
-  executorAddress: Hex
+  /** The bootstrap address for the account */
+  bootStrapAddress: Hex
+  /** The factory address for the account */
+  factoryAddress: Hex
+}
+
+export type AddressConfig = BaseAddressConfig &
+  AddressConfigsAdditions[keyof AddressConfigsAdditions]
+
+/**
+ * Returns the appropriate configuration based on the SDK version
+ * @param version - The SDK version string (e.g., "0.2.0")
+ * @returns The configuration containing attester and factory addresses
+ * @throws Error if the version is not supported
+ */
+export function getConfigFromNexusVersion(
+  nexusVersion: Required<
+    NonNullable<ToNexusSmartAccountParameters["nexusVersion"]>
+  >
+): AddressConfig {
+  // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
+  if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
+    return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]
+  }
+
+  // If the version is not explicitly listed, find the closest compatible version
+  // Sort the available versions in descending order
+  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION).sort(
+    (a, b) => semverCompare(b, a)
+  )
+
+  // If no compatible version is found, throw an error
+  throw new Error(
+    `Unsupported Nexus version: ${nexusVersion}. Compatible versions are: ${allVersions.join(
+      ", "
+    )}`
+  )
 }

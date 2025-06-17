@@ -109,7 +109,8 @@ export const buildApprove = async (
       functionName: functionSig,
       args: args as unknown as Array<AnyData>,
       abi,
-      chainId
+      chainId,
+      ...(gasLimit ? { gasLimit } : {})
     }
 
     triggerCalls = await buildComposableCall(

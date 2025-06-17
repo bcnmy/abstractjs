@@ -1,11 +1,15 @@
 import {
+  type Address,
   type ByteArray,
   type Chain,
   type Client,
   type Hex,
   type Transport,
+  type WalletClient,
   isHex,
   pad,
+  publicActions,
+  toFunctionSelector,
   toHex
 } from "viem"
 import { ERROR_MESSAGES } from "../../account/index.js"
@@ -88,4 +92,58 @@ export const parseModule = <
     throw new Error(ERROR_MESSAGES.MODULE_NOT_ACTIVATED)
   }
   return activeModule
+}
+
+export const isPermitSupported = async (
+  walletClient: WalletClient,
+  tokenAddress: Address
+): Promise<boolean> => {
+  try {
+    const client = walletClient.extend(publicActions)
+
+    // Define all selectors
+    const permitSelector = toFunctionSelector(
+      "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)"
+    )
+    const domainSeparatorSelector = "0x3644e515" // keccak256("DOMAIN_SEPARATOR()")
+    const noncesSelector = "0x7ecebe00" // keccak256("nonces(address)")
+
+    // Helper function to check function existence
+    const checkPermitEnabled = async (
+      selector: Hex,
+      padding = ""
+    ): Promise<boolean> => {
+      return client
+        .call({
+          to: tokenAddress,
+          data: `${selector}${padding}` as Hex
+        })
+        .then(() => true)
+        .catch((error) => {
+          // For permit function, we check if it's a revert due to params, not function missing
+          if (selector === permitSelector) {
+            return (
+              error.message.includes("revert") &&
+              !error.message.includes("function selector")
+            )
+          }
+          return false
+        })
+    }
+
+    // Create the calls to check for each function
+    const [hasPermit, hasDomainSeparator, hasNonces] = await Promise.all([
+      checkPermitEnabled(permitSelector, "0".repeat(64)),
+      checkPermitEnabled(domainSeparatorSelector),
+      checkPermitEnabled(
+        noncesSelector,
+        `000000000000000000000000${"0".repeat(40)}`
+      )
+    ])
+
+    return hasPermit && hasDomainSeparator && hasNonces
+  } catch (err) {
+    console.error("Error checking permit support:", err)
+    return false
+  }
 }

@@ -28,28 +28,21 @@ export type Trigger = {
    * @example 1 // Ethereum Mainnet
    */
   chainId: number
-} & OneOf<
-  | {
-      /**
-       * The amount of the token to use, in the token's smallest unit.
-       * @example 1000000n // 1 USDC (6 decimals)
-       */
-      amount: bigint
-      useMaxAvailableAmount?: false
-    }
-  | {
-      /**
-       * Whether to use the maximum available token balance, automatically accounting for gas fees.
-       * When true, the specified amount will be ignored and the maximum available balance
-       * after deducting gas fees will be used. Should be used in combination with runtimeERC20BalanceOf
-       * in the instruction which uses the permitted token, so that the amount is the maximum available amount
-       * after deducting gas fees. Default is false.
-       */
-      useMaxAvailableAmount: true
-      amount?: never
-    }
->
-
+  /**
+   * The amount of the token to use, in the token's smallest unit.
+   * @example 1000000n // 1 USDC (6 decimals)
+   */
+  amount?: bigint
+  /**
+   * custom gas limit can be added to override the default 50_000 gas limit
+   */
+  gasLimit?: bigint
+  /**
+   * Whether to use max available funds from the EOA wallet to be pulled into SCA after fee deduction.
+   * default is false
+   */
+  useMaxAvailableFunds?: true
+}
 /**
  * Parameters for signing a permit quote
  */
@@ -119,9 +112,11 @@ export const signPermitQuote = async (
   if (!trigger.amount)
     throw new Error("Amount is required to sign a permit quote")
 
-  const { walletClient } = account_.deploymentOn(trigger.chainId, true)
+  const { walletClient, address: spender } = account_.deploymentOn(
+    trigger.chainId,
+    true
+  )
   const owner = signer.address
-  const spender = quote.paymentInfo.sender
 
   const token = getContract({
     abi: TokenWithPermitAbi,

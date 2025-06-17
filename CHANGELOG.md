@@ -1,5 +1,69 @@
 # @biconomy/abstractjs
 
+## 1.0.17
+
+### Patch Changes
+
+- Features includes:
+
+  1. Multichain smart session support is added
+  2. Nexus 102 support is added
+  3. New mee node changes have been adjusted
+
+## 1.0.16
+
+### Patch Changes
+
+- Improved error handling and added a utility function chainToAddressMap
+
+## 1.0.15
+
+### Patch Changes
+
+- Added support for custom gas limit for payment and cleanup userops and increased the cleanup execution window
+
+## 1.0.14
+
+### Patch Changes
+
+- Added support for MEE biconomy hosted sponsorship and enhanced the max fund usage in trigger (include fee -> useMaxAvailableFunds)
+
+## 1.0.13
+
+### Patch Changes
+
+- remove log
+
+## 1.0.12
+
+### Patch Changes
+
+- add explorer catch
+
+## 1.0.11
+
+### Patch Changes
+
+- auths
+
+## 1.0.10
+
+### Patch Changes
+
+- Fix gasLimit bug
+
+## 1.0.9
+
+### Patch Changes
+
+- Fusion gasLimit
+
+## 1.0.8
+
+### Patch Changes
+
+- Change maxAvailableAmount -> includeFee
+
 ## 1.0.7
 
 ### Patch Changes
@@ -10,7 +74,7 @@
 
 ### Patch Changes
 
-- Fix for useMaxAvailableAmount
+- Fix for includeFee
 - signTransaction signer fix
 
 ## 1.0.5
@@ -25,7 +89,7 @@
 
 ### Patch Changes
 
-- Added a useMaxAvailableAmount to trigger
+- Added a includeFee to trigger
 
 ## 1.0.3
 

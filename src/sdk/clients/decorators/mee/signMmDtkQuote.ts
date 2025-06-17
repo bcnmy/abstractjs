@@ -5,58 +5,16 @@ import {
   createOpenDelegation
 } from "@metamask/delegation-toolkit"
 import {
-  type Address,
   type Hex,
-  type OneOf,
   concatHex,
-  domainSeparator,
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
-  getContract,
-  parseSignature
 } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
-import { PERMIT_TYPEHASH } from "../../../constants"
-import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuotePayload } from "./getQuote"
-/**
- * Parameters for a token trigger
- */
-export type Trigger = {
-  /**
-   * The address of the token to use on the relevant chain
-   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
-   */
-  tokenAddress: Address
-  /**
-   * The chainId to use
-   * @example 1 // Ethereum Mainnet
-   */
-  chainId: number
-} & OneOf<
-  | {
-      /**
-       * The amount of the token to use, in the token's smallest unit.
-       * @example 1000000n // 1 USDC (6 decimals)
-       */
-      amount: bigint
-      useMaxAvailableAmount?: false
-    }
-  | {
-      /**
-       * Whether to use the maximum available token balance, automatically accounting for gas fees.
-       * When true, the specified amount will be ignored and the maximum available balance
-       * after deducting gas fees will be used. Should be used in combination with runtimeERC20BalanceOf
-       * in the instruction which uses the permitted token, so that the amount is the maximum available amount
-       * after deducting gas fees. Default is false.
-       */
-      useMaxAvailableAmount: true
-      amount?: never
-    }
->
 
 /**
  * Parameters for signing a permit quote

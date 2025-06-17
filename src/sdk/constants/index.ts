@@ -1,5 +1,10 @@
-import { GLOBAL_CONSTANTS } from "@rhinestone/module-sdk"
+import {
+  GLOBAL_CONSTANTS,
+  REGISTRY_ADDRESS,
+  RHINESTONE_ATTESTER_ADDRESS
+} from "@rhinestone/module-sdk"
 import type { Hex } from "viem"
+import type { AddressConfig } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
@@ -22,6 +27,22 @@ export const COMPOSABLE_MODULE_ADDRESS: Hex =
   "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10"
 export const NEXUS_IMPLEMENTATION_ADDRESS: Hex =
   "0x000000004F43C49e93C970E84001853a70923B03"
+
+export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
+  string,
+  AddressConfig
+> = {
+  "1.0.2": {
+    accountId: "biconomy.nexus.1.0.2",
+    factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9",
+    bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
+    implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
+    k1ValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa", // K1 validator address
+    k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc",
+    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+    registryAddress: REGISTRY_ADDRESS
+  }
+}
 
 // Rhinestone constants
 export {

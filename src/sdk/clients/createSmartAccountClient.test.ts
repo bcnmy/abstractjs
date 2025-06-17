@@ -1,4 +1,4 @@
-import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
+import { COUNTER_ADDRESS, MEE_VALIDATOR_ADDRESS } from "@biconomy/ecosystem"
 import { Wallet, ethers } from "ethers"
 import {
   http,
@@ -31,6 +31,7 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -81,7 +82,7 @@ describe("nexus.client", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  test("should deploy smart account if not deployed", async () => {
+  test("should deploy latest Nexus smart account if not deployed", async () => {
     const isDeployed = await nexusClient.account.isDeployed()
 
     if (!isDeployed) {
@@ -303,6 +304,9 @@ describe("nexus.client", async () => {
       account: ethersAccount,
       mock: true
     })
+
+    //fund the account
+    await topUp(testClient, ethersAccount.address, parseEther("0.1"))
 
     const hash = await ethersNexusClient.sendUserOperation({
       calls: [

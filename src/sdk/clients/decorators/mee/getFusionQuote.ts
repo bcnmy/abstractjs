@@ -1,5 +1,5 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import type { Address, OneOf } from "viem"
+import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
@@ -87,8 +87,29 @@ export const getFusionQuote = async (
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
-  // else we need to check the payment token's permit support
-  const { permitEnabled } = await getPaymentToken(client, parameters.trigger)
+  
+  const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
+
+  let permitEnabled = false
+
+  if (paymentTokenInfo.paymentToken) {
+    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
+  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
+    const modularSmartAccount = client.account.deploymentOn(
+      parameters.trigger.chainId,
+      true
+    )
+
+    permitEnabled = await isPermitSupported(
+      modularSmartAccount.walletClient,
+      parameters.trigger.tokenAddress
+    )
+  } else {
+    throw new Error(
+      `Payment token (${parameters.trigger.tokenAddress}) not supported for chain ${parameters.trigger.chainId}`
+    )
+  }
+
   return permitEnabled
     ? getPermitQuote(client, parameters)
     : getOnChainQuote(client, parameters)

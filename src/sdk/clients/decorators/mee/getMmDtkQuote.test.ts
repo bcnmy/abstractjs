@@ -15,17 +15,13 @@ import {
   parseUnits,
   zeroAddress
 } from "viem"
-import { readContract } from "viem/actions"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   type FeeTokenInfo,
   type Instruction,
   type Trigger,
-  executeSignedQuote,
   getFusionQuote,
-  getPermitQuote,
-  signPermitQuote,
-  waitForSupertransactionReceipt
+  DEFAULT_GAS_LIMIT
 } from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -38,12 +34,12 @@ import {
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
 import {
-  DEFAULT_MEE_NODE_URL,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
 import { signMMDtkQuote } from "./signMmDtkQuote"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 
 describe("mee.getMmDtkQuote", () => {
   let network: NetworkConfig
@@ -208,6 +204,93 @@ describe("mee.getMmDtkQuote", () => {
     expect([3, 4].includes(fusionQuote.quote.userOps.length)).toBe(true) // 3 or 4 depending on if bridging is needed
   })
 
+  test("should trigger have a default gas limit as 75K gas", async () => {
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    const transfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress,
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+    expect(fusionQuote.trigger.gasLimit).toBe(DEFAULT_GAS_LIMIT)
+
+    expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
+      DEFAULT_GAS_LIMIT.toString()
+    )
+
+    const gasLimit = transfer[0].calls.reduce((acc, call) => {
+      const gas = call?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
+      return gas + acc
+    }, 0n)
+
+    expect(fusionQuote.quote.userOps[1]).toBeDefined()
+    expect(fusionQuote.quote.userOps[1].userOp.callGasLimit).to.eq(
+      (DEFAULT_GAS_LIMIT + gasLimit).toString()
+    )
+  })
+
+  test("should trigger have a custom gas limit", async () => {
+    const customGasLimit = 100_000n
+
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n,
+      gasLimit: customGasLimit
+    }
+
+    const transfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress,
+        amount: 1n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+    expect(fusionQuote.trigger.gasLimit).toBe(customGasLimit)
+
+    expect(fusionQuote.quote.paymentInfo.callGasLimit).toBe(
+      customGasLimit.toString()
+    )
+
+    const gasLimit = transfer[0].calls.reduce((acc, call) => {
+      const gas = call?.gasLimit || LARGE_DEFAULT_GAS_LIMIT
+      return gas + acc
+    }, 0n)
+
+    expect(fusionQuote.quote.userOps[1]).toBeDefined()
+    expect(fusionQuote.quote.userOps[1].userOp.callGasLimit).to.eq(
+      (customGasLimit + gasLimit).toString()
+    )
+  })
+
   test("should reserve gas fees when using max available amount", async () => {
     const totalBalance = await getBalance(
       pubClient,
@@ -218,7 +301,7 @@ describe("mee.getMmDtkQuote", () => {
     const trigger: Trigger = {
       chainId: paymentChain.id,
       tokenAddress,
-      useMaxAvailableAmount: true
+      useMaxAvailableFunds: true
     }
 
     // withdraw
@@ -260,7 +343,7 @@ describe("mee.getMmDtkQuote", () => {
     const trigger: Trigger = {
       chainId,
       tokenAddress,
-      useMaxAvailableAmount: true
+      useMaxAvailableFunds: true
     }
 
     const transferInstruction = await mcNexus.buildComposable({
@@ -279,10 +362,23 @@ describe("mee.getMmDtkQuote", () => {
 
     const fusionQuote = await getMmDtkQuote(meeClient, {
       trigger,
-      instructions: [transferInstruction], // inx 1 => transferFrom (Runtime) + Dev userOps
+      instructions: [transferInstruction], 
       feeToken,
       delegatorSmartAccount: mmDtkAccount
     })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+
+    // EOA balance maximum available balance fetch
+    const maxAvailableBalance = await getBalance(
+      pubClient,
+      mmDtkAccount.address,
+      trigger.tokenAddress
+    )
+
+    // The final amount should be the total balance
+    expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
 
     const signedQuote = await signMMDtkQuote(meeClient, {
       fusionQuote,

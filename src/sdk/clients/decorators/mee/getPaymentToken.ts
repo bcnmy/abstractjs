@@ -54,9 +54,12 @@ export type GetPaymentTokenParams = {
 }
 
 /**
- * Response payload containing payment token information
+ * Response payload containing payment token information and arbitrary token support info
  */
-export type GetPaymentTokenPayload = PaymentToken
+export type GetPaymentTokenPayload = {
+  isArbitraryPaymentTokensSupported: boolean
+  paymentToken?: PaymentToken
+}
 
 /**
  * Retrieves detailed information about a specific payment token on a given chain.
@@ -77,11 +80,14 @@ export type GetPaymentTokenPayload = PaymentToken
  * });
  * // Returns:
  * // {
- * //   name: "USD Coin",
- * //   address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
- * //   symbol: "USDC",
- * //   decimals: 6,
- * //   permitEnabled: true
+ * //   isArbitraryPaymentTokensSupported: true,
+ * //   paymentToken: {
+ * //     name: "USD Coin",
+ * //     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+ * //     symbol: "USDC",
+ * //     decimals: 6,
+ * //     permitEnabled: true
+ * //   }
  * // }
  * ```
  *
@@ -100,12 +106,11 @@ export const getPaymentToken = async (
   const paymentToken = gasToken.paymentTokens.find((paymentToken) =>
     addressEquals(paymentToken.address, parameters.tokenAddress)
   )
-  if (!paymentToken) {
-    throw new Error(
-      `Payment token not found for chain ${parameters.chainId} and address ${parameters.tokenAddress}`
-    )
+  return {
+    isArbitraryPaymentTokensSupported:
+      gasToken.isArbitraryPaymentTokensSupported,
+    paymentToken
   }
-  return paymentToken
 }
 
 export default getPaymentToken

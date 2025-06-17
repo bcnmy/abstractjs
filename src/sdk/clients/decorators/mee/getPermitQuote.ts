@@ -1,10 +1,4 @@
-import {
-  type Account,
-  type Chain,
-  type PublicClient,
-  type Transport,
-  erc20Abi
-} from "viem"
+import { erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
@@ -13,7 +7,7 @@ import {
   runtimeERC20AllowanceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { type GetQuotePayload, getQuote } from "./getQuote"
+import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
@@ -86,25 +80,55 @@ export const getPermitQuote = async (
     trigger,
     cleanUps,
     instructions,
+    gasLimit,
+    sponsorship,
     ...rest
   } = parameters
 
   const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
   const recipient = account_.addressOn(trigger.chainId, true)
+
+  let triggerAmount = 0n
+
+  if (trigger.useMaxAvailableFunds) {
+    const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
+
+    // EOA balance maximum available balance fetch
+    const maxAvailableBalance = await publicClient.readContract({
+      address: trigger.tokenAddress,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [sender]
+    })
+
+    triggerAmount = maxAvailableBalance
+  } else {
+    if (!trigger.amount) throw new Error("Trigger amount field is required")
+
+    triggerAmount = trigger.amount
+  }
+
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const isComposable = resolvedInstructions.some(
     ({ isComposable }) => isComposable
   )
 
-  const transferFromAmount = trigger.useMaxAvailableAmount
+  // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
+  // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
+  // the remaining funds after the fee deduction.
+  const transferFromAmount = trigger.useMaxAvailableFunds
     ? runtimeERC20AllowanceOf({
         owner: sender,
         spender: recipient,
         tokenAddress: trigger.tokenAddress,
         constraints: [greaterThanOrEqualTo(1n)]
       })
-    : trigger.amount
+    : triggerAmount
+
+  const triggerGasLimit = trigger.gasLimit
+    ? trigger.gasLimit
+    : DEFAULT_GAS_LIMIT
 
   const params: BuildInstructionTypes = {
     type: "transferFrom",
@@ -113,7 +137,8 @@ export const getPermitQuote = async (
       chainId: trigger.chainId,
       amount: transferFromAmount,
       recipient,
-      sender
+      sender,
+      gasLimit: triggerGasLimit
     }
   }
 
@@ -130,31 +155,32 @@ export const getPermitQuote = async (
     path: "quote-permit", // Use different endpoint for permit enabled tokens
     eoa: account_.signer.address,
     instructions: batchedInstructions,
+    gasLimit: gasLimit || triggerGasLimit,
+    sponsorship,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
 
-  let resolvedAmount = BigInt(0)
-  if (trigger.useMaxAvailableAmount) {
-    const publicClient = account_.deploymentOn(trigger.chainId, true)
-      .client as PublicClient<Transport, Chain, Account>
-    resolvedAmount = await publicClient.readContract({
-      address: trigger.tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [sender]
-    })
-  } else {
-    resolvedAmount =
-      BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+  // For useMaxAvailableFunds case, fees will be taken from max available funds.
+  // else it will be explicitly defined here
+  let fees = trigger.useMaxAvailableFunds
+    ? 0n
+    : BigInt(quote.paymentInfo.tokenWeiAmount)
+
+  if (sponsorship) {
+    // For sponsorship, user will never pay fee. So the trigger amount never include fees
+    fees = 0n
   }
+
+  const amount = triggerAmount + fees
 
   return {
     quote,
     trigger: {
       tokenAddress: trigger.tokenAddress,
       chainId: trigger.chainId,
-      amount: resolvedAmount
+      amount,
+      gasLimit: triggerGasLimit
     }
   }
 }
