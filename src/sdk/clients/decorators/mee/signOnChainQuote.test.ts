@@ -33,8 +33,7 @@ import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
-// const { runPaidTests } = inject("settings")
-const runPaidTests = true
+const { runPaidTests } = inject("settings")
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -325,7 +324,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       amount: 1n
     }
 
-    const fusionQuote = await meeClient.getPermitQuote({
+    const fusionQuote = await meeClient.getOnChainQuote({
       trigger,
       instructions: [
         mcNexus.build({

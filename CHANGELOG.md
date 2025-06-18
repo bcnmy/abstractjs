@@ -1,5 +1,16 @@
 # @biconomy/abstractjs
 
+## 1.0.18
+
+### Patch Changes
+
+- Features included:
+
+  1. Self hosted sponsorship support where the developers can utilize third party sponsorship services to sponsor the super transactions
+  2. toGasTankAccount support addded. This helps self hosted sponsorship developers to manage gas tanks easily
+  3. Eth Forwarder - A fusion flow for native tokens. This enables anyone to trigger Native tokens to their SCA accounts
+  4. One click template builder is added. This lets the developer to easily build cross chain actions easily to have a one click experience
+
 ## 1.0.17
 
 ### Patch Changes

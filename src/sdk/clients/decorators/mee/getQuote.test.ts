@@ -5,14 +5,14 @@ import {
   type Transport,
   publicActions
 } from "viem"
-import { baseSepolia } from "viem/chains"
+import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
+import { LARGE_DEFAULT_GAS_LIMIT, getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { mcUSDC, mcUSDT, testnetMcUSDC } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -984,4 +984,149 @@ describe("mee.getQuote", () => {
       expect(balanceAfter).to.eq(balanceBefore)
     }
   )
+
+  // This is a mainnet onchain fusion flow test. Still the SDK doesn't have fund setup for non permit tokens.
+  // Will be skipped for now
+  test.skip("On chain fusion flow token transfer", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [base],
+      signer: eoaAccount,
+      transports: [http()]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const amountToTransfer = 1n
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDT.addressOn(base.id),
+        amount: amountToTransfer,
+        chainId: base.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        amount: amountToTransfer,
+        chainId: base.id,
+        tokenAddress: mcUSDT.addressOn(base.id)
+      },
+      instructions: [transfer],
+      feeToken: {
+        address: mcUSDT.addressOn(base.id),
+        chainId: base.id
+      }
+    })
+
+    console.log(getMeeScanLink(quote.quote.hash))
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
+
+    await meeClient.waitForSupertransactionReceipt({ hash })
+  })
+
+  // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
+  test.skip("Should execute sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      signer: eoaAccount,
+      transports: [http()]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: "http://localhost:3004/v1",
+        customHeaders: {
+          hello: "world"
+        },
+        gasTank: {
+          address: "0xC2461985dE59CcA97eBAcBBF1eDBe904ea859c84",
+          token: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+          chainId: 84532
+        }
+      },
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ]
+    })
+
+    const { hash } = await meeClient.executeQuote({ quote: quote })
+
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.to.eq("MINED_SUCCESS")
+  })
+
+  // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
+  test.skip("Should execute fusion sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      signer: eoaAccount,
+      transports: [http()]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id,
+        amount: 1n
+      },
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: "http://localhost:3004/v1",
+        customHeaders: {
+          hello: "world"
+        },
+        gasTank: {
+          address: "0xC2461985dE59CcA97eBAcBBF1eDBe904ea859c84",
+          token: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+          chainId: 84532
+        }
+      },
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ]
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
+
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.to.eq("MINED_SUCCESS")
+  })
 })
