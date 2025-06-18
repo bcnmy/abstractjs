@@ -15,6 +15,7 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponse } from "../../../modules/validators/smartSessions/decorators/grantPermission"
+import createHttpClient, { type Url } from "../../createHttpClient"
 import {
   type BaseMeeClient,
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
@@ -165,7 +166,14 @@ export type SponsorshipOptionsParams = {
    * Sponsorship url for requesting sponsorship
    * @example http://dapp-backend/sponsor-supertx
    */
-  url: string
+  url: Url
+  /**
+   * Custom headers to be passed to self hosted sponsorship backends.
+   */
+  customHeaders?: Record<string, string>
+  /**
+   * Gas tank parameters
+   */
   gasTank: {
     /**
      * The chainId to use
@@ -200,8 +208,17 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   path?: string
   /**
-   * EOA address to be used for the transaction.
-   * Only required when using permit-enabled tokens
+   * An address to be used as funds origin in the payment userOp
+   *
+   * Note: In fact this param should be named `paymentOrigin`,
+   * as in some cases (for example MM DTK fusion mode) it
+   * is not an EOA, but a smart account.
+   *
+   * We keep it as `eoa` for backward compatibility for now.
+   * TODO: rename to `paymentOrigin` when it is possible.
+   * It will require according changes on the node side.
+   *
+   * @example "0x1234567890123456789012345678901234567890"
    */
   eoa?: Address
   /**
@@ -233,15 +250,25 @@ export type GetQuoteParams = SupertransactionLike & {
    * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
-  /**
-   * sponsorship flag to enable the sponsored super transactions.
-   */
-  sponsorship?: true
-  /**
-   * Sponsorship options for overrides
-   */
-  sponsorshipOptions?: SponsorshipOptionsParams
 } & OneOf<
+    | {
+        /**
+         * Token to be used for paying transaction fees
+         */
+        feeToken: FeeTokenInfo
+      }
+    | {
+        /**
+         * sponsorship flag to enable the sponsored super transactions.
+         */
+        sponsorship: true
+        /**
+         * Sponsorship options for overrides
+         */
+        sponsorshipOptions?: SponsorshipOptionsParams
+      }
+  > &
+  OneOf<
     | {
         /**
          * Whether to delegate the transaction to the account
@@ -327,6 +354,8 @@ export type PaymentInfo = {
   callGasLimit?: bigint
   /** Sponsorship flag  */
   sponsored?: boolean
+  /** Sponsorship url  */
+  sponsorshipUrl?: Url
 }
 
 /**
@@ -403,6 +432,8 @@ export interface MeeFilledUserOpDetails {
    *  fusion signature for a given userOp
    **/
   shortEncoding: boolean
+  /** Userop signature signed by sponsorship service */
+  signature?: Hex
 }
 
 /**
@@ -472,7 +503,8 @@ export const getQuote = async (
     authorization,
     moduleAddress,
     shortEncodingSuperTxn = false,
-    sponsorship = false
+    sponsorship = false,
+    sponsorshipOptions
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -598,7 +630,32 @@ export const getQuote = async (
 
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
-  return await client.request<GetQuotePayload>({ path, body: quoteRequest })
+  let quote = await client.request<GetQuotePayload>({
+    path,
+    body: quoteRequest
+  })
+
+  if (sponsorship && sponsorshipOptions) {
+    const isSelfHostedSponsorship = ![
+      DEFAULT_PATHFINDER_URL,
+      DEFAULT_STAGING_PATHFINDER_URL
+    ].includes(sponsorshipOptions.url)
+
+    if (isSelfHostedSponsorship) {
+      const selfHostedClient = createHttpClient(sponsorshipOptions.url)
+
+      quote = await selfHostedClient.request<GetQuotePayload>({
+        path: `sponsorship/sign/${sponsorshipOptions.gasTank.chainId}/${sponsorshipOptions.gasTank.address}`,
+        method: "POST",
+        body: quote,
+        ...(sponsorshipOptions.customHeaders
+          ? { headers: sponsorshipOptions.customHeaders }
+          : {})
+      })
+    }
+  }
+
+  return quote
 }
 
 const preparePaymentInfo = async (
@@ -629,46 +686,27 @@ const preparePaymentInfo = async (
     let sender = DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
     let token = DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
     let chainId = DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+    let sponsorshipUrl: Url = DEFAULT_PATHFINDER_URL
 
     if (sponsorshipOptions) {
-      // TODO: Only biconomy hosted sponsorship is supported right now. Remove this when self hosted is supported
-      if (
-        sponsorshipOptions.url !== DEFAULT_PATHFINDER_URL &&
-        sponsorshipOptions.url !== DEFAULT_STAGING_PATHFINDER_URL
-      ) {
-        throw new Error("Self hosted sponsorship is not supported yet.")
-      }
-
       sender = sponsorshipOptions.gasTank.address
       token = sponsorshipOptions.gasTank.token
       chainId = sponsorshipOptions.gasTank.chainId
+      sponsorshipUrl = sponsorshipOptions.url
     }
 
-    const nonceUrl = `${DEFAULT_PATHFINDER_URL}/sponsorship/nonce/${chainId}/${sender}`
+    const sponsorshipClient = createHttpClient(sponsorshipUrl)
 
-    let nonce: string | undefined
-
-    try {
-      const nonceInfoResponse = await fetch(nonceUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-
-      const nonceInfo = (await nonceInfoResponse.json()) as {
-        nonce: string
-        nonceKey: string
-      }
-
-      nonce = nonceInfo.nonce
-    } catch {
-      throw new Error("Failed to fetch nonce for sponsorship")
-    }
-
-    if (!nonce || nonce === "") {
-      throw new Error("Failed to fetch nonce for sponsorship")
-    }
+    const { nonce } = await sponsorshipClient.request<{
+      nonce: string
+      nonceKey: string
+    }>({
+      path: `sponsorship/nonce/${chainId}/${sender}`,
+      method: "GET",
+      ...(sponsorshipOptions?.customHeaders
+        ? { headers: sponsorshipOptions.customHeaders }
+        : {})
+    })
 
     paymentInfo = {
       sponsored: true,
@@ -677,6 +715,7 @@ const preparePaymentInfo = async (
       nonce,
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       chainId: chainId.toString(),
+      sponsorshipUrl,
       ...(eoa ? { eoa } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
       // So initCode will be always undefined
@@ -950,7 +989,10 @@ const resolveVerificationGasLimit = (
       index
     })
   }
-  return resolveVerificationGasLimitForNonPaymentChain({ moduleAddress, index })
+  return resolveVerificationGasLimitForNonPaymentChain({
+    moduleAddress,
+    index
+  })
 }
 
 /**

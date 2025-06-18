@@ -19,6 +19,8 @@ type RequestParams = {
   body?: object
   /** Optional request params */
   params?: Record<string, string>
+  /** Optional request params */
+  headers?: Record<string, string>
 }
 
 /**
@@ -54,14 +56,15 @@ type Extended = Prettify<
  */
 export const createHttpClient = (url: Url, apiKey?: string): HttpClient => {
   const request = async <T>(requesParams: RequestParams) => {
-    const { path, method = "POST", body, params } = requesParams
+    const { path, method = "POST", body, params, headers } = requesParams
     const urlParams = params ? `?${new URLSearchParams(params)}` : ""
     const fullPath = `${url}/${path}${urlParams}`
     const result = await fetch(fullPath, {
       method,
       headers: {
         "Content-Type": "application/json",
-        ...(apiKey ? { "x-api-key": apiKey } : {})
+        ...(apiKey ? { "x-api-key": apiKey } : {}),
+        ...(headers ? { ...headers } : {})
       },
       ...(body ? { body: stringify(body) } : {})
     })

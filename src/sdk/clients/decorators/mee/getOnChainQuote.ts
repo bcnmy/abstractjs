@@ -84,7 +84,6 @@ export const getOnChainQuote = async (
     cleanUps,
     instructions,
     gasLimit,
-    sponsorship,
     ...rest
   } = parameters
 
@@ -163,7 +162,6 @@ export const getOnChainQuote = async (
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
-    sponsorship,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
@@ -174,7 +172,7 @@ export const getOnChainQuote = async (
     ? 0n
     : BigInt(quote.paymentInfo.tokenWeiAmount)
 
-  if (sponsorship) {
+  if (rest.sponsorship) {
     // For sponsorship, user will never pay fee. So the trigger amount never include fees
     fees = 0n
   }

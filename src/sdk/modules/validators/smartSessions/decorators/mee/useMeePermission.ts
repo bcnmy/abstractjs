@@ -1,4 +1,4 @@
-import type { Hash } from "viem"
+import type { Hash, OneOf } from "viem"
 import type {
   BaseMeeClient,
   MeeClient
@@ -17,11 +17,16 @@ import type { GrantMeePermissionPayload } from "./grantMeePermission"
 export type UseMeePermissionParams = {
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
-  feeToken: FeeTokenInfo
   sessionDetails: GrantMeePermissionPayload
-  sponsorship?: true
-  sponsorshipOptions?: SponsorshipOptionsParams
-}
+} & OneOf<
+  | {
+      feeToken: FeeTokenInfo
+    }
+  | {
+      sponsorship: true
+      sponsorshipOptions?: SponsorshipOptionsParams
+    }
+>
 
 export type UseMeePermissionPayload = { hash: Hash }
 
@@ -32,10 +37,7 @@ export const useMeePermission = async (
   const {
     sessionDetails: sessionDetailsArray,
     mode: mode_,
-    instructions,
-    feeToken,
-    sponsorship,
-    sponsorshipOptions
+    instructions
   } = parameters
   const meeClient = meeClient_ as MeeClient
 
@@ -46,11 +48,14 @@ export const useMeePermission = async (
 
   const quote = await meeClient.getQuote({
     instructions,
-    feeToken,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
-    sponsorship,
-    sponsorshipOptions
+    ...(parameters.sponsorship
+      ? {
+          sponsorship: parameters.sponsorship,
+          sponsorshipOptions: parameters.sponsorshipOptions
+        }
+      : { feeToken: parameters.feeToken })
   })
 
   const signedQuote = await meeClient.signQuote({ quote })

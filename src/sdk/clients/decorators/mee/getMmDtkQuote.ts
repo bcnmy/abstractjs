@@ -92,7 +92,6 @@ export const getMmDtkQuote = async (
     cleanUps,
     instructions,
     gasLimit,
-    sponsorship,
     delegatorSmartAccount,
     ...rest
   } = parameters
@@ -168,10 +167,9 @@ export const getMmDtkQuote = async (
   // rest is similar to the regular permit fusion mode
   const quote = await getQuote(client, {
     path: "quote-permit",
-    eoa: sender,
+    eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
-    sponsorship,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
@@ -182,7 +180,7 @@ export const getMmDtkQuote = async (
     ? 0n
     : BigInt(quote.paymentInfo.tokenWeiAmount)
 
-  if (sponsorship) {
+  if (rest.sponsorship) {
     // For sponsorship, user will never pay fee. So the trigger amount never include fees
     fees = 0n
   }
