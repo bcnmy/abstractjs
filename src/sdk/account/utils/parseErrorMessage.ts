@@ -2,15 +2,20 @@ import type { AnyData } from "../../modules/utils/Types"
 
 // Helper functions to extract specific error patterns
 const extractFailedOpError = (message: string): string | null => {
-  // First try to match AA23 revert message pattern
-  const aa23Match = message.match(
-    /errorArgs=\[.*?,\s*"(AA23[^"]+)",\s*"(0x[^"]+)"\]/
+  // First try to match AA error message pattern (any AA followed by numbers)
+  const aaMatch = message.match(/errorArgs=\[.*?,\s*"(AA[0-9]+[^"]+)"/)
+  if (aaMatch) {
+    return aaMatch[1]
+  }
+
+  // Try to match AA error message with hex data pattern
+  const aaHexMatch = message.match(
+    /errorArgs=\[.*?,\s*"AA[0-9]+[^"]+",\s*"(0x[^"]+)"\]/
   )
-  if (aa23Match) {
-    // If it's an AA23 error, return the decoded message
+  if (aaHexMatch && aaHexMatch[1] !== "0x") {
     try {
       // Extract the hex data starting after the first 32 bytes (position of string)
-      const hexData = aa23Match[2].slice(130)
+      const hexData = aaHexMatch[1].slice(130)
       // Convert hex to ASCII, removing null bytes, control characters, and padding
       const decoded = Buffer.from(hexData.replace(/00+$/, ""), "hex")
         .toString()
@@ -18,7 +23,7 @@ const extractFailedOpError = (message: string): string | null => {
         .replace(/[\u0000-\u001F]/g, "") // Remove all control characters
       return decoded
     } catch {
-      return aa23Match[1] // Fallback to AA23 message if decoding fails
+      return null // Return null to allow fallback to other patterns
     }
   }
 

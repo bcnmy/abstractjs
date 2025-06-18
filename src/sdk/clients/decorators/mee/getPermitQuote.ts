@@ -81,11 +81,10 @@ export const getPermitQuote = async (
     cleanUps,
     instructions,
     gasLimit,
-    sponsorship,
     ...rest
   } = parameters
 
-  const sender = account_.signer.address
+  const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
   const recipient = account_.addressOn(trigger.chainId, true)
 
   let triggerAmount = 0n
@@ -156,7 +155,6 @@ export const getPermitQuote = async (
     eoa: account_.signer.address,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
-    sponsorship,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
@@ -167,7 +165,7 @@ export const getPermitQuote = async (
     ? 0n
     : BigInt(quote.paymentInfo.tokenWeiAmount)
 
-  if (sponsorship) {
+  if (rest.sponsorship) {
     // For sponsorship, user will never pay fee. So the trigger amount never include fees
     fees = 0n
   }

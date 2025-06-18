@@ -55,9 +55,17 @@ import type {
   ComposableCall
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
+import { toLegacyK1Module } from "../modules/validators/legacyK1/toLegacyK1Module"
 import type { Validator } from "../modules/validators/toValidator"
-import { getFactoryData, getInitData } from "./decorators/getFactoryData"
-import { getNexusAddress } from "./decorators/getNexusAddress"
+import {
+  getFactoryData,
+  getInitData,
+  getK1FactoryData
+} from "./decorators/getFactoryData"
+import {
+  getK1NexusAddress,
+  getNexusAddress
+} from "./decorators/getNexusAddress"
 import {
   getDefaultNonceKey,
   getNonceWithKeyUtil
@@ -79,6 +87,13 @@ import {
   isNullOrUndefined,
   typeToString
 } from "./utils/Utils"
+import {
+  type AddressConfigsAdditions,
+  type NexusAccountId,
+  type NexusVersion,
+  getConfigFromNexusVersion,
+  isVersionOlder
+} from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
@@ -130,26 +145,29 @@ export type ToNexusSmartAccountParameters = {
   hook?: GenericModuleConfig
   /** Optional fallback modules configuration */
   fallbacks?: Array<GenericModuleConfig>
-  /** Optional registry address */
-  registryAddress?: Address
-  /** Optional factory address */
-  factoryAddress?: Address
   /** Optional bootstrap address */
   bootStrapAddress?: Address
   /** Optional implementation address */
   implementationAddress?: Address
-} & Prettify<
-  Pick<
-    ClientConfig<Transport, Chain, Account, RpcSchema>,
-    | "account"
-    | "cacheTime"
-    | "chain"
-    | "key"
-    | "name"
-    | "pollingInterval"
-    | "rpcSchema"
+  /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
+  nexusVersion?: NexusVersion
+  /** Optional factory address */
+  factoryAddress?: Address
+  /** Optional init data */
+  initData?: Hex
+} & AddressConfigsAdditions[keyof AddressConfigsAdditions] &
+  Prettify<
+    Pick<
+      ClientConfig<Transport, Chain, Account, RpcSchema>,
+      | "account"
+      | "cacheTime"
+      | "chain"
+      | "key"
+      | "name"
+      | "pollingInterval"
+      | "rpcSchema"
+    >
   >
->
 /**
  * Nexus Smart Account type
  */
@@ -199,7 +217,14 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     getInitCode: () => Hex
 
     /** Gets the nonce with key for the account */
-    getNonceWithKey: (accountAddress: Address) => Promise<NonceInfo>
+    getNonceWithKey: (
+      accountAddress: Address,
+      parameters?: {
+        key?: bigint
+        validationMode?: "0x00" | "0x01" | "0x02"
+        moduleAddress?: Address
+      }
+    ) => Promise<NonceInfo>
 
     /** Encodes a single call for execution */
     encodeExecute: (call: Call) => Promise<Hex>
@@ -278,17 +303,46 @@ export const toNexusAccount = async (
     transport: transportConfig,
     signer: _signer,
     index = 0n,
-    registryAddress = zeroAddress,
     validators: customValidators,
     executors: customExecutors,
     hook: customHook,
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
+    nexusVersion,
+    attesterThreshold = 1,
+    useK1Config = false
+  } = parameters
+
+  let {
+    initData,
+    // those params are 1.2.0 by default
     factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
     bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS
+    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
+    // those params are undefined by default and are defined only if explicitly provided
+    // or if nexus version is provided
+    registryAddress,
+    attesters,
+    k1ValidatorAddress,
+    k1FactoryAddress
   } = parameters
+
+  // if nexus version earlier than 1.2.0 is provided, use the config from the constants
+  if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
+    ;({
+      factoryAddress,
+      bootStrapAddress,
+      implementationAddress,
+      registryAddress,
+      attesters,
+      k1ValidatorAddress,
+      k1FactoryAddress
+    } = getConfigFromNexusVersion(nexusVersion))
+    if (useK1Config) {
+      factoryAddress = k1FactoryAddress!
+    }
+  }
 
   const signer = await toSigner({ signer: _signer })
   const walletClient = toWalletClient({
@@ -305,8 +359,17 @@ export const toNexusAccount = async (
   // Prepare validator modules
   const validators = customValidators || []
 
-  // The default validator should be the defaultValidator unless custom validators have been set
-  let module = customValidators?.[0] || defaultValidator
+  let k1Validator: Validator | undefined = undefined
+
+  if (useK1Config && k1ValidatorAddress) {
+    k1Validator = toLegacyK1Module({
+      signer,
+      module: k1ValidatorAddress
+    })
+  }
+
+  // The default validator should be the defaultValidator unless custom validators have been set or k1Validator is set
+  let module = k1Validator || customValidators?.[0] || defaultValidator
 
   // Prepare executor modules
   const executors = customExecutors || []
@@ -320,27 +383,50 @@ export const toNexusAccount = async (
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []
 
-  const initData = getInitData({
-    defaultValidator: toInitData(defaultValidator),
-    validators: validators.map(toInitData),
-    executors: executors.map(toInitData),
-    hook: toInitData(hook),
-    fallbacks: fallbacks.map(toInitData),
-    registryAddress,
-    bootStrapAddress,
-    prevalidationHooks
-  })
+  let factoryData: Hex = "0x"
 
-  // Generate the factory data with the bootstrap address and init data
-  const factoryData = getFactoryData({ initData, index })
+  if (useK1Config) {
+    factoryData = getK1FactoryData({
+      signerAddress: signer.address,
+      index,
+      attesters: attesters!,
+      attesterThreshold
+    })
+  } else {
+    if (!initData) {
+      initData = getInitData({
+        defaultValidator: toInitData(defaultValidator),
+        prevalidationHooks,
+        validators: validators.map(toInitData),
+        executors: executors.map(toInitData),
+        hook: toInitData(hook),
+        fallbacks: fallbacks.map(toInitData),
+        bootStrapAddress,
+        registryAddress,
+        attesters,
+        attesterThreshold,
+        nexusVersion
+      })
+      factoryData = getFactoryData({ initData, index })
+    }
+  }
 
   /**
    * @description Gets the init code for the account
    * @returns The init code as a hexadecimal string
    */
-  const getInitCode = () => concatHex([factoryAddress, factoryData])
+  const getInitCode = () =>
+    concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
+
+  const accountId: NexusAccountId = (await publicClient.readContract({
+    address: implementationAddress,
+    abi: parseAbi(["function accountId() public view returns (string)"]),
+    functionName: "accountId",
+    args: []
+  })) as NexusAccountId
+
   /**
    * @description Gets the counterfactual address of the account
    * @returns The counterfactual address
@@ -349,12 +435,21 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = await getNexusAddress({
-      factoryAddress,
-      index,
-      initData,
-      publicClient
-    })
+    const addressFromFactory = useK1Config
+      ? await getK1NexusAddress({
+          k1FactoryAddress: k1FactoryAddress!,
+          index,
+          ownerAddress: signer.address,
+          attesters: attesters!,
+          attesterThreshold,
+          publicClient
+        })
+      : await getNexusAddress({
+          factoryAddress,
+          index,
+          initData: initData!,
+          publicClient
+        })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
       _accountAddress = addressFromFactory
@@ -662,6 +757,9 @@ export const toNexusAccount = async (
     })
   }
 
+  // ================================================
+  //        Return the Nexus Account
+  // ================================================
   return toSmartAccount({
     client: publicClient,
     entryPoint: {
@@ -714,12 +812,14 @@ export const toNexusAccount = async (
       return await module.signUserOpHash(hash)
     },
     getNonce,
+
     extend: {
       isDelegated,
       toDelegation,
       unDelegate,
       entryPointAddress: entryPoint07Address,
       getAddress,
+      accountId,
       getInitCode,
       getNonceWithKey,
       encodeExecute,

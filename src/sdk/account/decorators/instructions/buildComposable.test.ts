@@ -27,8 +27,10 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
-import { userOp } from "../../../clients/decorators/mee"
-import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import {
+  type Instruction,
+  userOp
+} from "../../../clients/decorators/mee/getQuote"
 import {
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
@@ -1290,7 +1292,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
       console.log({ explorerLinks, hash })
     } catch (error) {
       // UserOp one always reverts
-      expect(error.message).to.be.eq("[1] UserOperation reverted")
+      expect(error.message).to.be.oneOf([
+        "[1] UserOperation reverted",
+        "[1] ERC20: transfer amount exceeds balance"
+      ])
     }
   })
 

@@ -1,7 +1,7 @@
 import { zeroAddress, zeroHash } from "viem"
-import type { ModuleConfig } from "../account/decorators/getFactoryData"
+import type { MinimalModuleConfig } from "../account"
 
-export const toEmptyHook = (): ModuleConfig => ({
+export const toEmptyHook = (): MinimalModuleConfig => ({
   module: zeroAddress,
   data: zeroHash
 })

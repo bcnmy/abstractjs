@@ -1,5 +1,21 @@
 # @biconomy/abstractjs
 
+## 1.0.17
+
+### Patch Changes
+
+- Features includes:
+
+  1. Multichain smart session support is added
+  2. Nexus 102 support is added
+  3. New mee node changes have been adjusted
+
+## 1.0.16
+
+### Patch Changes
+
+- Improved error handling and added a utility function chainToAddressMap
+
 ## 1.0.15
 
 ### Patch Changes

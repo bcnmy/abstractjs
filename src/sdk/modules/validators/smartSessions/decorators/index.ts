@@ -53,3 +53,4 @@ export function smartSessionActions() {
 }
 
 export { usePermission, grantPermission }
+export { meeSessionActions, grantMeePermission, useMeePermission } from "./mee"

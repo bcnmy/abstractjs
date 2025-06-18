@@ -20,7 +20,7 @@ import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_STAGING_PATHFINDER_URL,
+  DEFAULT_PATHFINDER_URL,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -255,17 +255,15 @@ describe("mee.getQuote", () => {
       transports: [http()]
     })
 
-    // TODO: Remove the url and API key once everything is moved into production
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: DEFAULT_STAGING_PATHFINDER_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
 
     const quote = await meeClient.getQuote({
       sponsorship: true,
       sponsorshipOptions: {
-        url: DEFAULT_STAGING_PATHFINDER_URL,
+        url: DEFAULT_PATHFINDER_URL,
         gasTank: {
           address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
           token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
@@ -292,8 +290,8 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(
-      DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS.toLowerCase()
     )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
@@ -316,11 +314,9 @@ describe("mee.getQuote", () => {
         transports: [http()]
       })
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       await meeClient.getQuote({
@@ -359,11 +355,9 @@ describe("mee.getQuote", () => {
       transports: [http()]
     })
 
-    // TODO: Remove the url and API key once everything is moved into production
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: DEFAULT_STAGING_PATHFINDER_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
 
     const quote = await meeClient.getQuote({
@@ -388,7 +382,9 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS)
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS.toLowerCase()
+    )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
       DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
@@ -410,11 +406,9 @@ describe("mee.getQuote", () => {
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
-    // TODO: Remove the url and API key once everything is moved into production
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: DEFAULT_STAGING_PATHFINDER_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
 
     const quote = await meeClient.getQuote({
@@ -439,7 +433,9 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS)
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS.toLowerCase()
+    )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
       DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
@@ -468,11 +464,9 @@ describe("mee.getQuote", () => {
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
-    // TODO: Remove the url and API key once everything is moved into production
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: DEFAULT_STAGING_PATHFINDER_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
 
     const quote = await meeClient.getQuote({
@@ -498,7 +492,9 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(quote.paymentInfo.token).to.eq(DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS)
+    expect(quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS.toLowerCase()
+    )
 
     expect(quote.userOps[0].userOp.sender).to.eq(
       DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
@@ -538,11 +534,9 @@ describe("mee.getQuote", () => {
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
-    // TODO: Remove the url and API key once everything is moved into production
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-      url: DEFAULT_STAGING_PATHFINDER_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
 
     const amountToTrigger = 1n
@@ -578,8 +572,8 @@ describe("mee.getQuote", () => {
     expect(fusionQuote.quote.paymentInfo.chainId).to.eq(
       String(DEFAULT_MEE_SPONSORSHIP_CHAIN_ID)
     )
-    expect(fusionQuote.quote.paymentInfo.token).to.eq(
-      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS
+    expect(fusionQuote.quote.paymentInfo.token.toLowerCase()).to.eq(
+      DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS.toLowerCase()
     )
 
     expect(fusionQuote.quote.userOps[0].userOp.sender).to.eq(
@@ -610,17 +604,15 @@ describe("mee.getQuote", () => {
         transports: [http()]
       })
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_STAGING_PATHFINDER_URL,
+          url: DEFAULT_PATHFINDER_URL,
           gasTank: {
             address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
             token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
@@ -662,11 +654,9 @@ describe("mee.getQuote", () => {
         transports: [http()]
       })
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       const quote = await meeClient.getQuote({
@@ -712,17 +702,15 @@ describe("mee.getQuote", () => {
 
       await expect(await nexusAccount.isDeployed()).to.eq(false)
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_STAGING_PATHFINDER_URL,
+          url: DEFAULT_PATHFINDER_URL,
           gasTank: {
             address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
             token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
@@ -784,17 +772,15 @@ describe("mee.getQuote", () => {
 
       await expect(isDelegated).to.eq(false)
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_STAGING_PATHFINDER_URL,
+          url: DEFAULT_PATHFINDER_URL,
           gasTank: {
             address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
             token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
@@ -863,17 +849,15 @@ describe("mee.getQuote", () => {
         testnetMcUSDC.addressOn(baseSepolia.id)
       )
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_STAGING_PATHFINDER_URL,
+          url: DEFAULT_PATHFINDER_URL,
           gasTank: {
             address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
             token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
@@ -943,11 +927,9 @@ describe("mee.getQuote", () => {
         testnetMcUSDC.addressOn(baseSepolia.id)
       )
 
-      // TODO: Remove the url and API key once everything is moved into production
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf",
-        url: DEFAULT_STAGING_PATHFINDER_URL
+        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       })
 
       const transferInx = await mcNexus.build({
@@ -963,7 +945,7 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_STAGING_PATHFINDER_URL,
+          url: DEFAULT_PATHFINDER_URL,
           gasTank: {
             address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
             token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
