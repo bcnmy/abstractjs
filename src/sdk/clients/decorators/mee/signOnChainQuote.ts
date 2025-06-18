@@ -58,7 +58,13 @@ const generateTriggerCallFromTrigger = async ({
     ] = await account.build({
       type: "default",
       data: {
-        calls: [trigger.call],
+        calls: [
+          {
+            to: trigger.call.to,
+            data: trigger.call.data,
+            value: trigger.call.value
+          }
+        ],
         chainId: trigger.call.chainId
       } as BuildDefaultParameters
     })

@@ -26,31 +26,17 @@ export type GetOnChainQuotePayload = { quote: GetQuotePayload } & {
 /**
  * Parameters for requesting an on-chain quote
  */
-export type GetOnChainQuoteParams = GetQuoteParams &
-  (
-    | {
-        /**
-         * Trigger information for the transaction
-         * @see {@link Trigger}
-         */
-        trigger: CustomTrigger
-        /**
-         * Sponsorship is required for custom triggers
-         */
-        sponsorship: true
-      }
-    | {
-        /**
-         * Trigger information for the transaction
-         * @see {@link Trigger}
-         */
-        trigger: TokenTrigger
-        /**
-         * Optional sponsorship flag
-         */
-        sponsorship?: boolean
-      }
-  )
+export type GetOnChainQuoteParams = GetQuoteParams & {
+  /**
+   * Trigger information for the transaction
+   * @see {@link Trigger}
+   */
+  trigger: Trigger
+  /**
+   * Optional sponsorship flag
+   */
+  sponsorship?: boolean
+}
 
 /**
  * Gets a quote for an on-chain transaction from the MEE service.

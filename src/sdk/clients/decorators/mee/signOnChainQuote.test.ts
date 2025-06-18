@@ -17,7 +17,7 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { FORWARDER_ADDRESS } from "../../../constants"
-import { mcUSDC } from "../../../constants/tokens"
+import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -88,8 +88,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
 
     const sender = mcNexus.signer.address
     const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
-
-    console.log({ recipient })
 
     const quote = await getQuote(meeClient, {
       path: "quote-permit",
@@ -315,18 +313,19 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       index: 1n
     })
     meeClient = await createMeeClient({
-      account: mcNexus
+      account: mcNexus,
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
   })
 
-  test.skip("should succeed with native coin trigger", async () => {
+  test("should succeed with native coin trigger", async () => {
     const trigger = {
       chainId: network.chain.id,
       tokenAddress: zeroAddress,
       amount: 1n
     }
 
-    const fusionQuote = await meeClient.getOnChainQuote({
+    const fusionQuote = await meeClient.getPermitQuote({
       trigger,
       instructions: [
         mcNexus.build({
@@ -348,7 +347,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         address: zeroAddress
       }
     })
-    console.log("fusionQuote", fusionQuote)
     // Execute the quote
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote
@@ -358,49 +356,87 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
-  test("should succeed with custom call trigger", async () => {
-    const fusionQuote = await meeClient.getOnChainQuote({
-      trigger: {
-        call: {
-          to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
-          value: 1n,
-          data: "0x" as `0x${string}`,
-          chainId: network.chain.id
-        }
-      },
-      sponsorship: true,
-      sponsorshipOptions: {
-        url: DEFAULT_STAGING_PATHFINDER_URL,
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS
-        }
-      },
-      instructions: [
-        mcNexus.build({
-          type: "default",
-          data: {
-            chainId: network.chain.id,
-            calls: [
-              {
-                // dummy transfer to an address
-                to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
-                value: 1n
-              }
-            ]
+  describe("should succeed with custom call trigger", () => {
+    test("should succeed with sponsored=true transactions", async () => {
+      const fusionQuote = await meeClient.getOnChainQuote({
+        trigger: {
+          call: {
+            to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
+            value: 1n,
+            chainId: network.chain.id
           }
-        })
-      ]
+        },
+        sponsorship: true,
+        sponsorshipOptions: {
+          url: DEFAULT_PATHFINDER_URL,
+          gasTank: {
+            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+          }
+        },
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              chainId: network.chain.id,
+              calls: [
+                {
+                  // dummy transfer to an address
+                  to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
+                  value: 1n
+                }
+              ]
+            }
+          })
+        ]
+      })
+      // Execute the quote
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote
+      })
+      // Wait for the transaction to complete
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
-    console.log("fusionQuote custom call", fusionQuote)
-    // Execute the quote
-    // const { hash } = await meeClient.executeFusionQuote({
-    //   fusionQuote
-    // })
-
-    // // Wait for the transaction to complete
-    // const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-    // expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    test("should succeed with sponsored=false transactions", async () => {
+      const fusionQuote = await meeClient.getOnChainQuote({
+        trigger: {
+          call: {
+            to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
+            value: 1n,
+            chainId: network.chain.id
+          }
+        },
+        // note that the fee token needs to match with the trigger above
+        // eg if the trigger is for transferring ETH, the fee token needs to be ETH
+        feeToken: {
+          chainId: network.chain.id,
+          address: zeroAddress
+        },
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              chainId: network.chain.id,
+              calls: [
+                {
+                  // dummy transfer to an address
+                  to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
+                  value: 1n
+                }
+              ]
+            }
+          })
+        ]
+      })
+      // Execute the quote
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote
+      })
+      // Wait for the transaction to complete
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    })
   })
 })
