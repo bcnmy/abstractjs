@@ -1034,4 +1034,57 @@ describe("mee.getQuote", () => {
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
+
+  // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
+  test.skip("Should execute fusion sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      signer: eoaAccount,
+      transports: [http()]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id,
+        amount: 1n
+      },
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: "http://localhost:3004/v1",
+        customHeaders: {
+          hello: "world"
+        },
+        gasTank: {
+          address: "0xC2461985dE59CcA97eBAcBBF1eDBe904ea859c84",
+          token: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+          chainId: 84532
+        }
+      },
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ]
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
+
+    const { transactionStatus } =
+      await meeClient.waitForSupertransactionReceipt({ hash })
+
+    expect(transactionStatus).to.to.eq("MINED_SUCCESS")
+  })
 })
