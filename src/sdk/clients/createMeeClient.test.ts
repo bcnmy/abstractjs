@@ -14,7 +14,7 @@ import {
   generatePrivateKey,
   privateKeyToAccount
 } from "viem/accounts"
-import { gnosisChiado, sepolia } from "viem/chains"
+import { baseSepolia, gnosisChiado } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
@@ -24,11 +24,7 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
-import {
-  DEFAULT_MEE_NODE_URL,
-  type MeeClient,
-  createMeeClient
-} from "./createMeeClient"
+import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
 // @ts-ignore
@@ -307,20 +303,17 @@ describe("mee.createMeeClient.delegated", async () => {
   let meeClient: MeeClient
 
   const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
-  const rpc = `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`
 
   beforeAll(async () => {
     mcNexus = await toMultichainNexusAccount({
-      chains: [sepolia],
+      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(rpc)],
+      transports: [http()],
       accountAddress: eoaAccount.address
     })
 
-    // The explicit default URL should be removed later.
     meeClient = await createMeeClient({
-      account: mcNexus,
-      url: DEFAULT_MEE_NODE_URL
+      account: mcNexus
     })
   })
 
@@ -333,7 +326,7 @@ describe("mee.createMeeClient.delegated", async () => {
   // Funds are draining quickly on test wallets
   test.skip("should get a quote for a delegated account", async () => {
     const balanceBefore = await getBalance(
-      mcNexus.deploymentOn(sepolia.id, true).publicClient,
+      mcNexus.deploymentOn(baseSepolia.id, true).publicClient,
       zeroAddress
     )
     const quote = await meeClient.getQuote({
@@ -346,12 +339,12 @@ describe("mee.createMeeClient.delegated", async () => {
               value: 1n
             }
           ],
-          chainId: sepolia.id
+          chainId: baseSepolia.id
         }
       ],
       feeToken: {
-        address: testnetMcUSDC.addressOn(sepolia.id), // usdc
-        chainId: sepolia.id
+        address: testnetMcUSDC.addressOn(baseSepolia.id), // usdc
+        chainId: baseSepolia.id
       }
     })
     expect(quote).toBeDefined()
@@ -367,7 +360,7 @@ describe("mee.createMeeClient.delegated", async () => {
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
 
     const balanceAfter = await getBalance(
-      mcNexus.deploymentOn(sepolia.id, true).publicClient,
+      mcNexus.deploymentOn(baseSepolia.id, true).publicClient,
       zeroAddress
     )
     expect(balanceAfter).toBeGreaterThan(balanceBefore)
@@ -385,7 +378,7 @@ describe("mee.createMeeClient.delegated", async () => {
 
   test("should override the authorization for delegation", async () => {
     const dummyAuth: SignAuthorizationReturnType = {
-      chainId: sepolia.id,
+      chainId: baseSepolia.id,
       address: zeroAddress,
       nonce: 1,
       r: "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -405,12 +398,12 @@ describe("mee.createMeeClient.delegated", async () => {
               value: 1n
             }
           ],
-          chainId: sepolia.id
+          chainId: baseSepolia.id
         }
       ],
       feeToken: {
-        address: testnetMcUSDC.addressOn(sepolia.id), // usdc
-        chainId: sepolia.id
+        address: testnetMcUSDC.addressOn(baseSepolia.id), // usdc
+        chainId: baseSepolia.id
       }
     })
 
