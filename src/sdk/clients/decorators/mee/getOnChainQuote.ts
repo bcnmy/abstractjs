@@ -7,9 +7,9 @@ import {
   runtimeERC20AllowanceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
-import type { CustomTrigger, TokenTrigger, Trigger } from "./signPermitQuote"
+import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
+import type { Trigger } from "./signPermitQuote"
 
 /**
  * Payload returned when requesting an on-chain quote.
@@ -107,14 +107,6 @@ export const getOnChainQuote = async (
     const batchedInstructions = await batchInstructions({
       account: account_,
       instructions: [...triggerTransfer, ...resolvedInstructions]
-    })
-    console.log("batchedInstructions", batchedInstructions[0], {
-      path: "quote-permit", // Use different endpoint for onchain quotes
-      eoa: account_.signer.address,
-      instructions: batchedInstructions,
-      gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
-      ...(cleanUps ? { cleanUps } : {}),
-      ...rest
     })
     const quote = await getQuote(client, {
       path: "quote-permit", // Use different endpoint for onchain quotes
