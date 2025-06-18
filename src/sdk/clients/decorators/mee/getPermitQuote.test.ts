@@ -354,7 +354,7 @@ describe("mee.getPermitQuote", () => {
     const trigger: Trigger = {
       chainId,
       tokenAddress,
-      useMaxAvailableAmount: true
+      useMaxAvailableFunds: true
     }
 
     const transferInstruction = await mcNexus.buildComposable({

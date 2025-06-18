@@ -168,7 +168,7 @@ export const getMmDtkQuote = async (
   // rest is similar to the regular permit fusion mode
   const quote = await getQuote(client, {
     path: "quote-permit",
-    eoa: account_.signer.address,
+    eoa: sender,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
     sponsorship,

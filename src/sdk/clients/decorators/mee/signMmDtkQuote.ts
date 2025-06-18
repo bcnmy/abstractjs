@@ -9,6 +9,7 @@ import {
   concatHex,
   encodeAbiParameters,
   encodeFunctionData,
+  encodePacked,
   erc20Abi
 } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -117,19 +118,16 @@ export const signMMDtkQuote = async (
     caveats
   })
 
-  console.log("openRootDelegation", openRootDelegation)
-
   const signature = await delegatorSmartAccount.signDelegation({
     delegation: openRootDelegation
   })
 
   const delegationManager = getDelegationManager(trigger.chainId)
 
-  const redeemDelegationErc7579ExecutionCalldata = concatHex([
-    trigger.tokenAddress, // to
-    "0x00", // value
-    approvedCallData // data
-  ])
+  const redeemDelegationErc7579ExecutionCalldata = encodePacked(
+    ["address", "uint256", "bytes"],
+    [trigger.tokenAddress, 0n, approvedCallData]
+  )
 
   const encodedSignature = encodeAbiParameters(
     [
@@ -183,11 +181,6 @@ export const signMMDtkQuote = async (
 export default signMMDtkQuote
 
 const getDelegationManager = (chainId: number): `0x${string}` => {
-  // Check if chainId is supported in any version
-  const supportedVersions = Object.keys(DELEGATOR_CONTRACTS) as Array<
-    keyof typeof DELEGATOR_CONTRACTS
-  >
-
   // Try to find the delegation manager in the latest version first (1.3.0)
   if (DELEGATOR_CONTRACTS["1.3.0"][chainId]?.DelegationManager) {
     return DELEGATOR_CONTRACTS["1.3.0"][chainId].DelegationManager

@@ -3,7 +3,9 @@ import {
   type MetaMaskSmartAccount,
   toMetaMaskSmartAccount
 } from "@metamask/delegation-toolkit"
+import { createPimlicoClient } from "permissionless/clients/pimlico"
 import {
+  http,
   type Address,
   type Chain,
   type LocalAccount,
@@ -12,31 +14,45 @@ import {
   createPublicClient,
   createWalletClient,
   erc20Abi,
+  parseEther,
   parseUnits,
   zeroAddress
 } from "viem"
-import { beforeAll, describe, expect, test } from "vitest"
+import { createBundlerClient } from "viem/account-abstraction"
+import { waitForTransactionReceipt } from "viem/actions"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
   type Trigger,
-  getFusionQuote
+  executeSignedQuote,
+  getFusionQuote,
+  waitForSupertransactionReceipt
 } from "."
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import { getBalance } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import type { NexusAccount } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { mcUSDC } from "../../../constants/tokens"
+import { toMeeK1Module } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
-import { type MeeClient, createMeeClient } from "../../createMeeClient"
+import {
+  DEFAULT_MEE_NODE_URL,
+  type MeeClient,
+  createMeeClient
+} from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
 import { signMMDtkQuote } from "./signMmDtkQuote"
+
+// @ts-ignore
+const { runPaidTests } = inject("settings")
 
 describe("mee.getMmDtkQuote", () => {
   let network: NetworkConfig
@@ -91,8 +107,9 @@ describe("mee.getMmDtkQuote", () => {
     })
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      apiKey: process.env.PERSONAL_MEE_API_KEY
+      account: mcNexus
+      //apiKey: process.env.PERSONAL_MEE_API_KEY,
+      //url: DEFAULT_MEE_NODE_URL
     })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
 
@@ -331,65 +348,6 @@ describe("mee.getMmDtkQuote", () => {
     expect(fusionQuote.trigger.amount).toBeGreaterThan(0n)
   })
 
-  // TODO: unskip this once
-  // This test uses all available usdc on the eoa on mainnet, so should be skipped
-  test("should demo behaviour of max available amount", async () => {
-    const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-    const chainId = paymentChain.id
-    const mcNexusAddress = mcNexus.addressOn(paymentChain.id, true)
-    const trigger: Trigger = {
-      chainId,
-      tokenAddress,
-      useMaxAvailableFunds: true
-    }
-
-    const transferInstruction = await mcNexus.buildComposable({
-      type: "transfer",
-      data: {
-        chainId,
-        tokenAddress,
-        recipient: vitalik,
-        amount: runtimeERC20BalanceOf({
-          targetAddress: mcNexusAddress,
-          tokenAddress,
-          constraints: [greaterThanOrEqualTo(1n)]
-        })
-      }
-    })
-
-    const fusionQuote = await getMmDtkQuote(meeClient, {
-      trigger,
-      instructions: [transferInstruction],
-      feeToken,
-      delegatorSmartAccount: mmDtkAccount
-    })
-
-    expect(fusionQuote).toBeDefined()
-    expect(fusionQuote.trigger).toBeDefined()
-
-    // EOA balance maximum available balance fetch
-    const maxAvailableBalance = await getBalance(
-      pubClient,
-      mmDtkAccount.address,
-      trigger.tokenAddress
-    )
-
-    // The final amount should be the total balance
-    expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
-
-    const signedQuote = await signMMDtkQuote(meeClient, {
-      fusionQuote,
-      delegatorSmartAccount: mmDtkAccount
-    })
-    console.log("signedQuote", signedQuote)
-    /*
-    const { hash } = await executeSignedQuote(meeClient, { signedQuote })
-
-    const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    */
-  })
-
   test("should add gas fees to amount when not using max available amount", async () => {
     const amount = parseUnits("0.0295", decimals) // some fraction of the unit of token
     const trigger: Trigger = {
@@ -426,5 +384,173 @@ describe("mee.getMmDtkQuote", () => {
     expect(fusionQuote.trigger.amount).toBe(
       amount + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
     )
+  })
+
+  test.runIf(runPaidTests)("should execute a signed quote", async () => {
+    const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    const chainId = paymentChain.id
+    const amount = 11n
+
+    const trigger: Trigger = {
+      chainId,
+      tokenAddress,
+      amount
+    }
+
+    // install new mee validator on the mcNexus
+    /// ==============  SINCE THE MEE K1 MODULE WITH MMDTK SUPPORT IS NOT SUPPORTED YET AS A DEFAULT MODULE, =========
+    // ===============  WE NEED TO INSTALL AND ACTIVATE IT MANUALLY  ==============
+    const meeK1ModuleWithMMDTKSupportAddress =
+      "0x4076c12AB82dD23Eb7b1755d3454E89CEEA46c47"
+    const meeK1ModuleWithMMDTKSupportCode = await pubClient.getCode({
+      address: meeK1ModuleWithMMDTKSupportAddress,
+      blockTag: "latest"
+    })
+    const isDeployed = meeK1ModuleWithMMDTKSupportCode !== "0x"
+    if (!isDeployed) {
+      throw new Error(
+        `MeeK1ModuleWithMMDTKSupport is not deployed at ${meeK1ModuleWithMMDTKSupportAddress}`
+      )
+    }
+
+    const meeK1ModuleWithMMDTKSupport = toMeeK1Module({
+      signer: eoaAccount,
+      module: meeK1ModuleWithMMDTKSupportAddress,
+      mode: "mm-dtk"
+    })
+
+    const mcNexusWithMMDTKSupport = await toMultichainNexusAccount({
+      chains: [paymentChain, targetChain],
+      transports,
+      signer: eoaAccount,
+      validators: [meeK1ModuleWithMMDTKSupport]
+    })
+
+    const mcNexusAddress = mcNexusWithMMDTKSupport.addressOn(
+      paymentChain.id,
+      true
+    )
+
+    const activeValidator = (
+      mcNexusWithMMDTKSupport.deploymentOn(
+        paymentChain.id,
+        true
+      ) as NexusAccount
+    ).getModule()
+    if (activeValidator.address !== meeK1ModuleWithMMDTKSupport.address) {
+      console.log("activeValidator", activeValidator)
+      console.log("setting new validator")
+      ;(
+        mcNexusWithMMDTKSupport.deploymentOn(
+          paymentChain.id,
+          true
+        ) as NexusAccount
+      ).setModule(meeK1ModuleWithMMDTKSupport)
+    }
+
+    // ========= deploy the mmDtkAccount =========
+    if (!(await mmDtkAccount.isDeployed())) {
+      console.log("mmDtkAccount is not deployed")
+      console.log("deploying mmDtkAccount")
+
+      // fund the mmDtkAccount
+      const walletClient = createWalletClient({
+        account: eoaAccount,
+        chain: paymentChain,
+        transport: transports[0]
+      })
+
+      const fundMmDtkAccountHash = await walletClient.sendTransaction({
+        to: mmDtkAccount.address,
+        value: parseEther("0.001")
+      })
+
+      await waitForTransactionReceipt(pubClient, { hash: fundMmDtkAccountHash })
+
+      const pimlicoClient = createPimlicoClient({
+        transport: http(
+          `https://api.pimlico.io/v2/10/rpc?apikey=${process.env.PIMLICO_API_KEY}`
+        )
+      })
+      const { fast: fee } = await pimlicoClient.getUserOperationGasPrice()
+
+      const bundlerClient = createBundlerClient({
+        client: pubClient,
+        transport: http(
+          `https://public.pimlico.io/v2/10/rpc?apikey=${process.env.PIMLICO_API_KEY}`
+        )
+      })
+
+      const userOperationHash = await bundlerClient.sendUserOperation({
+        account: mmDtkAccount,
+        calls: [
+          {
+            to: "0x1234567890123456789012345678901234567890",
+            value: parseUnits("1", 0)
+          }
+        ],
+        ...fee
+      })
+
+      const { receipt: mmDtkAccountReceipt } =
+        await bundlerClient.waitForUserOperationReceipt({
+          hash: userOperationHash
+        })
+    }
+    // ==================
+
+    const transferInstruction = await mcNexusWithMMDTKSupport.buildComposable({
+      type: "transfer",
+      data: {
+        chainId,
+        tokenAddress,
+        recipient: vitalik,
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexusAddress,
+          tokenAddress,
+          constraints: [greaterThanOrEqualTo(1n)]
+        })
+      }
+    })
+
+    const meeClientWithMMDTKSupport = await createMeeClient({
+      account: mcNexusWithMMDTKSupport,
+      apiKey: process.env.PERSONAL_MEE_API_KEY,
+      url: DEFAULT_MEE_NODE_URL
+    })
+
+    const fusionQuote = await getMmDtkQuote(meeClientWithMMDTKSupport, {
+      trigger,
+      instructions: [transferInstruction],
+      feeToken,
+      delegatorSmartAccount: mmDtkAccount,
+      moduleAddress: meeK1ModuleWithMMDTKSupportAddress
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+
+    const signedQuote = await signMMDtkQuote(meeClientWithMMDTKSupport, {
+      fusionQuote,
+      delegatorSmartAccount: mmDtkAccount
+    })
+
+    const vitalikBalanceBefore = await getBalance(
+      pubClient,
+      vitalik,
+      tokenAddress
+    )
+
+    const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+    const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    const vitalikBalanceAfter = await getBalance(
+      pubClient,
+      vitalik,
+      tokenAddress
+    )
+
+    expect(vitalikBalanceAfter).toBe(vitalikBalanceBefore + amount)
   })
 })

@@ -1,4 +1,7 @@
-import { getMeeK1ModuleStubSignature } from "../default/toDefaultModule"
+import {
+  type FusionMode,
+  getMeeK1ModuleStubSignature
+} from "../default/toDefaultModule"
 import {
   type Validator,
   type ValidatorParameters,
@@ -7,7 +10,7 @@ import {
 
 export const toMeeK1Module = (
   parameters: Omit<ValidatorParameters, "initData"> & {
-    mode?: "simple" | "no_mee" | "permit" | "on-chain"
+    mode?: FusionMode
     superTxEntriesCount?: number
   }
 ): Validator => {
