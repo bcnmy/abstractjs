@@ -150,6 +150,8 @@ export async function getSupertransactionReceipt(
       if (waitForReceipts) {
         const isSponsoredSupertransaction =
           explorerResponse.paymentInfo.sponsored
+        const sponsorshipUrl =
+          explorerResponse.paymentInfo.sponsorshipUrl || DEFAULT_PATHFINDER_URL
 
         receipts = await Promise.all(
           explorerResponse.userOps
@@ -167,9 +169,7 @@ export async function getSupertransactionReceipt(
               // If sponsored tx ? the receipt for sponsored payment userOp needs to be fetched from
               // sponsorship backend
               if (isSponsoredSupertransaction && index === 0) {
-                const sponsorshipClient = createHttpClient(
-                  DEFAULT_PATHFINDER_URL
-                )
+                const sponsorshipClient = createHttpClient(sponsorshipUrl)
 
                 const receipt = await sponsorshipClient.request({
                   path: `sponsorship/receipt/${chainId}/${executionData}`,

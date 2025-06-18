@@ -335,6 +335,8 @@ export type PaymentInfo = {
   callGasLimit?: bigint
   /** Sponsorship flag  */
   sponsored?: boolean
+  /** Sponsorship url  */
+  sponsorshipUrl?: Url
 }
 
 /**
@@ -694,6 +696,7 @@ const preparePaymentInfo = async (
       nonce,
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       chainId: chainId.toString(),
+      sponsorshipUrl,
       ...(eoa ? { eoa } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
       // So initCode will be always undefined
