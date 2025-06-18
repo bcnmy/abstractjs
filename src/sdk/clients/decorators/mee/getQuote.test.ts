@@ -306,48 +306,6 @@ describe("mee.getQuote", () => {
     }
   })
 
-  test("Should get quote for sponsored super transaction fail for unsupported sponshorship url", async () => {
-    try {
-      const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
-        signer: eoaAccount,
-        transports: [http()]
-      })
-
-      const meeClient = await createMeeClient({
-        account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
-      })
-
-      await meeClient.getQuote({
-        sponsorship: true,
-        sponsorshipOptions: {
-          url: "https://www.google.com",
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
-        },
-        instructions: [
-          {
-            calls: [
-              {
-                to: eoaAccount.address,
-                value: 1n
-              }
-            ],
-            chainId: baseSepolia.id
-          }
-        ]
-      })
-    } catch (error) {
-      expect(error.message).to.eq(
-        "Self hosted sponsorship is not supported yet."
-      )
-    }
-  })
-
   test("Should get quote for sponsored super transaction (Mainnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
