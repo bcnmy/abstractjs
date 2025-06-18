@@ -1,13 +1,7 @@
-import { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import { OneOf } from "viem"
 import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { getPaymentToken } from "./getPaymentToken"
-import {
-  type SignMmDtkQuoteParams,
-  type SignMmDtkQuotePayload,
-  signMMDtkQuote
-} from "./signMmDtkQuote"
+import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"
 import signOnChainQuote, {
   type SignOnChainQuotePayload,
   type SignOnChainQuoteParams

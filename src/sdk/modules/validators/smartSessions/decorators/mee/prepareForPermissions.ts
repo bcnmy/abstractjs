@@ -131,7 +131,7 @@ export const prepareForPermissions = async (
 
       return await executeFusionQuote(client, {
         fusionQuote: quote,
-        account: client.account
+        companionAccount: client.account
       })
     }
 

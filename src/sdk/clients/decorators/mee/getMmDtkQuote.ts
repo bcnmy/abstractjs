@@ -1,12 +1,5 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import {
-  type Account,
-  type Address,
-  type Chain,
-  type PublicClient,
-  type Transport,
-  erc20Abi
-} from "viem"
+import { erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
