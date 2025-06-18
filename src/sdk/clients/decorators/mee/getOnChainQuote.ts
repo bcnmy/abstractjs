@@ -32,10 +32,6 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
-  /**
-   * Optional sponsorship flag
-   */
-  sponsorship?: boolean
 }
 
 /**
