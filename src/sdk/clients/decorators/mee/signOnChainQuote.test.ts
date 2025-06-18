@@ -9,7 +9,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { optimism } from "viem/chains"
-import { beforeAll, describe, expect, test, vi } from "vitest"
+import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
@@ -25,7 +25,8 @@ import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+// const { runPaidTests } = inject("settings")
+const runPaidTests = true
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -216,16 +217,21 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         amount: 1n
       }
 
-      const sender = mcNexus.signer.address
       const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
 
       const quote = await getQuote(meeClient, {
         path: "quote-permit",
-        eoa: sender,
+        eoa: mcNexus.signer.address,
         instructions: [
           mcNexus.build({
-            type: "transferFrom",
-            data: { ...erc20Trigger, sender, recipient }
+            type: "transfer",
+            // dummy instruction
+            data: {
+              tokenAddress,
+              recipient: zeroAddress,
+              chainId: optimism.id,
+              amount: 1n
+            }
           })
         ],
         feeToken
