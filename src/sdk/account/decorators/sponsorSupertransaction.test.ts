@@ -4,11 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest"
 import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
-import {
-  DEFAULT_STAGING_PATHFINDER_URL,
-  type MeeClient,
-  createMeeClient
-} from "../../clients/createMeeClient"
+import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
@@ -35,7 +31,7 @@ describe("mee.sponsorSupertransaction", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      url: DEFAULT_STAGING_PATHFINDER_URL
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
     })
 
     gasTankAccount = await toGasTankAccount({

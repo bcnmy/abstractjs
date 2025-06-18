@@ -9,13 +9,16 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { waitForTransactionReceipt } from "viem/actions"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../test/testUtils"
-import { DEFAULT_STAGING_PATHFINDER_URL } from "../../clients/createMeeClient"
+import { DEFAULT_PATHFINDER_URL } from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
 import { runtimeERC20BalanceOf } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
+
+// @ts-ignore
+const { runPaidTests } = inject("settings")
 
 describe("mee.withdrawFromGasTank", () => {
   let network: NetworkConfig
@@ -40,14 +43,14 @@ describe("mee.withdrawFromGasTank", () => {
       privateKey: gasTankPk,
       options: {
         mee: {
-          url: DEFAULT_STAGING_PATHFINDER_URL,
-          apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+          url: DEFAULT_PATHFINDER_URL,
+          apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
         }
       }
     })
   })
 
-  it("Deploy gas tank", async () => {
+  test.runIf(runPaidTests)("Withdraw funds from gas tank", async () => {
     const { address: gasTankAddress } = await gasTankAccount.getAddress()
     const deployed = await gasTankAccount.isDeployed()
 
