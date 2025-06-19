@@ -476,12 +476,9 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         account: mcNexus.signer
       })
 
-      const resetApprovalReceipt = await publicClient.waitForTransactionReceipt(
-        {
-          hash: resetApprovalHash
-        }
-      )
-      console.log("resetApprovalReceipt", resetApprovalReceipt)
+      await publicClient.waitForTransactionReceipt({
+        hash: resetApprovalHash
+      })
 
       const allowanceStart = await publicClient.readContract({
         address: token,
@@ -490,7 +487,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
       })
       expect(allowanceStart).toBe(0n)
-      console.log("allowance start", allowanceStart)
 
       const trigger: Trigger = {
         chainId: chain.id,
@@ -505,12 +501,10 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
           await mcNexus.build({
             type: "transfer",
             data: {
+              // transfer back to the eoa account
               recipient: mcNexus.signer.address,
               tokenAddress: token,
-              amount: runtimeERC20BalanceOf({
-                targetAddress: mcNexus.signer.address,
-                tokenAddress: token
-              }),
+              amount: 1n,
               chainId: chain.id
             }
           })
@@ -520,10 +514,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
           address: token
         }
       })
-
       expect(fusionQuote).toBeDefined()
       expect(fusionQuote.trigger).toBeDefined()
-      console.log("fusionQuote", fusionQuote)
       // // Execute the quote
       const { hash } = await meeClient.executeFusionQuote({
         fusionQuote
@@ -540,8 +532,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         functionName: "allowance",
         args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
       })
+      console.log("allowance start", allowanceStart)
       console.log("allowance end", allowanceEnd)
-      console.log("fusionQuote", fusionQuote)
     })
   })
 })
