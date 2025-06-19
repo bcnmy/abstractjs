@@ -457,9 +457,9 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       const approvalAmount = parseUnits("0.03", 6)
       console.log("approvalAmount", approvalAmount, amount)
       const token = testnetMcUSDC.addressOn(chain.id)
-      const account = privateKeyToAccount(pKey as Hex)
+
       const walletClient = createWalletClient({
-        account,
+        account: eoaAccount,
         chain: network.chain,
         transport: http(network.rpcUrl)
       })
@@ -472,14 +472,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         address: token,
         abi: erc20Abi,
         functionName: "approve",
-        args: [mcNexus.addressOn(chain.id, true), 0n],
-        account: mcNexus.signer
+        args: [mcNexus.addressOn(chain.id, true), 0n]
       })
-
       await publicClient.waitForTransactionReceipt({
         hash: resetApprovalHash
       })
-
       const allowanceStart = await publicClient.readContract({
         address: token,
         abi: erc20Abi,
@@ -534,6 +531,13 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       })
       console.log("allowance start", allowanceStart)
       console.log("allowance end", allowanceEnd)
+      console.log({
+        eoa: mcNexus.signer.address,
+        eoaAccount: eoaAccount.address,
+        mcNexus: mcNexus.addressOn(chain.id, true),
+        chainId: chain.id,
+        executeReceipt
+      })
     })
   })
 })
