@@ -65,7 +65,7 @@ const generateTriggerCallFromTrigger = async ({
             value: trigger.call.value
           }
         ],
-        chainId: trigger.call.chainId
+        chainId: trigger.chainId
       } as BuildDefaultParameters
     })
     triggerCall = customCall
@@ -136,7 +136,7 @@ export const signOnChainQuote = async (
     fusionQuote: { quote, trigger }
   } = params
 
-  const chainId = "chainId" in trigger ? trigger.chainId : trigger.call.chainId
+  const chainId = trigger.chainId
 
   const {
     chain,

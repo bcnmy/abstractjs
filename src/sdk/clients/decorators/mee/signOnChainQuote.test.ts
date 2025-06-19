@@ -360,10 +360,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       const fusionQuote = await meeClient.getOnChainQuote({
         trigger: {
           call: {
+            // dummy transfer to an address
             to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
-            value: 1n,
-            chainId: network.chain.id
-          }
+            value: 1n
+          },
+          chainId: network.chain.id
         },
         sponsorship: true,
         sponsorshipOptions: {
@@ -402,10 +403,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       const fusionQuote = await meeClient.getOnChainQuote({
         trigger: {
           call: {
+            // dummy transfer to an address
             to: "0x072A5250ecDE01De247b6671BC206756b6b0Ec26" as `0x${string}`,
-            value: 1n,
-            chainId: network.chain.id
-          }
+            value: 1n
+          },
+          chainId: network.chain.id
         },
         // note that the fee token needs to match with the trigger above
         // eg if the trigger is for transferring ETH, the fee token needs to be ETH

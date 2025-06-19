@@ -90,22 +90,12 @@ export const getOnChainQuote = async (
   const resolvedInstructions = await resolveInstructions(instructions)
 
   if ("call" in trigger) {
-    const params: BuildInstructionTypes = {
-      type: "default",
-      data: {
-        calls: [trigger.call],
-        chainId: trigger.call.chainId
-      }
-    }
-
-    const triggerTransfer = await account_.build(params)
-
     const batchedInstructions = await batchInstructions({
       account: account_,
-      instructions: [...triggerTransfer, ...resolvedInstructions]
+      instructions: resolvedInstructions
     })
     const quote = await getQuote(client, {
-      path: "quote-permit", // Use different endpoint for onchain quotes
+      path: "quote",
       eoa: account_.signer.address,
       instructions: batchedInstructions,
       gasLimit: gasLimit || DEFAULT_GAS_LIMIT,

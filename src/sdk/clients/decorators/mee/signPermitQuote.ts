@@ -21,7 +21,12 @@ export type CustomTrigger = {
    * The call to execute
    * @see {@link AbstractCall}
    */
-  call: AbstractCall & { chainId: number }
+  call: AbstractCall
+  /**
+   * The chainId to use
+   * @example 1 // Ethereum Mainnet
+   */
+  chainId: number
 }
 
 /**
