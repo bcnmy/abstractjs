@@ -198,10 +198,9 @@ export const getOnChainQuote = async (
   return {
     quote,
     trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
       amount,
-      gasLimit: triggerGasLimit
+      gasLimit: triggerGasLimit,
+      ...trigger
     }
   }
 }

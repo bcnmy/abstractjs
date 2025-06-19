@@ -49,6 +49,11 @@ export type TokenTrigger = {
    */
   amount?: bigint
   /**
+   * A custom amount to approve as the trigger
+   * @example 1000000n // 1 USDC (6 decimals)
+   */
+  approvalAmount?: bigint
+  /**
    * custom gas limit can be added to override the default 50_000 gas limit
    */
   gasLimit?: bigint
@@ -135,6 +140,25 @@ export const signPermitQuote = async (
   if (!trigger.amount)
     throw new Error("Amount is required to sign a permit quote")
 
+  // check if we have an explicit `approvalAmount` set and error if it's smaller than the default amount
+  if (
+    trigger.approvalAmount &&
+    trigger.amount !== undefined &&
+    trigger.approvalAmount < trigger.amount
+  ) {
+    throw new Error(
+      `Approval amount must be at bigger or equal with the default amount to approve (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+    )
+  }
+
+  const amount = trigger.approvalAmount ?? trigger.amount
+
+  console.log("before approve trigger", trigger, {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    amount
+  })
+
   const { walletClient, address: spender } = account_.deploymentOn(
     trigger.chainId,
     true
@@ -185,7 +209,7 @@ export const signPermitQuote = async (
     message: {
       owner,
       spender: spender,
-      value: trigger.amount,
+      value: amount,
       nonce,
       deadline: BigInt(quote.hash)
     },
@@ -212,7 +236,7 @@ export const signPermitQuote = async (
       spender,
       domainSeparator,
       PERMIT_TYPEHASH,
-      trigger.amount,
+      amount,
       BigInt(trigger.chainId),
       nonce,
       sigComponents.v!,

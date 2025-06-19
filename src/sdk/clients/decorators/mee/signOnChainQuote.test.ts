@@ -4,20 +4,29 @@ import {
   type Hex,
   type LocalAccount,
   type Transport,
+  createPublicClient,
+  createWalletClient,
+  erc20Abi,
   isHex,
+  parseUnits,
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
-import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import {
+  type NetworkConfig,
+  getBalance,
+  pKey
+} from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { FORWARDER_ADDRESS } from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -30,10 +39,12 @@ import {
 import executeSignedQuote from "./executeSignedQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
+import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
+
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -438,6 +449,99 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       // Wait for the transaction to complete
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    })
+  })
+  describe("custom approvalAmount", () => {
+    test("changes the allowance based on approvalAmount", async () => {
+      const amount = parseUnits("0.01", 6) // 1 unit of token
+      const approvalAmount = parseUnits("0.03", 6)
+      console.log("approvalAmount", approvalAmount, amount)
+      const token = testnetMcUSDC.addressOn(chain.id)
+      const account = privateKeyToAccount(pKey as Hex)
+      const walletClient = createWalletClient({
+        account,
+        chain: network.chain,
+        transport: http(network.rpcUrl)
+      })
+      const publicClient = createPublicClient({
+        chain: network.chain,
+        transport: http(network.rpcUrl)
+      })
+      // Set allowance to 0 before the test to ensure a known state
+      const resetApprovalHash = await walletClient.writeContract({
+        address: token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [mcNexus.addressOn(chain.id, true), 0n],
+        account: mcNexus.signer
+      })
+
+      const resetApprovalReceipt = await publicClient.waitForTransactionReceipt(
+        {
+          hash: resetApprovalHash
+        }
+      )
+      console.log("resetApprovalReceipt", resetApprovalReceipt)
+
+      const allowanceStart = await publicClient.readContract({
+        address: token,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
+      })
+      expect(allowanceStart).toBe(0n)
+      console.log("allowance start", allowanceStart)
+
+      const trigger: Trigger = {
+        chainId: chain.id,
+        tokenAddress: token,
+        amount,
+        approvalAmount
+      }
+
+      const fusionQuote = await meeClient.getOnChainQuote({
+        trigger,
+        instructions: [
+          await mcNexus.build({
+            type: "transfer",
+            data: {
+              recipient: mcNexus.signer.address,
+              tokenAddress: token,
+              amount: runtimeERC20BalanceOf({
+                targetAddress: mcNexus.signer.address,
+                tokenAddress: token
+              }),
+              chainId: chain.id
+            }
+          })
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: token
+        }
+      })
+
+      expect(fusionQuote).toBeDefined()
+      expect(fusionQuote.trigger).toBeDefined()
+      console.log("fusionQuote", fusionQuote)
+      // // Execute the quote
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote
+      })
+
+      // Wait for the transaction to complete
+      const executeReceipt = await meeClient.waitForSupertransactionReceipt({
+        hash
+      })
+      expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
+      const allowanceEnd = await publicClient.readContract({
+        address: token,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
+      })
+      console.log("allowance end", allowanceEnd)
+      console.log("fusionQuote", fusionQuote)
     })
   })
 })
