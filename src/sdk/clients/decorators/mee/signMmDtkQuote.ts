@@ -62,10 +62,9 @@ const MM_DTK_PREFIX = "0x177eee03"
  *
  * @returns Promise resolving to the quote payload with permit signature
  *
- * // TODO: FIX EXAMPLE
  * @example
  * ```typescript
- * const signedPermitQuote = await signPermitQuote(meeClient, {
+ * const signedMMDtkQuote = await signMMDtkQuote(meeClient, {
  *   fusionQuote: {
  *     quote: quotePayload,
  *     trigger: {
@@ -74,7 +73,7 @@ const MM_DTK_PREFIX = "0x177eee03"
  *       amount: 1000000n // 1 USDC
  *     }
  *   },
- *   account: smartAccount // Optional
+ *   delegatorSmartAccount: mmDtkAccount
  * });
  * ```
  */

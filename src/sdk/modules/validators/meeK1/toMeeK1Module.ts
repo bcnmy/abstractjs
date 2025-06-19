@@ -1,5 +1,5 @@
 import {
-  type FusionMode,
+  type MeeSignatureType,
   getMeeK1ModuleStubSignature
 } from "../default/toDefaultModule"
 import {
@@ -10,11 +10,11 @@ import {
 
 export const toMeeK1Module = (
   parameters: Omit<ValidatorParameters, "initData"> & {
-    mode?: FusionMode
+    signatureType?: MeeSignatureType
     superTxEntriesCount?: number
   }
 ): Validator => {
-  const { mode = "simple", superTxEntriesCount = 3 } = parameters
+  const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
   return toValidator({
     initData: parameters.signer.address,
     data: parameters.signer.address,
@@ -24,6 +24,6 @@ export const toMeeK1Module = (
     module: parameters.module,
     type: "validator",
     getStubSignature: async () =>
-      getMeeK1ModuleStubSignature(mode, superTxEntriesCount)
+      getMeeK1ModuleStubSignature(signatureType, superTxEntriesCount)
   })
 }

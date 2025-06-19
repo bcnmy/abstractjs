@@ -9,14 +9,19 @@ import {
 const MOCK_SUPERTXN_HASH_AND_TIMESTAMPS: Hex =
   "0x9e1cce57126e9205fe085888ed6b5ca0033f168e26b8927adb1c6da566cf7c5100000000000000000000000000000000000000000000000000000000642622800000000000000000000000000000000000000000000000000000000064262668"
 
-export type FusionMode = "simple" | "no-mee" | "permit" | "on-chain" | "mm-dtk"
+export type MeeSignatureType =
+  | "simple"
+  | "no-mee"
+  | "permit"
+  | "on-chain"
+  | "mm-dtk"
 export const toDefaultModule = (
   parameters: Omit<ValidatorParameters, "module" | "initData"> & {
-    mode?: FusionMode
+    signatureType?: MeeSignatureType
     superTxEntriesCount?: number
   }
 ): Validator => {
-  const { mode = "simple", superTxEntriesCount = 3 } = parameters
+  const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
   return toValidator({
     initData: parameters.signer.address,
     data: parameters.signer.address,
@@ -26,12 +31,12 @@ export const toDefaultModule = (
     module: zeroAddress,
     type: "validator",
     getStubSignature: async () =>
-      getMeeK1ModuleStubSignature(mode, superTxEntriesCount)
+      getMeeK1ModuleStubSignature(signatureType, superTxEntriesCount)
   })
 }
 
 export const getMeeK1ModuleStubSignature = (
-  mode: FusionMode,
+  signatureType: MeeSignatureType,
   superTxEntriesCount: number
 ): Hex => {
   // get the proof size for a given merkle tree size
@@ -41,10 +46,10 @@ export const getMeeK1ModuleStubSignature = (
   let prefix: Hex = "0x"
   let mockModePayload: Hex = "0x"
 
-  if (mode === "no-mee") {
+  if (signatureType === "no-mee") {
     return DUMMY_SIGNATURE
   }
-  if (mode === "simple") {
+  if (signatureType === "simple") {
     prefix = "0x177eee00"
     mockModePayload = concatHex([
       MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
@@ -55,7 +60,7 @@ export const getMeeK1ModuleStubSignature = (
   // for permmit and on-chain mode, we imitate the sig structure
   // hex values are taken from a real signature for an according fusion mode
   // stub signatures are used to estimate gas and are not expected to be valid
-  if (mode === "permit") {
+  if (signatureType === "permit") {
     prefix = "0x177eee01"
     mockModePayload = concatHex([
       "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b0000000000000000000000000000000000000000000000003782dace9d9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027d5730e3c64852e56f4f10c0c27a8d96651193fd13663c1dd652b5f18677458",
@@ -63,7 +68,7 @@ export const getMeeK1ModuleStubSignature = (
       "0x00000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000250e2ad6bd90d6121dc5166dc6968f23ba43497594de5c7ca655f58e96d31775d"
     ])
   }
-  if (mode === "on-chain") {
+  if (signatureType === "on-chain") {
     prefix = "0x177eee02"
     mockModePayload = concatHex([
       "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b000000000000000000000000000000000000000000000001158e460913d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -73,7 +78,7 @@ export const getMeeK1ModuleStubSignature = (
   }
 
   // TODO: adjust this to the actual mm-dtk payload
-  if (mode === "mm-dtk") {
+  if (signatureType === "mm-dtk") {
     prefix = "0x177eee03"
     mockModePayload = concatHex([
       "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b0000000000000000000000000000000000000000000000003782dace9d9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027d5730e3c64852e56f4f10c0c27a8d96651193fd13663c1dd652b5f18677458",

@@ -107,9 +107,8 @@ describe("mee.getMmDtkQuote", () => {
     })
 
     meeClient = await createMeeClient({
-      account: mcNexus
-      //apiKey: process.env.PERSONAL_MEE_API_KEY,
-      //url: DEFAULT_MEE_NODE_URL
+      account: mcNexus,
+      apiKey: process.env.PERSONAL_MEE_API_KEY
     })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
 
@@ -416,7 +415,7 @@ describe("mee.getMmDtkQuote", () => {
     const meeK1ModuleWithMMDTKSupport = toMeeK1Module({
       signer: eoaAccount,
       module: meeK1ModuleWithMMDTKSupportAddress,
-      mode: "mm-dtk"
+      signatureType: "mm-dtk"
     })
 
     const mcNexusWithMMDTKSupport = await toMultichainNexusAccount({

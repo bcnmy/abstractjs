@@ -154,7 +154,7 @@ export const getOnChainQuote = async (
   })
 
   // It uses the same endpoint (path) for onchain and permit quotes, as currently
-  // the fusion on-chain txn will always be 'approve' and never 'transfer'
+  // the fusion on-chain txn for erc-20 tokens will always be 'approve' and never 'transfer'
   // so the MEE Node endpoint can be the same for both
   // there is also just a 'quote' endpoint, which applies to non-fusion superTxns
   const quote = await getQuote(client, {
