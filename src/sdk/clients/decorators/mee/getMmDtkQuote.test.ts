@@ -512,6 +512,7 @@ describe("mee.getMmDtkQuote", () => {
       }
     })
 
+    // TODO: remove this once all the nodes are upgraded to have MM DTK support on the node level
     const meeClientWithMMDTKSupport = await createMeeClient({
       account: mcNexusWithMMDTKSupport,
       apiKey: process.env.PERSONAL_MEE_API_KEY,

@@ -57,7 +57,7 @@ export const getMeeK1ModuleStubSignature = (
       "0x0000000000000000000000000000000000000000000000000000000000000100"
     ])
   }
-  // for permmit and on-chain mode, we imitate the sig structure
+  // for permit mode, on-chain mode, and mm-dtk mode, we imitate the sig structure
   // hex values are taken from a real signature for an according fusion mode
   // stub signatures are used to estimate gas and are not expected to be valid
   if (signatureType === "permit") {
