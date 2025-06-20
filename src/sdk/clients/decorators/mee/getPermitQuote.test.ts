@@ -63,7 +63,9 @@ describe("mee.getPermitQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus
+    })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
@@ -347,11 +349,6 @@ describe("mee.getPermitQuote", () => {
   })
 
   test("should add gas fees to amount when not using max available amount", async () => {
-    const client = createPublicClient({
-      chain: paymentChain,
-      transport: transports[0]
-    })
-
     const amount = parseUnits("1", 6) // 1 unit of token
     const trigger: Trigger = {
       chainId: paymentChain.id,
