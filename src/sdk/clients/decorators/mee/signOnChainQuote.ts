@@ -104,7 +104,7 @@ const generateTriggerCallFromTrigger = async ({
       trigger.approvalAmount < trigger.amount
     ) {
       throw new Error(
-        `Approval amount must be bigger or equal with the amount to approve from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+        `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
       )
     }
 
