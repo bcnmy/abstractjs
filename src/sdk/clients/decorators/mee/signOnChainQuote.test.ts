@@ -43,8 +43,8 @@ import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
-
+// const { runPaidTests } = inject("settings")
+const runPaidTests = true
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -453,11 +453,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
   })
   describe("custom approvalAmount", () => {
     test("changes the allowance based on approvalAmount", async () => {
-      const amount = parseUnits("0.01", 6) // 1 unit of token
+      // Define the amount to transfer and the custom approval amount (allowance)
+      const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.03", 6)
-      console.log("approvalAmount", approvalAmount, amount)
       const token = testnetMcUSDC.addressOn(chain.id)
 
+      // Create a wallet client for sending transactions and a public client for reading blockchain state
       const walletClient = createWalletClient({
         account: eoaAccount,
         chain: network.chain,
@@ -467,7 +468,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         chain: network.chain,
         transport: http(network.rpcUrl)
       })
-      // Set allowance to 0 before the test to ensure a known state
+      // Set the allowance to 0 before the test to ensure a known state (reset approval)
       const resetApprovalHash = await walletClient.writeContract({
         address: token,
         abi: erc20Abi,
@@ -477,6 +478,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       await publicClient.waitForTransactionReceipt({
         hash: resetApprovalHash
       })
+      // Read the starting allowance (should be 0)
       const allowanceStart = await publicClient.readContract({
         address: token,
         abi: erc20Abi,
@@ -485,11 +487,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       })
       expect(allowanceStart).toBe(0n)
 
+      // Prepare the trigger with the custom approvalAmount
       const trigger: Trigger = {
         chainId: chain.id,
         tokenAddress: token,
-        amount,
-        approvalAmount
+        amount, // The amount to transfer
+        approvalAmount // The custom allowance to set
       }
 
       const fusionQuote = await meeClient.getOnChainQuote({
@@ -523,14 +526,15 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         hash
       })
       expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
+      // Read the ending allowance (should match approvalAmount - the amount that was spent on fees and the amount that was transferred)
       const allowanceEnd = await publicClient.readContract({
         address: token,
         abi: erc20Abi,
         functionName: "allowance",
         args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
       })
-      console.log("allowance start", allowanceStart)
-      console.log("allowance end", allowanceEnd)
+      const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
+      expect(allowanceEnd).toBe(approvalAmount - amount - fees)
       console.log({
         eoa: mcNexus.signer.address,
         eoaAccount: eoaAccount.address,
