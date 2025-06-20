@@ -198,9 +198,9 @@ export const getOnChainQuote = async (
   return {
     quote,
     trigger: {
+      ...trigger,
       amount,
-      gasLimit: triggerGasLimit,
-      ...trigger
+      gasLimit: triggerGasLimit
     }
   }
 }

@@ -64,8 +64,7 @@ describe("mee.getPermitQuote", () => {
     })
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      account: mcNexus
     })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
