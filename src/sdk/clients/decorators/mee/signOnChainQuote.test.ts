@@ -534,13 +534,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       })
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)
-      console.log({
-        eoa: mcNexus.signer.address,
-        eoaAccount: eoaAccount.address,
-        mcNexus: mcNexus.addressOn(chain.id, true),
-        chainId: chain.id,
-        executeReceipt
-      })
     })
   })
 })
