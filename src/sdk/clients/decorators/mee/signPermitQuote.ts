@@ -140,14 +140,14 @@ export const signPermitQuote = async (
   if (!trigger.amount)
     throw new Error("Amount is required to sign a permit quote")
 
-  // check if we have an explicit `approvalAmount` set and error if it's smaller than the default amount
+  // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
   if (
     trigger.approvalAmount &&
     trigger.amount !== undefined &&
     trigger.approvalAmount < trigger.amount
   ) {
     throw new Error(
-      `Approval amount must be at bigger or equal with the default amount to approve (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+      `Approval amount must be bigger or equal with the amount to approve from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
     )
   }
 

@@ -25,14 +25,12 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { FORWARDER_ADDRESS } from "../../../constants"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
-import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
+import { mcUSDC, mcUSDT } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
   DEFAULT_PATHFINDER_URL,
-  DEFAULT_STAGING_PATHFINDER_URL,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -149,7 +147,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     )
     expect(balanceOfRecipient).toBe(trigger.amount)
   })
-
   describe("trigger calls", () => {
     test("should handle ETH forwarder trigger call", async () => {
       const ethTrigger = {
@@ -451,12 +448,50 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     })
   })
   describe("custom approvalAmount", () => {
+    test("should fail if approvalAmount is smaller than the trigger amount", async () => {
+      const amount = parseUnits("0.01", 6)
+      const approvalAmount = parseUnits("0.005", 6)
+      const token = mcUSDT.addressOn(network.chain.id)
+      const trigger: Trigger = {
+        chainId: network.chain.id,
+        tokenAddress: token,
+        amount,
+        approvalAmount
+      }
+      const fusionQuote = await meeClient.getOnChainQuote({
+        trigger,
+        instructions: [
+          await mcNexus.build({
+            type: "transfer",
+            data: {
+              // transfer back to the eoa account
+              recipient: mcNexus.signer.address,
+              tokenAddress: token,
+              amount: 1n,
+              chainId: network.chain.id
+            }
+          })
+        ],
+        feeToken: {
+          chainId: network.chain.id,
+          address: token
+        }
+      })
+      expect(fusionQuote).toBeDefined()
+      expect(fusionQuote.trigger).toBeDefined()
+      // Execute the quote
+      await expect(
+        meeClient.executeFusionQuote({
+          fusionQuote
+        })
+      ).rejects.toThrow()
+    })
+
     test("changes the allowance based on approvalAmount", async () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.03", 6)
-      const token = testnetMcUSDC.addressOn(chain.id)
-
+      const token = mcUSDT.addressOn(network.chain.id)
       // Create a wallet client for sending transactions and a public client for reading blockchain state
       const walletClient = createWalletClient({
         account: eoaAccount,
@@ -472,7 +507,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         address: token,
         abi: erc20Abi,
         functionName: "approve",
-        args: [mcNexus.addressOn(chain.id, true), 0n]
+        args: [mcNexus.addressOn(network.chain.id, true), 0n]
       })
       await publicClient.waitForTransactionReceipt({
         hash: resetApprovalHash
@@ -482,13 +517,16 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         address: token,
         abi: erc20Abi,
         functionName: "allowance",
-        args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
+        args: [
+          mcNexus.signer.address,
+          mcNexus.addressOn(network.chain.id, true)
+        ]
       })
       expect(allowanceStart).toBe(0n)
 
       // Prepare the trigger with the custom approvalAmount
       const trigger: Trigger = {
-        chainId: chain.id,
+        chainId: network.chain.id,
         tokenAddress: token,
         amount, // The amount to transfer
         approvalAmount // The custom allowance to set
@@ -504,12 +542,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
               recipient: mcNexus.signer.address,
               tokenAddress: token,
               amount: 1n,
-              chainId: chain.id
+              chainId: network.chain.id
             }
           })
         ],
         feeToken: {
-          chainId: chain.id,
+          chainId: network.chain.id,
           address: token
         }
       })
@@ -530,7 +568,10 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         address: token,
         abi: erc20Abi,
         functionName: "allowance",
-        args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
+        args: [
+          mcNexus.signer.address,
+          mcNexus.addressOn(network.chain.id, true)
+        ]
       })
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)
