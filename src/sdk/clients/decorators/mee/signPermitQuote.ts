@@ -153,12 +153,6 @@ export const signPermitQuote = async (
 
   const amount = trigger.approvalAmount ?? trigger.amount
 
-  console.log("before approve trigger", trigger, {
-    tokenAddress: trigger.tokenAddress,
-    chainId: trigger.chainId,
-    amount
-  })
-
   const { walletClient, address: spender } = account_.deploymentOn(
     trigger.chainId,
     true
