@@ -16,7 +16,12 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
-import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import {
+  type NetworkConfig,
+  getAllowance,
+  getBalance,
+  setAllowance
+} from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -124,68 +129,71 @@ describe("mee.signPermitQuote", () => {
 
   test
     .runIf(runPaidTests)
-    .skip("should execute a signed fusion quote using signPermitQuote", async () => {
-      console.time("signPermitQuote:getQuote")
-      console.time("signPermitQuote:getHash")
-      console.time("signPermitQuote:receipt")
+    .skip(
+      "should execute a signed fusion quote using signPermitQuote",
+      async () => {
+        console.time("signPermitQuote:getQuote")
+        console.time("signPermitQuote:getHash")
+        console.time("signPermitQuote:receipt")
 
-      const trigger = {
-        chainId: paymentChain.id,
-        tokenAddress: mcUSDC.addressOn(paymentChain.id),
-        amount: 1n
-      }
-
-      const recipient = mcNexus.addressOn(paymentChain.id, true)
-      const sender = mcNexus.signer.address
-
-      const quote = await getQuote(meeClient, {
-        path: "quote-permit",
-        eoa: sender,
-        instructions: [
-          mcNexus.build({
-            type: "transferFrom",
-            data: { ...trigger, recipient, sender }
-          }),
-          mcNexus.build({
-            type: "transfer",
-            data: {
-              ...trigger,
-              recipient: recipientAccount.address
-            }
-          })
-        ],
-        feeToken
-      })
-
-      console.log(quote.hash)
-
-      const fusionQuote = {
-        quote,
-        trigger: {
-          ...trigger,
-          amount:
-            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+        const trigger = {
+          chainId: paymentChain.id,
+          tokenAddress: mcUSDC.addressOn(paymentChain.id),
+          amount: 1n
         }
+
+        const recipient = mcNexus.addressOn(paymentChain.id, true)
+        const sender = mcNexus.signer.address
+
+        const quote = await getQuote(meeClient, {
+          path: "quote-permit",
+          eoa: sender,
+          instructions: [
+            mcNexus.build({
+              type: "transferFrom",
+              data: { ...trigger, recipient, sender }
+            }),
+            mcNexus.build({
+              type: "transfer",
+              data: {
+                ...trigger,
+                recipient: recipientAccount.address
+              }
+            })
+          ],
+          feeToken
+        })
+
+        console.log(quote.hash)
+
+        const fusionQuote = {
+          quote,
+          trigger: {
+            ...trigger,
+            amount:
+              BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+          }
+        }
+
+        console.timeEnd("signPermitQuote:getQuote")
+        const signedQuote = await signPermitQuote(meeClient, { fusionQuote })
+        const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+        console.timeEnd("signPermitQuote:getHash")
+        const receipt = await waitForSupertransactionReceipt(meeClient, {
+          hash
+        })
+        console.timeEnd("signPermitQuote:receipt")
+
+        expect(receipt).toBeDefined()
+        console.log(receipt.explorerLinks)
+        const balanceOfRecipient = await getBalance(
+          mcNexus.deploymentOn(paymentChain.id, true).publicClient,
+          recipientAccount.address,
+          tokenAddress
+        )
+        expect(balanceOfRecipient).toBe(trigger.amount)
       }
-
-      console.timeEnd("signPermitQuote:getQuote")
-      const signedQuote = await signPermitQuote(meeClient, { fusionQuote })
-      const { hash } = await executeSignedQuote(meeClient, { signedQuote })
-      console.timeEnd("signPermitQuote:getHash")
-      const receipt = await waitForSupertransactionReceipt(meeClient, {
-        hash
-      })
-      console.timeEnd("signPermitQuote:receipt")
-
-      expect(receipt).toBeDefined()
-      console.log(receipt.explorerLinks)
-      const balanceOfRecipient = await getBalance(
-        mcNexus.deploymentOn(paymentChain.id, true).publicClient,
-        recipientAccount.address,
-        tokenAddress
-      )
-      expect(balanceOfRecipient).toBe(trigger.amount)
-    })
+    )
 })
 
 describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
@@ -267,21 +275,19 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
         transport: http(network.rpcUrl)
       })
       // Set the allowance to 0 before the test to ensure a known state (reset approval)
-      const resetApprovalHash = await walletClient.writeContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [mcNexus.addressOn(chain.id, true), 0n]
-      })
-      await publicClient.waitForTransactionReceipt({
-        hash: resetApprovalHash
+      await setAllowance({
+        publicClient,
+        walletClient,
+        tokenAddress: token,
+        spender: mcNexus.addressOn(chain.id, true),
+        amount: 0n
       })
       // Read the starting allowance (should be 0)
-      const allowanceStart = await publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
+      const allowanceStart = await getAllowance({
+        publicClient,
+        tokenAddress: token,
+        owner: mcNexus.signer.address,
+        spender: mcNexus.addressOn(chain.id, true)
       })
       expect(allowanceStart).toBe(0n)
 
@@ -325,11 +331,11 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
       })
       expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
       // Read the ending allowance (should match approvalAmount - the amount that was spent on fees and the amount that was transferred)
-      const allowanceEnd = await publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [mcNexus.signer.address, mcNexus.addressOn(chain.id, true)]
+      const allowanceEnd = await getAllowance({
+        publicClient,
+        tokenAddress: token,
+        owner: mcNexus.signer.address,
+        spender: mcNexus.addressOn(chain.id, true)
       })
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)

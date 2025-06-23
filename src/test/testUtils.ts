@@ -8,12 +8,15 @@ import {
   type Chain,
   type Hex,
   type LocalAccount,
+  type PublicClient,
   createTestClient,
   erc20Abi,
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress
+  zeroAddress,
+  WalletClient,
+  Transport
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { getChain, getCustomChain } from "../sdk/account/utils"
@@ -300,3 +303,52 @@ export const topUp = async (
 
 export const getBundlerUrl = (chainId: number) =>
   `https://bundler.biconomy.io/api/v3/${chainId}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14`
+
+/**
+ * Get the allowance of a token for an owner and spender
+ */
+export const getAllowance = async ({
+  publicClient,
+  tokenAddress,
+  owner,
+  spender
+}: {
+  publicClient: PublicClient
+  tokenAddress: Address
+  owner: Address
+  spender: Address
+}) => {
+  return await publicClient.readContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [owner, spender]
+  })
+}
+
+/**
+ * Set the allowance of a token for an owner and spender
+ */
+export const setAllowance = async ({
+  publicClient,
+  walletClient,
+  tokenAddress,
+  spender,
+  amount
+}: {
+  publicClient: PublicClient
+  walletClient: WalletClient<Transport, Chain, Account>
+  tokenAddress: Address
+  spender: Address
+  amount: bigint
+}) => {
+  const resetApprovalHash = await walletClient.writeContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [spender, amount]
+  })
+  return await publicClient.waitForTransactionReceipt({
+    hash: resetApprovalHash
+  })
+}

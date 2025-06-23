@@ -17,8 +17,10 @@ import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import {
   type NetworkConfig,
+  getAllowance,
   getBalance,
-  pKey
+  pKey,
+  setAllowance
 } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -353,24 +355,20 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         transport: http(network.rpcUrl)
       })
       // Set the allowance to 0 before the test to ensure a known state (reset approval)
-      const resetApprovalHash = await walletClient.writeContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [mcNexus.addressOn(network.chain.id, true), 0n]
+      await setAllowance({
+        publicClient,
+        walletClient,
+        tokenAddress: token,
+        spender: mcNexus.addressOn(network.chain.id, true),
+        amount: 0n
       })
-      await publicClient.waitForTransactionReceipt({
-        hash: resetApprovalHash
-      })
+
       // Read the starting allowance (should be 0)
-      const allowanceStart = await publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [
-          mcNexus.signer.address,
-          mcNexus.addressOn(network.chain.id, true)
-        ]
+      const allowanceStart = await getAllowance({
+        publicClient,
+        tokenAddress: token,
+        owner: mcNexus.signer.address,
+        spender: mcNexus.addressOn(network.chain.id, true)
       })
       expect(allowanceStart).toBe(0n)
 
@@ -414,14 +412,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       })
       expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
       // Read the ending allowance (should match approvalAmount - the amount that was spent on fees and the amount that was transferred)
-      const allowanceEnd = await publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [
-          mcNexus.signer.address,
-          mcNexus.addressOn(network.chain.id, true)
-        ]
+      const allowanceEnd = await getAllowance({
+        publicClient,
+        tokenAddress: token,
+        owner: mcNexus.signer.address,
+        spender: mcNexus.addressOn(network.chain.id, true)
       })
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)
