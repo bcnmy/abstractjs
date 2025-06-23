@@ -17,7 +17,7 @@ import { toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
-import { testnetMcTestUSDC } from "../src/test/testUtils"
+import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testUtils"
 
 dotenv.config()
 
@@ -76,6 +76,7 @@ async function processChain(
       : mcUSDC.addressOn(chainId)
 
     const testUsdcAddress = testnetMcTestUSDC.addressOn(chainId)
+    const testUsdcPAddress = testnetMcTestUSDCP.addressOn(chainId)
 
     if (!usdcAddress) {
       console.warn(
@@ -87,12 +88,14 @@ async function processChain(
     const [
       masterNativeBalance,
       masterUsdcBalance,
-      masterTestnetMcTestUSDCBalance
+      masterTestnetMcTestUSDCBalance,
+      masterTestnetMcTestUSDCPBalance
     ] = await getBalances(
       [
         { chainId, tokenAddress: zeroAddress },
         { chainId, tokenAddress: usdcAddress },
-        { chainId, tokenAddress: testUsdcAddress }
+        { chainId, tokenAddress: testUsdcAddress },
+        { chainId, tokenAddress: testUsdcPAddress }
       ],
       account.address
     )
@@ -129,12 +132,14 @@ async function processChain(
     const [
       nexusNativeBalance,
       nexusUsdcBalance,
-      nexusTestnetMcTestUSDCBalance
+      nexusTestnetMcTestUSDCBalance,
+      nexusTestnetMcTestUSDCPBalance
     ] = await getBalances(
       [
         { chainId, tokenAddress: zeroAddress },
         { chainId, tokenAddress: usdcAddress },
-        { chainId, tokenAddress: testUsdcAddress }
+        { chainId, tokenAddress: testUsdcAddress },
+        { chainId, tokenAddress: testUsdcPAddress }
       ],
       nexusAddress
     )
@@ -153,6 +158,14 @@ async function processChain(
           nexusTestnetMcTestUSDCBalance,
           6
         )} USDC`
+      )
+    }
+    if (testUsdcPAddress) {
+      console.log(
+        `Nexus Testnet Test USDCP Balance: ${formatUnits(
+          nexusTestnetMcTestUSDCPBalance,
+          6
+        )} USDCP`
       )
     }
 
@@ -213,6 +226,28 @@ async function processChain(
       }
     } else if (usdcAddress) {
       console.log(`Nexus account already has sufficient USDC on ${chain.name}`)
+    }
+
+    // Fund with USDCP if needed todo
+    if (
+      testUsdcPAddress &&
+      nexusTestnetMcTestUSDCPBalance < USDC_TOKEN_AMOUNT
+    ) {
+      if (masterTestnetMcTestUSDCPBalance < USDC_TOKEN_AMOUNT) {
+        console.warn(
+          `Insufficient master account USDCP balance on ${chain.name}`
+        )
+      } else {
+        console.log(`Funding Nexus account with USDCP on ${chain.name}...`)
+        const usdcPTx = await walletClient.sendTransaction({
+          to: testUsdcPAddress,
+          data: encodeFunctionData({
+            abi: TokenWithPermitAbi,
+            functionName: "transfer",
+            args: [nexusAddress, USDC_TOKEN_AMOUNT]
+          })
+        })
+      }
     }
 
     console.log(`\n✅ Completed processing for ${chain.name} (${chainId})`)

@@ -16,6 +16,7 @@ import {
   zeroAddress
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
+import { baseSepolia } from "viem/chains"
 import {
   getChain,
   getCustomChain,
@@ -25,7 +26,6 @@ import { Logger } from "../sdk/account/utils/Logger"
 import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
 import type { TestFileNetworkType } from "./testSetup"
-import { baseSepolia } from "viem/chains"
 
 config()
 
