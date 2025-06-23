@@ -147,7 +147,7 @@ export const signPermitQuote = async (
     trigger.approvalAmount < trigger.amount
   ) {
     throw new Error(
-      `Approval amount must be at bigger or equal with the default amount to approve (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+      `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
     )
   }
 

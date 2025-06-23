@@ -96,6 +96,20 @@ const generateTriggerCallFromTrigger = async ({
     triggerCall = ethForwardCall
   } else {
     // erc20 trigger
+
+    // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
+    if (
+      trigger.approvalAmount &&
+      trigger.amount !== undefined &&
+      trigger.approvalAmount < trigger.amount
+    ) {
+      throw new Error(
+        `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+      )
+    }
+
+    const amount = trigger.approvalAmount ?? trigger.amount
+
     const [
       {
         calls: [approveCall]
@@ -106,7 +120,7 @@ const generateTriggerCallFromTrigger = async ({
         spender,
         tokenAddress: trigger.tokenAddress,
         chainId: trigger.chainId,
-        amount: trigger.amount
+        amount
       } as BuildApproveParameters
     })
     triggerCall = approveCall
