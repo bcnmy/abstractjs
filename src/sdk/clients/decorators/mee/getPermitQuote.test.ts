@@ -392,9 +392,9 @@ describe("mee.getPermitQuote", () => {
     }
 
     // address that the funds will be transferred from
-    const feePayer = "0x1234567890123456789012345678901234567890" // todo change this to a full pub/priv key account/signer
+    const feePayer = "0x1234567890123456789012345678901234567890" // todo change this to a full pub/priv key account/signer and fund it with usdc
 
-    // todo approval on the token with and from the feePayer?
+    // todo approval on the token with and from the feePayer on the mcNexus.addressOn(paymentChain.id, true) ?
 
     const fusionQuote = await getPermitQuote(meeClient, {
       trigger,

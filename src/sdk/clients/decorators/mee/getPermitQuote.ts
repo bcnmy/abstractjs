@@ -1,4 +1,4 @@
-import { Address, erc20Abi } from "viem"
+import { type Address, erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
