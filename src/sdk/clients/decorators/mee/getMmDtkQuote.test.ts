@@ -386,7 +386,7 @@ describe("mee.getMmDtkQuote", () => {
   })
 
   test.runIf(runPaidTests)("should execute a signed quote", async () => {
-    const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    const cicdAddress = "0xD5Fe79C09CDF3D279cD87B5CAdC77517D65274ca"
     const chainId = paymentChain.id
     const amount = 11n
 
@@ -503,7 +503,7 @@ describe("mee.getMmDtkQuote", () => {
       data: {
         chainId,
         tokenAddress,
-        recipient: vitalik,
+        recipient: cicdAddress,
         amount: runtimeERC20BalanceOf({
           targetAddress: mcNexusAddress,
           tokenAddress,
@@ -535,9 +535,9 @@ describe("mee.getMmDtkQuote", () => {
       delegatorSmartAccount: mmDtkAccount
     })
 
-    const vitalikBalanceBefore = await getBalance(
+    const cicdAddressBalanceBefore = await getBalance(
       pubClient,
-      vitalik,
+      cicdAddress,
       tokenAddress
     )
 
@@ -545,12 +545,12 @@ describe("mee.getMmDtkQuote", () => {
     const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
 
-    const vitalikBalanceAfter = await getBalance(
+    const cicdAddressBalanceAfter = await getBalance(
       pubClient,
-      vitalik,
+      cicdAddress,
       tokenAddress
     )
 
-    expect(vitalikBalanceAfter).toBe(vitalikBalanceBefore + amount)
+    expect(cicdAddressBalanceAfter).toBe(cicdAddressBalanceBefore + amount)
   })
 })
