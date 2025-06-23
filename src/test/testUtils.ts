@@ -13,7 +13,8 @@ import {
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress
+  zeroAddress,
+  PublicClient
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { getChain, getCustomChain } from "../sdk/account/utils"
@@ -300,3 +301,25 @@ export const topUp = async (
 
 export const getBundlerUrl = (chainId: number) =>
   `https://bundler.biconomy.io/api/v3/${chainId}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14`
+
+/**
+ * Get the allowance of a token for an owner and spender
+ */
+export const getAllowance = async ({
+  testClient,
+  tokenAddress,
+  owner,
+  spender
+}: {
+  testClient: PublicClient
+  tokenAddress: Address
+  owner: Address
+  spender: Address
+}) => {
+  return await testClient.readContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [owner, spender]
+  })
+}

@@ -17,6 +17,7 @@ import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import {
   type NetworkConfig,
+  getAllowance,
   getBalance,
   pKey
 } from "../../../../test/testUtils"
@@ -363,14 +364,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         hash: resetApprovalHash
       })
       // Read the starting allowance (should be 0)
-      const allowanceStart = await publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [
-          mcNexus.signer.address,
-          mcNexus.addressOn(network.chain.id, true)
-        ]
+      const allowanceStart = await getAllowance({
+        testClient: publicClient,
+        tokenAddress: token,
+        owner: mcNexus.signer.address,
+        spender: mcNexus.addressOn(network.chain.id, true)
       })
       expect(allowanceStart).toBe(0n)
 
@@ -414,14 +412,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       })
       expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
       // Read the ending allowance (should match approvalAmount - the amount that was spent on fees and the amount that was transferred)
-      const allowanceEnd = await publicClient.readContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [
-          mcNexus.signer.address,
-          mcNexus.addressOn(network.chain.id, true)
-        ]
+      const allowanceEnd = await getAllowance({
+        testClient: publicClient,
+        tokenAddress: token,
+        owner: mcNexus.signer.address,
+        spender: mcNexus.addressOn(network.chain.id, true)
       })
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)
