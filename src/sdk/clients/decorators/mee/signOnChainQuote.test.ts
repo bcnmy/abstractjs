@@ -19,7 +19,8 @@ import {
   type NetworkConfig,
   getAllowance,
   getBalance,
-  pKey
+  pKey,
+  setAllowance
 } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -354,18 +355,17 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         transport: http(network.rpcUrl)
       })
       // Set the allowance to 0 before the test to ensure a known state (reset approval)
-      const resetApprovalHash = await walletClient.writeContract({
-        address: token,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [mcNexus.addressOn(network.chain.id, true), 0n]
+      await setAllowance({
+        publicClient,
+        walletClient,
+        tokenAddress: token,
+        spender: mcNexus.addressOn(network.chain.id, true),
+        amount: 0n
       })
-      await publicClient.waitForTransactionReceipt({
-        hash: resetApprovalHash
-      })
+
       // Read the starting allowance (should be 0)
       const allowanceStart = await getAllowance({
-        testClient: publicClient,
+        publicClient,
         tokenAddress: token,
         owner: mcNexus.signer.address,
         spender: mcNexus.addressOn(network.chain.id, true)
@@ -413,7 +413,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
       // Read the ending allowance (should match approvalAmount - the amount that was spent on fees and the amount that was transferred)
       const allowanceEnd = await getAllowance({
-        testClient: publicClient,
+        publicClient,
         tokenAddress: token,
         owner: mcNexus.signer.address,
         spender: mcNexus.addressOn(network.chain.id, true)

@@ -8,13 +8,15 @@ import {
   type Chain,
   type Hex,
   type LocalAccount,
+  type PublicClient,
   createTestClient,
   erc20Abi,
   parseAbi,
   publicActions,
   walletActions,
   zeroAddress,
-  PublicClient
+  WalletClient,
+  Transport
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { getChain, getCustomChain } from "../sdk/account/utils"
@@ -306,20 +308,47 @@ export const getBundlerUrl = (chainId: number) =>
  * Get the allowance of a token for an owner and spender
  */
 export const getAllowance = async ({
-  testClient,
+  publicClient,
   tokenAddress,
   owner,
   spender
 }: {
-  testClient: PublicClient
+  publicClient: PublicClient
   tokenAddress: Address
   owner: Address
   spender: Address
 }) => {
-  return await testClient.readContract({
+  return await publicClient.readContract({
     address: tokenAddress,
     abi: erc20Abi,
     functionName: "allowance",
     args: [owner, spender]
+  })
+}
+
+/**
+ * Set the allowance of a token for an owner and spender
+ */
+export const setAllowance = async ({
+  publicClient,
+  walletClient,
+  tokenAddress,
+  spender,
+  amount
+}: {
+  publicClient: PublicClient
+  walletClient: WalletClient<Transport, Chain, Account>
+  tokenAddress: Address
+  spender: Address
+  amount: bigint
+}) => {
+  const resetApprovalHash = await walletClient.writeContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [spender, amount]
+  })
+  return await publicClient.waitForTransactionReceipt({
+    hash: resetApprovalHash
   })
 }
