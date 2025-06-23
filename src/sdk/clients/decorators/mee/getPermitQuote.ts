@@ -1,4 +1,4 @@
-import { erc20Abi } from "viem"
+import { Address, erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
@@ -34,6 +34,11 @@ export type GetPermitQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+
+  /**
+   * The address of the account that will pay for the transaction fees
+   */
+  feePayer?: Address
 }
 
 /**
@@ -154,9 +159,13 @@ export const getPermitQuote = async (
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 
+  // If feePayer is provided, it will be used as the EOA for the transaction
+  // Otherwise, the signer of the account will be used
+  const eoa = parameters.feePayer || account_.signer.address
+
   const quote = await getQuote(client, {
     path: "quote-permit", // Use different endpoint for permit enabled tokens
-    eoa: account_.signer.address,
+    eoa,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
     ...(cleanUps ? { cleanUps } : {}),

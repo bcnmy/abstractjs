@@ -384,4 +384,39 @@ describe("mee.getPermitQuote", () => {
       amount + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
     )
   })
+  test("should use feePayer if provided", async () => {
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    // address that the funds will be transferred from
+    const feePayer = "0x1234567890123456789012345678901234567890" // todo change this to a full pub/priv key account/signer
+
+    // todo approval on the token with and from the feePayer?
+
+    const fusionQuote = await getPermitQuote(meeClient, {
+      trigger,
+      instructions: [
+        mcNexus.build({
+          type: "transfer",
+          data: {
+            // dummy transfer as a transaction
+            amount: 1n,
+            tokenAddress,
+            chainId: paymentChain.id,
+            recipient: eoaAccount.address
+          }
+        })
+      ],
+      feePayer,
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+
+    console.log(fusionQuote)
+  })
 })
