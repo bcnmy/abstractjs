@@ -16,11 +16,16 @@ import {
   zeroAddress
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { getChain, getCustomChain } from "../sdk/account/utils"
+import {
+  getChain,
+  getCustomChain,
+  getMultichainContract
+} from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
 import type { TestFileNetworkType } from "./testSetup"
+import { baseSepolia } from "viem/chains"
 
 config()
 
@@ -300,3 +305,31 @@ export const topUp = async (
 
 export const getBundlerUrl = (chainId: number) =>
   `https://bundler.biconomy.io/api/v3/${chainId}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f14`
+
+/**
+ * Internal testnet USDC token, no Permit.
+ */
+export const testnetMcTestUSDC = getMultichainContract<typeof erc20Abi>({
+  abi: erc20Abi,
+  deployments: [["0xD0461f0516E2202c86145530494d36A0Ed431Ee7", baseSepolia.id]]
+})
+
+/**
+ * Internal testnet USDC token, with Permit.
+ */
+export const testnetMcTestUSDCP = getMultichainContract<typeof erc20Abi>({
+  abi: erc20Abi,
+  deployments: [["0x016b744B7E8d7EF72349a8e17178721Fd6126424", baseSepolia.id]]
+})
+
+/**
+ * Fund an address with internal testnet USDC token.
+ * @param chainId - The chain ID. Base Sepolia supported only.
+ * @param address - The address to fund to.
+ */
+const fundAddressWithInternalTestnetUSDC = async (
+  chainId: number,
+  fromAccount: ReturnType<typeof privateKeyToAccount>
+) => {
+  const chain = getChain(chainId)
+}

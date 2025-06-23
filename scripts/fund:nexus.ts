@@ -9,13 +9,15 @@ import {
   formatUnits,
   parseEther,
   parseUnits,
-  publicActions
+  publicActions,
+  zeroAddress
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
+import { testnetMcTestUSDC } from "../src/test/testUtils"
 
 dotenv.config()
 
@@ -73,6 +75,8 @@ async function processChain(
       ? testnetMcUSDC.addressOn(chainId)
       : mcUSDC.addressOn(chainId)
 
+    const testUsdcAddress = testnetMcTestUSDC.addressOn(chainId)
+
     if (!usdcAddress) {
       console.warn(
         `No USDC token address found for chain ${chainId}. Skipping USDC funding.`
@@ -80,8 +84,16 @@ async function processChain(
     }
 
     // Check master account balances
-    const [masterNativeBalance, masterUsdcBalance] = await getBalances(
-      { chainId, tokenAddress: usdcAddress },
+    const [
+      masterNativeBalance,
+      masterUsdcBalance,
+      masterTestnetMcTestUSDCBalance
+    ] = await getBalances(
+      [
+        { chainId, tokenAddress: zeroAddress },
+        { chainId, tokenAddress: usdcAddress },
+        { chainId, tokenAddress: testUsdcAddress }
+      ],
       account.address
     )
 
@@ -91,6 +103,14 @@ async function processChain(
     if (usdcAddress) {
       console.log(
         `Master USDC Balance: ${formatUnits(masterUsdcBalance, 6)} USDC`
+      )
+    }
+    if (testUsdcAddress) {
+      console.log(
+        `Master Testnet Test USDC Balance: ${formatUnits(
+          masterTestnetMcTestUSDCBalance,
+          6
+        )} USDC`
       )
     }
 
@@ -106,8 +126,16 @@ async function processChain(
     console.log(`Nexus Account Address: ${nexusAddress}`)
 
     // Check Nexus account balances
-    const [nexusNativeBalance, nexusUsdcBalance] = await getBalances(
-      { chainId, tokenAddress: usdcAddress },
+    const [
+      nexusNativeBalance,
+      nexusUsdcBalance,
+      nexusTestnetMcTestUSDCBalance
+    ] = await getBalances(
+      [
+        { chainId, tokenAddress: zeroAddress },
+        { chainId, tokenAddress: usdcAddress },
+        { chainId, tokenAddress: testUsdcAddress }
+      ],
       nexusAddress
     )
 
@@ -117,6 +145,14 @@ async function processChain(
     if (usdcAddress) {
       console.log(
         `Nexus USDC Balance: ${formatUnits(nexusUsdcBalance, 6)} USDC`
+      )
+    }
+    if (testUsdcAddress) {
+      console.log(
+        `Nexus Testnet Test USDC Balance: ${formatUnits(
+          nexusTestnetMcTestUSDCBalance,
+          6
+        )} USDC`
       )
     }
 
@@ -210,35 +246,44 @@ const getBalances = async (
   params: {
     chainId: number
     tokenAddress?: Address
-  },
+  }[],
   address: Address
-): Promise<[bigint, bigint]> => {
-  const chain = getChain(params.chainId)
-  const publicClient = createPublicClient({ transport: http(), chain })
+): Promise<bigint[]> => {
+  const results: bigint[] = []
 
-  // Get native token balance
-  const nativeBalance = await publicClient.getBalance({
-    address: address
-  })
-
-  // Get USDC balance if token address is available
-  let tokenBalance = 0n
-  if (params.tokenAddress) {
-    try {
-      tokenBalance = await publicClient.readContract({
-        address: params.tokenAddress,
-        abi: TokenWithPermitAbi,
-        functionName: "balanceOf",
-        args: [address]
+  for (const param of params) {
+    const chain = getChain(param.chainId)
+    const publicClient = createPublicClient({ transport: http(), chain })
+    let balance = 0n
+    // Get native token balance
+    if (param.tokenAddress === zeroAddress) {
+      balance = await publicClient.getBalance({
+        address: address
       })
-    } catch (error) {
-      console.warn(
-        `Failed to get token balance for ${params.tokenAddress} on chain ${params.chainId}`
-      )
+    } else {
+      // Get USDC balance if token address is available
+      let tokenBalance = 0n
+      if (param.tokenAddress) {
+        try {
+          tokenBalance = await publicClient.readContract({
+            address: param.tokenAddress,
+            abi: TokenWithPermitAbi,
+            functionName: "balanceOf",
+            args: [address]
+          })
+        } catch (error) {
+          console.warn(
+            `Failed to get token balance for ${param.tokenAddress} on chain ${param.chainId}`
+          )
+        }
+      }
+      balance = tokenBalance
     }
+
+    results.push(balance)
   }
 
-  return [nativeBalance, tokenBalance]
+  return results
 }
 
 /**
