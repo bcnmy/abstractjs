@@ -87,4 +87,32 @@ describe("mee.getOnChainQuote", () => {
     expect(fusionQuote.quote).toBeDefined()
     expect(fusionQuote.trigger).toBeDefined()
   })
+  test("should use feePayer if provided", async () => {
+    const trigger = {
+      chainId: paymentChain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    const instructions: Instruction[] = [
+      {
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: targetChain.id
+      }
+    ]
+    const eoa = "0x1234567890123456789012345678901234567890"
+    const onChainQuote = await getOnChainQuote(meeClient, {
+      instructions,
+      feeToken,
+      feePayer: eoa,
+      trigger
+    })
+    expect(onChainQuote.quote.paymentInfo.eoa).toEqual(eoa)
+  })
 })

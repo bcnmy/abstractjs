@@ -1,4 +1,4 @@
-import { erc20Abi } from "viem"
+import { type Address, erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
@@ -32,6 +32,11 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+
+  /**
+   * The address of the account that will pay for the transaction fees
+   */
+  feePayer?: Address
 }
 
 /**
@@ -89,6 +94,8 @@ export const getOnChainQuote = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
+  const eoa = parameters.feePayer || account_.signer.address
+
   if ("call" in trigger) {
     const batchedInstructions = await batchInstructions({
       account: account_,
@@ -96,7 +103,7 @@ export const getOnChainQuote = async (
     })
     const quote = await getQuote(client, {
       path: "quote",
-      eoa: account_.signer.address,
+      eoa,
       instructions: batchedInstructions,
       gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       ...(cleanUps ? { cleanUps } : {}),
@@ -175,7 +182,7 @@ export const getOnChainQuote = async (
 
   const quote = await getQuote(client, {
     path: "quote-permit", // Use different endpoint for onchain quotes
-    eoa: account_.signer.address,
+    eoa,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
     ...(cleanUps ? { cleanUps } : {}),

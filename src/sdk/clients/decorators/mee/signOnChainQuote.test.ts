@@ -25,7 +25,7 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { FORWARDER_ADDRESS } from "../../../constants"
-import { mcUSDC, mcUSDT } from "../../../constants/tokens"
+import { mcUSDC, mcUSDT, testnetMcUSDC } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -491,6 +491,46 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     // Wait for the transaction to complete
     const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("should use feePayer if provided", async () => {
+    const tokenAddress = testnetMcUSDC.addressOn(chain.id)
+    const trigger: Trigger = {
+      chainId: chain.id,
+      tokenAddress,
+      amount: 1n
+    }
+
+    // address that the funds will be transferred from
+    const feePayer = "0x1234567890123456789012345678901234567890" // todo change this to a full pub/priv key account/signer and fund it with usdc
+
+    // todo approval on the token with and from the feePayer on the mcNexus.addressOn(paymentChain.id, true) ?
+
+    const quote = await meeClient.getOnChainQuote({
+      trigger,
+      instructions: [
+        mcNexus.build({
+          type: "transfer",
+          data: {
+            // dummy transfer as a transaction
+            amount: 1n,
+            tokenAddress,
+            chainId: chain.id,
+            recipient: eoaAccount.address
+          }
+        })
+      ],
+      feePayer,
+      feeToken: {
+        chainId: chain.id,
+        address: tokenAddress
+      }
+    })
+
+    expect(quote).toBeDefined()
+    expect(quote.trigger).toBeDefined()
+
+    console.log(quote)
   })
   describe("should succeed with custom call trigger", () => {
     test("should succeed with sponsored=true transactions", async () => {
