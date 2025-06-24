@@ -17,8 +17,6 @@ import {
   type Trigger,
   executeSignedQuote,
   getFusionQuote,
-  getOnChainQuote,
-  getQuote,
   signPermitQuote,
   waitForSupertransactionReceipt
 } from "."

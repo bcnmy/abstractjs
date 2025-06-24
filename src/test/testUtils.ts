@@ -9,14 +9,14 @@ import {
   type Hex,
   type LocalAccount,
   type PublicClient,
+  type Transport,
+  type WalletClient,
   createTestClient,
   erc20Abi,
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress,
-  WalletClient,
-  Transport
+  zeroAddress
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { getChain, getCustomChain } from "../sdk/account/utils"
@@ -350,5 +350,52 @@ export const setAllowance = async ({
   })
   return await publicClient.waitForTransactionReceipt({
     hash: resetApprovalHash
+  })
+}
+
+/**
+ * Transfer an ERC20 token
+ */
+export const transferErc20 = async ({
+  publicClient,
+  walletClient,
+  tokenAddress,
+  recipient,
+  amount
+}: {
+  publicClient: PublicClient
+  walletClient: WalletClient<Transport, Chain, Account>
+  tokenAddress: Address
+  recipient: Address
+  amount: bigint
+}) => {
+  const hash = await walletClient.writeContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [recipient, amount]
+  })
+  return await publicClient.waitForTransactionReceipt({
+    hash
+  })
+}
+
+/**
+ * Get the balance of an ERC20 token
+ */
+export const getErc20Balance = async ({
+  publicClient,
+  tokenAddress,
+  owner
+}: {
+  publicClient: PublicClient
+  tokenAddress: Address
+  owner: Address
+}) => {
+  return await publicClient.readContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [owner]
   })
 }

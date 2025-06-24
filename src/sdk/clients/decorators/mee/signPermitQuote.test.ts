@@ -129,71 +129,68 @@ describe("mee.signPermitQuote", () => {
 
   test
     .runIf(runPaidTests)
-    .skip(
-      "should execute a signed fusion quote using signPermitQuote",
-      async () => {
-        console.time("signPermitQuote:getQuote")
-        console.time("signPermitQuote:getHash")
-        console.time("signPermitQuote:receipt")
+    .skip("should execute a signed fusion quote using signPermitQuote", async () => {
+      console.time("signPermitQuote:getQuote")
+      console.time("signPermitQuote:getHash")
+      console.time("signPermitQuote:receipt")
 
-        const trigger = {
-          chainId: paymentChain.id,
-          tokenAddress: mcUSDC.addressOn(paymentChain.id),
-          amount: 1n
-        }
-
-        const recipient = mcNexus.addressOn(paymentChain.id, true)
-        const sender = mcNexus.signer.address
-
-        const quote = await getQuote(meeClient, {
-          path: "quote-permit",
-          eoa: sender,
-          instructions: [
-            mcNexus.build({
-              type: "transferFrom",
-              data: { ...trigger, recipient, sender }
-            }),
-            mcNexus.build({
-              type: "transfer",
-              data: {
-                ...trigger,
-                recipient: recipientAccount.address
-              }
-            })
-          ],
-          feeToken
-        })
-
-        console.log(quote.hash)
-
-        const fusionQuote = {
-          quote,
-          trigger: {
-            ...trigger,
-            amount:
-              BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-          }
-        }
-
-        console.timeEnd("signPermitQuote:getQuote")
-        const signedQuote = await signPermitQuote(meeClient, { fusionQuote })
-        const { hash } = await executeSignedQuote(meeClient, { signedQuote })
-        console.timeEnd("signPermitQuote:getHash")
-        const receipt = await waitForSupertransactionReceipt(meeClient, {
-          hash
-        })
-        console.timeEnd("signPermitQuote:receipt")
-
-        expect(receipt).toBeDefined()
-        console.log(receipt.explorerLinks)
-        const balanceOfRecipient = await getBalance(
-          mcNexus.deploymentOn(paymentChain.id, true).publicClient,
-          recipientAccount.address,
-          tokenAddress
-        )
-        expect(balanceOfRecipient).toBe(trigger.amount)
+      const trigger = {
+        chainId: paymentChain.id,
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 1n
       }
-    )
+
+      const recipient = mcNexus.addressOn(paymentChain.id, true)
+      const sender = mcNexus.signer.address
+
+      const quote = await getQuote(meeClient, {
+        path: "quote-permit",
+        eoa: sender,
+        instructions: [
+          mcNexus.build({
+            type: "transferFrom",
+            data: { ...trigger, recipient, sender }
+          }),
+          mcNexus.build({
+            type: "transfer",
+            data: {
+              ...trigger,
+              recipient: recipientAccount.address
+            }
+          })
+        ],
+        feeToken
+      })
+
+      console.log(quote.hash)
+
+      const fusionQuote = {
+        quote,
+        trigger: {
+          ...trigger,
+          amount:
+            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
+        }
+      }
+
+      console.timeEnd("signPermitQuote:getQuote")
+      const signedQuote = await signPermitQuote(meeClient, { fusionQuote })
+      const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+      console.timeEnd("signPermitQuote:getHash")
+      const receipt = await waitForSupertransactionReceipt(meeClient, {
+        hash
+      })
+      console.timeEnd("signPermitQuote:receipt")
+
+      expect(receipt).toBeDefined()
+      console.log(receipt.explorerLinks)
+      const balanceOfRecipient = await getBalance(
+        mcNexus.deploymentOn(paymentChain.id, true).publicClient,
+        recipientAccount.address,
+        tokenAddress
+      )
+      expect(balanceOfRecipient).toBe(trigger.amount)
+    })
 })
 
 describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
