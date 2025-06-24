@@ -45,8 +45,7 @@ import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
-// const { runPaidTests } = inject("settings")
-const runPaidTests = true
+const { runPaidTests } = inject("settings")
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -491,7 +490,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 
-  test.only("should use feePayer if provided", async () => {
+  test("should use feePayer if provided", async () => {
     const tokenAddress = testnetMcUSDC.addressOn(chain.id)
     const trigger: Trigger = {
       chainId: chain.id,
