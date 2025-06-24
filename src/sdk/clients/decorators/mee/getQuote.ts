@@ -330,7 +330,7 @@ export type PaymentInfo = {
   /** Address of the account used for the transaction */
   sender: Address
   /** Address of the account paying for the transaction */
-  eoa: Address
+  eoa?: Address
   /** Optional initialization code for account deployment */
   initCode?: Hex
   /** Address of the token used for payment */
@@ -755,12 +755,12 @@ const preparePaymentInfo = async (
     const initData: InitDataOrUndefined = isAccountDeployed
       ? undefined
       : delegate
-        ? {
-            eip7702Auth: await validPaymentAccount.toDelegation({
-              authorization
-            })
-          }
-        : { initCode }
+      ? {
+          eip7702Auth: await validPaymentAccount.toDelegation({
+            authorization
+          })
+        }
+      : { initCode }
 
     paymentInfo = {
       sponsored: false,
