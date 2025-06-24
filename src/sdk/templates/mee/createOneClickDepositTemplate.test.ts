@@ -79,7 +79,6 @@ describe("createOneClickDepositTemplate", () => {
         })
       },
       bridgeInstructions: async ({ sourceChain, destChain, amount }) => {
-        // dummy brige call
         return []
       },
       destChainInstructions: async ({ sourceChain, destChain }) => {
