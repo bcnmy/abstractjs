@@ -11,7 +11,8 @@ import {
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantPermissionResponse,
-  grantPermissionPersonalSign
+  grantPermissionPersonalSign,
+  grantPermissionTypedDataSign
 } from "../grantPermission"
 
 export type MultichainActionData = {
@@ -32,6 +33,24 @@ export type GrantMeePermissionParams<
   }
 >
 export type GrantMeePermissionPayload = GrantPermissionResponse[]
+
+export const grantMeePermissionPersonalSign = async <
+  TModularSmartAccount extends ModularSmartAccount | undefined
+>(
+  baseMeeClient: BaseMeeClient,
+  params: GrantMeePermissionParams<TModularSmartAccount>
+) => {
+  return grantMeePermission(baseMeeClient, params, "PERSONAL_SIGN")
+}
+
+export const grantMeePermissionTypedDataSign = async <
+  TModularSmartAccount extends ModularSmartAccount | undefined
+>(
+  baseMeeClient: BaseMeeClient,
+  params: GrantMeePermissionParams<TModularSmartAccount>
+) => {
+  return grantMeePermission(baseMeeClient, params, "TYPED_DATA_SIGN")
+}
 
 /**
  * Grants a permission to the redeemer for the actions
@@ -56,7 +75,8 @@ export const grantMeePermission = async <
     actions,
     feeToken,
     maxPaymentAmount
-  }: GrantMeePermissionParams<TModularSmartAccount>
+  }: GrantMeePermissionParams<TModularSmartAccount>,
+  mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
 
@@ -99,17 +119,29 @@ export const grantMeePermission = async <
             }
           : undefined
 
-      return grantPermissionPersonalSign(undefined as AnyData, {
-        account: deployment,
-        redeemer,
-        actions: [
-          ...actions.map((action) => ({ ...action, actionTarget })),
-          ...(paymentActionPolicy ? [paymentActionPolicy] : [])
-        ],
-        sessionValidator: MEE_VALIDATOR_ADDRESS,
-        sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
-        permitERC4337Paymaster: true
-      })
+      return mode === "PERSONAL_SIGN"
+        ? grantPermissionPersonalSign(undefined as AnyData, {
+            account: deployment,
+            redeemer,
+            actions: [
+              ...actions.map((action) => ({ ...action, actionTarget })),
+              ...(paymentActionPolicy ? [paymentActionPolicy] : [])
+            ],
+            sessionValidator: MEE_VALIDATOR_ADDRESS,
+            sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
+            permitERC4337Paymaster: true
+          })
+        : grantPermissionTypedDataSign(undefined as AnyData, {
+            account: deployment,
+            redeemer,
+            actions: [
+              ...actions.map((action) => ({ ...action, actionTarget })),
+              ...(paymentActionPolicy ? [paymentActionPolicy] : [])
+            ],
+            sessionValidator: MEE_VALIDATOR_ADDRESS,
+            sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
+            permitERC4337Paymaster: true
+          })
     })
   )
   return sessionDetails

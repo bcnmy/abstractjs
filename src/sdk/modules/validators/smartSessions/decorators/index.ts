@@ -60,10 +60,16 @@ export function smartSessionActions() {
     client: Client<Transport, Chain | undefined, TModularSmartAccount>
   ): SmartSessionActions<TModularSmartAccount> => ({
     usePermission: (args) => usePermission(client, args),
-    grantPermissionPersonalSign: (args) => grantPermissionPersonalSign(client, args),
-    grantPermissionTypedDataSign: (args) => grantPermissionTypedDataSign(client, args)
+    grantPermissionPersonalSign: (args) =>
+      grantPermissionPersonalSign(client, args),
+    grantPermissionTypedDataSign: (args) =>
+      grantPermissionTypedDataSign(client, args)
   })
 }
 
-export { usePermission, grantPermissionPersonalSign, grantPermissionTypedDataSign }
+export {
+  usePermission,
+  grantPermissionPersonalSign,
+  grantPermissionTypedDataSign
+}
 export { meeSessionActions, grantMeePermission, useMeePermission } from "./mee"

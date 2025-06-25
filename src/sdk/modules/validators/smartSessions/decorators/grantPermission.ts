@@ -1,8 +1,9 @@
 import {
   type Account,
   type ActionData,
-  ChainSession,
+  type ChainSession,
   type ERC7739Data,
+  GLOBAL_CONSTANTS,
   OWNABLE_VALIDATOR_ADDRESS,
   type PolicyData,
   type Session,
@@ -12,11 +13,10 @@ import {
   getEnableSessionDetails,
   getOwnableValidatorMockSignature,
   getPermissionId,
-  getSudoPolicy,
   getSessionDigest,
   getSessionNonce,
-  GLOBAL_CONSTANTS,
-  hashChainSessions,
+  getSudoPolicy,
+  hashChainSessions
 } from "@rhinestone/module-sdk"
 import {
   type Address,
@@ -115,84 +115,84 @@ export async function grantPermissionTypedDataSign<
   const { session, nexusAccountForRhinestone, publicClient, signer } =
     await prepareForGrantingPermission(nexusClient, parameters)
 
-    // keeping this ago with `for` loop
-    // because we are going to use multiple sessions in the future
-    const sessions = [session]
-    const clients = [publicClient]
+  // keeping this ago with `for` loop
+  // because we are going to use multiple sessions in the future
+  const sessions = [session]
+  const clients = [publicClient]
 
-    const chainDigests: { chainId: bigint; sessionDigest: any }[] = []
-    const chainSessions: ChainSession[] = []
-    for (const session of sessions) {
-      const permissionId = getPermissionId({
-        session,
-      })
-  
-      const client = clients.find(
-        (c) => BigInt(c.chain?.id ?? 0) === session.chainId,
-      )
-  
-      if (!client) {
-        throw new Error(`Client not found for chainId ${session.chainId}`)
-      }
-  
-      const sessionNonce = await getSessionNonce({
-        client,
-        account: nexusAccountForRhinestone,
-        permissionId,
-      })
-  
-      const sessionDigest = await getSessionDigest({
-        client,
-        account: nexusAccountForRhinestone,
-        session,
-        mode: SmartSessionMode.UNSAFE_ENABLE,
-        permissionId,
-      })
+  const chainDigests: { chainId: bigint; sessionDigest: any }[] = []
+  const chainSessions: ChainSession[] = []
+  for (const session of sessions) {
+    const permissionId = getPermissionId({
+      session
+    })
 
-      chainDigests.push({
-        chainId: session.chainId,
-        sessionDigest,
-      })
-  
-      chainSessions.push({
-        chainId: session.chainId,
-        session: {
-          ...session,
-          permissions: {
-            permitGenericPolicy: false,
-            permitAdminAccess: false,
-            ignoreSecurityAttestations: true,
-            permitERC4337Paymaster: session.permitERC4337Paymaster,
-            userOpPolicies: session.userOpPolicies,
-            erc7739Policies: session.erc7739Policies,
-            actions: session.actions,
-          },
-          account: nexusAccountForRhinestone.address,
-          smartSession: GLOBAL_CONSTANTS.SMART_SESSIONS_ADDRESS,
-          nonce: sessionNonce,
-        },
-      })
+    const client = clients.find(
+      (c) => BigInt(c.chain?.id ?? 0) === session.chainId
+    )
+
+    if (!client) {
+      throw new Error(`Client not found for chainId ${session.chainId}`)
     }
+
+    const sessionNonce = await getSessionNonce({
+      client,
+      account: nexusAccountForRhinestone,
+      permissionId
+    })
+
+    const sessionDigest = await getSessionDigest({
+      client,
+      account: nexusAccountForRhinestone,
+      session,
+      mode: SmartSessionMode.UNSAFE_ENABLE,
+      permissionId
+    })
+
+    chainDigests.push({
+      chainId: session.chainId,
+      sessionDigest
+    })
+
+    chainSessions.push({
+      chainId: session.chainId,
+      session: {
+        ...session,
+        permissions: {
+          permitGenericPolicy: false,
+          permitAdminAccess: false,
+          ignoreSecurityAttestations: true,
+          permitERC4337Paymaster: session.permitERC4337Paymaster,
+          userOpPolicies: session.userOpPolicies,
+          erc7739Policies: session.erc7739Policies,
+          actions: session.actions
+        },
+        account: nexusAccountForRhinestone.address,
+        smartSession: GLOBAL_CONSTANTS.SMART_SESSIONS_ADDRESS,
+        nonce: sessionNonce
+      }
+    })
+  }
 
   // const sessionToEnable = sessions[sessionIndex || 0]
   const sessionToEnable = sessions[0] // for now it is always 0
   const permissionId = getPermissionId({
-    session: sessionToEnable,
+    session: sessionToEnable
   })
 
   const sessionDetails = {
     mode: SmartSessionMode.UNSAFE_ENABLE,
     permissionId,
-    signature: '0x' as Hex,
+    signature: "0x" as Hex,
     enableSessionData: {
       enableSession: {
         chainDigestIndex: 0, // TODO: sessionIndex || 0,
         hashesAndChainIds: chainDigests,
         sessionToEnable,
-        permissionEnableSig: '0x' as Hex,
+        permissionEnableSig: "0x" as Hex
       },
       validator: zeroAddress, // default validator
-      accountType: nexusAccountForRhinestone.type,
+      accountType: nexusAccountForRhinestone.type
     }
   }
 
@@ -218,60 +218,61 @@ export async function grantPermissionTypedDataSign<
 
   // const typedHash = hashChainSessions(chainSessions)
 
-  sessionDetails.enableSessionData.enableSession.permissionEnableSig = await signer.signTypedData({
-    domain: {
-      name: 'SmartSession',
-      version: '1',
-    },
-    types: {
-      PolicyData: [
-        { name: 'policy', type: 'address' },
-        { name: 'initData', type: 'bytes' },
-      ],
-      ActionData: [
-        { name: 'actionTargetSelector', type: 'bytes4' },
-        { name: 'actionTarget', type: 'address' },
-        { name: 'actionPolicies', type: 'PolicyData[]' },
-      ],
-      ERC7739Context: [
-        { name: 'appDomainSeparator', type: 'bytes32' },
-        { name: 'contentName', type: 'string[]' },
-      ],
-      ERC7739Data: [
-        { name: 'allowedERC7739Content', type: 'ERC7739Context[]' },
-        { name: 'erc1271Policies', type: 'PolicyData[]' },
-      ],
-      SignedPermissions: [
-        { name: 'permitGenericPolicy', type: 'bool' },
-        { name: 'permitAdminAccess', type: 'bool' },
-        { name: 'ignoreSecurityAttestations', type: 'bool' },
-        { name: 'permitERC4337Paymaster', type: 'bool' },
-        { name: 'userOpPolicies', type: 'PolicyData[]' },
-        { name: 'erc7739Policies', type: 'ERC7739Data' },
-        { name: 'actions', type: 'ActionData[]' },
-      ],
-      SignedSession: [
-        { name: 'account', type: 'address' },
-        { name: 'permissions', type: 'SignedPermissions' },
-        { name: 'sessionValidator', type: 'address' },
-        { name: 'sessionValidatorInitData', type: 'bytes' },
-        { name: 'salt', type: 'bytes32' },
-        { name: 'smartSession', type: 'address' },
-        { name: 'nonce', type: 'uint256' },
-      ],
-      ChainSession: [
-        { name: 'chainId', type: 'uint64' },
-        { name: 'session', type: 'SignedSession' },
-      ],
-      MultiChainSession: [
-        { name: 'sessionsAndChainIds', type: 'ChainSession[]' },
-      ],
-    },
-    primaryType: 'MultiChainSession',
-    message: {
-      sessionsAndChainIds: chainSessions,
-    },
-  })
+  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
+    await signer.signTypedData({
+      domain: {
+        name: "SmartSession",
+        version: "1"
+      },
+      types: {
+        PolicyData: [
+          { name: "policy", type: "address" },
+          { name: "initData", type: "bytes" }
+        ],
+        ActionData: [
+          { name: "actionTargetSelector", type: "bytes4" },
+          { name: "actionTarget", type: "address" },
+          { name: "actionPolicies", type: "PolicyData[]" }
+        ],
+        ERC7739Context: [
+          { name: "appDomainSeparator", type: "bytes32" },
+          { name: "contentName", type: "string[]" }
+        ],
+        ERC7739Data: [
+          { name: "allowedERC7739Content", type: "ERC7739Context[]" },
+          { name: "erc1271Policies", type: "PolicyData[]" }
+        ],
+        SignedPermissions: [
+          { name: "permitGenericPolicy", type: "bool" },
+          { name: "permitAdminAccess", type: "bool" },
+          { name: "ignoreSecurityAttestations", type: "bool" },
+          { name: "permitERC4337Paymaster", type: "bool" },
+          { name: "userOpPolicies", type: "PolicyData[]" },
+          { name: "erc7739Policies", type: "ERC7739Data" },
+          { name: "actions", type: "ActionData[]" }
+        ],
+        SignedSession: [
+          { name: "account", type: "address" },
+          { name: "permissions", type: "SignedPermissions" },
+          { name: "sessionValidator", type: "address" },
+          { name: "sessionValidatorInitData", type: "bytes" },
+          { name: "salt", type: "bytes32" },
+          { name: "smartSession", type: "address" },
+          { name: "nonce", type: "uint256" }
+        ],
+        ChainSession: [
+          { name: "chainId", type: "uint64" },
+          { name: "session", type: "SignedSession" }
+        ],
+        MultiChainSession: [
+          { name: "sessionsAndChainIds", type: "ChainSession[]" }
+        ]
+      },
+      primaryType: "MultiChainSession",
+      message: {
+        sessionsAndChainIds: chainSessions
+      }
+    })
 
   sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
 

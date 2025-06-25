@@ -110,16 +110,17 @@ describe("modules.toSmartSessionsModule", () => {
   test("grant a permission with typed data sign", async () => {
     const smartSessionsClient = nexusClient.extend(smartSessionActions())
 
-    sessionDetailsTypedDataSign = await smartSessionsClient.grantPermissionTypedDataSign({
-      redeemer: redeemerAddress,
-      actions: [
-        {
-          actionTarget: COUNTER_ADDRESS,
-          actionTargetSelector: "0x273ea3e3",
-          actionPolicies: [getSudoPolicy()]
-        }
-      ]
-    })
+    sessionDetailsTypedDataSign =
+      await smartSessionsClient.grantPermissionTypedDataSign({
+        redeemer: redeemerAddress,
+        actions: [
+          {
+            actionTarget: COUNTER_ADDRESS,
+            actionTargetSelector: "0x273ea3e3",
+            actionPolicies: [getSudoPolicy()]
+          }
+        ]
+      })
   })
 
   test("use a permission", async () => {
@@ -172,9 +173,10 @@ describe("modules.toSmartSessionsModule", () => {
       calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
       mode: "ENABLE_AND_USE"
     })
-    const receiptTypedDataSignOne = await nexusClient.waitForUserOperationReceipt({
-      hash: userOpHashTypedDataSignOne
-    })
+    const receiptTypedDataSignOne =
+      await nexusClient.waitForUserOperationReceipt({
+        hash: userOpHashTypedDataSignOne
+      })
     if (!receiptTypedDataSignOne.success) {
       throw new Error("Smart sessions module validation failed")
     }
@@ -230,9 +232,10 @@ describe("modules.toSmartSessionsModule", () => {
       mode: "USE"
     })
 
-    const receiptTwoTypedDataSign = await nexusClient.waitForUserOperationReceipt({
-      hash: userOpHashTwoTypedDataSign
-    })
+    const receiptTwoTypedDataSign =
+      await nexusClient.waitForUserOperationReceipt({
+        hash: userOpHashTwoTypedDataSign
+      })
     expect(receiptTwoTypedDataSign.success).toBe(true)
   })
 })
