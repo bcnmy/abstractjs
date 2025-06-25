@@ -64,7 +64,8 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ",
+      //url: "https://mee-node.biconomy.io/v1"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
   })
@@ -196,7 +197,7 @@ describe("mee.multichainSmartSessions", () => {
       const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
       const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
 
-      const sessionDetails = await sessionMeeClient.grantPermissionPersonalSign(
+      const sessionDetails = await sessionMeeClient.grantPermissionTypedDataSign(
         {
           redeemer: redeemerAddress,
           feeToken,
