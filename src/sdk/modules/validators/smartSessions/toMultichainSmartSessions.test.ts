@@ -112,7 +112,7 @@ describe("mee.multichainSmartSessions", () => {
       for (const deployment of mcNexus.deployments) {
         expect(await deployment.isDeployed()).toBe(true)
         const isInstalled = await isModuleInstalled(
-          deployment.client as Client<
+          deployment.client as unknown as Client<
             Transport,
             Chain | undefined,
             ModularSmartAccount
@@ -328,7 +328,7 @@ describe("mee.multichainSmartSessions", () => {
             chainId: paymentChain.id
           }
         ],
-        feeToken
+        //feeToken
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({

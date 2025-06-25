@@ -9,7 +9,8 @@ import {
   getAccount,
   getEnableSessionDetails,
   getOwnableValidatorMockSignature,
-  getSudoPolicy
+  getSudoPolicy,
+  type Account
 } from "@rhinestone/module-sdk"
 import {
   type Address,
@@ -74,6 +75,51 @@ export async function grantPermission<
   nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
   parameters: GrantPermissionParameters<TModularSmartAccount>
 ): Promise<GrantPermissionResponse> {
+  const { session, nexusAccountForRhinestone, publicClient, signer } = await prepareForGrantingPermission(nexusClient, parameters)
+
+  const sessionDetailsWithPermissionEnableHash = await getEnableSessionDetails({
+    enableMode: SmartSessionMode.UNSAFE_ENABLE,
+    sessions: [session],
+    account: nexusAccountForRhinestone,
+    clients: [publicClient],
+    enableValidatorAddress: zeroAddress, // default validator
+    ignoreSecurityAttestations: true
+  })
+
+  const { permissionEnableHash, ...sessionDetails } =
+    sessionDetailsWithPermissionEnableHash
+
+  if (!sessionDetails.enableSessionData?.enableSession.permissionEnableSig) {
+    throw new Error("enableSessionData is undefined")
+  }
+  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
+    await signer.signMessage({ message: { raw: permissionEnableHash } })
+
+  sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
+  return sessionDetails
+}
+
+/* export async function grantPermissionTypedDataSign<
+  TModularSmartAccount extends ModularSmartAccount | undefined
+>(
+  nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
+  parameters: GrantPermissionParameters<TModularSmartAccount>
+): Promise<GrantPermissionResponse> {
+  
+
+} */
+
+export type PrepareForGrantingPermissionResponse = {
+  session: Session,
+  nexusAccountForRhinestone: Account,
+  publicClient: PublicClient,
+  signer: any,
+}
+
+const prepareForGrantingPermission = async<TModularSmartAccount extends ModularSmartAccount | undefined>(
+  nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
+  parameters: GrantPermissionParameters<TModularSmartAccount>
+): Promise<PrepareForGrantingPermissionResponse> => {
   const {
     account: nexusAccount = nexusClient.account,
     redeemer,
@@ -117,24 +163,10 @@ export async function grantPermission<
     type: "nexus"
   })
 
-  const sessionDetailsWithPermissionEnableHash = await getEnableSessionDetails({
-    enableMode: SmartSessionMode.UNSAFE_ENABLE,
-    sessions: [session],
-    account: nexusAccountForRhinestone,
-    clients: [publicClient],
-    enableValidatorAddress: zeroAddress, // default validator
-    ignoreSecurityAttestations: true
-  })
-
-  const { permissionEnableHash, ...sessionDetails } =
-    sessionDetailsWithPermissionEnableHash
-
-  if (!sessionDetails.enableSessionData?.enableSession.permissionEnableSig) {
-    throw new Error("enableSessionData is undefined")
+  return {
+    session,
+    nexusAccountForRhinestone,
+    publicClient,
+    signer
   }
-  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
-    await signer.signMessage({ message: { raw: permissionEnableHash } })
-
-  sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
-  return sessionDetails
 }
