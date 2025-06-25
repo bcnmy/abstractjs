@@ -64,7 +64,7 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ",
+      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
       //url: "https://mee-node.biconomy.io/v1"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
@@ -197,8 +197,8 @@ describe("mee.multichainSmartSessions", () => {
       const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
       const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
 
-      const sessionDetails = await sessionMeeClient.grantPermissionTypedDataSign(
-        {
+      const sessionDetails =
+        await sessionMeeClient.grantPermissionTypedDataSign({
           redeemer: redeemerAddress,
           feeToken,
           // Could add a helper function to build the actions array,
@@ -218,8 +218,7 @@ describe("mee.multichainSmartSessions", () => {
             }
           ],
           maxPaymentAmount: parseUnits("3", 6)
-        }
-      )
+        })
 
       // overload account to use the redeemer account as signer
       // so using this entity one can sign userOps that have userOp.sender = mcNexus.address
