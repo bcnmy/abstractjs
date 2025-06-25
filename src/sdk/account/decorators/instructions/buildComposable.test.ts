@@ -116,7 +116,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
   )
 
   // Skipping this just because this file takes a long time to run.
-  it.only("should batch execute composable transaction with getQuotes (Without fusion)", async () => {
+  it("should batch execute composable transaction with getQuotes (Without fusion)", async () => {
     const amountToSupply = parseUnits("0.1", 6)
     const amountToTransfer = parseUnits("0.08", 6)
 
