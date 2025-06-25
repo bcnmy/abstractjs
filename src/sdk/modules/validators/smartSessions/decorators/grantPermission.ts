@@ -15,8 +15,7 @@ import {
   getPermissionId,
   getSessionDigest,
   getSessionNonce,
-  getSudoPolicy,
-  hashChainSessions
+  getSudoPolicy
 } from "@rhinestone/module-sdk"
 import {
   type Address,

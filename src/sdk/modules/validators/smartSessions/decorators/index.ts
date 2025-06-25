@@ -72,4 +72,9 @@ export {
   grantPermissionPersonalSign,
   grantPermissionTypedDataSign
 }
-export { meeSessionActions, grantMeePermission, useMeePermission } from "./mee"
+export {
+  meeSessionActions,
+  grantMeePermissionPersonalSign,
+  grantMeePermissionTypedDataSign,
+  useMeePermission
+} from "./mee"

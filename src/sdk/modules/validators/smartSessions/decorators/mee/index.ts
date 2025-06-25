@@ -3,7 +3,6 @@ import type { ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantMeePermissionParams,
   type GrantMeePermissionPayload,
-  grantMeePermission,
   grantMeePermissionPersonalSign,
   grantMeePermissionTypedDataSign
 } from "./grantMeePermission"
