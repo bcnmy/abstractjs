@@ -72,7 +72,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
-      transports: [http()],
+      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
       index: 1n // Added based on the suggestion by Joe to prevent the collision with nonce
     })

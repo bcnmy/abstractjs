@@ -35,8 +35,8 @@ describe("mee.sponsorSupertransaction", () => {
     })
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
-      chain: chain,
+      transport: http(network.rpcUrl),
+      chain,
       privateKey: generatePrivateKey()
     })
   })

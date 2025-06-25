@@ -86,13 +86,13 @@ describe("nexus.account", async () => {
     walletClient = createWalletClient({
       account: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
@@ -113,7 +113,7 @@ describe("nexus.account", async () => {
     const undeployedAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(),
+      transport: http(network.rpcUrl),
       index: 102n // undeployed
     })
 

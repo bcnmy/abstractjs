@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest"
 import { getBalance } from "../../../test/testUtils"
 import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
+import { TESTNET_RPC_URLS } from "../../../test/testSetup"
 
 describe("mee.getGasTankBalance", () => {
   let gasTankAccount: GasTankAccount
@@ -22,7 +23,7 @@ describe("mee.getGasTankBalance", () => {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
     })
 
     const erc20Balance = await getBalance(

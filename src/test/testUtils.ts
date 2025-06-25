@@ -22,7 +22,7 @@ import { getChain, getCustomChain } from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
-import type { TestFileNetworkType } from "./testSetup"
+import { MAINNET_RPC_URLS, type TestFileNetworkType } from "./testSetup"
 
 config()
 
@@ -138,7 +138,10 @@ export const initNetwork = async (
   )
 
   const rpcUrl =
-    envRpcUrl ?? TESTNET_RPC_URLS[chain.id] ?? chain.rpcUrls.default.http[0]
+    envRpcUrl ??
+    TESTNET_RPC_URLS[chain.id] ??
+    MAINNET_RPC_URLS[chain.id] ??
+    chain.rpcUrls.default.http[0]
 
   return {
     rpcUrl,

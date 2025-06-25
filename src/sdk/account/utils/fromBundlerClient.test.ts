@@ -4,6 +4,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { mainnet } from "viem/chains"
 import { describe, expect, it } from "vitest"
 import { toNexusAccount } from "../toNexusAccount"
+import { MAINNET_RPC_URLS } from "../../../test/testSetup"
 import {
   type BundlerClientTypes,
   fromBundlerClientToChain,
@@ -16,7 +17,7 @@ import { toSigner } from "./toSigner"
 
 describe("utils.fromBundlerClient", async () => {
   // Create real instances for testing
-  const transport = http()
+  const transport = http(MAINNET_RPC_URLS[mainnet.id])
   const publicClient = createPublicClient({
     chain: mainnet,
     transport
@@ -40,7 +41,7 @@ describe("utils.fromBundlerClient", async () => {
   const nexusAccount = await toNexusAccount({
     chain: mainnet,
     signer,
-    transport: http()
+    transport
   })
 
   // Attach the Nexus account to the bundler client
