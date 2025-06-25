@@ -3,7 +3,8 @@ import type { ModularSmartAccount } from "../../../../modules/utils/Types"
 import {
   type GrantPermissionParameters,
   type GrantPermissionResponse,
-  grantPermission
+  grantPermissionPersonalSign,
+  grantPermissionTypedDataSign
 } from "./grantPermission"
 import { type UsePermissionParameters, usePermission } from "./usePermission"
 
@@ -23,9 +24,20 @@ export type SmartSessionActions<
    * @param args - Parameters for creating sessions.
    * @returns A promise that resolves to the creation response.
    */
-  grantPermission: (
+  grantPermissionPersonalSign: (
     args: GrantPermissionParameters<TModularSmartAccount>
   ) => Promise<GrantPermissionResponse>
+
+  /**
+   * Grants a permission with typed data sign.
+   *
+   * @param args - Parameters for granting a permission.
+   * @returns A promise that resolves to the grant permission response.
+   */
+  grantPermissionTypedDataSign: (
+    args: GrantPermissionParameters<TModularSmartAccount>
+  ) => Promise<GrantPermissionResponse>
+
   /**
    * Uses a session to perform an action.
    *
@@ -48,9 +60,10 @@ export function smartSessionActions() {
     client: Client<Transport, Chain | undefined, TModularSmartAccount>
   ): SmartSessionActions<TModularSmartAccount> => ({
     usePermission: (args) => usePermission(client, args),
-    grantPermission: (args) => grantPermission(client, args)
+    grantPermissionPersonalSign: (args) => grantPermissionPersonalSign(client, args),
+    grantPermissionTypedDataSign: (args) => grantPermissionTypedDataSign(client, args)
   })
 }
 
-export { usePermission, grantPermission }
+export { usePermission, grantPermissionPersonalSign, grantPermissionTypedDataSign }
 export { meeSessionActions, grantMeePermission, useMeePermission } from "./mee"

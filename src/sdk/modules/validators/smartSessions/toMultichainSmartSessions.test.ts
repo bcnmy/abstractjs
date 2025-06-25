@@ -327,7 +327,7 @@ describe("mee.multichainSmartSessions", () => {
             ],
             chainId: paymentChain.id
           }
-        ],
+        ]
         //feeToken
       })
 

@@ -11,7 +11,7 @@ import {
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantPermissionResponse,
-  grantPermission
+  grantPermissionPersonalSign
 } from "../grantPermission"
 
 export type MultichainActionData = {
@@ -99,7 +99,7 @@ export const grantMeePermission = async <
             }
           : undefined
 
-      return grantPermission(undefined as AnyData, {
+      return grantPermissionPersonalSign(undefined as AnyData, {
         account: deployment,
         redeemer,
         actions: [
