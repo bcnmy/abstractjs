@@ -82,7 +82,7 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
   test("should send a transaction through the MeeNode", async () => {
     const usdcBalance = await createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
     }).getBalance({
       address: mcNexus.addressOn(baseSepolia.id, true)
     })
@@ -112,9 +112,9 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
 
 describe.runIf(runPaidTests).each(COMPETITORS)(
   "nexus.interoperability with $name bundler",
-  async ({ bundlerUrl, chain, mock }) => {
+  async ({ bundlerUrl, chain, mock, rpcUrl }) => {
     const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY as Hex}`)
-    const publicClient = createPublicClient({ chain, transport: http() })
+    const publicClient = createPublicClient({ chain, transport: http(rpcUrl) })
     let nexusAccountAddress: Address
     let nexusAccount: NexusAccount
     let bundlerClient: NexusClient
@@ -123,7 +123,7 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
       nexusAccount = await toNexusAccount({
         signer: account,
         chain,
-        transport: http()
+        transport: http(rpcUrl)
       })
 
       nexusAccountAddress = await nexusAccount.getAddress()

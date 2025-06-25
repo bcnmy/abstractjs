@@ -3,6 +3,7 @@ import {
   type Chain,
   base,
   baseSepolia,
+  mainnet,
   optimism,
   optimismSepolia
 } from "viem/chains"
@@ -14,15 +15,17 @@ import {
   initNetwork
 } from "./testUtils"
 
-const MAINNET_CHAINS_FOR_TESTING: Chain[] = [optimism, base]
-const MAINNET_TRANSPORTS_FOR_TESTING: Transport[] = [
-  http(`https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`),
-  http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`)
-]
+export const MAINNET_RPC_URLS: Record<number, string> = {
+  [mainnet.id]: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [optimism.id]: `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [base.id]: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+}
+
 export const TESTNET_RPC_URLS: Record<number, string> = {
   [optimismSepolia.id]: `https://opt-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
   [baseSepolia.id]: `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
 }
+
 export const testnetTest = test.extend<{
   config: NetworkConfig
 }>({
@@ -80,13 +83,17 @@ export const paymasterTruthy = () => {
 export const getTestChainConfig = (
   network: NetworkConfig
 ): [Chain[], Transport[]] => {
-  const defaultChainsIncludePaymentChain = MAINNET_CHAINS_FOR_TESTING.some(
-    ({ id }) => Number(id) === network.chain.id
+  const defaultChainsIncludePaymentChain = Object.keys(MAINNET_RPC_URLS).some(
+    (id) => Number(id) === network.chain.id
   )
   if (defaultChainsIncludePaymentChain) {
-    const pairedChains = MAINNET_CHAINS_FOR_TESTING.map((chain, i) => ({
-      chain,
-      transport: MAINNET_TRANSPORTS_FOR_TESTING[i]
+    const chainMap: Record<number, Chain> = {
+      [optimism.id]: optimism,
+      [base.id]: base
+    }
+    const pairedChains = Object.entries(MAINNET_RPC_URLS).map(([id, url]) => ({
+      chain: chainMap[Number(id)],
+      transport: http(url)
     }))
     const sortedPairedChains = pairedChains.sort((a, b) =>
       a.chain.id === network.chain.id ? -1 : 1

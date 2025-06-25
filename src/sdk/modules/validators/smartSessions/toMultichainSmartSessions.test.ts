@@ -131,7 +131,7 @@ describe("mee.multichainSmartSessions", () => {
       // check approved amount on the target chain
       const client = createPublicClient({
         chain: targetChain,
-        transport: http()
+        transport: http(infra.network.rpcUrl)
       })
       const approvedAmount = await client.readContract({
         address: mcUSDC.addressOn(targetChain.id),

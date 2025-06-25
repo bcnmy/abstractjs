@@ -20,7 +20,11 @@ import {
   signPermitQuote,
   waitForSupertransactionReceipt
 } from "."
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  getTestChainConfig,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -236,7 +240,7 @@ describe("mee.getPermitQuote", () => {
   test("should reserve gas fees when using max available amount", async () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
-      transports: [http()],
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       signer: eoaAccount
     })
 
@@ -244,7 +248,7 @@ describe("mee.getPermitQuote", () => {
 
     const client = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
     })
 
     const trigger: Trigger = {

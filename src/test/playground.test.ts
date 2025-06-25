@@ -89,7 +89,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
+        transport: http(network.rpcUrl),
         index
       }),
       transport: http(bundlerUrl),

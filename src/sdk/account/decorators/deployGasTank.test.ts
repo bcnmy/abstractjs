@@ -58,7 +58,7 @@ describe("mee.getGasTankBalance", () => {
     const wallet = createWalletClient({
       chain,
       account: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     }).extend(publicActions)
 
     // Funds the gas tank EOA account. So the gas tank account can be deployed with deposit

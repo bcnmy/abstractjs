@@ -68,7 +68,7 @@ describe("nexus.client", async () => {
     const nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
@@ -263,13 +263,13 @@ describe("nexus.client", async () => {
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
       chain,
-      transport: http()
+      transport: http(network.rpcURL)
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain,
-      transport: http()
+      transport: http(network.rpcURL)
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -296,7 +296,7 @@ describe("nexus.client", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     const ethersNexusClient = createSmartAccountClient({

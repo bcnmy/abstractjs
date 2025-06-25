@@ -75,7 +75,7 @@ describe("nexus.client.1.0.2", async () => {
     nexusAccount_1_0_2_with_k1 = await toNexusAccount({
       signer: account_1_0_2,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
@@ -89,7 +89,7 @@ describe("nexus.client.1.0.2", async () => {
     nexusAccount_1_0_2_custom_validator = await toNexusAccount({
       signer: account_1_0_2,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
       nexusVersion: "1.0.2",
       validators: [
@@ -308,7 +308,7 @@ describe("nexus.client.1.0.2", async () => {
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
@@ -322,7 +322,7 @@ describe("nexus.client.1.0.2", async () => {
     const ethersAccount2 = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
       nexusVersion: "1.0.2",
       validators: [
@@ -356,7 +356,7 @@ describe("nexus.client.1.0.2", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
@@ -370,7 +370,7 @@ describe("nexus.client.1.0.2", async () => {
     const etherAccountCustomValidator = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
       nexusVersion: "1.0.2",
       validators: [

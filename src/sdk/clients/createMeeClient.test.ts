@@ -16,7 +16,12 @@ import {
 } from "viem/accounts"
 import { baseSepolia, gnosisChiado } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../test/testSetup"
+import {
+  getTestChainConfig,
+  MAINNET_RPC_URLS,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -69,7 +74,11 @@ describe("mee.createMeeClient", async () => {
   test.concurrent(
     "should fail if the account is not supported by the MEE node",
     async () => {
-      const transports = [http("https://optimism.drpc.org"), http(), http()]
+      const transports = [
+        http(MAINNET_RPC_URLS[paymentChain.id]),
+        http(MAINNET_RPC_URLS[targetChain.id]),
+        http(MAINNET_RPC_URLS[gnosisChiado.id])
+      ]
       const invalidMcNexus = await toMultichainNexusAccount({
         chains: [paymentChain, targetChain, gnosisChiado],
         transports,
@@ -308,7 +317,7 @@ describe("mee.createMeeClient.delegated", async () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()],
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       accountAddress: eoaAccount.address
     })
 

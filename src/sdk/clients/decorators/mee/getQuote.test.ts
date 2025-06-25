@@ -7,7 +7,12 @@ import {
 } from "viem"
 import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  getTestChainConfig,
+  MAINNET_RPC_URLS,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT, getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -252,7 +257,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -310,7 +315,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()]
+      transports: transports
     })
 
     const meeClient = await createMeeClient({
@@ -360,7 +365,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()],
+      transports: transports,
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -418,7 +423,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()],
+      transports: transports,
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -488,7 +493,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()],
+      transports,
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -559,7 +564,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()]
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
       })
 
       const meeClient = await createMeeClient({
@@ -609,7 +614,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [paymentChain],
         signer: eoaAccount,
-        transports: [http()]
+        transports
       })
 
       const meeClient = await createMeeClient({
@@ -652,7 +657,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         index: BigInt(getRandomAccountIndex(1000, 1000000000))
       })
 
@@ -709,7 +714,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         accountAddress: eoaAccount.address,
         index: BigInt(getRandomAccountIndex(1000, 1000000000))
       })
@@ -794,7 +799,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()]
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
       })
 
       const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -871,7 +876,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         index: BigInt(getRandomAccountIndex(1000, 1000000000))
       })
 
@@ -949,7 +954,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [base],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(MAINNET_RPC_URLS[base.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -993,7 +998,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -1040,7 +1045,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
     })
 
     const meeClient = await createMeeClient({
