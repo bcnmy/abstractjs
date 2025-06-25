@@ -315,7 +315,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: transports
+      transports: [transports[0]]
     })
 
     const meeClient = await createMeeClient({
@@ -365,7 +365,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: transports,
+      transports: [transports[0]],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -423,7 +423,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: transports,
+      transports: [transports[0]],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -493,7 +493,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports,
+      transports: [transports[0]],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
