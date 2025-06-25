@@ -10,7 +10,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { toNetwork } from "../../test/testSetup"
+import { TESTNET_RPC_URLS, toNetwork } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -66,7 +66,7 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
-      transports: [http()],
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       signer: eoaAccount
     })
 

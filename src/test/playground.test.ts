@@ -66,12 +66,12 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     walletClient = createWalletClient({
       account: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     paymasterParams = paymasterUrl

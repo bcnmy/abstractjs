@@ -67,7 +67,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     mcNexus = await toMultichainNexusAccount({

@@ -37,8 +37,8 @@ describe("mee.getGasTankBalance", () => {
     gasTankEoaAccount = privateKeyToAccount(gasTankPk)
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
-      chain: chain,
+      transport: http(network.rpcUrl),
+      chain,
       privateKey: gasTankPk,
       options: {
         mee: {

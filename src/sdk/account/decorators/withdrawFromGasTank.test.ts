@@ -38,7 +38,7 @@ describe("mee.withdrawFromGasTank", () => {
     gasTankEoaAccount = privateKeyToAccount(gasTankPk)
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
+      transport: http(network.rpcUrl),
       chain: chain,
       privateKey: gasTankPk,
       options: {

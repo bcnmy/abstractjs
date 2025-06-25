@@ -61,12 +61,12 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     walletClient = createWalletClient({
       account,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     paymaster = createBicoPaymasterClient({
@@ -76,7 +76,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusAccountAddress = await nexusAccount.getAddress()

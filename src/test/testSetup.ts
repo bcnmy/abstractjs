@@ -1,5 +1,11 @@
 import { http, type Prettify, type Transport } from "viem"
-import { type Chain, base, optimism } from "viem/chains"
+import {
+  type Chain,
+  base,
+  baseSepolia,
+  optimism,
+  optimismSepolia
+} from "viem/chains"
 import { test } from "vitest"
 import {
   BASE_SEPOLIA_RPC_URL,
@@ -13,7 +19,10 @@ const MAINNET_TRANSPORTS_FOR_TESTING: Transport[] = [
   http(`https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`),
   http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`)
 ]
-
+export const TESTNET_RPC_URLS: Record<number, string> = {
+  [optimismSepolia.id]: `https://opt-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [baseSepolia.id]: `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+}
 export const testnetTest = test.extend<{
   config: NetworkConfig
 }>({

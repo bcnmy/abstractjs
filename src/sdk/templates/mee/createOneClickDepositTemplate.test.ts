@@ -7,7 +7,7 @@ import {
 } from "viem"
 import { sepolia } from "viem/chains"
 import { beforeAll, describe, expect, it, vi } from "vitest"
-import { toNetwork } from "../../../test/testSetup"
+import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -56,7 +56,10 @@ describe("createOneClickDepositTemplate", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [sourceChain, destinationChain],
-      transports: [http(), http()],
+      transports: [
+        http(network.rpcUrl),
+        http(TESTNET_RPC_URLS[destinationChain.id])
+      ],
       signer: eoaAccount
     })
   })
