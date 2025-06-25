@@ -16,8 +16,8 @@ import {
   toMultichainNexusAccount
 } from ".."
 import {
-  getTestChainConfig,
   MAINNET_RPC_URLS,
+  getTestChainConfig,
   toNetwork
 } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"

@@ -91,10 +91,12 @@ export const getTestChainConfig = (
       [optimism.id]: optimism,
       [base.id]: base
     }
-    const pairedChains = Object.entries(MAINNET_RPC_URLS).map(([id, url]) => ({
-      chain: chainMap[Number(id)],
-      transport: http(url)
-    }))
+    const pairedChains = Object.entries(MAINNET_RPC_URLS)
+      .map(([id, url]) => ({
+        chain: chainMap[Number(id)],
+        transport: http(url)
+      }))
+      .filter(({ chain }) => chain !== undefined)
     const sortedPairedChains = pairedChains.sort((a, b) =>
       a.chain.id === network.chain.id ? -1 : 1
     )

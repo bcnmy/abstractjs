@@ -21,8 +21,8 @@ import {
   waitForSupertransactionReceipt
 } from "."
 import {
-  getTestChainConfig,
   TESTNET_RPC_URLS,
+  getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"

@@ -17,9 +17,9 @@ import {
 import { baseSepolia, gnosisChiado } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
-  getTestChainConfig,
   MAINNET_RPC_URLS,
   TESTNET_RPC_URLS,
+  getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
