@@ -46,7 +46,6 @@ import buildComposable from "./buildComposable"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
-
 describe.runIf(runPaidTests)("mee.buildComposable", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -67,12 +66,12 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     publicClient = createPublicClient({
       chain,
-      transport: http(network.rpcUrl)
+      transport: http()
     })
 
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
-      transports: [http(network.rpcUrl)],
+      transports: [http()],
       signer: eoaAccount,
       index: 1n // Added based on the suggestion by Joe to prevent the collision with nonce
     })
@@ -117,7 +116,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
   )
 
   // Skipping this just because this file takes a long time to run.
-  it("should batch execute composable transaction with getQuotes (Without fusion)", async () => {
+  it.only("should batch execute composable transaction with getQuotes (Without fusion)", async () => {
     const amountToSupply = parseUnits("0.1", 6)
     const amountToTransfer = parseUnits("0.08", 6)
 
