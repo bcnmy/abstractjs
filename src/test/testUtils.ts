@@ -9,15 +9,14 @@ import {
   type Hex,
   type LocalAccount,
   type PublicClient,
-  Transport,
+  type Transport,
+  type WalletClient,
   createTestClient,
   erc20Abi,
   parseAbi,
   publicActions,
   walletActions,
-  zeroAddress,
-  WalletClient,
-  Transport
+  zeroAddress
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -25,7 +24,11 @@ import { getChain, getCustomChain } from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
-import { MAINNET_RPC_URLS, type TestFileNetworkType } from "./testSetup"
+import {
+  MAINNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  type TestFileNetworkType
+} from "./testSetup"
 
 config()
 
@@ -361,6 +364,7 @@ export const setAllowance = async ({
     args: [spender, amount]
   })
   return await publicClient.waitForTransactionReceipt({
-    hash: resetApprovalHash
+    hash: resetApprovalHash,
+    confirmations: TEST_BLOCK_CONFIRMATIONS
   })
 }
