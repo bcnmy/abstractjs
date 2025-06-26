@@ -22,6 +22,7 @@ import {
 } from "."
 import {
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
@@ -352,7 +353,7 @@ describe("mee.getPermitQuote", () => {
 
     const receipt = await waitForSupertransactionReceipt(meeClient, {
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })

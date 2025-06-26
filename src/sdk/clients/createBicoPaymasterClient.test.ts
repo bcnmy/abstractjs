@@ -10,7 +10,11 @@ import {
   parseUnits
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { paymasterTruthy, toNetwork } from "../../test/testSetup"
+import {
+  paymasterTruthy,
+  TEST_BLOCK_CONFIRMATIONS,
+  toNetwork
+} from "../../test/testSetup"
 import { getBalance, killNetwork } from "../../test/testUtils"
 import type { NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
@@ -118,7 +122,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     // Wait for the transaction to be mined
     const { status } = await publicClient.waitForTransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     expect(status).toBe("success")
     // Get final balance
@@ -220,7 +224,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
 
     const receipt = await publicClient.waitForTransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
     expect(receipt.status).toBe("success")

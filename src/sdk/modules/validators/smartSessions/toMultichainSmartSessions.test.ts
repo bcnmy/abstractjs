@@ -3,7 +3,11 @@ import type { Address, Chain, Client, LocalAccount, Transport } from "viem"
 import { http, createPublicClient, erc20Abi, parseUnits } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  getTestChainConfig,
+  TEST_BLOCK_CONFIRMATIONS,
+  toNetwork
+} from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -24,7 +28,7 @@ import { toSmartSessionsModule } from "./toSmartSessionsModule"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-describe.skip("mee.multichainSmartSessions", () => {
+describe("mee.multichainSmartSessions", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -106,7 +110,7 @@ describe.skip("mee.multichainSmartSessions", () => {
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash: preparePayload?.hash!,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       for (const receipt_ of receipt.receipts) {
@@ -263,7 +267,7 @@ describe.skip("mee.multichainSmartSessions", () => {
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash: usePermissionPayload?.hash!,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       for (const receipt_ of receipt.receipts) {
@@ -338,7 +342,7 @@ describe.skip("mee.multichainSmartSessions", () => {
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash: usePermissionPayload?.hash!,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")

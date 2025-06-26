@@ -10,7 +10,11 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  getTestChainConfig,
+  TEST_BLOCK_CONFIRMATIONS,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -123,7 +127,10 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     console.timeEnd("signOnChainQuote:getHash")
     const superTransactionReceipt = await waitForSupertransactionReceipt(
       meeClient,
-      { hash: executeSignedQuoteResponse.hash, confirmations: 5 }
+      {
+        hash: executeSignedQuoteResponse.hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      }
     )
     console.timeEnd("signOnChainQuote:receipt")
 
@@ -262,7 +269,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       })
 
       const signedQuote = await signOnChainQuote(meeClient, {
-        confirmations: 5,
+        confirmations: TEST_BLOCK_CONFIRMATIONS,
         fusionQuote: {
           quote,
           trigger: erc20Trigger
@@ -353,7 +360,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     // Wait for the transaction to complete
     const receipt = await meeClient.waitForSupertransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })

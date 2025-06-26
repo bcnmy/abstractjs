@@ -2,7 +2,7 @@ import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { http, type Account, type Address, type Chain, isHex } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../../test/__contracts/abi"
-import { toNetwork } from "../../../../test/testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../../test/testSetup"
 import {
   type MasterClient,
   type NetworkConfig,
@@ -119,7 +119,7 @@ describe("account.decorators", async () => {
     })
     const { status } = await nexusClient.waitForTransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     const balanceAfter = await getBalance(testClient, recipientAddress)
     expect(status).toBe("success")
@@ -142,7 +142,7 @@ describe("account.decorators", async () => {
     })
     const { status } = await nexusClient.waitForTransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     const counterValueAfter = await testClient.readContract({
       abi: CounterAbi,

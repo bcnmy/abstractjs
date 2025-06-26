@@ -10,6 +10,7 @@ import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   MAINNET_RPC_URLS,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
@@ -606,7 +607,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt).toBeDefined()
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
@@ -649,7 +650,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -706,7 +707,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt).toBeDefined()
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
@@ -735,7 +736,7 @@ describe("mee.getQuote", () => {
         const txHash = await nexusAccount.unDelegate()
         await publicClient.waitForTransactionReceipt({
           hash: txHash,
-          confirmations: 5
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
         isDelegated = await nexusAccount.isDelegated()
       }
@@ -778,7 +779,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -792,7 +793,7 @@ describe("mee.getQuote", () => {
         const txHash = await nexusAccount.unDelegate()
         await publicClient.waitForTransactionReceipt({
           hash: txHash,
-          confirmations: 5
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
 
         await expect(await nexusAccount.isDelegated()).to.eq(false)
@@ -861,7 +862,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -939,7 +940,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -997,7 +998,10 @@ describe("mee.getQuote", () => {
 
     const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
 
-    await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
+    await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
   })
 
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
@@ -1042,7 +1046,10 @@ describe("mee.getQuote", () => {
     const { hash } = await meeClient.executeQuote({ quote: quote })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
@@ -1095,7 +1102,10 @@ describe("mee.getQuote", () => {
     const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })

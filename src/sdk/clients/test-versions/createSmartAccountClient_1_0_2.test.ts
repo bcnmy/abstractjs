@@ -14,7 +14,7 @@ import type { UserOperationReceipt } from "viem/account-abstraction"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../test/__contracts/abi"
-import { toNetwork } from "../../../test/testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
 import {
   getBalance,
   getTestAccount,
@@ -139,7 +139,7 @@ describe("nexus.client.1.0.2", async () => {
         })
         const { status } = await client.waitForTransactionReceipt({
           hash,
-          confirmations: 5
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
         expect(status).toBe("success")
 
@@ -297,7 +297,7 @@ describe("nexus.client.1.0.2", async () => {
       const hash = await client.sendTransaction({ calls: [tx, tx] })
       const { status } = await client.waitForTransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       const balanceAfter = await getBalance(testClient_1_0_2, recipientAddress)
       expect(status).toBe("success")

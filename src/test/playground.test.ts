@@ -26,7 +26,7 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { toNetwork } from "./testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
 
 const index = 0n
@@ -124,7 +124,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       })
       const receipt = await publicClient.waitForTransactionReceipt({
         hash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt.status).toBe("success")
       const [ownerBalanceTwo, smartAccountBalanceTwo] = await Promise.all([

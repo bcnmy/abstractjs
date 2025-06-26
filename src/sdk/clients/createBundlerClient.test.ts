@@ -10,7 +10,11 @@ import {
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { TESTNET_RPC_URLS, toNetwork } from "../../test/testSetup"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -105,7 +109,10 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 })
@@ -180,7 +187,7 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
       // Wait for the transaction to be mined
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: userOpReceipt.receipt.transactionHash,
-        confirmations: 5
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt.status).toBe("success")
 

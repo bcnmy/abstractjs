@@ -7,7 +7,11 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  getTestChainConfig,
+  TEST_BLOCK_CONFIRMATIONS,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -133,7 +137,7 @@ describe("mee.signFusionQuote", () => {
     console.timeEnd("signFusionQuote:getHash")
     const receipt = await waitForSupertransactionReceipt(meeClient, {
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     console.timeEnd("signFusionQuote:receipt")
     expect(receipt).toBeDefined()
