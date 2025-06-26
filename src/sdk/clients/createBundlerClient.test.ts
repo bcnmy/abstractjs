@@ -11,8 +11,8 @@ import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
-  TEST_BLOCK_CONFIRMATIONS,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"

@@ -11,8 +11,8 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
-  getTestChainConfig,
   TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"

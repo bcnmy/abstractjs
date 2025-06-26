@@ -11,8 +11,8 @@ import {
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import {
-  paymasterTruthy,
   TEST_BLOCK_CONFIRMATIONS,
+  paymasterTruthy,
   toNetwork
 } from "../../test/testSetup"
 import { getBalance, killNetwork } from "../../test/testUtils"
