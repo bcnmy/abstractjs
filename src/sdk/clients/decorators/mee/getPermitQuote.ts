@@ -81,6 +81,8 @@ export const getPermitQuote = async (
     cleanUps,
     instructions,
     gasLimit,
+    // Unused parameter, but needed to satisfy the type, Omit<GetQuoteParams, "feePayer"> doesn't work
+    feePayer,
     ...rest
   } = parameters
 
