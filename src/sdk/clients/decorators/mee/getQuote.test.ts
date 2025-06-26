@@ -1181,31 +1181,32 @@ describe("mee.getQuote", () => {
       confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
-    await Promise.all([
-      // transfer usdc to the fee account
-      transferErc20({
-        publicClient,
-        walletClient: signerWalletClient,
-        tokenAddress,
-        recipient: feeAccount.address,
-        amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
-      }),
-      // set allowance to the fee account on the mcNexus account
-      setAllowance({
-        publicClient,
-        walletClient,
-        tokenAddress,
-        spender: mcNexus.addressOn(chain.id, true),
-        amount: BigInt(quote.paymentInfo.tokenWeiAmount)
-      })
-    ])
-    const feePayerErc20Balance = await getBalance(
+    // transfer usdc to the fee account
+    await transferErc20({
       publicClient,
-      feeAccount.address,
-      tokenAddress
-    )
-    const { hash } = await meeClient.executeQuote({ quote })
+      walletClient: signerWalletClient,
+      tokenAddress,
+      recipient: feeAccount.address,
+      amount: BigInt(quote.paymentInfo.tokenWeiAmount)
+    })
+    // set allowance to the fee account on the mcNexus account
+    await setAllowance({
+      publicClient,
+      walletClient,
+      tokenAddress,
+      spender: mcNexus.addressOn(chain.id, true),
+      amount: BigInt(quote.paymentInfo.tokenWeiAmount)
+    })
+    // transfer usdc to the nexus account for the 1n tx
+    await transferErc20({
+      publicClient,
+      walletClient: signerWalletClient,
+      tokenAddress,
+      recipient: mcNexus.addressOn(chain.id, true),
+      amount: 1n
+    })
 
+    const { hash } = await meeClient.executeQuote({ quote })
     // Wait for the transaction to complete
     const receipt = await meeClient.waitForSupertransactionReceipt({
       hash,
