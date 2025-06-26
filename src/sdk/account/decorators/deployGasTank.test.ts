@@ -69,7 +69,7 @@ describe("mee.getGasTankBalance", () => {
       args: [gasTankEoaAccount.address, parseUnits("0.3", 6)]
     })
 
-    await waitForTransactionReceipt(wallet, { hash, confirmations: 3 })
+    await waitForTransactionReceipt(wallet, { hash, confirmations: 5 })
 
     const { isDeployed, address } = await gasTankAccount.deploy({
       tokenAddress: testnetMcUSDC.addressOn(chain.id),

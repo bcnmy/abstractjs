@@ -44,13 +44,17 @@ describe("mee.createMeeClient", async () => {
   let meeClient: MeeClient
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
   let tokenAddress: Address
   const index = 0n
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
 
@@ -62,7 +66,7 @@ describe("mee.createMeeClient", async () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       index
     })
 
@@ -179,7 +183,8 @@ describe("mee.createMeeClient", async () => {
       const { hash } = await meeClient.executeQuote({ quote })
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: 5
       })
       expect(receipt).toBeDefined()
     }
@@ -215,7 +220,7 @@ describe("mee.createMeeClient", async () => {
       const superTransactionReceipt =
         await meeClient.waitForSupertransactionReceipt({
           hash: executeSignedQuoteResponse.hash,
-          confirmations: 3
+          confirmations: 5
         })
       expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
       expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
@@ -293,7 +298,8 @@ describe("mee.createMeeClient", async () => {
       const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
       console.timeEnd("aave:executeFusionQuote")
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: 5
       })
       console.timeEnd("aave:waitForSupertransactionReceipt")
       const balanceAfter = await getBalance(
@@ -364,7 +370,10 @@ describe("mee.createMeeClient.delegated", async () => {
 
     const { hash } = await meeClient.executeQuote({ quote })
     expect(hash).toBeDefined()
-    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: 5
+    })
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
 

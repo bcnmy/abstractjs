@@ -24,17 +24,21 @@ describe("mee.buildIntent", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount
     })
 
@@ -59,7 +63,7 @@ describe("mee.buildIntent", () => {
   it("should highlight building optimistic intent instructions", async () => {
     const newMcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: privateKeyToAccount(generatePrivateKey())
     })
 

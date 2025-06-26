@@ -72,13 +72,13 @@ describe("mee.withdrawFromGasTank", () => {
 
     await waitForTransactionReceipt(wallet, {
       hash: fundHash,
-      confirmations: 3
+      confirmations: 5
     })
 
     const { isDeployed, address } = await gasTankAccount.deploy({
       tokenAddress: testnetMcUSDC.addressOn(chain.id),
       amount: parseUnits("0.1", 6),
-      confirmations: 3
+      confirmations: 5
     })
 
     expect(isDeployed).to.eq(true)
@@ -99,7 +99,7 @@ describe("mee.withdrawFromGasTank", () => {
         targetAddress: gasTankAddress,
         tokenAddress: testnetMcUSDC.addressOn(chain.id)
       }),
-      confirmations: 3
+      confirmations: 5
     })
 
     const balanceAfter = await getBalance(

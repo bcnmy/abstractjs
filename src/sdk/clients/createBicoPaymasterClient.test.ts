@@ -116,7 +116,10 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     })
 
     // Wait for the transaction to be mined
-    const { status } = await publicClient.waitForTransactionReceipt({ hash })
+    const { status } = await publicClient.waitForTransactionReceipt({
+      hash,
+      confirmations: 5
+    })
     expect(status).toBe("success")
     // Get final balance
     const finalBalance = await publicClient.getBalance({
@@ -215,7 +218,10 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
 
     const hash = await nexusClient.sendTransaction(tokenPaymasterUserOp)
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash })
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash,
+      confirmations: 5
+    })
 
     expect(receipt.status).toBe("success")
 

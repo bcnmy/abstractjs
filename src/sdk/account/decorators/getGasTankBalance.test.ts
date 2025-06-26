@@ -12,7 +12,7 @@ describe("mee.getGasTankBalance", () => {
 
   beforeAll(async () => {
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
       chain: baseSepolia,
       privateKey: generatePrivateKey()
     })

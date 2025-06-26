@@ -44,11 +44,15 @@ describe("mee.signPermitQuote", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     recipientAccount = privateKeyToAccount(generatePrivateKey())
@@ -60,7 +64,7 @@ describe("mee.signPermitQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       index
     })
 
@@ -169,7 +173,8 @@ describe("mee.signPermitQuote", () => {
       const { hash } = await executeSignedQuote(meeClient, { signedQuote })
       console.timeEnd("signPermitQuote:getHash")
       const receipt = await waitForSupertransactionReceipt(meeClient, {
-        hash
+        hash,
+        confirmations: 5
       })
       console.timeEnd("signPermitQuote:receipt")
 

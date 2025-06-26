@@ -138,7 +138,8 @@ describe("nexus.client.1.0.2", async () => {
           ]
         })
         const { status } = await client.waitForTransactionReceipt({
-          hash
+          hash,
+          confirmations: 5
         })
         expect(status).toBe("success")
 
@@ -294,7 +295,10 @@ describe("nexus.client.1.0.2", async () => {
       const balanceBefore = await getBalance(testClient_1_0_2, recipientAddress)
       const tx = { to: recipientAddress, value: 1n }
       const hash = await client.sendTransaction({ calls: [tx, tx] })
-      const { status } = await client.waitForTransactionReceipt({ hash })
+      const { status } = await client.waitForTransactionReceipt({
+        hash,
+        confirmations: 5
+      })
       const balanceAfter = await getBalance(testClient_1_0_2, recipientAddress)
       expect(status).toBe("success")
       expect(balanceAfter - balanceBefore).toBe(2n)

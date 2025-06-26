@@ -117,7 +117,10 @@ describe("account.decorators", async () => {
         }
       ]
     })
-    const { status } = await nexusClient.waitForTransactionReceipt({ hash })
+    const { status } = await nexusClient.waitForTransactionReceipt({
+      hash,
+      confirmations: 5
+    })
     const balanceAfter = await getBalance(testClient, recipientAddress)
     expect(status).toBe("success")
     expect(balanceAfter - balanceBefore).toBe(1n)
@@ -137,7 +140,10 @@ describe("account.decorators", async () => {
       address: COUNTER_ADDRESS,
       chain
     })
-    const { status } = await nexusClient.waitForTransactionReceipt({ hash })
+    const { status } = await nexusClient.waitForTransactionReceipt({
+      hash,
+      confirmations: 5
+    })
     const counterValueAfter = await testClient.readContract({
       abi: CounterAbi,
       functionName: "getNumber",

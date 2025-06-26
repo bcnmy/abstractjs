@@ -53,11 +53,15 @@ describe("mee.getQuote", () => {
   let meeClient: MeeClient
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -67,7 +71,7 @@ describe("mee.getQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount
     })
 
@@ -315,7 +319,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [transports[0]]
+      transports: [paymentChainTransport]
     })
 
     const meeClient = await createMeeClient({
@@ -365,7 +369,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [transports[0]],
+      transports: [paymentChainTransport],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -423,7 +427,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [transports[0]],
+      transports: [paymentChainTransport],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -493,7 +497,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [transports[0]],
+      transports: [paymentChainTransport],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -601,7 +605,8 @@ describe("mee.getQuote", () => {
 
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: 5
       })
       expect(receipt).toBeDefined()
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
@@ -614,7 +619,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [paymentChain],
         signer: eoaAccount,
-        transports
+        transports: [paymentChainTransport]
       })
 
       const meeClient = await createMeeClient({
@@ -643,7 +648,8 @@ describe("mee.getQuote", () => {
 
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: 5
       })
 
       expect(receipt).toBeDefined()
@@ -699,7 +705,8 @@ describe("mee.getQuote", () => {
 
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: 5
       })
       expect(receipt).toBeDefined()
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
@@ -728,7 +735,7 @@ describe("mee.getQuote", () => {
         const txHash = await nexusAccount.unDelegate()
         await publicClient.waitForTransactionReceipt({
           hash: txHash,
-          confirmations: 2
+          confirmations: 5
         })
         isDelegated = await nexusAccount.isDelegated()
       }
@@ -771,7 +778,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 2
+        confirmations: 5
       })
 
       expect(receipt).toBeDefined()
@@ -785,7 +792,7 @@ describe("mee.getQuote", () => {
         const txHash = await nexusAccount.unDelegate()
         await publicClient.waitForTransactionReceipt({
           hash: txHash,
-          confirmations: 2
+          confirmations: 5
         })
 
         await expect(await nexusAccount.isDelegated()).to.eq(false)
@@ -854,7 +861,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 2
+        confirmations: 5
       })
 
       expect(receipt).toBeDefined()
@@ -932,7 +939,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 2
+        confirmations: 5
       })
 
       expect(receipt).toBeDefined()
@@ -990,7 +997,7 @@ describe("mee.getQuote", () => {
 
     const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
 
-    await meeClient.waitForSupertransactionReceipt({ hash })
+    await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
   })
 
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
@@ -1035,7 +1042,7 @@ describe("mee.getQuote", () => {
     const { hash } = await meeClient.executeQuote({ quote: quote })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
@@ -1088,7 +1095,7 @@ describe("mee.getQuote", () => {
     const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({ hash, confirmations: 5 })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })

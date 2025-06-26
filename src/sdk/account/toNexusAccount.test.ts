@@ -482,7 +482,10 @@ describe("nexus.account", async () => {
       ]
     })
 
-    await nexusClient.waitForTransactionReceipt({ hash: permitTokenResponse })
+    await nexusClient.waitForTransactionReceipt({
+      hash: permitTokenResponse,
+      confirmations: 5
+    })
 
     const allowance = await testClient.readContract({
       address: TOKEN_WITH_PERMIT as Address,

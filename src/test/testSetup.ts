@@ -104,6 +104,7 @@ export const getTestChainConfig = (
     const sortedTransports = sortedPairedChains.map(
       ({ transport }) => transport
     )
+
     return [sortedChains, sortedTransports]
   }
   throw new Error("Unsupported chain")

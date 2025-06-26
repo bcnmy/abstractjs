@@ -49,11 +49,15 @@ describe("mee.getPermitQuote", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -63,7 +67,7 @@ describe("mee.getPermitQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount
     })
 
@@ -297,7 +301,7 @@ describe("mee.getPermitQuote", () => {
   test.skip("should demo behaviour of max available amount", async () => {
     const client = createPublicClient({
       chain: paymentChain,
-      transport: transports[0]
+      transport: paymentChainTransport
     })
 
     const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -346,14 +350,17 @@ describe("mee.getPermitQuote", () => {
     const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
-    const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
+    const receipt = await waitForSupertransactionReceipt(meeClient, {
+      hash,
+      confirmations: 5
+    })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 
   test("should add gas fees to amount when not using max available amount", async () => {
     const client = createPublicClient({
       chain: paymentChain,
-      transport: transports[0]
+      transport: paymentChainTransport
     })
 
     const amount = parseUnits("1", 6) // 1 unit of token
