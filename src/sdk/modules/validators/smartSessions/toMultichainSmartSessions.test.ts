@@ -23,6 +23,10 @@ import { toSmartSessionsModule } from "./toSmartSessionsModule"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
+const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
+const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
+const COUNTER_ON_BASE_SEPOLIA = "0xcaf661eeD95DE905Fcf5234040A7d6A70c6F5C85"
+const COUNTER_ON_OPTIMISM_SEPOLIA = "0x111EB1afF13be64d81485E7d45E70A6A0283dedE"
 
 describe("mee.multichainSmartSessions", () => {
   let network: NetworkConfig
@@ -57,6 +61,9 @@ describe("mee.multichainSmartSessions", () => {
       index: BigInt(Date.now())
     })
 
+    console.log("paymentChain ", paymentChain.id)
+    console.log("targetChain ", targetChain.id)
+
     feeToken = {
       address: mcUSDC.addressOn(paymentChain.id),
       chainId: paymentChain.id
@@ -77,7 +84,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.15", 6), // 0.07 usdc => so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.15", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -194,9 +201,6 @@ describe("mee.multichainSmartSessions", () => {
         })
       expect(prepareForPermissionsPayload).toBeUndefined()
 
-      const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
-      const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
-
       const sessionDetails =
         await sessionMeeClient.grantPermissionTypedDataSign({
           redeemer: redeemerAddress,
@@ -284,9 +288,6 @@ describe("mee.multichainSmartSessions", () => {
           feeToken
         })
       expect(prepareForPermissionsPayload).toBeUndefined()
-
-      const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
-      const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
 
       const sessionDetails = await sessionMeeClient.grantPermissionPersonalSign(
         {
