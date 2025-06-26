@@ -7,7 +7,13 @@ import {
 } from "viem"
 import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  MAINNET_RPC_URLS,
+  TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT, getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -48,11 +54,15 @@ describe("mee.getQuote", () => {
   let meeClient: MeeClient
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -62,7 +72,7 @@ describe("mee.getQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount
     })
 
@@ -252,7 +262,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -310,7 +320,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [paymentChainTransport]
     })
 
     const meeClient = await createMeeClient({
@@ -360,7 +370,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()],
+      transports: [paymentChainTransport],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -418,7 +428,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()],
+      transports: [paymentChainTransport],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -488,7 +498,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain],
       signer: eoaAccount,
-      transports: [http()],
+      transports: [paymentChainTransport],
       index: BigInt(getRandomAccountIndex(1000, 10000000000000))
     })
 
@@ -559,7 +569,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()]
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
       })
 
       const meeClient = await createMeeClient({
@@ -596,7 +606,8 @@ describe("mee.getQuote", () => {
 
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt).toBeDefined()
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
@@ -609,7 +620,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [paymentChain],
         signer: eoaAccount,
-        transports: [http()]
+        transports: [paymentChainTransport]
       })
 
       const meeClient = await createMeeClient({
@@ -638,7 +649,8 @@ describe("mee.getQuote", () => {
 
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -652,7 +664,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         index: BigInt(getRandomAccountIndex(1000, 1000000000))
       })
 
@@ -694,7 +706,8 @@ describe("mee.getQuote", () => {
 
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt).toBeDefined()
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
@@ -709,7 +722,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         accountAddress: eoaAccount.address,
         index: BigInt(getRandomAccountIndex(1000, 1000000000))
       })
@@ -723,7 +736,7 @@ describe("mee.getQuote", () => {
         const txHash = await nexusAccount.unDelegate()
         await publicClient.waitForTransactionReceipt({
           hash: txHash,
-          confirmations: 2
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
         isDelegated = await nexusAccount.isDelegated()
       }
@@ -766,7 +779,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 2
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -780,7 +793,7 @@ describe("mee.getQuote", () => {
         const txHash = await nexusAccount.unDelegate()
         await publicClient.waitForTransactionReceipt({
           hash: txHash,
-          confirmations: 2
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
 
         await expect(await nexusAccount.isDelegated()).to.eq(false)
@@ -794,7 +807,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()]
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
       })
 
       const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -849,7 +862,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 2
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -871,7 +884,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http()],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         index: BigInt(getRandomAccountIndex(1000, 1000000000))
       })
 
@@ -927,7 +940,7 @@ describe("mee.getQuote", () => {
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
-        confirmations: 2
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt).toBeDefined()
@@ -949,7 +962,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [base],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(MAINNET_RPC_URLS[base.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -985,7 +998,10 @@ describe("mee.getQuote", () => {
 
     const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
 
-    await meeClient.waitForSupertransactionReceipt({ hash })
+    await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
   })
 
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
@@ -993,7 +1009,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -1030,7 +1046,10 @@ describe("mee.getQuote", () => {
     const { hash } = await meeClient.executeQuote({ quote: quote })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
@@ -1040,7 +1059,7 @@ describe("mee.getQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()]
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
     })
 
     const meeClient = await createMeeClient({
@@ -1083,7 +1102,10 @@ describe("mee.getQuote", () => {
     const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })

@@ -3,7 +3,11 @@ import type { Address, Chain, Client, LocalAccount, Transport } from "viem"
 import { http, createPublicClient, erc20Abi, parseUnits } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -33,7 +37,8 @@ describe("mee.multichainSmartSessions", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   let redeemerAddress: Address
   let redeemerAccount: LocalAccount
@@ -44,7 +49,10 @@ describe("mee.multichainSmartSessions", () => {
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     redeemerAccount = privateKeyToAccount(generatePrivateKey())
@@ -52,7 +60,7 @@ describe("mee.multichainSmartSessions", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
       index: BigInt(Date.now())
     })
@@ -101,7 +109,8 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash: preparePayload?.hash!
+        hash: preparePayload?.hash!,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       for (const receipt_ of receipt.receipts) {
@@ -131,7 +140,7 @@ describe("mee.multichainSmartSessions", () => {
       // check approved amount on the target chain
       const client = createPublicClient({
         chain: targetChain,
-        transport: http()
+        transport: targetChainTransport
       })
       const approvedAmount = await client.readContract({
         address: mcUSDC.addressOn(targetChain.id),
@@ -221,7 +230,7 @@ describe("mee.multichainSmartSessions", () => {
       const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
         chains: [paymentChain, targetChain],
-        transports,
+        transports: [paymentChainTransport, targetChainTransport],
         signer: redeemerAccount
       })
 
@@ -257,7 +266,8 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash: usePermissionPayload?.hash!
+        hash: usePermissionPayload?.hash!,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       for (const receipt_ of receipt.receipts) {
@@ -303,7 +313,7 @@ describe("mee.multichainSmartSessions", () => {
       const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
         chains: [paymentChain, targetChain],
-        transports,
+        transports: [paymentChainTransport, targetChainTransport],
         signer: redeemerAccount
       })
 
@@ -327,12 +337,12 @@ describe("mee.multichainSmartSessions", () => {
             ],
             chainId: paymentChain.id
           }
-        ],
-        feeToken
+        ]
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash: usePermissionPayload?.hash!
+        hash: usePermissionPayload?.hash!,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
