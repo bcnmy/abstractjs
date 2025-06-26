@@ -74,8 +74,8 @@ export type GrantPermissionParameters<
 export type GrantPermissionResponse = Prettify<
   Omit<
     Awaited<ReturnType<typeof getEnableSessionDetails>>,
-    "permissionEnableHash" 
-  > 
+    "permissionEnableHash"
+  >
 >[]
 
 export async function grantPermissionPersonalSign<
@@ -86,7 +86,6 @@ export async function grantPermissionPersonalSign<
 ): Promise<GrantPermissionResponse> {
   const { sessions, accountsAndChainIds, clients, signer } =
     await prepareForGrantingPermission(nexusClient, parameters)
-  
 
   // re-implement getEnableSessionDetails so it takes an array nexusAccountsForRhinestone
   // and uses one account for every chain coz it can have different address for every chain
@@ -98,7 +97,7 @@ export async function grantPermissionPersonalSign<
   const sessionDetailsWithPermissionEnableHash = await getEnableSessionDetails({
     enableMode: SmartSessionMode.UNSAFE_ENABLE,
     sessions,
-    accountsAndChainIds[0],
+    account: accountsAndChainIds[0].account,
     clients,
     enableValidatorAddress: zeroAddress, // default validator
     ignoreSecurityAttestations: true
@@ -119,9 +118,9 @@ export async function grantPermissionPersonalSign<
 
 /**
  * Grants the permission signed with typed data signature
- * @param nexusClient 
- * @param parameters 
- * @returns 
+ * @param nexusClient
+ * @param parameters
+ * @returns
  */
 
 export async function grantPermissionTypedDataSign<
@@ -200,75 +199,75 @@ export async function grantPermissionTypedDataSign<
     })
   }
 
-  const permissionEnableSig =
-    await signer.signTypedData({
-      domain: {
-        name: "SmartSession",
-        version: "1"
-      },
-      types: {
-        PolicyData: [
-          { name: "policy", type: "address" },
-          { name: "initData", type: "bytes" }
-        ],
-        ActionData: [
-          { name: "actionTargetSelector", type: "bytes4" },
-          { name: "actionTarget", type: "address" },
-          { name: "actionPolicies", type: "PolicyData[]" }
-        ],
-        ERC7739Context: [
-          { name: "appDomainSeparator", type: "bytes32" },
-          { name: "contentName", type: "string[]" }
-        ],
-        ERC7739Data: [
-          { name: "allowedERC7739Content", type: "ERC7739Context[]" },
-          { name: "erc1271Policies", type: "PolicyData[]" }
-        ],
-        SignedPermissions: [
-          { name: "permitGenericPolicy", type: "bool" },
-          { name: "permitAdminAccess", type: "bool" },
-          { name: "ignoreSecurityAttestations", type: "bool" },
-          { name: "permitERC4337Paymaster", type: "bool" },
-          { name: "userOpPolicies", type: "PolicyData[]" },
-          { name: "erc7739Policies", type: "ERC7739Data" },
-          { name: "actions", type: "ActionData[]" }
-        ],
-        SignedSession: [
-          { name: "account", type: "address" },
-          { name: "permissions", type: "SignedPermissions" },
-          { name: "sessionValidator", type: "address" },
-          { name: "sessionValidatorInitData", type: "bytes" },
-          { name: "salt", type: "bytes32" },
-          { name: "smartSession", type: "address" },
-          { name: "nonce", type: "uint256" }
-        ],
-        ChainSession: [
-          { name: "chainId", type: "uint64" },
-          { name: "session", type: "SignedSession" }
-        ],
-        MultiChainSession: [
-          { name: "sessionsAndChainIds", type: "ChainSession[]" }
-        ]
-      },
-      primaryType: "MultiChainSession",
-      message: {
-        sessionsAndChainIds: chainSessions
-      }
-    })
+  const permissionEnableSig = await signer.signTypedData({
+    domain: {
+      name: "SmartSession",
+      version: "1"
+    },
+    types: {
+      PolicyData: [
+        { name: "policy", type: "address" },
+        { name: "initData", type: "bytes" }
+      ],
+      ActionData: [
+        { name: "actionTargetSelector", type: "bytes4" },
+        { name: "actionTarget", type: "address" },
+        { name: "actionPolicies", type: "PolicyData[]" }
+      ],
+      ERC7739Context: [
+        { name: "appDomainSeparator", type: "bytes32" },
+        { name: "contentName", type: "string[]" }
+      ],
+      ERC7739Data: [
+        { name: "allowedERC7739Content", type: "ERC7739Context[]" },
+        { name: "erc1271Policies", type: "PolicyData[]" }
+      ],
+      SignedPermissions: [
+        { name: "permitGenericPolicy", type: "bool" },
+        { name: "permitAdminAccess", type: "bool" },
+        { name: "ignoreSecurityAttestations", type: "bool" },
+        { name: "permitERC4337Paymaster", type: "bool" },
+        { name: "userOpPolicies", type: "PolicyData[]" },
+        { name: "erc7739Policies", type: "ERC7739Data" },
+        { name: "actions", type: "ActionData[]" }
+      ],
+      SignedSession: [
+        { name: "account", type: "address" },
+        { name: "permissions", type: "SignedPermissions" },
+        { name: "sessionValidator", type: "address" },
+        { name: "sessionValidatorInitData", type: "bytes" },
+        { name: "salt", type: "bytes32" },
+        { name: "smartSession", type: "address" },
+        { name: "nonce", type: "uint256" }
+      ],
+      ChainSession: [
+        { name: "chainId", type: "uint64" },
+        { name: "session", type: "SignedSession" }
+      ],
+      MultiChainSession: [
+        { name: "sessionsAndChainIds", type: "ChainSession[]" }
+      ]
+    },
+    primaryType: "MultiChainSession",
+    message: {
+      sessionsAndChainIds: chainSessions
+    }
+  })
 
-  const sessionDetailsSignature = getOwnableValidatorMockSignature({ threshold: 1 })
+  const sessionDetailsSignature = getOwnableValidatorMockSignature({
+    threshold: 1
+  })
 
   const sessionDetailsArray = sessions.map((session) => {
-    
     const permissionId = getPermissionId({
       session: session
     })
 
     const sessionIndex = sessions.indexOf(session)
 
-    const accountType = accountsAndChainIds.find(
-      (a) => a.chainId === session.chainId
-    )?.account.type ?? "nexus"
+    const accountType =
+      accountsAndChainIds.find((a) => a.chainId === session.chainId)?.account
+        .type ?? "nexus"
 
     return {
       mode: SmartSessionMode.UNSAFE_ENABLE,
@@ -286,7 +285,7 @@ export async function grantPermissionTypedDataSign<
       }
     }
   })
-  
+
   return sessionDetailsArray
 }
 

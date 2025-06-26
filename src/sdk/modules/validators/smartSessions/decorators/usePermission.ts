@@ -71,7 +71,9 @@ export async function usePermission<
 
   // find the all session details when chainId matches
   const sessionDetails_ = sessionDetailsArray.filter(
-    (sessionDetails__) => sessionDetails__.enableSessionData.enableSession.sessionToEnable.chainId === BigInt(chainId)
+    (sessionDetails__) =>
+      sessionDetails__.enableSessionData.enableSession.sessionToEnable
+        .chainId === BigInt(chainId)
   )
 
   //sanity check

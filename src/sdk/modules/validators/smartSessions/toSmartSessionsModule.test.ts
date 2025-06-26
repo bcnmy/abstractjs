@@ -111,16 +111,18 @@ describe("modules.toSmartSessionsModule", () => {
     const smartSessionsClient = nexusClient.extend(smartSessionActions())
 
     sessionDetailsTypedDataSign =
-      await smartSessionsClient.grantPermissionTypedDataSign([{
-        redeemer: redeemerAddress,
-        actions: [
-          {
-            actionTarget: COUNTER_ADDRESS,
-            actionTargetSelector: "0x273ea3e3",
-            actionPolicies: [getSudoPolicy()]
-          }
-        ]
-      }])
+      await smartSessionsClient.grantPermissionTypedDataSign([
+        {
+          redeemer: redeemerAddress,
+          actions: [
+            {
+              actionTarget: COUNTER_ADDRESS,
+              actionTargetSelector: "0x273ea3e3",
+              actionPolicies: [getSudoPolicy()]
+            }
+          ]
+        }
+      ])
   })
 
   test("use a permission", async () => {
