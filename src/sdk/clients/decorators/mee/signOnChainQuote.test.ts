@@ -24,7 +24,6 @@ import {
   getAllowance,
   getBalance,
   pKey,
-  transferErc20,
   setAllowance
 } from "../../../../test/testUtils"
 import {
@@ -502,94 +501,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       confirmations: TEST_BLOCK_CONFIRMATIONS
     })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-  })
-
-  test("should use feePayer if provided", async () => {
-    const tokenAddress = testnetMcUSDC.addressOn(chain.id)
-    const trigger: Trigger = {
-      chainId: chain.id,
-      tokenAddress,
-      amount: 1n
-    }
-    const feeAccount = privateKeyToAccount(generatePrivateKey())
-    const walletClient = createWalletClient({
-      account: feeAccount,
-      chain: network.chain,
-      transport: http(network.rpcUrl)
-    })
-    const signerWalletClient = createWalletClient({
-      account: mcNexus.signer,
-      chain: network.chain,
-      transport: http(network.rpcUrl)
-    })
-    const publicClient = createPublicClient({
-      chain: network.chain,
-      transport: http(network.rpcUrl)
-    })
-
-    const quote = await meeClient.getOnChainQuote({
-      trigger,
-      instructions: [
-        mcNexus.build({
-          type: "transfer",
-          data: {
-            // dummy transfer as a transaction
-            amount: 1n,
-            tokenAddress,
-            chainId: chain.id,
-            recipient: eoaAccount.address
-          }
-        })
-      ],
-      feePayer: feeAccount.address,
-      feeToken: {
-        chainId: chain.id,
-        address: tokenAddress
-      }
-    })
-
-    expect(quote.quote.paymentInfo.eoa).toBe(feeAccount.address)
-
-    // transfer eth to the fee account
-    const sendEthHash = await signerWalletClient.sendTransaction({
-      to: feeAccount.address,
-      value: parseEther("0.000001")
-    })
-
-    await publicClient.waitForTransactionReceipt({ hash: sendEthHash })
-
-    await Promise.all([
-      // transfer usdc to the fee account
-      transferErc20({
-        publicClient,
-        walletClient: signerWalletClient,
-        tokenAddress,
-        recipient: feeAccount.address,
-        amount: BigInt(quote.quote.paymentInfo.tokenWeiAmount)
-      }),
-      // set allowance to the fee account on the mcNexus account
-      setAllowance({
-        publicClient,
-        walletClient,
-        tokenAddress,
-        spender: mcNexus.addressOn(chain.id, true),
-        amount: BigInt(quote.quote.paymentInfo.tokenWeiAmount)
-      })
-    ])
-
-    const { hash } = await meeClient.executeFusionQuote({
-      fusionQuote: quote
-    })
-
-    // Wait for the transaction to complete
-    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    const feeAccountErc20Balance = await getBalance(
-      publicClient,
-      feeAccount.address,
-      tokenAddress
-    )
-    expect(feeAccountErc20Balance).toBe(0n)
   })
 
   describe("should succeed with custom call trigger", () => {

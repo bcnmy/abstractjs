@@ -32,11 +32,6 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
-
-  /**
-   * The address of the account that will pay for the transaction fees
-   */
-  feePayer?: Address
 }
 
 /**
@@ -89,21 +84,22 @@ export const getOnChainQuote = async (
     cleanUps,
     instructions,
     gasLimit,
+    // Unused parameter, but needed to satisfy the type, Omit<GetQuoteParams, "feePayer"> doesn't work
+    feePayer: _feePayer,
     ...rest
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
-
-  const eoa = parameters.feePayer || account_.signer.address
 
   if ("call" in trigger) {
     const batchedInstructions = await batchInstructions({
       account: account_,
       instructions: resolvedInstructions
     })
+
     const quote = await getQuote(client, {
       path: "quote",
-      eoa,
+      eoa: account_.signer.address,
       instructions: batchedInstructions,
       gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       ...(cleanUps ? { cleanUps } : {}),
@@ -182,7 +178,7 @@ export const getOnChainQuote = async (
 
   const quote = await getQuote(client, {
     path: "quote-permit", // Use different endpoint for onchain quotes
-    eoa,
+    eoa: account_.signer.address,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
     ...(cleanUps ? { cleanUps } : {}),
