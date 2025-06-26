@@ -3,8 +3,8 @@ import { createBundlerClient } from "viem/account-abstraction"
 import { privateKeyToAccount } from "viem/accounts"
 import { mainnet } from "viem/chains"
 import { describe, expect, it } from "vitest"
-import { toNexusAccount } from "../toNexusAccount"
 import { MAINNET_RPC_URLS } from "../../../test/testSetup"
+import { toNexusAccount } from "../toNexusAccount"
 import {
   type BundlerClientTypes,
   fromBundlerClientToChain,

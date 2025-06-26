@@ -9,8 +9,8 @@ import {
 import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  getTestChainConfig,
   TESTNET_RPC_URLS,
+  getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
