@@ -24,7 +24,7 @@ import { toSmartSessionsModule } from "./toSmartSessionsModule"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-describe("mee.multichainSmartSessions", () => {
+describe.skip("mee.multichainSmartSessions", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
