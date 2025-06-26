@@ -774,12 +774,12 @@ const preparePaymentInfo = async (
     const initData: InitDataOrUndefined = isAccountDeployed
       ? undefined
       : delegate
-      ? {
-          eip7702Auth: await validPaymentAccount.toDelegation({
-            authorization
-          })
-        }
-      : { initCode }
+        ? {
+            eip7702Auth: await validPaymentAccount.toDelegation({
+              authorization
+            })
+          }
+        : { initCode }
 
     paymentInfo = {
       sponsored: false,

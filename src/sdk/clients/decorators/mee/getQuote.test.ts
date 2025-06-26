@@ -3,11 +3,13 @@ import {
   type Chain,
   type LocalAccount,
   type Transport,
-  publicActions,
-  createWalletClient,
   createPublicClient,
-  parseEther
+  createWalletClient,
+  parseEther,
+  publicActions
 } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+import { generatePrivateKey } from "viem/accounts"
 import { base, baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
@@ -44,8 +46,6 @@ import {
 } from "./getQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 import { Trigger } from "./signPermitQuote"
-import { privateKeyToAccount } from "viem/accounts"
-import { generatePrivateKey } from "viem/accounts"
 
 const getRandomAccountIndex = (min: number, max: number) => {
   const minValue = Math.ceil(min) // Round up to ensure inclusive min
@@ -1150,7 +1150,6 @@ describe("mee.getQuote", () => {
       chain,
       transport: http(TESTNET_RPC_URLS[chain.id])
     })
-    console.log({ feePayer: feeAccount.address })
     const quote = await meeClient.getQuote({
       instructions: [
         mcNexus.build({
@@ -1170,7 +1169,6 @@ describe("mee.getQuote", () => {
         address: tokenAddress
       }
     })
-    console.log(quote)
 
     // transfer eth to the fee account
     const sendEthHash = await signerWalletClient.sendTransaction({
@@ -1206,10 +1204,8 @@ describe("mee.getQuote", () => {
       feeAccount.address,
       tokenAddress
     )
-    console.log({ feePayerErc20Balance })
     const { hash } = await meeClient.executeQuote({ quote })
 
-    console.log({ hash })
     // Wait for the transaction to complete
     const receipt = await meeClient.waitForSupertransactionReceipt({
       hash,
