@@ -10,7 +10,11 @@ import {
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { TESTNET_RPC_URLS, toNetwork } from "../../test/testSetup"
+import {
+  TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  toNetwork
+} from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -65,8 +69,8 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     chain = baseSepolia
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
+      chains: [chain],
+      transports: [http(network.rpcUrl)],
       signer: eoaAccount
     })
 
@@ -105,16 +109,22 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 })
 
 describe.runIf(runPaidTests).each(COMPETITORS)(
   "nexus.interoperability with $name bundler",
-  async ({ bundlerUrl, chain, mock, rpcUrl }) => {
+  async ({ bundlerUrl, chain, mock }) => {
     const account = privateKeyToAccount(`0x${process.env.PRIVATE_KEY as Hex}`)
-    const publicClient = createPublicClient({ chain, transport: http(rpcUrl) })
+    const publicClient = createPublicClient({
+      chain,
+      transport: http(TESTNET_RPC_URLS[chain.id])
+    })
     let nexusAccountAddress: Address
     let nexusAccount: NexusAccount
     let bundlerClient: NexusClient
@@ -123,7 +133,7 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
       nexusAccount = await toNexusAccount({
         signer: account,
         chain,
-        transport: http(rpcUrl)
+        transport: http(TESTNET_RPC_URLS[chain.id])
       })
 
       nexusAccountAddress = await nexusAccount.getAddress()
@@ -176,7 +186,8 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
 
       // Wait for the transaction to be mined
       const receipt = await publicClient.waitForTransactionReceipt({
-        hash: userOpReceipt.receipt.transactionHash
+        hash: userOpReceipt.receipt.transactionHash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt.status).toBe("success")
 

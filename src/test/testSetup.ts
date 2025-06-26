@@ -15,6 +15,8 @@ import {
   initNetwork
 } from "./testUtils"
 
+export const TEST_BLOCK_CONFIRMATIONS = 5
+
 export const MAINNET_RPC_URLS: Record<number, string> = {
   [mainnet.id]: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
   [optimism.id]: `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -104,6 +106,7 @@ export const getTestChainConfig = (
     const sortedTransports = sortedPairedChains.map(
       ({ transport }) => transport
     )
+
     return [sortedChains, sortedTransports]
   }
   throw new Error("Unsupported chain")

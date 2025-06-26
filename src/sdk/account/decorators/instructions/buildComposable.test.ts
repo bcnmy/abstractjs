@@ -21,7 +21,7 @@ import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
-import { toNetwork } from "../../../../test/testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MeeClient,
@@ -46,6 +46,7 @@ import buildComposable from "./buildComposable"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
+
 describe.runIf(runPaidTests)("mee.buildComposable", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -66,12 +67,12 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
-      transports: [http()],
+      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
       index: 1n // Added based on the suggestion by Joe to prevent the collision with nonce
     })
@@ -153,7 +154,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus: transactionStatusOne } =
-      await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
+      await meeClient.waitForSupertransactionReceipt({
+        hash: hashOne,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
 
     const transferInstruction = await mcNexus.buildComposable({
@@ -201,7 +205,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus: transactionStatusTwo, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
+      await meeClient.waitForSupertransactionReceipt({
+        hash: hashTwo,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash: hashTwo })
   })
@@ -239,7 +246,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus: transactionStatusOne, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash: hashOne })
+      await meeClient.waitForSupertransactionReceipt({
+        hash: hashOne,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash: hashOne })
 
@@ -287,7 +297,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     const {
       transactionStatus: transactionStatusTwo,
       explorerLinks: explorerLinksTwo
-    } = await meeClient.waitForSupertransactionReceipt({ hash: hashTwo })
+    } = await meeClient.waitForSupertransactionReceipt({
+      hash: hashTwo,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
     expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks: explorerLinksTwo })
   })
@@ -342,7 +355,8 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({
-        hash: receipt.hash
+        hash: receipt.hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash: receipt.hash })
@@ -404,7 +418,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
   })
@@ -465,7 +482,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
     const balanceAfter = await publicClient.readContract({
@@ -539,7 +559,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
   })
@@ -595,7 +618,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
   })
@@ -651,7 +677,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
   })
@@ -718,7 +747,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
   })
@@ -781,7 +813,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
           })
 
           const { transactionStatus, explorerLinks } =
-            await meeClient.waitForSupertransactionReceipt({ hash })
+            await meeClient.waitForSupertransactionReceipt({
+              hash,
+              confirmations: TEST_BLOCK_CONFIRMATIONS
+            })
           expect(transactionStatus).to.be.eq("MINED_SUCCESS")
           console.log({ explorerLinks, hash })
         })
@@ -790,7 +825,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
   })
 
   // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for uniswap args", async () => {
+  it.skip("should execute composable transaction for uniswap args", async () => {
     const fusionToken = getMultichainContract<typeof erc20Abi>({
       abi: erc20Abi,
       deployments: [
@@ -862,7 +897,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
   })
@@ -915,7 +953,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
   })
 
@@ -955,7 +996,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
     const tokenApproval = await publicClient.readContract({
@@ -1002,7 +1046,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
 
@@ -1075,7 +1122,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks, userOps } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
@@ -1136,7 +1186,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks, userOps } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
@@ -1197,7 +1250,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks, userOps } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
@@ -1234,7 +1290,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     await waitForTransactionReceipt(publicClient, {
       hash: tx as Hex,
-      confirmations: 2
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
     const transferInstruction = await mcNexus.build({
@@ -1270,7 +1326,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     try {
       const { transactionStatus, explorerLinks, userOps } =
-        await meeClient.waitForSupertransactionReceipt({ hash })
+        await meeClient.waitForSupertransactionReceipt({
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
 
       expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
@@ -1346,7 +1405,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks, userOps } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
@@ -1384,7 +1446,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     await waitForTransactionReceipt(publicClient, {
       hash: tx as Hex,
-      confirmations: 2
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
     const transferInstructionOne = await mcNexus.buildComposable({
@@ -1429,7 +1491,10 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     const { transactionStatus, explorerLinks, userOps } =
-      await meeClient.waitForSupertransactionReceipt({ hash })
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 

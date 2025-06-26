@@ -2,8 +2,8 @@ import { http, isAddress } from "viem"
 import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
-import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 import { TESTNET_RPC_URLS } from "../../../test/testSetup"
+import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.getGasTankAddress", () => {
   let gasTankAccount: GasTankAccount

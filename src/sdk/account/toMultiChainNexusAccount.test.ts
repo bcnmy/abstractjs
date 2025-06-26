@@ -8,7 +8,11 @@ import {
 } from "viem"
 import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../test/testSetup"
+import {
+  TESTNET_RPC_URLS,
+  getTestChainConfig,
+  toNetwork
+} from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
 import { mcUSDC } from "../constants/tokens"
 import {
@@ -25,16 +29,20 @@ describe("mee.toMultiChainNexusAccount", async () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount
     })
   })
@@ -43,7 +51,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
       chains: [paymentChain, targetChain],
-      transports
+      transports: [paymentChainTransport, targetChainTransport]
     })
 
     // Verify the structure of the returned object
@@ -78,7 +86,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     const nexus = await toNexusAccount({
       chain: baseSepolia,
       signer: eoaAccount,
-      transport: http()
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()

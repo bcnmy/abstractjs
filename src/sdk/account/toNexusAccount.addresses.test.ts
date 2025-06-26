@@ -9,8 +9,8 @@ import {
 import { base, baseSepolia } from "viem/chains"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import {
-  TESTNET_RPC_URLS,
   MAINNET_RPC_URLS,
+  TESTNET_RPC_URLS,
   toNetwork
 } from "../../test/testSetup"
 import { getTestAccount, killNetwork, toTestClient } from "../../test/testUtils"

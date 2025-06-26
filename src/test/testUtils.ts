@@ -109,7 +109,6 @@ export const initNetwork = async (
   const privateKeyTwo = process.env.PRIVATE_KEY_TWO
   const chainId_ = process.env.TESTNET_CHAIN_ID
   const mainnetChainId = process.env.MAINNET_CHAIN_ID
-  const envRpcUrl = process.env.RPC_URL //Optional, taken from chain (using chainId) if not provided
   const _bundlerUrl = process.env.BUNDLER_URL // Optional, taken from chain (using chainId) if not provided
   const paymasterUrl = process.env.PAYMASTER_URL // Optional
   const chainId = type === "MAINNET_FROM_ENV_VARS" ? mainnetChainId : chainId_
@@ -123,9 +122,9 @@ export const initNetwork = async (
   try {
     chain = getChain(+chainId)
   } catch (e) {
-    if (!envRpcUrl) throw new Error("Missing env var RPC_URL")
-    chain = getCustomChain("Custom Chain", +chainId, envRpcUrl)
+    throw new Error("Failed to find the chain")
   }
+
   const bundlerUrl = _bundlerUrl ?? getBundlerUrl(+chainId)
 
   const holder = privateKeyToAccount(
@@ -138,9 +137,8 @@ export const initNetwork = async (
   )
 
   const rpcUrl =
-    envRpcUrl ??
-    TESTNET_RPC_URLS[chain.id] ??
-    MAINNET_RPC_URLS[chain.id] ??
+    TESTNET_RPC_URLS[+chainId] ??
+    MAINNET_RPC_URLS[+chainId] ??
     chain.rpcUrls.default.http[0]
 
   return {

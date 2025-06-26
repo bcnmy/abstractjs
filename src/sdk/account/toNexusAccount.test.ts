@@ -31,7 +31,7 @@ import {
 import type { UserOperation } from "viem/account-abstraction"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { MockSignatureValidatorAbi } from "../../test/__contracts/abi/MockSignatureValidatorAbi"
-import { toNetwork } from "../../test/testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../test/testSetup"
 import {
   fundAndDeployClients,
   getTestAccount,
@@ -482,7 +482,10 @@ describe("nexus.account", async () => {
       ]
     })
 
-    await nexusClient.waitForTransactionReceipt({ hash: permitTokenResponse })
+    await nexusClient.waitForTransactionReceipt({
+      hash: permitTokenResponse,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
 
     const allowance = await testClient.readContract({
       address: TOKEN_WITH_PERMIT as Address,
