@@ -7,7 +7,11 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -36,11 +40,15 @@ describe("mee.signFusionQuote", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     recipientAccount = privateKeyToAccount(generatePrivateKey())
 
@@ -52,7 +60,7 @@ describe("mee.signFusionQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
       index
     })
@@ -127,7 +135,10 @@ describe("mee.signFusionQuote", () => {
     const signedQuote = await signFusionQuote(meeClient, { fusionQuote })
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
     console.timeEnd("signFusionQuote:getHash")
-    const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
+    const receipt = await waitForSupertransactionReceipt(meeClient, {
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
     console.timeEnd("signFusionQuote:receipt")
     expect(receipt).toBeDefined()
     console.log(receipt.explorerLinks)

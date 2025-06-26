@@ -6,7 +6,6 @@ import {
   type Transport,
   createPublicClient,
   createWalletClient,
-  erc20Abi,
   isHex,
   parseEther,
   parseUnits,
@@ -15,14 +14,18 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../../test/testSetup"
 import {
   type NetworkConfig,
   getAllowance,
   getBalance,
   pKey,
-  setAllowance,
-  transferErc20
+  transferErc20,
+  setAllowance
 } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -46,6 +49,7 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
+
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -60,11 +64,15 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     recipientAccount = privateKeyToAccount(generatePrivateKey())
@@ -76,7 +84,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
       index
     })
@@ -136,7 +144,10 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     console.timeEnd("signOnChainQuote:getHash")
     const superTransactionReceipt = await waitForSupertransactionReceipt(
       meeClient,
-      { hash: executeSignedQuoteResponse.hash }
+      {
+        hash: executeSignedQuoteResponse.hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      }
     )
     console.timeEnd("signOnChainQuote:receipt")
 
@@ -274,7 +285,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       })
 
       const signedQuote = await signOnChainQuote(meeClient, {
-        confirmations: 0,
+        confirmations: TEST_BLOCK_CONFIRMATIONS,
         fusionQuote: {
           quote,
           trigger: erc20Trigger
@@ -441,7 +452,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     chain = network.chain
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
-      transports: [http()],
+      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
       index: 1n
     })
@@ -486,7 +497,10 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     })
 
     // Wait for the transaction to complete
-    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 

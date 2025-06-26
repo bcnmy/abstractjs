@@ -16,7 +16,13 @@ import {
 } from "viem/accounts"
 import { baseSepolia, gnosisChiado } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../test/testSetup"
+import {
+  MAINNET_RPC_URLS,
+  TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -39,13 +45,17 @@ describe("mee.createMeeClient", async () => {
   let meeClient: MeeClient
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
   let tokenAddress: Address
   const index = 0n
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
 
@@ -57,7 +67,7 @@ describe("mee.createMeeClient", async () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       index
     })
 
@@ -69,7 +79,11 @@ describe("mee.createMeeClient", async () => {
   test.concurrent(
     "should fail if the account is not supported by the MEE node",
     async () => {
-      const transports = [http("https://optimism.drpc.org"), http(), http()]
+      const transports = [
+        http(MAINNET_RPC_URLS[paymentChain.id]),
+        http(MAINNET_RPC_URLS[targetChain.id]),
+        http(MAINNET_RPC_URLS[gnosisChiado.id])
+      ]
       const invalidMcNexus = await toMultichainNexusAccount({
         chains: [paymentChain, targetChain, gnosisChiado],
         transports,
@@ -170,7 +184,8 @@ describe("mee.createMeeClient", async () => {
       const { hash } = await meeClient.executeQuote({ quote })
       expect(hash).toBeDefined()
       const receipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(receipt).toBeDefined()
     }
@@ -179,9 +194,18 @@ describe("mee.createMeeClient", async () => {
   test.runIf(runPaidTests)(
     "should execute a quote using signOnChainQuote",
     async () => {
+      const mcNexus = await toMultichainNexusAccount({
+        chains: [baseSepolia],
+        signer: eoaAccount,
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
+        index
+      })
+
+      const meeClient = await createMeeClient({ account: mcNexus })
+
       const trigger = {
-        chainId: paymentChain.id,
-        tokenAddress,
+        chainId: baseSepolia.id,
+        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
         amount: 1n
       }
 
@@ -196,7 +220,10 @@ describe("mee.createMeeClient", async () => {
             }
           })
         ],
-        feeToken
+        feeToken: {
+          address: testnetMcUSDC.addressOn(baseSepolia.id),
+          chainId: baseSepolia.id
+        }
       })
 
       const signedQuote = await meeClient.signOnChainQuote({ fusionQuote })
@@ -206,15 +233,15 @@ describe("mee.createMeeClient", async () => {
       const superTransactionReceipt =
         await meeClient.waitForSupertransactionReceipt({
           hash: executeSignedQuoteResponse.hash,
-          confirmations: 3
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
       expect(superTransactionReceipt.explorerLinks.length).toBeGreaterThan(0)
       expect(isHex(executeSignedQuoteResponse.hash)).toBe(true)
 
       const balanceOfRecipient = await getBalance(
-        mcNexus.deploymentOn(paymentChain.id, true).publicClient,
+        mcNexus.deploymentOn(baseSepolia.id, true).publicClient,
         recipientAccount.address,
-        tokenAddress
+        testnetMcUSDC.addressOn(baseSepolia.id)
       )
 
       expect(balanceOfRecipient).toBe(trigger.amount)
@@ -232,7 +259,7 @@ describe("mee.createMeeClient", async () => {
         mcAUSDC.addressOn(targetChain.id)
       )
 
-      console.log("")
+      console.log(mcNexus.signer.address)
 
       const trigger = {
         chainId: paymentChain.id,
@@ -284,7 +311,8 @@ describe("mee.createMeeClient", async () => {
       const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
       console.timeEnd("aave:executeFusionQuote")
       const sTxReceipt = await meeClient.waitForSupertransactionReceipt({
-        hash
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       console.timeEnd("aave:waitForSupertransactionReceipt")
       const balanceAfter = await getBalance(
@@ -308,7 +336,7 @@ describe("mee.createMeeClient.delegated", async () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http()],
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       accountAddress: eoaAccount.address
     })
 
@@ -355,7 +383,10 @@ describe("mee.createMeeClient.delegated", async () => {
 
     const { hash } = await meeClient.executeQuote({ quote })
     expect(hash).toBeDefined()
-    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
 

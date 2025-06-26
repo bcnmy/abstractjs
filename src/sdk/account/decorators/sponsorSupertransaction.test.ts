@@ -25,7 +25,7 @@ describe("mee.sponsorSupertransaction", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
-      transports: [http()],
+      transports: [http(network.rpcUrl)],
       signer: eoaAccount
     })
 
@@ -35,8 +35,8 @@ describe("mee.sponsorSupertransaction", () => {
     })
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
-      chain: chain,
+      transport: http(network.rpcUrl),
+      chain,
       privateKey: generatePrivateKey()
     })
   })

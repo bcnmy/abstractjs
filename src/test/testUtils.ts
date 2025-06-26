@@ -19,16 +19,26 @@ import {
   zeroAddress
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
+import { baseSepolia, optimismSepolia } from "viem/chains"
 import { getChain, getCustomChain } from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
-import type { TestFileNetworkType } from "./testSetup"
+import {
+  MAINNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  type TestFileNetworkType
+} from "./testSetup"
 
 config()
 
 export const BASE_SEPOLIA_RPC_URL =
   "https://virtual.base-sepolia.rpc.tenderly.co/3c4d2e0f-2d96-457e-bbfe-02c5b60c0cf1"
+
+const TESTNET_RPC_URLS: Record<number, string> = {
+  [optimismSepolia.id]: `https://opt-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [baseSepolia.id]: `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+}
 
 type AnvilInstance = ReturnType<typeof anvil>
 type BundlerInstance = ReturnType<typeof alto>
@@ -53,6 +63,7 @@ export type NetworkConfig = Omit<
   paymasterUrl?: string
   meeNodeUrl?: string
 }
+
 export const pKey =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" // This is a publicly available private key meant only for testing only
 
@@ -104,7 +115,6 @@ export const initNetwork = async (
   const privateKeyTwo = process.env.PRIVATE_KEY_TWO
   const chainId_ = process.env.TESTNET_CHAIN_ID
   const mainnetChainId = process.env.MAINNET_CHAIN_ID
-  const rpcUrl = process.env.RPC_URL //Optional, taken from chain (using chainId) if not provided
   const _bundlerUrl = process.env.BUNDLER_URL // Optional, taken from chain (using chainId) if not provided
   const paymasterUrl = process.env.PAYMASTER_URL // Optional
   const chainId = type === "MAINNET_FROM_ENV_VARS" ? mainnetChainId : chainId_
@@ -118,9 +128,9 @@ export const initNetwork = async (
   try {
     chain = getChain(+chainId)
   } catch (e) {
-    if (!rpcUrl) throw new Error("Missing env var RPC_URL")
-    chain = getCustomChain("Custom Chain", +chainId, rpcUrl)
+    throw new Error("Failed to find the chain")
   }
+
   const bundlerUrl = _bundlerUrl ?? getBundlerUrl(+chainId)
 
   const holder = privateKeyToAccount(
@@ -132,8 +142,13 @@ export const initNetwork = async (
       : `0x${privateKeyTwo}`
   )
 
+  const rpcUrl =
+    TESTNET_RPC_URLS[+chainId] ??
+    MAINNET_RPC_URLS[+chainId] ??
+    chain.rpcUrls.default.http[0]
+
   return {
-    rpcUrl: chain.rpcUrls.default.http[0],
+    rpcUrl,
     rpcPort: 0,
     chain,
     bundlerUrl,
@@ -349,7 +364,8 @@ export const setAllowance = async ({
     args: [spender, amount]
   })
   return await publicClient.waitForTransactionReceipt({
-    hash: resetApprovalHash
+    hash: resetApprovalHash,
+    confirmations: TEST_BLOCK_CONFIRMATIONS
   })
 }
 

@@ -14,7 +14,7 @@ import type { UserOperationReceipt } from "viem/account-abstraction"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../test/__contracts/abi"
-import { toNetwork } from "../../test/testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../test/testSetup"
 import {
   getBalance,
   getTestAccount,
@@ -68,7 +68,7 @@ describe("nexus.client", async () => {
     const nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
@@ -99,7 +99,8 @@ describe("nexus.client", async () => {
         ]
       })
       const { status } = await nexusClient.waitForTransactionReceipt({
-        hash
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
       expect(status).toBe("success")
 
@@ -250,7 +251,10 @@ describe("nexus.client", async () => {
     const balanceBefore = await getBalance(testClient, recipientAddress)
     const tx = { to: recipientAddress, value: 1n }
     const hash = await nexusClient.sendTransaction({ calls: [tx, tx] })
-    const { status } = await nexusClient.waitForTransactionReceipt({ hash })
+    const { status } = await nexusClient.waitForTransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
     const balanceAfter = await getBalance(testClient, recipientAddress)
     expect(status).toBe("success")
     expect(balanceAfter - balanceBefore).toBe(2n)
@@ -263,13 +267,13 @@ describe("nexus.client", async () => {
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -296,7 +300,7 @@ describe("nexus.client", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     const ethersNexusClient = createSmartAccountClient({

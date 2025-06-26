@@ -49,7 +49,7 @@ describe("modules.toDefaultModule", () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http()
+      transport: http(infra.network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({

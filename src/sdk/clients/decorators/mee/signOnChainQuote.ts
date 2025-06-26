@@ -51,24 +51,7 @@ const generateTriggerCallFromTrigger = async ({
   let triggerCall: AbstractCall | ComposableCall
   // build custom call
   if ("call" in trigger) {
-    const [
-      {
-        calls: [customCall]
-      }
-    ] = await account.build({
-      type: "default",
-      data: {
-        calls: [
-          {
-            to: trigger.call.to,
-            data: trigger.call.data,
-            value: trigger.call.value
-          }
-        ],
-        chainId: trigger.chainId
-      } as BuildDefaultParameters
-    })
-    triggerCall = customCall
+    triggerCall = trigger.call
   } else if (trigger.tokenAddress === zeroAddress) {
     // If the token address is zero address, we need to send eth via the ETH forwarder
     const forwardCalldata = encodeFunctionData({

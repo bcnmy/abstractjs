@@ -10,7 +10,11 @@ import {
   parseUnits
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { paymasterTruthy, toNetwork } from "../../test/testSetup"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  paymasterTruthy,
+  toNetwork
+} from "../../test/testSetup"
 import { getBalance, killNetwork } from "../../test/testUtils"
 import type { NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
@@ -61,12 +65,12 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     walletClient = createWalletClient({
       account,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     paymaster = createBicoPaymasterClient({
@@ -76,7 +80,7 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusAccountAddress = await nexusAccount.getAddress()
@@ -116,7 +120,10 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     })
 
     // Wait for the transaction to be mined
-    const { status } = await publicClient.waitForTransactionReceipt({ hash })
+    const { status } = await publicClient.waitForTransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
     expect(status).toBe("success")
     // Get final balance
     const finalBalance = await publicClient.getBalance({
@@ -215,7 +222,10 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
 
     const hash = await nexusClient.sendTransaction(tokenPaymasterUserOp)
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash })
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
 
     expect(receipt.status).toBe("success")
 

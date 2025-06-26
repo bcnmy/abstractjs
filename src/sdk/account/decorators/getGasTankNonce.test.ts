@@ -2,6 +2,7 @@ import { http } from "viem"
 import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
+import { TESTNET_RPC_URLS } from "../../../test/testSetup"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.getGasTankNonce", () => {
@@ -9,7 +10,7 @@ describe("mee.getGasTankNonce", () => {
 
   beforeAll(async () => {
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
       chain: baseSepolia,
       privateKey: generatePrivateKey()
     })
