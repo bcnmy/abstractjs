@@ -1130,8 +1130,7 @@ describe("mee.getQuote", () => {
     })
 
     const meeClient = await createMeeClient({
-      account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      account: mcNexus
     })
 
     const tokenAddress = testnetMcUSDC.addressOn(chain.id)
@@ -1153,10 +1152,11 @@ describe("mee.getQuote", () => {
     const quote = await meeClient.getQuote({
       instructions: [
         mcNexus.build({
-          type: "transfer",
+          type: "transferFrom",
           data: {
             // dummy transfer as a transaction
             amount: 1n,
+            sender: feeAccount.address,
             tokenAddress,
             chainId: chain.id,
             recipient: eoaAccount.address
@@ -1187,7 +1187,7 @@ describe("mee.getQuote", () => {
       walletClient: signerWalletClient,
       tokenAddress,
       recipient: feeAccount.address,
-      amount: BigInt(quote.paymentInfo.tokenWeiAmount)
+      amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
     })
     // set allowance to the fee account on the mcNexus account
     await setAllowance({
@@ -1195,15 +1195,7 @@ describe("mee.getQuote", () => {
       walletClient,
       tokenAddress,
       spender: mcNexus.addressOn(chain.id, true),
-      amount: BigInt(quote.paymentInfo.tokenWeiAmount)
-    })
-    // transfer usdc to the nexus account for the 1n tx
-    await transferErc20({
-      publicClient,
-      walletClient: signerWalletClient,
-      tokenAddress,
-      recipient: mcNexus.addressOn(chain.id, true),
-      amount: 1n
+      amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
     })
 
     const { hash } = await meeClient.executeQuote({ quote })

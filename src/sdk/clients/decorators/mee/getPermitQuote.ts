@@ -73,7 +73,7 @@ export type GetPermitQuoteParams = GetQuoteParams & {
  */
 export const getPermitQuote = async (
   client: BaseMeeClient,
-  parameters: GetPermitQuoteParams
+  parameters: GetPermitQuoteParams & { feePayer?: undefined }
 ): Promise<GetPermitQuotePayload> => {
   const {
     account: account_ = client.account,
@@ -81,8 +81,6 @@ export const getPermitQuote = async (
     cleanUps,
     instructions,
     gasLimit,
-    // Unused parameter, but needed to satisfy the type, Omit<GetQuoteParams, "feePayer"> doesn't work
-    feePayer,
     ...rest
   } = parameters
 

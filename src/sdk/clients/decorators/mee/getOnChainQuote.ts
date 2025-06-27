@@ -76,7 +76,7 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
  */
 export const getOnChainQuote = async (
   client: BaseMeeClient,
-  parameters: GetOnChainQuoteParams
+  parameters: GetOnChainQuoteParams & { feePayer?: undefined }
 ): Promise<GetOnChainQuotePayload> => {
   const {
     account: account_ = client.account,
@@ -84,8 +84,6 @@ export const getOnChainQuote = async (
     cleanUps,
     instructions,
     gasLimit,
-    // Unused parameter, but needed to satisfy the type, Omit<GetQuoteParams, "feePayer"> doesn't work
-    feePayer: _feePayer,
     ...rest
   } = parameters
 

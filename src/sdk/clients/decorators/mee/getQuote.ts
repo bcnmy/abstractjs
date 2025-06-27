@@ -203,6 +203,11 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   account?: MultichainSmartAccount
   /**
+   * Path to the quote endpoint. Defaults to "/quote"
+   * @example "/quote"
+   */
+  path?: string
+  /**
    * Lower bound execution timestamp to be applied to all user operations
    */
   lowerBoundTimestamp?: number
@@ -239,11 +244,6 @@ export type GetQuoteParams = SupertransactionLike & {
         feePayer: Address
       }
     | {
-        /**
-         * Path to the quote endpoint. Defaults to "/quote"
-         * @example "/quote"
-         */
-        path?: string
         /**
          * EOA address to be used for the transaction.
          * Only required when using permit-enabled tokens
@@ -774,12 +774,12 @@ const preparePaymentInfo = async (
     const initData: InitDataOrUndefined = isAccountDeployed
       ? undefined
       : delegate
-        ? {
-            eip7702Auth: await validPaymentAccount.toDelegation({
-              authorization
-            })
-          }
-        : { initCode }
+      ? {
+          eip7702Auth: await validPaymentAccount.toDelegation({
+            authorization
+          })
+        }
+      : { initCode }
 
     paymentInfo = {
       sponsored: false,
