@@ -1,7 +1,7 @@
 import {
   type Address,
   type Hex,
-  OneOf,
+  type OneOf,
   concatHex,
   encodeAbiParameters,
   getContract,
