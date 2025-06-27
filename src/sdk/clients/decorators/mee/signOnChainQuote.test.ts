@@ -31,7 +31,7 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { FORWARDER_ADDRESS } from "../../../constants"
-import { mcUSDC, mcUSDT, testnetMcUSDC } from "../../../constants/tokens"
+import { mcUSDC, mcUSDT } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,

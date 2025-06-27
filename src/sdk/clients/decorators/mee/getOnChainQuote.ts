@@ -96,7 +96,6 @@ export const getOnChainQuote = async (
       account: account_,
       instructions: resolvedInstructions
     })
-
     const quote = await getQuote(client, {
       path: "quote",
       eoa: account_.signer.address,

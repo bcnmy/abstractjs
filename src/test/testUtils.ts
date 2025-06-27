@@ -392,26 +392,7 @@ export const transferErc20 = async ({
     args: [recipient, amount]
   })
   return await publicClient.waitForTransactionReceipt({
-    hash
-  })
-}
-
-/**
- * Get the balance of an ERC20 token
- */
-export const getErc20Balance = async ({
-  publicClient,
-  tokenAddress,
-  owner
-}: {
-  publicClient: PublicClient
-  tokenAddress: Address
-  owner: Address
-}) => {
-  return await publicClient.readContract({
-    address: tokenAddress,
-    abi: erc20Abi,
-    functionName: "balanceOf",
-    args: [owner]
+    hash,
+    confirmations: TEST_BLOCK_CONFIRMATIONS
   })
 }
