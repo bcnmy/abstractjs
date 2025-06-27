@@ -29,6 +29,8 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+
+  feePayer?: undefined
 }
 
 /**

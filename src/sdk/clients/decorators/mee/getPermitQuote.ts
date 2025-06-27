@@ -34,6 +34,8 @@ export type GetPermitQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+
+  feePayer?: undefined
 }
 
 /**
@@ -73,7 +75,7 @@ export type GetPermitQuoteParams = GetQuoteParams & {
  */
 export const getPermitQuote = async (
   client: BaseMeeClient,
-  parameters: GetPermitQuoteParams & { feePayer?: undefined }
+  parameters: GetPermitQuoteParams
 ): Promise<GetPermitQuotePayload> => {
   const {
     account: account_ = client.account,

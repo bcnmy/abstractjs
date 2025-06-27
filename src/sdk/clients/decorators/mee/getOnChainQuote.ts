@@ -32,6 +32,8 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+
+  feePayer?: undefined
 }
 
 /**
@@ -76,7 +78,7 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
  */
 export const getOnChainQuote = async (
   client: BaseMeeClient,
-  parameters: GetOnChainQuoteParams & { feePayer?: undefined }
+  parameters: GetOnChainQuoteParams
 ): Promise<GetOnChainQuotePayload> => {
   const {
     account: account_ = client.account,
