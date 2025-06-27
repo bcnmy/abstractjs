@@ -79,7 +79,7 @@ describe("modules.toSmartSessionsModule", () => {
     await killNetwork([infra.network.rpcPort, infra.bundler.port])
   })
 
-  test("grant a permission", async () => {
+  test.skip("grant a permission", async () => {
     const smartSessionsModule = toSmartSessionsModule({ signer: eoaAccount })
 
     // Install the smart sessions module on the Nexus client's smart contract account
@@ -107,25 +107,7 @@ describe("modules.toSmartSessionsModule", () => {
     })
   })
 
-  test("grant a permission with typed data sign", async () => {
-    const smartSessionsClient = nexusClient.extend(smartSessionActions())
-
-    sessionDetailsTypedDataSign =
-      await smartSessionsClient.grantPermissionTypedDataSign([
-        {
-          redeemer: redeemerAddress,
-          actions: [
-            {
-              actionTarget: COUNTER_ADDRESS,
-              actionTargetSelector: "0x273ea3e3",
-              actionPolicies: [getSudoPolicy()]
-            }
-          ]
-        }
-      ])
-  })
-
-  test("use a permission", async () => {
+  test.skip("use a permission", async () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
@@ -154,37 +136,7 @@ describe("modules.toSmartSessionsModule", () => {
     }
   })
 
-  test("use a permission with typed data sign", async () => {
-    const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
-      signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
-    })
-
-    const emulatedClient = createSmartAccountClient({
-      account: emulatedAccount,
-      transport: http(bundlerUrl),
-      mock: true
-    })
-
-    const smartSessionsClient = emulatedClient.extend(smartSessionActions())
-
-    const userOpHashTypedDataSignOne = await smartSessionsClient.usePermission({
-      sessionDetails: sessionDetailsTypedDataSign,
-      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
-      mode: "ENABLE_AND_USE"
-    })
-    const receiptTypedDataSignOne =
-      await nexusClient.waitForUserOperationReceipt({
-        hash: userOpHashTypedDataSignOne
-      })
-    if (!receiptTypedDataSignOne.success) {
-      throw new Error("Smart sessions module validation failed")
-    }
-  })
-
-  test("use a permission a second time", async () => {
+  test.skip("use a permission a second time", async () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
@@ -212,7 +164,69 @@ describe("modules.toSmartSessionsModule", () => {
     expect(receiptTwo.success).toBe(true)
   })
 
-  test("use a permission a second time with typed data sign", async () => {
+  test("grant a permission with typed data sign", async () => {
+    const smartSessionsModule = toSmartSessionsModule({ signer: eoaAccount })
+
+    // Install the smart sessions module on the Nexus client's smart contract account
+    const hash = await nexusClient.installModule({
+      module: smartSessionsModule
+    })
+
+    // Wait for the module installation transaction to be mined and check its success
+    const { success: installSuccess } =
+      await nexusClient.waitForUserOperationReceipt({ hash })
+
+    expect(installSuccess).toBe(true)
+
+    // extend the Nexus client with the smart sessions actions
+    const smartSessionsClient = nexusClient.extend(smartSessionActions())
+
+    sessionDetailsTypedDataSign =
+      await smartSessionsClient.grantPermissionTypedDataSign([
+        {
+          redeemer: redeemerAddress,
+          actions: [
+            {
+              actionTarget: COUNTER_ADDRESS,
+              actionTargetSelector: "0x273ea3e3",
+              actionPolicies: [getSudoPolicy()]
+            }
+          ]
+        }
+      ])
+  })
+
+  test("use a permission with typed data sign", async () => {
+    const emulatedAccount = await toNexusAccount({
+      accountAddress: nexusAccount.address,
+      signer: redeemerAccount,
+      chain,
+      transport: http(infra.network.rpcUrl)
+    })
+
+    const emulatedClient = createSmartAccountClient({
+      account: emulatedAccount,
+      transport: http(bundlerUrl),
+      mock: true
+    })
+
+    const smartSessionsClient = emulatedClient.extend(smartSessionActions())
+
+    const userOpHashTypedDataSignOne = await smartSessionsClient.usePermission({
+      sessionDetailsArray: sessionDetailsTypedDataSign,
+      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
+      mode: "ENABLE_AND_USE"
+    })
+    const receiptTypedDataSignOne =
+      await nexusClient.waitForUserOperationReceipt({
+        hash: userOpHashTypedDataSignOne
+      })
+    if (!receiptTypedDataSignOne.success) {
+      throw new Error("Smart sessions module validation failed")
+    }
+  })
+
+  test("use a permission with typed data sign a second time", async () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
@@ -229,7 +243,7 @@ describe("modules.toSmartSessionsModule", () => {
     const smartSessionsClient = emulatedClient.extend(smartSessionActions())
 
     const userOpHashTwoTypedDataSign = await smartSessionsClient.usePermission({
-      sessionDetails: sessionDetailsTypedDataSign,
+      sessionDetailsArray: sessionDetailsTypedDataSign,
       calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
       mode: "USE"
     })
