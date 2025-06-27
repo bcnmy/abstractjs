@@ -84,7 +84,7 @@ export const getPermitQuote = async (
     ...rest
   } = parameters
 
-  if ("call" in trigger) {
+  if (trigger.call) {
     throw new Error("Custom call trigger is not supported for permit quotes")
   }
 

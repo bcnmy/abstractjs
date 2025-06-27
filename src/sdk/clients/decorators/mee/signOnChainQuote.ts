@@ -50,7 +50,7 @@ const generateTriggerCallFromTrigger = async ({
 }) => {
   let triggerCall: AbstractCall | ComposableCall
   // build custom call
-  if ("call" in trigger) {
+  if (trigger.call) {
     triggerCall = trigger.call
   } else if (trigger.tokenAddress === zeroAddress) {
     // If the token address is zero address, we need to send eth via the ETH forwarder
