@@ -120,7 +120,7 @@ export const grantMeePermission = async <
           : undefined
 
       return mode === "PERSONAL_SIGN"
-        ? grantPermissionPersonalSign(undefined as AnyData, {
+        ? grantPermissionPersonalSign(undefined as AnyData, [{
             account: deployment,
             redeemer,
             actions: [
@@ -130,8 +130,8 @@ export const grantMeePermission = async <
             sessionValidator: MEE_VALIDATOR_ADDRESS,
             sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
             permitERC4337Paymaster: true
-          })
-        : grantPermissionTypedDataSign(undefined as AnyData, {
+          }])
+        : grantPermissionTypedDataSign(undefined as AnyData, [{
             account: deployment,
             redeemer,
             actions: [
@@ -141,7 +141,7 @@ export const grantMeePermission = async <
             sessionValidator: MEE_VALIDATOR_ADDRESS,
             sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
             permitERC4337Paymaster: true
-          })
+          }])
     })
   )
   return sessionDetails

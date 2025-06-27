@@ -15,7 +15,8 @@ import {
   getPermissionId,
   getSessionDigest,
   getSessionNonce,
-  getSudoPolicy
+  getSudoPolicy,
+  hashChainSessions
 } from "@rhinestone/module-sdk"
 import {
   type Address,
@@ -78,64 +79,39 @@ export type GrantPermissionResponse = Prettify<
   >
 >[]
 
+/**
+ * Grants the permission signed with personal signature
+ */
 export async function grantPermissionPersonalSign<
   TModularSmartAccount extends ModularSmartAccount | undefined
 >(
   nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
   parameters: GrantPermissionParameters<TModularSmartAccount>
 ): Promise<GrantPermissionResponse> {
-  const { sessions, accountsAndChainIds, clients, signer } =
-    await prepareForGrantingPermission(nexusClient, parameters)
-
-  // re-implement getEnableSessionDetails so it takes an array nexusAccountsForRhinestone
-  // and uses one account for every chain coz it can have different address for every chain
-  // but we sign only once
-  // so the sessionDetails object is just modified for all the chains: to have different:
-  // - session to enable
-  // - chain digest index
-
-  const sessionDetailsWithPermissionEnableHash = await getEnableSessionDetails({
-    enableMode: SmartSessionMode.UNSAFE_ENABLE,
-    sessions,
-    account: accountsAndChainIds[0].account,
-    clients,
-    enableValidatorAddress: zeroAddress, // default validator
-    ignoreSecurityAttestations: true
-  })
-
-  const { permissionEnableHash, ...sessionDetails } =
-    sessionDetailsWithPermissionEnableHash
-
-  if (!sessionDetails.enableSessionData?.enableSession.permissionEnableSig) {
-    throw new Error("enableSessionData is undefined")
-  }
-  sessionDetails.enableSessionData.enableSession.permissionEnableSig =
-    await signer.signMessage({ message: { raw: permissionEnableHash } })
-
-  sessionDetails.signature = getOwnableValidatorMockSignature({ threshold: 1 })
-  return sessionDetails
+  return await grantPermission(nexusClient, parameters, "PERSONAL_SIGN")
 }
 
 /**
  * Grants the permission signed with typed data signature
- * @param nexusClient
- * @param parameters
- * @returns
  */
-
 export async function grantPermissionTypedDataSign<
   TModularSmartAccount extends ModularSmartAccount | undefined
 >(
   nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
   parameters: GrantPermissionParameters<TModularSmartAccount>
 ): Promise<GrantPermissionResponse> {
+  return await grantPermission(nexusClient, parameters, "TYPED_DATA_SIGN")
+}
+
+async function grantPermission<
+TModularSmartAccount extends ModularSmartAccount | undefined
+>(
+  nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
+  parameters: GrantPermissionParameters<TModularSmartAccount>,
+  mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
+): Promise<GrantPermissionResponse> {
   const { sessions, accountsAndChainIds, clients, signer } =
     await prepareForGrantingPermission(nexusClient, parameters)
-
-  // keeping this algorithm with `for` loop
-  // because we are going to use multiple sessions in the future
-  //const sessions = [session]
-  //const clients = [publicClient]
 
   const chainDigests: { chainId: bigint; sessionDigest: any }[] = []
   const chainSessions: ChainSession[] = []
@@ -199,7 +175,56 @@ export async function grantPermissionTypedDataSign<
     })
   }
 
-  const permissionEnableSig = await signer.signTypedData({
+  const permissionEnableSig = mode === "PERSONAL_SIGN" ? 
+    await getPersonalEnableSessionSignature(chainSessions, signer) : 
+    await getTypedDataEnableSessionSignature(chainSessions, signer)
+
+  const sessionDetailsSignature = getOwnableValidatorMockSignature({
+    threshold: 1
+  })
+
+  const sessionDetailsArray = sessions.map((session) => {
+    const permissionId = getPermissionId({
+      session: session
+    })
+
+    const sessionIndex = sessions.indexOf(session)
+
+    const accountType =
+      accountsAndChainIds.find((a) => a.chainId === session.chainId)?.account
+        .type ?? "nexus"
+
+    return {
+      mode: SmartSessionMode.UNSAFE_ENABLE,
+      permissionId,
+      signature: sessionDetailsSignature,
+      enableSessionData: {
+        enableSession: {
+          chainDigestIndex: sessionIndex,
+          hashesAndChainIds: chainDigests,
+          sessionToEnable: session,
+          permissionEnableSig: permissionEnableSig
+        },
+        validator: zeroAddress, // default validator
+        accountType
+      }
+    }
+  })
+
+  return sessionDetailsArray
+}
+
+/**
+ * Handle enable session signatures
+ */
+
+async function getPersonalEnableSessionSignature(chainSessions: ChainSession[], signer: any): Promise<Hex> {
+  const permissionEnableHash = hashChainSessions(chainSessions)
+  return await signer.signMessage({ message: { raw: permissionEnableHash } })
+}
+
+async function getTypedDataEnableSessionSignature(chainSessions: ChainSession[], signer: any): Promise<Hex> {
+  return await signer.signTypedData({
     domain: {
       name: "SmartSession",
       version: "1"
@@ -253,41 +278,11 @@ export async function grantPermissionTypedDataSign<
       sessionsAndChainIds: chainSessions
     }
   })
-
-  const sessionDetailsSignature = getOwnableValidatorMockSignature({
-    threshold: 1
-  })
-
-  const sessionDetailsArray = sessions.map((session) => {
-    const permissionId = getPermissionId({
-      session: session
-    })
-
-    const sessionIndex = sessions.indexOf(session)
-
-    const accountType =
-      accountsAndChainIds.find((a) => a.chainId === session.chainId)?.account
-        .type ?? "nexus"
-
-    return {
-      mode: SmartSessionMode.UNSAFE_ENABLE,
-      permissionId,
-      signature: sessionDetailsSignature,
-      enableSessionData: {
-        enableSession: {
-          chainDigestIndex: sessionIndex,
-          hashesAndChainIds: chainDigests,
-          sessionToEnable: session,
-          permissionEnableSig: permissionEnableSig
-        },
-        validator: zeroAddress, // default validator
-        accountType
-      }
-    }
-  })
-
-  return sessionDetailsArray
 }
+
+/**
+ * Prepare for granting permission
+ */
 
 export type PrepareForGrantingPermissionResponse = {
   sessions: Session[]
