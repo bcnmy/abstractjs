@@ -45,13 +45,13 @@ describe("core", async () => {
     walletClient = createWalletClient({
       account: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({

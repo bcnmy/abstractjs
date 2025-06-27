@@ -15,7 +15,11 @@ import {
   resolveInstructions,
   toMultichainNexusAccount
 } from ".."
-import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
+import {
+  MAINNET_RPC_URLS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { mcUSDC } from "../../constants/tokens"
@@ -82,16 +86,24 @@ describe("utils.batchInstructions", () => {
   let meeClient: MeeClient
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain, mainnet],
-      transports: [...transports, http()],
+      transports: [
+        paymentChainTransport,
+        targetChainTransport,
+        http(MAINNET_RPC_URLS[mainnet.id])
+      ],
       signer: eoaAccount
     })
 

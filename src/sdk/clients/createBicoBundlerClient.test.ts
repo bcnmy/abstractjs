@@ -38,7 +38,7 @@ describe("bico.bundler", async () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     bicoBundler = createBicoBundlerClient({
@@ -56,14 +56,14 @@ describe("bico.bundler", async () => {
 
   testnetTest(
     "should demo adjusting gas estimates returned by bico bundler",
-    async ({ config: { account, chain, bundlerUrl } }) => {
+    async ({ config: { account, chain, bundlerUrl, rpcUrl } }) => {
       if (!account) {
         throw new Error("Account is required")
       }
       const nexusAccount = await toNexusAccount({
         chain,
         signer: account,
-        transport: http()
+        transport: http(rpcUrl)
       })
 
       const nexusClient = createSmartAccountClient({

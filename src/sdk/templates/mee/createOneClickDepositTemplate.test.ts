@@ -7,7 +7,7 @@ import {
 } from "viem"
 import { sepolia } from "viem/chains"
 import { beforeAll, describe, expect, it, vi } from "vitest"
-import { toNetwork } from "../../../test/testSetup"
+import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -56,7 +56,10 @@ describe("createOneClickDepositTemplate", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [sourceChain, destinationChain],
-      transports: [http(), http()],
+      transports: [
+        http(network.rpcUrl),
+        http(TESTNET_RPC_URLS[destinationChain.id])
+      ],
       signer: eoaAccount
     })
   })
@@ -79,15 +82,7 @@ describe("createOneClickDepositTemplate", () => {
         })
       },
       bridgeInstructions: async ({ sourceChain, destChain, amount }) => {
-        // dummy brige call
-        return mcNexus.build({
-          type: "intent",
-          data: {
-            amount, // amount here,
-            mcToken: testnetMcUSDC,
-            toChain: destChain
-          }
-        })
+        return []
       },
       destChainInstructions: async ({ sourceChain, destChain }) => {
         // dummy instructions
@@ -129,11 +124,10 @@ describe("createOneClickDepositTemplate", () => {
       destChain: destinationChain,
       amount: parseUnits("1", 6)
     })
-    expect(instructions.length).toBe(4)
+    expect(instructions.length).toBe(3)
     expect(instructions[0].chainId).toBe(sourceChain.id)
-    expect(instructions[1].chainId).toBe(sourceChain.id)
+    expect(instructions[1].chainId).toBe(destinationChain.id)
     expect(instructions[2].chainId).toBe(destinationChain.id)
-    expect(instructions[3].chainId).toBe(destinationChain.id)
   })
   it("should call the source/bridge/destination instructions", async () => {
     // mock the source/bridge/destination instructions

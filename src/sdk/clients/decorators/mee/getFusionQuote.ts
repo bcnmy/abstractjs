@@ -88,8 +88,12 @@ export const getFusionQuote = async (
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
 
-  const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
+  // if custom call is provided, we use on-chain tx fusion mode
+  if ("call" in parameters.trigger) {
+    return getOnChainQuote(client, parameters)
+  }
 
+  const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
   let permitEnabled = false
 
   if (paymentTokenInfo.paymentToken) {

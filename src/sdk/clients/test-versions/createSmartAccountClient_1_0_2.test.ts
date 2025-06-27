@@ -14,7 +14,7 @@ import type { UserOperationReceipt } from "viem/account-abstraction"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { CounterAbi } from "../../../test/__contracts/abi"
-import { toNetwork } from "../../../test/testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
 import {
   getBalance,
   getTestAccount,
@@ -75,7 +75,7 @@ describe("nexus.client.1.0.2", async () => {
     nexusAccount_1_0_2_with_k1 = await toNexusAccount({
       signer: account_1_0_2,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
@@ -89,7 +89,7 @@ describe("nexus.client.1.0.2", async () => {
     nexusAccount_1_0_2_custom_validator = await toNexusAccount({
       signer: account_1_0_2,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
       nexusVersion: "1.0.2",
       validators: [
@@ -138,7 +138,8 @@ describe("nexus.client.1.0.2", async () => {
           ]
         })
         const { status } = await client.waitForTransactionReceipt({
-          hash
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
         })
         expect(status).toBe("success")
 
@@ -294,7 +295,10 @@ describe("nexus.client.1.0.2", async () => {
       const balanceBefore = await getBalance(testClient_1_0_2, recipientAddress)
       const tx = { to: recipientAddress, value: 1n }
       const hash = await client.sendTransaction({ calls: [tx, tx] })
-      const { status } = await client.waitForTransactionReceipt({ hash })
+      const { status } = await client.waitForTransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
       const balanceAfter = await getBalance(testClient_1_0_2, recipientAddress)
       expect(status).toBe("success")
       expect(balanceAfter - balanceBefore).toBe(2n)
@@ -308,7 +312,7 @@ describe("nexus.client.1.0.2", async () => {
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
@@ -322,7 +326,7 @@ describe("nexus.client.1.0.2", async () => {
     const ethersAccount2 = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
       nexusVersion: "1.0.2",
       validators: [
@@ -356,7 +360,7 @@ describe("nexus.client.1.0.2", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
       nexusVersion: "1.0.2"
     })
@@ -370,7 +374,7 @@ describe("nexus.client.1.0.2", async () => {
     const etherAccountCustomValidator = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
-      transport: http(),
+      transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
       nexusVersion: "1.0.2",
       validators: [

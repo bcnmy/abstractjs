@@ -2,6 +2,7 @@ import { http, createPublicClient } from "viem"
 import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
+import { TESTNET_RPC_URLS } from "../../../test/testSetup"
 import { getBalance } from "../../../test/testUtils"
 import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
@@ -11,7 +12,7 @@ describe("mee.getGasTankBalance", () => {
 
   beforeAll(async () => {
     gasTankAccount = await toGasTankAccount({
-      transport: http(),
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
       chain: baseSepolia,
       privateKey: generatePrivateKey()
     })
@@ -22,7 +23,7 @@ describe("mee.getGasTankBalance", () => {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
     })
 
     const erc20Balance = await getBalance(

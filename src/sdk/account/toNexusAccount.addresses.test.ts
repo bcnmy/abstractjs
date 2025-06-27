@@ -8,7 +8,11 @@ import {
 } from "viem"
 import { base, baseSepolia } from "viem/chains"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../test/testSetup"
+import {
+  MAINNET_RPC_URLS,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../test/testSetup"
 import { getTestAccount, killNetwork, toTestClient } from "../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import {
@@ -43,13 +47,13 @@ describe("nexus.account.addresses", async () => {
     walletClient = createWalletClient({
       account: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({
@@ -72,7 +76,7 @@ describe("nexus.account.addresses", async () => {
       accountAddress: someoneElsesNexusAddress,
       chain,
       signer: eoaAccount,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     const newNexusClient = createSmartAccountClient({
@@ -95,7 +99,7 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: base,
         signer: eoaAccount,
-        transport: http()
+        transport: http(MAINNET_RPC_URLS[base.id])
       }),
       mock: true,
       transport: http(bundlerUrl)
@@ -105,7 +109,7 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: baseSepolia,
         signer: eoaAccount,
-        transport: http()
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
       }),
       mock: true,
       transport: http(bundlerUrl)

@@ -27,7 +27,6 @@ jobs:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_TWO: ${{ secrets.PRIVATE_KEY_TWO }}
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-          INFURA_KEY: ${{ secrets.INFURA_KEY }}
           TESTNET_CHAIN_ID: 84532
           MAINNET_CHAIN_ID: 10
 
@@ -41,7 +40,6 @@ jobs:
           BUNDLER_URL: ${{ secrets.BUNDLER_URL }}
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          INFURA_KEY: ${{ secrets.INFURA_KEY }}
           TESTNET_CHAIN_ID: 84532
           MAINNET_CHAIN_ID: 10
           RUN_PAID_TESTS: true

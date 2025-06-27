@@ -1,6 +1,7 @@
 import {
   type Address,
   type Hex,
+  type OneOf,
   concatHex,
   encodeAbiParameters,
   getContract,
@@ -11,12 +12,28 @@ import { PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
-import type { GetQuotePayload } from "./getQuote"
+import type { AbstractCall, GetQuotePayload } from "./getQuote"
+
+/**
+ * Custom trigger for arbitrary calls
+ */
+export type CustomTrigger = {
+  /**
+   * The call to execute
+   * @see {@link AbstractCall}
+   */
+  call: AbstractCall
+  /**
+   * The chainId to use
+   * @example 1 // Ethereum Mainnet
+   */
+  chainId: number
+}
 
 /**
  * Parameters for a token trigger
  */
-export type Trigger = {
+export type TokenTrigger = {
   /**
    * The address of the token to use on the relevant chain
    * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
@@ -33,6 +50,11 @@ export type Trigger = {
    */
   amount?: bigint
   /**
+   * A custom amount to approve as the trigger
+   * @example 1000000n // 1 USDC (6 decimals)
+   */
+  approvalAmount?: bigint
+  /**
    * custom gas limit can be added to override the default 50_000 gas limit
    */
   gasLimit?: bigint
@@ -42,6 +64,9 @@ export type Trigger = {
    */
   useMaxAvailableFunds?: true
 }
+
+export type Trigger = OneOf<TokenTrigger | CustomTrigger>
+
 /**
  * Parameters for signing a permit quote
  */
@@ -106,10 +131,28 @@ export const signPermitQuote = async (
     fusionQuote: { quote, trigger }
   } = parameters
 
+  // Type guard to ensure we have a TokenTrigger
+  if (trigger.call) {
+    throw new Error("Custom triggers are not supported for permit quotes")
+  }
+
   const signer = account_.signer
 
   if (!trigger.amount)
     throw new Error("Amount is required to sign a permit quote")
+
+  // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
+  if (
+    trigger.approvalAmount &&
+    trigger.amount !== undefined &&
+    trigger.approvalAmount < trigger.amount
+  ) {
+    throw new Error(
+      `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+    )
+  }
+
+  const amount = trigger.approvalAmount ?? trigger.amount
 
   const { walletClient, address: spender } = account_.deploymentOn(
     trigger.chainId,
@@ -161,7 +204,7 @@ export const signPermitQuote = async (
     message: {
       owner,
       spender: spender,
-      value: trigger.amount,
+      value: amount,
       nonce,
       deadline: BigInt(quote.hash)
     },
@@ -188,7 +231,7 @@ export const signPermitQuote = async (
       spender,
       domainSeparator,
       PERMIT_TYPEHASH,
-      trigger.amount,
+      amount,
       BigInt(trigger.chainId),
       nonce,
       sigComponents.v!,

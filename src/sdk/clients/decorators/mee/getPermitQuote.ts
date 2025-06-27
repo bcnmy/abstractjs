@@ -84,6 +84,10 @@ export const getPermitQuote = async (
     ...rest
   } = parameters
 
+  if (trigger.call) {
+    throw new Error("Custom call trigger is not supported for permit quotes")
+  }
+
   const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
   const recipient = account_.addressOn(trigger.chainId, true)
 
@@ -175,8 +179,7 @@ export const getPermitQuote = async (
   return {
     quote,
     trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
+      ...trigger,
       amount,
       gasLimit: triggerGasLimit
     }

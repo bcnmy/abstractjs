@@ -53,7 +53,7 @@ describe("modules.toMeeK1Module", () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http()
+      transport: http(infra.network.rpcUrl)
     })
 
     nexusClient = createSmartAccountClient({

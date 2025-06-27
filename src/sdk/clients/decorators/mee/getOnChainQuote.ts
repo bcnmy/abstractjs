@@ -7,8 +7,8 @@ import {
   runtimeERC20AllowanceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
+import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
@@ -87,6 +87,28 @@ export const getOnChainQuote = async (
     ...rest
   } = parameters
 
+  const resolvedInstructions = await resolveInstructions(instructions)
+
+  if (trigger.call) {
+    const batchedInstructions = await batchInstructions({
+      account: account_,
+      instructions: resolvedInstructions
+    })
+    const quote = await getQuote(client, {
+      path: "quote",
+      eoa: account_.signer.address,
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    })
+
+    return {
+      quote,
+      trigger
+    }
+  }
+
   const recipient = account_.deploymentOn(trigger.chainId, true).address
   const sender = account_.signer.address
 
@@ -109,8 +131,6 @@ export const getOnChainQuote = async (
 
     triggerAmount = trigger.amount
   }
-
-  const resolvedInstructions = await resolveInstructions(instructions)
 
   const isComposable = resolvedInstructions.some(
     ({ isComposable }) => isComposable
@@ -182,8 +202,7 @@ export const getOnChainQuote = async (
   return {
     quote,
     trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
+      ...trigger,
       amount,
       gasLimit: triggerGasLimit
     }

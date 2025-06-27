@@ -1,4 +1,10 @@
-import { type Hex, concatHex, encodeAbiParameters, zeroAddress } from "viem"
+import {
+  type Address,
+  type Hex,
+  concatHex,
+  encodeAbiParameters,
+  zeroAddress
+} from "viem"
 import { encodeFunctionData } from "viem"
 import type { BuildApproveParameters } from "../../../account/decorators/instructions/buildApprove"
 import type { BuildDefaultParameters } from "../../../account/decorators/instructions/buildDefaultInstructions"
@@ -9,6 +15,7 @@ import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
+import type { Trigger } from "./signPermitQuote"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 
@@ -27,6 +34,82 @@ export type SignOnChainQuoteParams = {
 }
 
 export const ON_CHAIN_PREFIX = "0x177eee01"
+
+/**
+ * Generates a trigger call from a trigger
+ * @private
+ */
+const generateTriggerCallFromTrigger = async ({
+  account,
+  spender,
+  trigger
+}: {
+  account: MultichainSmartAccount
+  spender: Address
+  trigger: Trigger
+}) => {
+  let triggerCall: AbstractCall | ComposableCall
+  // build custom call
+  if (trigger.call) {
+    triggerCall = trigger.call
+  } else if (trigger.tokenAddress === zeroAddress) {
+    // If the token address is zero address, we need to send eth via the ETH forwarder
+    const forwardCalldata = encodeFunctionData({
+      abi: ForwarderAbi,
+      functionName: "forward",
+      args: [spender]
+    })
+    const [
+      {
+        calls: [ethForwardCall]
+      }
+    ] = await account.build({
+      type: "default",
+      data: {
+        calls: [
+          {
+            to: FORWARDER_ADDRESS,
+            data: forwardCalldata,
+            value: trigger.amount
+          }
+        ],
+        chainId: trigger.chainId
+      } as BuildDefaultParameters
+    })
+    triggerCall = ethForwardCall
+  } else {
+    // erc20 trigger
+
+    // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
+    if (
+      trigger.approvalAmount &&
+      trigger.amount !== undefined &&
+      trigger.approvalAmount < trigger.amount
+    ) {
+      throw new Error(
+        `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+      )
+    }
+
+    const amount = trigger.approvalAmount ?? trigger.amount
+
+    const [
+      {
+        calls: [approveCall]
+      }
+    ] = await account.build({
+      type: "approve",
+      data: {
+        spender,
+        tokenAddress: trigger.tokenAddress,
+        chainId: trigger.chainId,
+        amount
+      } as BuildApproveParameters
+    })
+    triggerCall = approveCall
+  }
+  return triggerCall
+}
 
 /**
  * Signs a fusion quote with a tx send client side.
@@ -50,56 +133,19 @@ export const signOnChainQuote = async (
     fusionQuote: { quote, trigger }
   } = params
 
+  const chainId = trigger.chainId
+
   const {
     chain,
     walletClient,
     address: spender
-  } = account_.deploymentOn(trigger.chainId, true)
+  } = account_.deploymentOn(chainId, true)
 
-  let triggerCall: AbstractCall | ComposableCall
-
-  // If the token address is zero address, we need to send eth via the ETH forwarder
-  if (trigger.tokenAddress === zeroAddress) {
-    const forwardCalldata = encodeFunctionData({
-      abi: ForwarderAbi,
-      functionName: "forward",
-      args: [spender]
-    })
-    const [
-      {
-        calls: [ethForwardCall]
-      }
-    ] = await account_.build({
-      type: "default",
-      data: {
-        calls: [
-          {
-            to: FORWARDER_ADDRESS,
-            data: forwardCalldata,
-            value: trigger.amount
-          }
-        ],
-        chainId: trigger.chainId
-      } as BuildDefaultParameters
-    })
-    triggerCall = ethForwardCall
-  } else {
-    // erc20 trigger
-    const [
-      {
-        calls: [approveCall]
-      }
-    ] = await account_.build({
-      type: "approve",
-      data: {
-        spender,
-        tokenAddress: trigger.tokenAddress,
-        chainId: trigger.chainId,
-        amount: trigger.amount
-      } as BuildApproveParameters
-    })
-    triggerCall = approveCall
-  }
+  const triggerCall = await generateTriggerCallFromTrigger({
+    account: account_,
+    trigger,
+    spender
+  })
 
   // This will be always a non composable transaction, so don't worry about the composability
   const dataOrPrefix =

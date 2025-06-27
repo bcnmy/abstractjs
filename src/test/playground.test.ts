@@ -26,7 +26,7 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { toNetwork } from "./testSetup"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
 
 const index = 0n
@@ -66,12 +66,12 @@ describe.skipIf(!playgroundTrue())("playground", () => {
     walletClient = createWalletClient({
       account: eoaAccount,
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(network.rpcUrl)
     })
 
     paymasterParams = paymasterUrl
@@ -89,7 +89,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
       account: await toNexusAccount({
         chain,
         signer: eoaAccount,
-        transport: http(),
+        transport: http(network.rpcUrl),
         index
       }),
       transport: http(bundlerUrl),
@@ -122,7 +122,10 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         to: nexusAccountAddress,
         value: parseEther("0.01")
       })
-      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
       expect(receipt.status).toBe("success")
       const [ownerBalanceTwo, smartAccountBalanceTwo] = await Promise.all([
         publicClient.getBalance({ address: eoaAccount.address }),
