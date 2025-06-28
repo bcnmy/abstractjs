@@ -102,7 +102,7 @@ export const grantMeePermission = async <
     maxPaymentAmount = parseUnits("5", decimals)
   }
 
-  const grantPermissionParameters = actions.map( (action) => {
+  const grantPermissionParameters = actions.map((action) => {
     const chainId = action.chainId
     const actionTarget = action.actionTarget // TODO: do we even need it?
     const deployment = account.deployments.find(
@@ -110,15 +110,15 @@ export const grantMeePermission = async <
     )
 
     const paymentActionPolicy =
-        feeToken && feeToken.chainId === chainId
-          ? {
-              actionTarget: feeToken.address,
-              actionTargetSelector: "0xa9059cbb" as Address, // transfer
-              actionPolicies: [
-                getPolicyForPayment(maxPaymentAmount!, feeToken.address)
-              ]
-            }
-          : undefined
+      feeToken && feeToken.chainId === chainId
+        ? {
+            actionTarget: feeToken.address,
+            actionTargetSelector: "0xa9059cbb" as Address, // transfer
+            actionPolicies: [
+              getPolicyForPayment(maxPaymentAmount!, feeToken.address)
+            ]
+          }
+        : undefined
 
     return {
       account: deployment,
@@ -132,11 +132,16 @@ export const grantMeePermission = async <
       permitERC4337Paymaster: true
     }
   })
-//)
 
   return mode === "PERSONAL_SIGN"
-  ? grantPermissionPersonalSign(undefined as AnyData, grantPermissionParameters)
-  : grantPermissionTypedDataSign(undefined as AnyData, grantPermissionParameters)
+    ? grantPermissionPersonalSign(
+        undefined as AnyData,
+        grantPermissionParameters
+      )
+    : grantPermissionTypedDataSign(
+        undefined as AnyData,
+        grantPermissionParameters
+      )
 }
 
 const getPolicyForPayment = (maxPaymentAmount: bigint, token: Address) => {

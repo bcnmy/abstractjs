@@ -302,10 +302,10 @@ describe("modules.toSmartSessionsModule", () => {
             actionPolicies: [getSudoPolicy()]
           }
         ]
-      },
+      }
       //{
-        // TODO: add a second permission for the same chain
-        // then test using it by prividing the index;
+      // TODO: add a second permission for the same chain
+      // then test using it by prividing the index;
       //}
     ])
   })
