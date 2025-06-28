@@ -19,7 +19,9 @@ export type UsePermissionParameters<
   /** Additional calls to be included in the user operation. */
   calls: Call[]
   /** Data string returned from grantPermission. Could be stored in local storage or a database. */
-  sessionDetails: GrantPermissionResponse
+  sessionDetailsArray: GrantPermissionResponse
+  /** Index within chain: specifies which session to use if some chain has multiple sessions. */
+  indexWithinChain?: number
   /** Mode. ENABLE the first time, or USE when > 1 time. */
   mode: "ENABLE_AND_USE" | "USE"
   /** Verification gas limit. */
@@ -48,7 +50,8 @@ export async function usePermission<
 ): Promise<Hash> {
   const {
     account: nexusAccount = nexusClient.account,
-    sessionDetails: sessionDetails_,
+    sessionDetailsArray,
+    indexWithinChain: indexWithinChain_ = 0,
     nonce: nonce_,
     mode: mode_,
     ...rest
@@ -62,14 +65,27 @@ export async function usePermission<
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
 
-  const sessionDetails = {
-    ...sessionDetails_,
-    mode
-  }
-
   if (!chainId) {
     throw new Error("Chain ID is not set")
   }
+
+  // find the all session details when chainId matches
+  const sessionDetails_ = sessionDetailsArray.filter(
+    (sessionDetails__) =>
+      sessionDetails__.enableSessionData.enableSession.sessionToEnable
+        .chainId === BigInt(chainId)
+  )
+
+  //sanity check
+  if (sessionDetails_.length < indexWithinChain_ + 1) {
+    throw new Error("Not enough sessions for the given index within chain")
+  }
+
+  const sessionDetails = {
+    ...sessionDetails_[indexWithinChain_],
+    mode
+  }
+
   if (!nexusAccount) {
     throw new AccountNotFoundError({
       docsPath: "/nexus-client/methods#sendtransaction"
