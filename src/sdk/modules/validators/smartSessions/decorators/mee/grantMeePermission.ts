@@ -104,7 +104,7 @@ export const grantMeePermission = async <
 
   const grantPermissionParameters = actions.map((action) => {
     const chainId = action.chainId
-    const actionTarget = action.actionTarget // TODO: do we even need it?
+    const actionTarget = action.actionTarget
     const deployment = account.deployments.find(
       (deployment) => deployment?.client?.chain?.id === chainId
     )
