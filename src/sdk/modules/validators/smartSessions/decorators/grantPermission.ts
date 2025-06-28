@@ -10,7 +10,7 @@ import {
   SmartSessionMode,
   encodeValidationData,
   getAccount,
-  getEnableSessionDetails,
+  type getEnableSessionDetails,
   getOwnableValidatorMockSignature,
   getPermissionId,
   getSessionDigest,
@@ -104,7 +104,7 @@ export async function grantPermissionTypedDataSign<
 }
 
 async function grantPermission<
-TModularSmartAccount extends ModularSmartAccount | undefined
+  TModularSmartAccount extends ModularSmartAccount | undefined
 >(
   nexusClient: Client<Transport, Chain | undefined, TModularSmartAccount>,
   parameters: GrantPermissionParameters<TModularSmartAccount>,
@@ -175,9 +175,10 @@ TModularSmartAccount extends ModularSmartAccount | undefined
     })
   }
 
-  const permissionEnableSig = mode === "PERSONAL_SIGN" ? 
-    await getPersonalEnableSessionSignature(chainSessions, signer) : 
-    await getTypedDataEnableSessionSignature(chainSessions, signer)
+  const permissionEnableSig =
+    mode === "PERSONAL_SIGN"
+      ? await getPersonalEnableSessionSignature(chainSessions, signer)
+      : await getTypedDataEnableSessionSignature(chainSessions, signer)
 
   const sessionDetailsSignature = getOwnableValidatorMockSignature({
     threshold: 1
@@ -218,12 +219,18 @@ TModularSmartAccount extends ModularSmartAccount | undefined
  * Handle enable session signatures
  */
 
-async function getPersonalEnableSessionSignature(chainSessions: ChainSession[], signer: any): Promise<Hex> {
+async function getPersonalEnableSessionSignature(
+  chainSessions: ChainSession[],
+  signer: any
+): Promise<Hex> {
   const permissionEnableHash = hashChainSessions(chainSessions)
   return await signer.signMessage({ message: { raw: permissionEnableHash } })
 }
 
-async function getTypedDataEnableSessionSignature(chainSessions: ChainSession[], signer: any): Promise<Hex> {
+async function getTypedDataEnableSessionSignature(
+  chainSessions: ChainSession[],
+  signer: any
+): Promise<Hex> {
   return await signer.signTypedData({
     domain: {
       name: "SmartSession",
