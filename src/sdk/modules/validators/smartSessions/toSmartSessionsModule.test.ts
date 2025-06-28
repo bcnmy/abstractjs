@@ -302,11 +302,18 @@ describe("modules.toSmartSessionsModule", () => {
             actionPolicies: [getSudoPolicy()]
           }
         ]
+      },
+      // decrement the counter as a separate permission
+      {
+        redeemer: redeemerAddress,
+        actions: [
+          {
+            actionTarget: COUNTER_ADDRESS,
+            actionTargetSelector: "0x871cc9d4",
+            actionPolicies: [getSudoPolicy()]
+          }
+        ]
       }
-      //{
-      // TODO: add a second permission for the same chain
-      // then test using it by prividing the index;
-      //}
     ])
   })
 
@@ -337,6 +344,36 @@ describe("modules.toSmartSessionsModule", () => {
     if (!receiptOne.success) {
       throw new Error("Smart sessions module validation failed")
     }
+  })
+
+  test("use a second permission on the same chain should work with index", async () => {
+    const emulatedAccount = await toNexusAccount({
+      accountAddress: nexusAccount.address,
+      signer: redeemerAccount,
+      chain,
+      transport: http(infra.network.rpcUrl)
+    })
+
+    const emulatedClient = createSmartAccountClient({
+      account: emulatedAccount,
+      transport: http(bundlerUrl),
+      mock: true
+    })
+
+    const smartSessionsClient = emulatedClient.extend(smartSessionActions())
+
+    // with index, it would use the second permission
+    // which allows 0x871cc9d4
+    const userOpHashWithIndex = await smartSessionsClient.usePermission({
+      sessionDetailsArray: sessionDetails,
+      calls: [{ to: COUNTER_ADDRESS, data: "0x871cc9d4" }],
+      mode: "ENABLE_AND_USE",
+      indexWithinChain: 1 // starts from 0
+    })
+    const receiptWithIndex = await nexusClient.waitForUserOperationReceipt({
+      hash: userOpHashWithIndex
+    })
+    expect(receiptWithIndex.success).toBe(true)
   })
 
   test("use a permission a second time", async () => {
