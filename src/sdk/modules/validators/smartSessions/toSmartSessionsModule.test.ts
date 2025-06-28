@@ -290,7 +290,7 @@ describe("modules.toSmartSessionsModule", () => {
     expect(receiptTwoTypedDataSign.success).toBe(true)
   })
 
-  test("grant a permission", async () => {
+  test("grant a permission with personal sign", async () => {
     const smartSessionsClient = nexusClient.extend(smartSessionActions())
     sessionDetails = await smartSessionsClient.grantPermissionPersonalSign([
       {
@@ -302,7 +302,11 @@ describe("modules.toSmartSessionsModule", () => {
             actionPolicies: [getSudoPolicy()]
           }
         ]
-      }
+      },
+      //{
+        // TODO: add a second permission for the same chain
+        // then test using it by prividing the index;
+      //}
     ])
   })
 

@@ -71,13 +71,16 @@ export type GrantPermissionParameters<
   TModularSmartAccount extends ModularSmartAccount | undefined
 > = GrantPermissionParameterEntry<TModularSmartAccount>[]
 
-// The session details in stringified format.
-export type GrantPermissionResponse = Prettify<
+// session details for a single chain that can be used to enable and use the permission
+export type GrantPermissionResponseEntry = Prettify<
   Omit<
     Awaited<ReturnType<typeof getEnableSessionDetails>>,
     "permissionEnableHash"
   >
->[]
+>
+
+// The array of session details that can be used to enable and use the permission
+export type GrantPermissionResponse = GrantPermissionResponseEntry[]
 
 /**
  * Grants the permission signed with personal signature
@@ -290,7 +293,6 @@ async function getTypedDataEnableSessionSignature(
 /**
  * Prepare for granting permission
  */
-
 export type PrepareForGrantingPermissionResponse = {
   sessions: Session[]
   accountsAndChainIds: AccountAndChainId[]
@@ -312,7 +314,7 @@ const prepareForGrantingPermission = async <
   const sessions: Session[] = []
   const accountsAndChainIds: AccountAndChainId[] = []
   const publicClients: PublicClient[] = []
-  const signer = nexusClient.account?.signer || parameters[0].account?.signer
+  const signer = nexusClient?.account?.signer || parameters[0].account?.signer
   if (!signer) {
     throw new Error("Signer is not set")
   }

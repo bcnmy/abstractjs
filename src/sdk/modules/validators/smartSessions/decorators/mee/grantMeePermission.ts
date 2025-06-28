@@ -32,7 +32,7 @@ export type GrantMeePermissionParams<
     maxPaymentAmount?: bigint
   }
 >
-export type GrantMeePermissionPayload = GrantPermissionResponse[]
+export type GrantMeePermissionPayload = GrantPermissionResponse
 
 export const grantMeePermissionPersonalSign = async <
   TModularSmartAccount extends ModularSmartAccount | undefined
@@ -59,8 +59,12 @@ export const grantMeePermissionTypedDataSign = async <
  * as it is not needed for the sponsored mode
  * If the superTxn is not sponsored, the payment action policy is added
  *
- * Attention: actions for the cleanup userOps are not added automatically
+ * @alert Attention: actions for the cleanup userOps are not added automatically
  * and should be provided explicitly in the actions array
+ *
+ * @alert Despite the fact smart sessions module supports it, please,
+ * avoid granting several permissions for the same chain within single `grantMeePermission` usage.
+ * Because later you will only be able to enable and use one permission per chain.
  *
  * @param baseMeeClient - The base MeeClient
  * @param params - The parameters for the grantMeePermission function
@@ -98,17 +102,14 @@ export const grantMeePermission = async <
     maxPaymentAmount = parseUnits("5", decimals)
   }
 
-  const sessionDetails = await Promise.all(
-    actions.map((action) => {
-      const chainId = action.chainId
-      const actionTarget = action.actionTarget
-      const deployment = account.deployments.find(
-        (deployment) => deployment?.client?.chain?.id === chainId
-      )
+  const grantPermissionParameters = actions.map( (action) => {
+    const chainId = action.chainId
+    const actionTarget = action.actionTarget // TODO: do we even need it?
+    const deployment = account.deployments.find(
+      (deployment) => deployment?.client?.chain?.id === chainId
+    )
 
-      // if no fee token is provided, the payment action policy is not added
-      // as it is not needed for the sponsored mode
-      const paymentActionPolicy =
+    const paymentActionPolicy =
         feeToken && feeToken.chainId === chainId
           ? {
               actionTarget: feeToken.address,
@@ -119,36 +120,23 @@ export const grantMeePermission = async <
             }
           : undefined
 
-      return mode === "PERSONAL_SIGN"
-        ? grantPermissionPersonalSign(undefined as AnyData, [
-            {
-              account: deployment,
-              redeemer,
-              actions: [
-                ...actions.map((action) => ({ ...action, actionTarget })),
-                ...(paymentActionPolicy ? [paymentActionPolicy] : [])
-              ],
-              sessionValidator: MEE_VALIDATOR_ADDRESS,
-              sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
-              permitERC4337Paymaster: true
-            }
-          ])
-        : grantPermissionTypedDataSign(undefined as AnyData, [
-            {
-              account: deployment,
-              redeemer,
-              actions: [
-                ...actions.map((action) => ({ ...action, actionTarget })),
-                ...(paymentActionPolicy ? [paymentActionPolicy] : [])
-              ],
-              sessionValidator: MEE_VALIDATOR_ADDRESS,
-              sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
-              permitERC4337Paymaster: true
-            }
-          ])
-    })
-  )
-  return sessionDetails
+    return {
+      account: deployment,
+      redeemer,
+      actions: [
+        ...actions.map((action) => ({ ...action, actionTarget })),
+        ...(paymentActionPolicy ? [paymentActionPolicy] : [])
+      ],
+      sessionValidator: MEE_VALIDATOR_ADDRESS,
+      sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
+      permitERC4337Paymaster: true
+    }
+  })
+//)
+
+  return mode === "PERSONAL_SIGN"
+  ? grantPermissionPersonalSign(undefined as AnyData, grantPermissionParameters)
+  : grantPermissionTypedDataSign(undefined as AnyData, grantPermissionParameters)
 }
 
 const getPolicyForPayment = (maxPaymentAmount: bigint, token: Address) => {

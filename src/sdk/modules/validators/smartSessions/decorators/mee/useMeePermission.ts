@@ -30,6 +30,9 @@ export type UseMeePermissionParams = {
 
 export type UseMeePermissionPayload = { hash: Hash }
 
+/**
+ * Use a MEE Permission
+ */
 export const useMeePermission = async (
   meeClient_: BaseMeeClient,
   parameters: UseMeePermissionParams

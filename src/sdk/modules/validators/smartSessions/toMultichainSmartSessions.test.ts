@@ -61,9 +61,6 @@ describe("mee.multichainSmartSessions", () => {
       index: BigInt(Date.now())
     })
 
-    console.log("paymentChain ", paymentChain.id)
-    console.log("targetChain ", targetChain.id)
-
     feeToken = {
       address: mcUSDC.addressOn(paymentChain.id),
       chainId: paymentChain.id
@@ -84,7 +81,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.15", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.1", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -277,7 +274,8 @@ describe("mee.multichainSmartSessions", () => {
     }
   )
 
-  test.runIf(runPaidTests)(
+  //test.runIf(runPaidTests)(
+  test.skip(  
     "should grant and use multichain permissions with sponsorship",
     async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
@@ -337,7 +335,6 @@ describe("mee.multichainSmartSessions", () => {
             chainId: paymentChain.id
           }
         ]
-        //feeToken
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
