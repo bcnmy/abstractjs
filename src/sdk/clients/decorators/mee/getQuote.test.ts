@@ -5,6 +5,7 @@ import {
   type Transport,
   createPublicClient,
   createWalletClient,
+  erc20Abi,
   parseEther,
   publicActions
 } from "viem"
@@ -1128,7 +1129,7 @@ describe("mee.getQuote", () => {
       signer: eoaAccount,
       transports: [http(TESTNET_RPC_URLS[chain.id])]
     })
-
+    console.log("mcNexus", eoaAccount)
     const meeClient = await createMeeClient({
       account: mcNexus
     })
@@ -1169,18 +1170,34 @@ describe("mee.getQuote", () => {
         address: tokenAddress
       }
     })
+    // Estimate gas for approve
+    const approveGas = await publicClient.estimateContractGas({
+      address: feeAccount.address,
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [
+        mcNexus.addressOn(chain.id, true),
+        BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
+      ],
+      account: feeAccount.address // explicitly simulate from their address
+    })
 
-    // transfer eth to the fee account
+    // Estimate current gas fees
+    const gasFees = await publicClient.estimateFeesPerGas()
+
+    // Add 300% buffer
+    const totalGasWithBuffer = (approveGas * gasFees.maxFeePerGas * 300n) / 100n
+
+    // Transfer ETH to the fee account
     const sendEthHash = await signerWalletClient.sendTransaction({
       to: feeAccount.address,
-      value: parseEther("0.000001")
+      value: totalGasWithBuffer
     })
 
     await publicClient.waitForTransactionReceipt({
       hash: sendEthHash,
       confirmations: TEST_BLOCK_CONFIRMATIONS
     })
-
     // transfer usdc to the fee account
     await transferErc20({
       publicClient,
@@ -1197,7 +1214,6 @@ describe("mee.getQuote", () => {
       spender: mcNexus.addressOn(chain.id, true),
       amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
     })
-
     const { hash } = await meeClient.executeQuote({ quote })
     // Wait for the transaction to complete
     const receipt = await meeClient.waitForSupertransactionReceipt({
