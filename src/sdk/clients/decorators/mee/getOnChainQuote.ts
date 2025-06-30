@@ -91,7 +91,7 @@ export const getOnChainQuote = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
-  if ("call" in trigger) {
+  if (trigger.call) {
     const batchedInstructions = await batchInstructions({
       account: account_,
       instructions: resolvedInstructions

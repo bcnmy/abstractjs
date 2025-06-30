@@ -132,7 +132,7 @@ export const signPermitQuote = async (
   } = parameters
 
   // Type guard to ensure we have a TokenTrigger
-  if ("call" in trigger) {
+  if (trigger.call) {
     throw new Error("Custom triggers are not supported for permit quotes")
   }
 

@@ -87,7 +87,7 @@ export const signMMDtkQuote = async (
     fusionQuote: { quote, trigger }
   } = parameters
 
-  if ("call" in trigger) {
+  if (trigger.call) {
     throw new Error("Custom triggers are not supported for fusion transactions")
   }
 
