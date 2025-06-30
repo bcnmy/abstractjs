@@ -10,7 +10,7 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
 /**
  * Response payload for a MM DTK quote request.
@@ -33,12 +33,14 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
    * Trigger information for the MM DTK transaction
    * @see {@link Trigger}
    */
-  trigger: Trigger
+  trigger: TokenTrigger
   /**
    * The MetaMask smart account to use for signing
    * the delegation
    */
   delegatorSmartAccount: MetaMaskSmartAccount
+
+  feePayer?: undefined
 }
 
 /**
