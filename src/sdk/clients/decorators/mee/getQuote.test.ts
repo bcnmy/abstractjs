@@ -1129,7 +1129,6 @@ describe("mee.getQuote", () => {
       signer: eoaAccount,
       transports: [http(TESTNET_RPC_URLS[chain.id])]
     })
-    console.log("mcNexus", eoaAccount)
     const meeClient = await createMeeClient({
       account: mcNexus
     })
