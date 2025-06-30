@@ -65,7 +65,7 @@ export type TokenTrigger = {
   useMaxAvailableFunds?: true
 }
 
-export type Trigger = OneOf<TokenTrigger, CustomTrigger>
+export type Trigger = OneOf<TokenTrigger | CustomTrigger>
 
 /**
  * Parameters for signing a permit quote
