@@ -15,7 +15,7 @@ import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import type { CustomTrigger, Trigger } from "./signPermitQuote"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 
@@ -51,7 +51,7 @@ const generateTriggerCallFromTrigger = async ({
   let triggerCall: AbstractCall | ComposableCall
   // build custom call
   if ("call" in trigger) {
-    triggerCall = trigger.call
+    triggerCall = (trigger as CustomTrigger).call
   } else if (trigger.tokenAddress === zeroAddress) {
     // If the token address is zero address, we need to send eth via the ETH forwarder
     const forwardCalldata = encodeFunctionData({

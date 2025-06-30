@@ -1,6 +1,7 @@
 import {
   type Address,
   type Hex,
+  OneOf,
   concatHex,
   encodeAbiParameters,
   getContract,
@@ -64,7 +65,7 @@ export type TokenTrigger = {
   useMaxAvailableFunds?: true
 }
 
-export type Trigger = TokenTrigger | CustomTrigger
+export type Trigger = OneOf<TokenTrigger, CustomTrigger>
 
 /**
  * Parameters for signing a permit quote

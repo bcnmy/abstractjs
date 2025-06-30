@@ -88,7 +88,7 @@ export const signMMDtkQuote = async (
   } = parameters
 
   if ("call" in trigger) {
-    throw new Error("Custom triggers are not supported for permit quotes")
+    throw new Error("Custom triggers are not supported for fusion transactions")
   }
 
   if (!trigger.amount)
