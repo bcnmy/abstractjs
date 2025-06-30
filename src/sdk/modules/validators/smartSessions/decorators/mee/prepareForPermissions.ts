@@ -55,7 +55,7 @@ export const prepareForPermissions = async (
 
       const isModuleInstalled_ = (await deployment.isDeployed())
         ? await isModuleInstalled(
-            deployment.client as Client<
+            deployment.client as unknown as Client<
               Transport,
               Chain | undefined,
               ModularSmartAccount
@@ -131,7 +131,7 @@ export const prepareForPermissions = async (
 
       return await executeFusionQuote(client, {
         fusionQuote: quote,
-        account: client.account
+        companionAccount: client.account
       })
     }
 

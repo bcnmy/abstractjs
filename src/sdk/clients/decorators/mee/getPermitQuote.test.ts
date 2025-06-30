@@ -360,6 +360,44 @@ describe("mee.getPermitQuote", () => {
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 
+  // This test uses all available usdc on the eoa on mainnet, so should be skipped
+  test.skip("should demo behaviour of max available amount", async () => {
+    const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    const chainId = paymentChain.id
+    const mcNexusAddress = mcNexus.addressOn(paymentChain.id, true)
+    const trigger: Trigger = {
+      chainId,
+      tokenAddress,
+      useMaxAvailableFunds: true
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        chainId,
+        tokenAddress,
+        recipient: vitalik,
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexusAddress,
+          tokenAddress,
+          constraints: [greaterThanOrEqualTo(1n)]
+        })
+      }
+    })
+
+    const fusionQuote = await meeClient.getPermitQuote({
+      trigger,
+      instructions: [transferInstruction], // inx 1 => transferFrom (Runtime) + Dev userOps
+      feeToken
+    })
+
+    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+
+    const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
   test("should add gas fees to amount when not using max available amount", async () => {
     const amount = parseUnits("1", 6) // 1 unit of token
     const trigger: Trigger = {

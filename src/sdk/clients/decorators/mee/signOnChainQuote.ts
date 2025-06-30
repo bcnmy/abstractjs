@@ -27,8 +27,8 @@ export type SignOnChainQuotePayload = GetQuotePayload & {
 export type SignOnChainQuoteParams = {
   /** The quote to sign */
   fusionQuote: GetOnChainQuotePayload
-  /** Optional smart account to execute the transaction. If not provided, uses the client's default account */
-  account?: MultichainSmartAccount
+  /** Optional companion smart account to execute the superTxn. If not provided, uses the client's default account */
+  companionAccount?: MultichainSmartAccount
   /** The number of confirmations to wait for. Defaults to 2 */
   confirmations?: number
 }
@@ -129,7 +129,7 @@ export const signOnChainQuote = async (
 ): Promise<SignOnChainQuotePayload> => {
   const {
     confirmations = 2,
-    account: account_ = client.account,
+    companionAccount: account_ = client.account,
     fusionQuote: { quote, trigger }
   } = params
 

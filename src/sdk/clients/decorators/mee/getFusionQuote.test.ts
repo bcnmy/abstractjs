@@ -90,4 +90,6 @@ describe("mee.getFusionQuote", () => {
     expect(fusionQuote.quote.paymentInfo.token).toEqual(feeToken.address)
     expect(+fusionQuote.quote.paymentInfo.chainId).toEqual(paymentChain.id)
   })
+
+  // TODO: Add tests for mode selection
 })

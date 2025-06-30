@@ -1,6 +1,7 @@
 import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { getPaymentToken } from "./getPaymentToken"
+import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"
 import signOnChainQuote, {
   type SignOnChainQuotePayload,
   type SignOnChainQuoteParams
@@ -17,6 +18,7 @@ import {
 export type SignFusionQuoteParameters =
   | SignPermitQuoteParams
   | SignOnChainQuoteParams
+  | SignMmDtkQuoteParams
 
 /**
  * Union type for the payload returned by signFusionQuote
@@ -61,15 +63,21 @@ export const signFusionQuote = async (
   client: BaseMeeClient,
   parameters: SignFusionQuoteParameters
 ): Promise<SignFusionQuotePayload> => {
+  if ("delegatorSmartAccount" in parameters) {
+    return signMMDtkQuote(client, parameters as SignMmDtkQuoteParams)
+  }
+  // if it is not mm-dtk, then it is permit or on-chain
+
+  // if custom call is provided, we use on-chain tx fusion mode
   if ("call" in parameters.fusionQuote.trigger) {
     return signOnChainQuote(client, parameters)
   }
 
+  // if no call, decide based on whether the payment token supports permit
   const paymentTokenInfo = await getPaymentToken(
     client,
     parameters.fusionQuote.trigger
   )
-
   let permitEnabled = false
 
   if (paymentTokenInfo.paymentToken) {

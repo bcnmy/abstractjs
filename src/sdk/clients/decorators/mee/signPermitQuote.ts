@@ -76,10 +76,10 @@ export type SignPermitQuoteParams = {
    */
   fusionQuote: GetPermitQuotePayload
   /**
-   * Optional smart account to execute the transaction
+   * Optional companion smart account to execute the superTxn
    * If not provided, uses the client's default account
    */
-  account?: MultichainSmartAccount
+  companionAccount?: MultichainSmartAccount
 }
 
 /**
@@ -126,7 +126,7 @@ export const signPermitQuote = async (
   parameters: SignPermitQuoteParams
 ): Promise<SignPermitQuotePayload> => {
   const {
-    account: account_ = client.account,
+    companionAccount: account_ = client.account,
     fusionQuote: { quote, trigger }
   } = parameters
 

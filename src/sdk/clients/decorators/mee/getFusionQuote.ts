@@ -1,5 +1,7 @@
+import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
 import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
+import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
@@ -31,6 +33,12 @@ export type GetFusionQuoteParams = GetQuoteParams & {
   cleanUps?: CleanUp[]
 
   feePayer?: undefined
+  /**
+   * Optional delegator smart account
+   * If not provided, that means the Delegation Toolkit fusion
+   * mode won't be used
+   */
+  delegatorSmartAccount?: MetaMaskSmartAccount
 }
 
 /**
@@ -45,6 +53,7 @@ export type GetFusionQuoteParams = GetQuoteParams & {
  * @param parameters.chainId - Target blockchain chain ID
  * @param parameters.walletProvider - Wallet provider to use
  * @param [parameters.gasToken] - Optional token address to use for gas payment
+ * @param [parameters.fusionMode] - Optional explicitly set fusion mode
  *
  * @returns Promise resolving to either a permit quote or on-chain quote payload
  *
@@ -76,12 +85,17 @@ export const getFusionQuote = async (
   client: BaseMeeClient,
   parameters: GetFusionQuoteParams
 ): Promise<GetFusionQuotePayload> => {
+  // if delegator smart account is provided, we use mm-dtk fusion mode
+  if (parameters.delegatorSmartAccount) {
+    return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
+  }
+
+  // if custom call is provided, we use on-chain tx fusion mode
   if ("call" in parameters.trigger) {
     return getOnChainQuote(client, parameters)
   }
 
   const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
-
   let permitEnabled = false
 
   if (paymentTokenInfo.paymentToken) {

@@ -2,14 +2,14 @@
   {
     "name": "core (esm)",
     "path": "./dist/_esm/index.js",
-    "limit": "55 kB",
+    "limit": "65 kB",
     "import": "*",
     "ignore": ["node:fs", "fs", "path", "os", "crypto"]
   },
   {
     "name": "core (cjs)",
     "path": "./dist/_cjs/index.js",
-    "limit": "80 kB",
+    "limit": "200 kB",
     "ignore": ["node:fs", "fs", "path", "os", "crypto"]
   },
   {
