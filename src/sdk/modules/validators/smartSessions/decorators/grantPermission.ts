@@ -24,18 +24,13 @@ import {
   type Client,
   type Hex,
   type LocalAccount,
-  type OneOf,
   type Prettify,
   type PublicClient,
   type RequiredBy,
   type Transport,
-  type Account as ViemAccount,
-  type WalletClient,
   zeroAddress
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
-import type { EthersWallet } from "../../../../account/utils/Utils"
-import type { EthereumProvider } from "../../../../account/utils/toSigner"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt } from "../Helpers"
 
@@ -227,11 +222,13 @@ async function grantPermission<
 
 /**
  * Handle enable session signatures
+ * @note signer is a LocalAccount
+ * use account/utils/toSigner to convert different signer types to a LocalAccount
  */
 
 async function getPersonalEnableSessionSignature(
   chainSessions: ChainSession[],
-  signer: any
+  signer: LocalAccount
 ): Promise<Hex> {
   const permissionEnableHash = hashChainSessions(chainSessions)
   return await signer.signMessage({ message: { raw: permissionEnableHash } })
@@ -239,7 +236,7 @@ async function getPersonalEnableSessionSignature(
 
 async function getTypedDataEnableSessionSignature(
   chainSessions: ChainSession[],
-  signer: any
+  signer: LocalAccount
 ): Promise<Hex> {
   return await signer.signTypedData({
     domain: {
@@ -304,12 +301,7 @@ export type PrepareForGrantingPermissionResponse = {
   sessions: Session[]
   accountsAndChainIds: AccountAndChainId[]
   clients: PublicClient[]
-  signer: OneOf<
-    | EthereumProvider
-    | WalletClient<Transport, Chain | undefined, ViemAccount>
-    | LocalAccount
-    | EthersWallet
-  >
+  signer: LocalAccount
 }
 
 export type AccountAndChainId = {

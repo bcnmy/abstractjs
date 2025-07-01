@@ -1,4 +1,4 @@
-import type { Chain, Client, Transport } from "viem"
+// import type { Chain, Client, Transport } from "viem"
 import { build } from "../../../../../account/decorators/build"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
@@ -17,7 +17,8 @@ import type {
   GetQuoteParams,
   InstructionLike
 } from "../../../../../clients/decorators/mee/getQuote"
-import type { ModularSmartAccount } from "../../../../utils/Types"
+//import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
+import type { AnyData } from "../../../../utils/Types"
 import type { Validator } from "../../../toValidator"
 
 // omit instructions, feeToken and trigger to make them optional
@@ -55,11 +56,12 @@ export const prepareForPermissions = async (
 
       const isModuleInstalled_ = (await deployment.isDeployed())
         ? await isModuleInstalled(
-            deployment.client as unknown as Client<
+            undefined as AnyData,
+            /*deployment.client as unknown as Client<
               Transport,
               Chain | undefined,
               ModularSmartAccount
-            >,
+            >,*/
             {
               account: deployment,
               module: {

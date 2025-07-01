@@ -11,7 +11,9 @@ import {
   type Chain,
   Hex,
   type LocalAccount,
-  parseEther
+  getAbiItem,
+  parseEther,
+  toFunctionSelector
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { getTestAccount, killNetwork } from "../../../../test/testUtils"
@@ -20,6 +22,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
+import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { ownableActions } from "./decorators"
 import { toOwnableModule } from "./toOwnableModule"
 
@@ -81,7 +84,9 @@ describe("modules.toOwnableModule", () => {
       calls: [
         {
           to: COUNTER_ADDRESS,
-          data: "0x273ea3e3"
+          data: toFunctionSelector(
+            getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+          )
         }
       ]
     })

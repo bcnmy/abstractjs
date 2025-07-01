@@ -1,6 +1,13 @@
 import { getSudoPolicy } from "@rhinestone/module-sdk"
 import type { Address, Chain, Client, LocalAccount, Transport } from "viem"
-import { http, createPublicClient, erc20Abi, parseUnits } from "viem"
+import {
+  http,
+  createPublicClient,
+  erc20Abi,
+  getAbiItem,
+  parseUnits,
+  toFunctionSelector
+} from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
@@ -15,6 +22,7 @@ import {
 } from "../../../clients/createMeeClient"
 import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleInstalled"
 import type { FeeTokenInfo } from "../../../clients/decorators/mee"
+import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { mcUSDC } from "../../../constants/tokens"
 import type { ModularSmartAccount } from "../../utils/Types"
 import type { Validator } from "../toValidator"
@@ -206,13 +214,17 @@ describe("mee.multichainSmartSessions", () => {
           // this architecture allows for more flexibility and customizations
           actions: [
             {
-              actionTargetSelector: "0x273ea3e3",
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
               actionPolicies: [getSudoPolicy()],
               chainId: paymentChain.id,
               actionTarget: COUNTER_ON_OPTIMISM
             },
             {
-              actionTargetSelector: "0x273ea3e3",
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
               actionPolicies: [getSudoPolicy()],
               chainId: targetChain.id,
               actionTarget: COUNTER_ON_BASE
@@ -245,7 +257,9 @@ describe("mee.multichainSmartSessions", () => {
             calls: [
               {
                 to: COUNTER_ON_OPTIMISM,
-                data: "0x273ea3e3"
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
               }
             ],
             chainId: paymentChain.id
@@ -254,7 +268,9 @@ describe("mee.multichainSmartSessions", () => {
             calls: [
               {
                 to: COUNTER_ON_BASE,
-                data: "0x273ea3e3"
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
               }
             ],
             chainId: targetChain.id
@@ -291,13 +307,17 @@ describe("mee.multichainSmartSessions", () => {
           redeemer: redeemerAddress,
           actions: [
             {
-              actionTargetSelector: "0x273ea3e3",
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
               actionPolicies: [getSudoPolicy()],
               chainId: paymentChain.id,
               actionTarget: COUNTER_ON_OPTIMISM
             },
             {
-              actionTargetSelector: "0x273ea3e3",
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
               actionPolicies: [getSudoPolicy()],
               chainId: targetChain.id,
               actionTarget: COUNTER_ON_BASE
@@ -328,7 +348,9 @@ describe("mee.multichainSmartSessions", () => {
             calls: [
               {
                 to: COUNTER_ON_OPTIMISM,
-                data: "0x273ea3e3"
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
               }
             ],
             chainId: paymentChain.id

@@ -59,8 +59,8 @@ export const grantMeePermissionTypedDataSign = async <
  * as it is not needed for the sponsored mode
  * If the superTxn is not sponsored, the payment action policy is added
  *
- * @alert Attention: actions for the cleanup userOps are not added automatically
- * and should be provided explicitly in the actions array
+ * @alert Attention: Smart Session actions for the cleanup userOps are not added automatically
+ * to the session, and should be provided explicitly in the actions array
  *
  * @alert Despite the fact smart sessions module supports it, please,
  * avoid granting several permissions for the same chain within single `grantMeePermission` usage.

@@ -13,8 +13,10 @@ import {
   type LocalAccount,
   type PublicClient,
   createPublicClient,
+  getAbiItem,
   parseAbi,
-  parseEther
+  parseEther,
+  toFunctionSelector
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { getTestAccount, killNetwork } from "../../../../test/testUtils"
@@ -24,6 +26,7 @@ import {
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
 import { getSudoPolicy } from "../../../constants"
+import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { smartSessionActions } from "./decorators"
 import type { GrantPermissionResponse } from "./decorators/grantPermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
@@ -153,7 +156,9 @@ describe("modules.toSmartSessionsModule", () => {
           actions: [
             {
               actionTarget: COUNTER_ADDRESS,
-              actionTargetSelector: "0x273ea3e3",
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
               actionPolicies: [getSudoPolicy()]
             }
           ],
@@ -164,7 +169,9 @@ describe("modules.toSmartSessionsModule", () => {
           actions: [
             {
               actionTarget: COUNTER_ADDRESS,
-              actionTargetSelector: "0x273ea3e3",
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
               actionPolicies: [getSudoPolicy()]
             }
           ],
@@ -199,7 +206,14 @@ describe("modules.toSmartSessionsModule", () => {
 
     const userOpHashTypedDataSignOne = await smartSessionsClient.usePermission({
       sessionDetailsArray: sessionDetailsTypedDataSign,
-      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
+      calls: [
+        {
+          to: COUNTER_ADDRESS,
+          data: toFunctionSelector(
+            getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+          )
+        }
+      ],
       mode: "ENABLE_AND_USE"
     })
     const receiptTypedDataSignOne =
@@ -212,7 +226,7 @@ describe("modules.toSmartSessionsModule", () => {
 
     const counterAfter = await publicClient.readContract({
       address: COUNTER_ADDRESS,
-      abi: parseAbi(["function getNumber() view returns (uint256)"]),
+      abi: CounterAbi,
       functionName: "getNumber"
     })
     expect(counterAfter).toBe(counterBefore + 1n)
@@ -221,7 +235,7 @@ describe("modules.toSmartSessionsModule", () => {
   test("use a permission with typed data sign for a second chain", async () => {
     const counterBefore = await secondChainPublicClient.readContract({
       address: COUNTER_ADDRESS,
-      abi: parseAbi(["function getNumber() view returns (uint256)"]),
+      abi: CounterAbi,
       functionName: "getNumber"
     })
 
@@ -243,7 +257,14 @@ describe("modules.toSmartSessionsModule", () => {
     const userOpHashTypedDataSignSecondChain =
       await smartSessionsClient.usePermission({
         sessionDetailsArray: sessionDetailsTypedDataSign,
-        calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
+        calls: [
+          {
+            to: COUNTER_ADDRESS,
+            data: toFunctionSelector(
+              getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+            )
+          }
+        ],
         mode: "ENABLE_AND_USE"
       })
 
@@ -255,7 +276,7 @@ describe("modules.toSmartSessionsModule", () => {
 
     const counterAfter = await secondChainPublicClient.readContract({
       address: COUNTER_ADDRESS,
-      abi: parseAbi(["function getNumber() view returns (uint256)"]),
+      abi: CounterAbi,
       functionName: "getNumber"
     })
     expect(counterAfter).toBe(counterBefore + 1n)
@@ -279,7 +300,14 @@ describe("modules.toSmartSessionsModule", () => {
 
     const userOpHashTwoTypedDataSign = await smartSessionsClient.usePermission({
       sessionDetailsArray: sessionDetailsTypedDataSign,
-      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
+      calls: [
+        {
+          to: COUNTER_ADDRESS,
+          data: toFunctionSelector(
+            getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+          )
+        }
+      ],
       mode: "USE"
     })
 
@@ -298,7 +326,9 @@ describe("modules.toSmartSessionsModule", () => {
         actions: [
           {
             actionTarget: COUNTER_ADDRESS,
-            actionTargetSelector: "0x273ea3e3",
+            actionTargetSelector: toFunctionSelector(
+              getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+            ),
             actionPolicies: [getSudoPolicy()]
           }
         ]
@@ -309,7 +339,9 @@ describe("modules.toSmartSessionsModule", () => {
         actions: [
           {
             actionTarget: COUNTER_ADDRESS,
-            actionTargetSelector: "0x871cc9d4",
+            actionTargetSelector: toFunctionSelector(
+              getAbiItem({ abi: CounterAbi, name: "decrementNumber" })
+            ),
             actionPolicies: [getSudoPolicy()]
           }
         ]
@@ -335,7 +367,14 @@ describe("modules.toSmartSessionsModule", () => {
 
     const userOpHashOne = await smartSessionsClient.usePermission({
       sessionDetailsArray: sessionDetails,
-      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
+      calls: [
+        {
+          to: COUNTER_ADDRESS,
+          data: toFunctionSelector(
+            getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+          )
+        }
+      ],
       mode: "ENABLE_AND_USE"
     })
     const receiptOne = await nexusClient.waitForUserOperationReceipt({
@@ -366,7 +405,14 @@ describe("modules.toSmartSessionsModule", () => {
     // which allows 0x871cc9d4
     const userOpHashWithIndex = await smartSessionsClient.usePermission({
       sessionDetailsArray: sessionDetails,
-      calls: [{ to: COUNTER_ADDRESS, data: "0x871cc9d4" }],
+      calls: [
+        {
+          to: COUNTER_ADDRESS,
+          data: toFunctionSelector(
+            getAbiItem({ abi: CounterAbi, name: "decrementNumber" })
+          )
+        }
+      ],
       mode: "ENABLE_AND_USE",
       indexWithinChain: 1 // starts from 0
     })
@@ -394,7 +440,14 @@ describe("modules.toSmartSessionsModule", () => {
 
     const userOpHashTwo = await smartSessionsClient.usePermission({
       sessionDetailsArray: sessionDetails,
-      calls: [{ to: COUNTER_ADDRESS, data: "0x273ea3e3" }],
+      calls: [
+        {
+          to: COUNTER_ADDRESS,
+          data: toFunctionSelector(
+            getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+          )
+        }
+      ],
       mode: "USE"
     })
 
