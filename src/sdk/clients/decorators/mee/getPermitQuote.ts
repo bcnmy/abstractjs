@@ -1,13 +1,7 @@
-import { erc20Abi } from "viem"
-import type { BuildInstructionTypes } from "../../../account"
-import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
-import {
-  greaterThanOrEqualTo,
-  runtimeERC20AllowanceOf
-} from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
+import { prepareInstructions } from "./getFusionQuote"
+import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
@@ -88,71 +82,19 @@ export const getPermitQuote = async (
     throw new Error("Custom call trigger is not supported for permit quotes")
   }
 
+  const resolvedInstructions = await resolveInstructions(instructions)
+
   const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
   const recipient = account_.addressOn(trigger.chainId, true)
 
-  let triggerAmount = 0n
-
-  if (trigger.useMaxAvailableFunds) {
-    const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
-
-    // EOA balance maximum available balance fetch
-    const maxAvailableBalance = await publicClient.readContract({
-      address: trigger.tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [sender]
-    })
-
-    triggerAmount = maxAvailableBalance
-  } else {
-    if (!trigger.amount) throw new Error("Trigger amount field is required")
-
-    triggerAmount = trigger.amount
-  }
-
-  const resolvedInstructions = await resolveInstructions(instructions)
-
-  const isComposable = resolvedInstructions.some(
-    ({ isComposable }) => isComposable
-  )
-
-  // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
-  // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
-  // the remaining funds after the fee deduction.
-  const transferFromAmount = trigger.useMaxAvailableFunds
-    ? runtimeERC20AllowanceOf({
-        owner: sender,
-        spender: recipient,
-        tokenAddress: trigger.tokenAddress,
-        constraints: [greaterThanOrEqualTo(1n)]
-      })
-    : triggerAmount
-
-  const triggerGasLimit = trigger.gasLimit
-    ? trigger.gasLimit
-    : DEFAULT_GAS_LIMIT
-
-  const params: BuildInstructionTypes = {
-    type: "transferFrom",
-    data: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      amount: transferFromAmount,
-      recipient,
+  const { triggerGasLimit, triggerAmount, batchedInstructions } =
+    await prepareInstructions(client, {
+      resolvedInstructions,
+      trigger,
       sender,
-      gasLimit: triggerGasLimit
-    }
-  }
-
-  const triggerTransfer = await (isComposable
-    ? account_.buildComposable(params)
-    : account_.build(params))
-
-  const batchedInstructions = await batchInstructions({
-    account: account_,
-    instructions: [...triggerTransfer, ...resolvedInstructions]
-  })
+      recipient,
+      account: account_
+    })
 
   const quote = await getQuote(client, {
     path: "quote-permit", // Use different endpoint for permit enabled tokens

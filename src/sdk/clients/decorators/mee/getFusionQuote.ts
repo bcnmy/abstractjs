@@ -1,11 +1,24 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
+import { erc20Abi } from "viem"
+import type { BuildInstructionTypes } from "../../../account/decorators/build"
+import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { isPermitSupported } from "../../../modules/utils/Helpers"
+import {
+  greaterThanOrEqualTo,
+  runtimeERC20AllowanceOf
+} from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
-import type { CleanUp, GetQuoteParams } from "./getQuote"
+import {
+  type CleanUp,
+  DEFAULT_GAS_LIMIT,
+  type GetQuoteParams,
+  type Instruction
+} from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
@@ -117,6 +130,85 @@ export const getFusionQuote = async (
   return permitEnabled
     ? getPermitQuote(client, parameters)
     : getOnChainQuote(client, parameters)
+}
+
+export type PrepareInstructionsParams = {
+  resolvedInstructions: Instruction[]
+  trigger: Trigger
+  sender: `0x${string}`
+  recipient: `0x${string}`
+  account: MultichainSmartAccount
+}
+
+export const prepareInstructions = async (
+  client: BaseMeeClient,
+  parameters: PrepareInstructionsParams
+) => {
+  const { resolvedInstructions, trigger, sender, recipient, account } =
+    parameters
+
+  let triggerAmount = 0n
+
+  if (trigger.useMaxAvailableFunds) {
+    const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
+
+    // EOA balance maximum available balance fetch
+    const maxAvailableBalance = await publicClient.readContract({
+      address: trigger.tokenAddress,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [sender]
+    })
+
+    triggerAmount = maxAvailableBalance
+  } else {
+    if (!trigger.amount) throw new Error("Trigger amount field is required")
+
+    triggerAmount = trigger.amount
+  }
+
+  const isComposable = resolvedInstructions.some(
+    ({ isComposable }) => isComposable
+  )
+
+  // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
+  // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
+  // the remaining funds after the fee deduction.
+  const transferFromAmount = trigger.useMaxAvailableFunds
+    ? runtimeERC20AllowanceOf({
+        owner: sender,
+        spender: recipient,
+        tokenAddress: trigger.tokenAddress,
+        constraints: [greaterThanOrEqualTo(1n)]
+      })
+    : triggerAmount
+
+  const triggerGasLimit = trigger.gasLimit
+    ? trigger.gasLimit
+    : DEFAULT_GAS_LIMIT
+
+  const params: BuildInstructionTypes = {
+    type: "transferFrom",
+    data: {
+      tokenAddress: trigger.tokenAddress!,
+      chainId: trigger.chainId,
+      amount: transferFromAmount,
+      recipient,
+      sender,
+      gasLimit: triggerGasLimit
+    }
+  }
+
+  const triggerTransfer = await (isComposable
+    ? account.buildComposable(params)
+    : account.build(params))
+
+  const batchedInstructions = await batchInstructions({
+    account: account,
+    instructions: [...triggerTransfer, ...resolvedInstructions]
+  })
+
+  return { triggerGasLimit, triggerAmount, batchedInstructions }
 }
 
 export default getFusionQuote
