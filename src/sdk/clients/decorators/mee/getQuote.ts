@@ -208,8 +208,17 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   path?: string
   /**
-   * EOA address to be used for the transaction.
-   * Only required when using permit-enabled tokens
+   * An address to be used as funds origin in the payment userOp
+   *
+   * Note: In fact this param should be named `paymentOrigin`,
+   * as in some cases (for example MM DTK fusion mode) it
+   * is not an EOA, but a smart account.
+   *
+   * We keep it as `eoa` for backward compatibility for now.
+   * TODO: rename to `paymentOrigin` when it is possible.
+   * It will require according changes on the node side.
+   *
+   * @example "0x1234567890123456789012345678901234567890"
    */
   eoa?: Address
   /**

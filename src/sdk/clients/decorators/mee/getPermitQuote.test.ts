@@ -20,7 +20,12 @@ import {
   signPermitQuote,
   waitForSupertransactionReceipt
 } from "."
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -45,11 +50,15 @@ describe("mee.getPermitQuote", () => {
 
   let paymentChain: Chain
   let targetChain: Chain
-  let transports: Transport[]
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[[paymentChain, targetChain], transports] = getTestChainConfig(network)
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
 
     eoaAccount = network.account!
     feeToken = {
@@ -59,11 +68,13 @@ describe("mee.getPermitQuote", () => {
 
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
-      transports,
+      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus
+    })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
@@ -236,7 +247,7 @@ describe("mee.getPermitQuote", () => {
   test("should reserve gas fees when using max available amount", async () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
-      transports: [http()],
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       signer: eoaAccount
     })
 
@@ -244,7 +255,7 @@ describe("mee.getPermitQuote", () => {
 
     const client = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
     })
 
     const trigger: Trigger = {
@@ -293,7 +304,7 @@ describe("mee.getPermitQuote", () => {
   test.skip("should demo behaviour of max available amount", async () => {
     const client = createPublicClient({
       chain: paymentChain,
-      transport: transports[0]
+      transport: paymentChainTransport
     })
 
     const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -342,16 +353,52 @@ describe("mee.getPermitQuote", () => {
     const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
+    const receipt = await waitForSupertransactionReceipt(meeClient, {
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  // This test uses all available usdc on the eoa on mainnet, so should be skipped
+  test.skip("should demo behaviour of max available amount", async () => {
+    const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    const chainId = paymentChain.id
+    const mcNexusAddress = mcNexus.addressOn(paymentChain.id, true)
+    const trigger: Trigger = {
+      chainId,
+      tokenAddress,
+      useMaxAvailableFunds: true
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        chainId,
+        tokenAddress,
+        recipient: vitalik,
+        amount: runtimeERC20BalanceOf({
+          targetAddress: mcNexusAddress,
+          tokenAddress,
+          constraints: [greaterThanOrEqualTo(1n)]
+        })
+      }
+    })
+
+    const fusionQuote = await meeClient.getPermitQuote({
+      trigger,
+      instructions: [transferInstruction], // inx 1 => transferFrom (Runtime) + Dev userOps
+      feeToken
+    })
+
+    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+
     const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 
   test("should add gas fees to amount when not using max available amount", async () => {
-    const client = createPublicClient({
-      chain: paymentChain,
-      transport: transports[0]
-    })
-
     const amount = parseUnits("1", 6) // 1 unit of token
     const trigger: Trigger = {
       chainId: paymentChain.id,

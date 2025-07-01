@@ -1,4 +1,7 @@
-import { getMeeK1ModuleStubSignature } from "../default/toDefaultModule"
+import {
+  type MeeSignatureType,
+  getMeeK1ModuleStubSignature
+} from "../default/toDefaultModule"
 import {
   type Validator,
   type ValidatorParameters,
@@ -7,11 +10,11 @@ import {
 
 export const toMeeK1Module = (
   parameters: Omit<ValidatorParameters, "initData"> & {
-    mode?: "simple" | "no_mee" | "permit" | "on-chain"
+    signatureType?: MeeSignatureType
     superTxEntriesCount?: number
   }
 ): Validator => {
-  const { mode = "simple", superTxEntriesCount = 3 } = parameters
+  const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
   return toValidator({
     initData: parameters.signer.address,
     data: parameters.signer.address,
@@ -21,6 +24,6 @@ export const toMeeK1Module = (
     module: parameters.module,
     type: "validator",
     getStubSignature: async () =>
-      getMeeK1ModuleStubSignature(mode, superTxEntriesCount)
+      getMeeK1ModuleStubSignature(signatureType, superTxEntriesCount)
   })
 }

@@ -1,5 +1,6 @@
+import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
 import { erc20Abi } from "viem"
-import type { BuildInstructionTypes } from "../../../account/decorators/build"
+import type { BuildInstructionTypes } from "../../../account"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
@@ -7,110 +8,89 @@ import {
   runtimeERC20AllowanceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
-import type { GetQuoteParams } from "./getQuote"
 import { DEFAULT_GAS_LIMIT, type GetQuotePayload, getQuote } from "./getQuote"
+import type { GetQuoteParams } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
- * Payload returned when requesting an on-chain quote.
- * Includes both the standard quote payload and trigger information.
+ * Response payload for a MM DTK quote request.
+ * Combines the standard quote payload with MM DTK-specific trigger information.
  */
-export type GetOnChainQuotePayload = { quote: GetQuotePayload } & {
+export type GetMmDtkQuotePayload = { quote: GetQuotePayload } & {
   /**
-   * Trigger information containing payment token details and amount
+   * Trigger information containing payment token details and total amount
+   * (including both the original amount and gas fees)
    * @see {@link Trigger}
    */
   trigger: Trigger
 }
 
 /**
- * Parameters for requesting an on-chain quote
+ * Parameters for requesting a permit-enabled quote
  */
-export type GetOnChainQuoteParams = GetQuoteParams & {
+export type GetMmDtkQuoteParams = GetQuoteParams & {
   /**
-   * Trigger information for the transaction
+   * Trigger information for the MM DTK transaction
    * @see {@link Trigger}
    */
   trigger: Trigger
+  /**
+   * The MetaMask smart account to use for signing
+   * the delegation
+   */
+  delegatorSmartAccount: MetaMaskSmartAccount
 }
 
 /**
- * Gets a quote for an on-chain transaction from the MEE service.
- * This method is used when the payment token doesn't support ERC20Permit
- * or when a standard on-chain transaction is preferred.
+ * Gets a quote for a permit-enabled transaction from the MEE service.
+ * This method is used when the payment token supports ERC20Permit, allowing for
+ * gasless approvals and more efficient transactions.
  *
  * @param client - The base MEE client instance
- * @param parameters - Parameters for the quote request
+ * @param parameters - Parameters for the permit quote request
  * @param parameters.trigger - Payment token and amount information
  * @param parameters.instructions - Array of transaction instructions to execute
  * @param [parameters.account] - Optional account to use (defaults to client.account)
  *
- * @returns Promise resolving to quote payload with trigger information
+ * @returns Promise resolving to quote payload with permit-specific trigger information
  *
  * @example
  * ```typescript
- * const quote = await getOnChainQuote(meeClient, {
- *   instructions: [
- *     mcNexus.build({
- *       type: "default",
- *       data: {
- *         calls: [
- *           {
- *             to: "0x0000000000000000000000000000000000000000",
- *             gasLimit: 50000n,
- *             value: 0n
- *           }
- *         ],
- *         chainId: base.id
- *       }
- *     })
- *   ],
+ * const quote = await getPermitQuote(meeClient, {
+ *   instructions: [{
+ *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+ *     data: "0x...",
+ *     value: "0"
+ *   }],
  *   trigger: {
  *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
- *     amount: "1000000" // 1 USDC (6 decimals)
+ *     amount: "1000000", // 1 USDC (6 decimals)
+ *     owner: "0x...", // Token owner address
+ *     spender: "0x..." // Address approved to spend tokens
  *   }
  * });
  * ```
  *
- * @throws Will throw an error if the token does not support ERC20Permit
+ * @throws Will throw an error if:
+ * - The trigger parameters are invalid
+ * - The quote request fails
  */
-export const getOnChainQuote = async (
+export const getMmDtkQuote = async (
   client: BaseMeeClient,
-  parameters: GetOnChainQuoteParams
-): Promise<GetOnChainQuotePayload> => {
+  parameters: GetMmDtkQuoteParams
+): Promise<GetMmDtkQuotePayload> => {
   const {
     account: account_ = client.account,
     trigger,
     cleanUps,
     instructions,
     gasLimit,
+    delegatorSmartAccount,
     ...rest
   } = parameters
 
-  const resolvedInstructions = await resolveInstructions(instructions)
-
-  if (trigger.call) {
-    const batchedInstructions = await batchInstructions({
-      account: account_,
-      instructions: resolvedInstructions
-    })
-    const quote = await getQuote(client, {
-      path: "quote",
-      eoa: account_.signer.address,
-      instructions: batchedInstructions,
-      gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
-      ...(cleanUps ? { cleanUps } : {}),
-      ...rest
-    })
-
-    return {
-      quote,
-      trigger
-    }
-  }
-
-  const recipient = account_.deploymentOn(trigger.chainId, true).address
-  const sender = account_.signer.address
+  const sender = delegatorSmartAccount.address
+  const recipient = account_.addressOn(trigger.chainId, true)
 
   let triggerAmount = 0n
 
@@ -131,6 +111,8 @@ export const getOnChainQuote = async (
 
     triggerAmount = trigger.amount
   }
+
+  const resolvedInstructions = await resolveInstructions(instructions)
 
   const isComposable = resolvedInstructions.some(
     ({ isComposable }) => isComposable
@@ -173,13 +155,12 @@ export const getOnChainQuote = async (
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 
-  // It uses the same endpoint (path) for onchain and permit quotes, as currently
-  // the fusion on-chain txn for erc-20 tokens will always be 'approve' and never 'transfer'
-  // so the MEE Node endpoint can be the same for both
-  // there is also just a 'quote' endpoint, which applies to non-fusion superTxns
+  // using the quote-permit endpoint as the redeemed permission
+  // will aprove whatever is required to be approved, so the
+  // rest is similar to the regular permit fusion mode
   const quote = await getQuote(client, {
     path: "quote-permit",
-    eoa: account_.signer.address,
+    eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
     ...(cleanUps ? { cleanUps } : {}),
@@ -202,11 +183,12 @@ export const getOnChainQuote = async (
   return {
     quote,
     trigger: {
-      ...trigger,
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
       amount,
       gasLimit: triggerGasLimit
     }
   }
 }
 
-export default getOnChainQuote
+export default getMmDtkQuote
