@@ -54,17 +54,14 @@ export const prepareForPermissions = async (
       }
 
       const isModuleInstalled_ = (await deployment.isDeployed())
-        ? await isModuleInstalled(
-            undefined as AnyData,
-            {
-              account: deployment,
-              module: {
-                address: parameters.smartSessionsValidator.address,
-                initData: "0x",
-                type: parameters.smartSessionsValidator.type
-              }
+        ? await isModuleInstalled(undefined as AnyData, {
+            account: deployment,
+            module: {
+              address: parameters.smartSessionsValidator.address,
+              initData: "0x",
+              type: parameters.smartSessionsValidator.type
             }
-          )
+          })
         : false
 
       // it will also include the deployment instruction if needed

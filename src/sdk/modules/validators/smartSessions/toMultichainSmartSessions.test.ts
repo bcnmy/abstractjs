@@ -124,17 +124,14 @@ describe("mee.multichainSmartSessions", () => {
 
       for (const deployment of mcNexus.deployments) {
         expect(await deployment.isDeployed()).toBe(true)
-        const isInstalled = await isModuleInstalled(
-          undefined as AnyData,
-          {
-            account: deployment,
-            module: {
-              address: smartSessionsValidator.address,
-              initData: "0x",
-              type: smartSessionsValidator.type
-            }
+        const isInstalled = await isModuleInstalled(undefined as AnyData, {
+          account: deployment,
+          module: {
+            address: smartSessionsValidator.address,
+            initData: "0x",
+            type: smartSessionsValidator.type
           }
-        )
+        })
         expect(isInstalled).toBe(true)
       }
       // check approved amount on the target chain
