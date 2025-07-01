@@ -1,4 +1,3 @@
-// import type { Chain, Client, Transport } from "viem"
 import { build } from "../../../../../account/decorators/build"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
@@ -57,11 +56,6 @@ export const prepareForPermissions = async (
       const isModuleInstalled_ = (await deployment.isDeployed())
         ? await isModuleInstalled(
             undefined as AnyData,
-            /*deployment.client as unknown as Client<
-              Transport,
-              Chain | undefined,
-              ModularSmartAccount
-            >,*/
             {
               account: deployment,
               module: {

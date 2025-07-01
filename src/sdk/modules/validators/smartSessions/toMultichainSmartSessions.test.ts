@@ -1,5 +1,5 @@
 import { getSudoPolicy } from "@rhinestone/module-sdk"
-import type { Address, Chain, Client, LocalAccount, Transport } from "viem"
+import type { Address, Chain, LocalAccount, Transport } from "viem"
 import {
   http,
   createPublicClient,
@@ -24,7 +24,7 @@ import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleI
 import type { FeeTokenInfo } from "../../../clients/decorators/mee"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { mcUSDC } from "../../../constants/tokens"
-import type { ModularSmartAccount } from "../../utils/Types"
+import type { AnyData } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
@@ -125,11 +125,7 @@ describe("mee.multichainSmartSessions", () => {
       for (const deployment of mcNexus.deployments) {
         expect(await deployment.isDeployed()).toBe(true)
         const isInstalled = await isModuleInstalled(
-          deployment.client as unknown as Client<
-            Transport,
-            Chain | undefined,
-            ModularSmartAccount
-          >,
+          undefined as AnyData,
           {
             account: deployment,
             module: {
