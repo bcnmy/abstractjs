@@ -23,13 +23,19 @@ import {
   type Chain,
   type Client,
   type Hex,
+  type LocalAccount,
+  type OneOf,
   type Prettify,
   type PublicClient,
   type RequiredBy,
   type Transport,
+  type Account as ViemAccount,
+  type WalletClient,
   zeroAddress
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
+import type { EthersWallet } from "../../../../account/utils/Utils"
+import type { EthereumProvider } from "../../../../account/utils/toSigner"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt } from "../Helpers"
 
@@ -116,7 +122,7 @@ async function grantPermission<
   const { sessions, accountsAndChainIds, clients, signer } =
     await prepareForGrantingPermission(nexusClient, parameters)
 
-  const chainDigests: { chainId: bigint; sessionDigest: any }[] = []
+  const chainDigests: { chainId: bigint; sessionDigest: `0x${string}` }[] = []
   const chainSessions: ChainSession[] = []
   for (const session of sessions) {
     const permissionId = getPermissionId({
@@ -139,19 +145,20 @@ async function grantPermission<
       throw new Error(`Account not found for chainId ${session.chainId}`)
     }
 
-    const sessionNonce = await getSessionNonce({
-      client,
-      account,
-      permissionId
-    })
-
-    const sessionDigest = await getSessionDigest({
-      client,
-      account,
-      session,
-      mode: SmartSessionMode.UNSAFE_ENABLE,
-      permissionId
-    })
+    const [sessionNonce, sessionDigest] = await Promise.all([
+      getSessionNonce({
+        client,
+        account,
+        permissionId
+      }),
+      getSessionDigest({
+        client,
+        account,
+        session,
+        mode: SmartSessionMode.UNSAFE_ENABLE,
+        permissionId
+      })
+    ])
 
     chainDigests.push({
       chainId: session.chainId,
@@ -297,7 +304,12 @@ export type PrepareForGrantingPermissionResponse = {
   sessions: Session[]
   accountsAndChainIds: AccountAndChainId[]
   clients: PublicClient[]
-  signer: any
+  signer: OneOf<
+    | EthereumProvider
+    | WalletClient<Transport, Chain | undefined, ViemAccount>
+    | LocalAccount
+    | EthersWallet
+  >
 }
 
 export type AccountAndChainId = {
