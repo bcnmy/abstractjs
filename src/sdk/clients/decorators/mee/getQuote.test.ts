@@ -1,16 +1,15 @@
 import {
-  http,
   type Chain,
   type LocalAccount,
   type Transport,
   createWalletClient,
   erc20Abi,
+  http,
   publicActions
 } from "viem"
-import { privateKeyToAccount } from "viem/accounts"
-import { generatePrivateKey } from "viem/accounts"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import {
   TESTNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
@@ -40,10 +39,11 @@ import {
 } from "../../createMeeClient"
 import {
   CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION,
-  DEFAULT_GAS_LIMIT
+  DEFAULT_GAS_LIMIT,
+  type FeeTokenInfo,
+  type Instruction,
+  getQuote
 } from "./getQuote"
-import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
-import { Trigger } from "./signPermitQuote"
 
 const getRandomAccountIndex = (min: number, max: number) => {
   const minValue = Math.ceil(min) // Round up to ensure inclusive min
@@ -1071,8 +1071,7 @@ describe("mee.getQuote", () => {
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
 
-  // TODO: Fix this test, this is failing due to gas issues
-  test.skip("should use feePayer if provided", async () => {
+  test("should use feePayer if provided", async () => {
     const chain = baseSepolia
     const mcNexus = await toMultichainNexusAccount({
       chains: [chain],
@@ -1118,17 +1117,18 @@ describe("mee.getQuote", () => {
         address: tokenAddress
       }
     })
-    // Estimate gas for approve
-    const approveGas = await publicClient.estimateContractGas({
-      address: feeAccount.address,
+    const request = await publicClient.simulateContract({
+      account: feeAccount.address,
+      address: tokenAddress,
       abi: erc20Abi,
       functionName: "approve",
       args: [
         mcNexus.addressOn(chain.id, true),
         BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
-      ],
-      account: feeAccount.address // explicitly simulate from their address
+      ]
     })
+    // Estimate gas for approve
+    const approveGas = await publicClient.estimateGas(request)
 
     // Estimate current gas fees
     const gasFees = await publicClient.estimateFeesPerGas()
@@ -1154,6 +1154,7 @@ describe("mee.getQuote", () => {
       recipient: feeAccount.address,
       amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
     })
+
     // set allowance to the fee account on the mcNexus account
     await setAllowance({
       publicClient,

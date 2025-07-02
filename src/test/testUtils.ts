@@ -357,14 +357,14 @@ export const setAllowance = async ({
   spender: Address
   amount: bigint
 }) => {
-  const resetApprovalHash = await walletClient.writeContract({
+  const allowanceTxHash = await walletClient.writeContract({
     address: tokenAddress,
     abi: erc20Abi,
     functionName: "approve",
     args: [spender, amount]
   })
   return await publicClient.waitForTransactionReceipt({
-    hash: resetApprovalHash,
+    hash: allowanceTxHash,
     confirmations: TEST_BLOCK_CONFIRMATIONS
   })
 }
