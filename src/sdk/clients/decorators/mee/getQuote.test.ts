@@ -1,15 +1,15 @@
 import {
+  http,
   type Chain,
   type LocalAccount,
   type Transport,
   createWalletClient,
   erc20Abi,
-  http,
   publicActions
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   TESTNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
