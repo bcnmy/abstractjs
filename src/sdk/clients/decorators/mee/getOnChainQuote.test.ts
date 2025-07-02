@@ -1,13 +1,27 @@
-import type { Address, Chain, LocalAccount, Transport } from "viem"
+import {
+  http,
+  type Address,
+  type Chain,
+  type LocalAccount,
+  type Transport
+} from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import {
+  getTestChainConfig,
+  MAINNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  toNetwork
+} from "../../../../test/testSetup"
+import { getBalance, type NetworkConfig } from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { mcUSDC } from "../../../constants/tokens"
+import { mcUSDC, mcUSDT } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getOnChainQuote from "./getOnChainQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
+import { getMeeScanLink } from "../../../account"
+import { base } from "viem/chains"
+import { Trigger } from "./signPermitQuote"
 
 describe("mee.getOnChainQuote", () => {
   let network: NetworkConfig
@@ -90,5 +104,193 @@ describe("mee.getOnChainQuote", () => {
 
     expect(fusionQuote.quote).toBeDefined()
     expect(fusionQuote.trigger).toBeDefined()
+  })
+
+  // This is a mainnet onchain fusion flow test. Still the SDK doesn't have fund setup for non permit tokens.
+  // Will be skipped for now
+  test.skip("On chain fusion flow token transfer", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [base],
+      signer: eoaAccount,
+      transports: [http(MAINNET_RPC_URLS[base.id])]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const amountToTransfer = 1n
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDT.addressOn(base.id),
+        amount: amountToTransfer,
+        chainId: base.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        amount: amountToTransfer,
+        chainId: base.id,
+        tokenAddress: mcUSDT.addressOn(base.id)
+      },
+      instructions: [transfer],
+      feeToken: {
+        address: mcUSDT.addressOn(base.id),
+        chainId: base.id
+      }
+    })
+
+    console.log(getMeeScanLink(quote.quote.hash))
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote: quote })
+
+    await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+  })
+
+  // This is a mainnet onchain fusion flow test. Still the SDK doesn't have fund setup for non permit tokens.
+  // Will be skipped for now
+  test.skip("Trigger amount should be transferred to the custom recipient", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [base],
+      signer: eoaAccount,
+      transports: [http(MAINNET_RPC_URLS[base.id])]
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(base.id, true)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const balanceBefore = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      mcUSDT.addressOn(base.id)
+    )
+
+    const trigger = {
+      amount: 1n,
+      recipientAddress: eoaAccount.address,
+      chainId: base.id,
+      tokenAddress: mcUSDT.addressOn(base.id)
+    }
+
+    const transfer = mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDT.addressOn(base.id),
+        amount: 0n,
+        chainId: base.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger,
+      instructions: [transfer],
+      feeToken: {
+        address: mcUSDT.addressOn(base.id),
+        chainId: base.id
+      }
+    })
+
+    console.log(getMeeScanLink(fusionQuote.quote.hash))
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    const balanceAfter = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      mcUSDT.addressOn(base.id)
+    )
+
+    expect(balanceBefore).to.eq(
+      balanceAfter + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
+    )
+  })
+
+  // This is a mainnet onchain fusion flow test. Still the SDK doesn't have fund setup for non permit tokens.
+  // Will be skipped for now
+  test.skip("Trigger max available amount should be transferred to the custom recipient", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [base],
+      signer: eoaAccount,
+      transports: [http(MAINNET_RPC_URLS[base.id])]
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(base.id, true)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const balanceBefore = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      mcUSDT.addressOn(base.id)
+    )
+
+    const trigger: Trigger = {
+      useMaxAvailableFunds: true,
+      recipientAddress: eoaAccount.address,
+      chainId: base.id,
+      tokenAddress: mcUSDT.addressOn(base.id)
+    }
+
+    const transfer = mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDT.addressOn(base.id),
+        amount: 0n,
+        chainId: base.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger,
+      instructions: [transfer],
+      feeToken: {
+        address: mcUSDT.addressOn(base.id),
+        chainId: base.id
+      }
+    })
+
+    console.log(getMeeScanLink(fusionQuote.quote.hash))
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    const balanceAfter = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      mcUSDT.addressOn(base.id)
+    )
+
+    expect(balanceBefore).to.eq(
+      balanceAfter + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
+    )
   })
 })

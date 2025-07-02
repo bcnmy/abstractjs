@@ -40,6 +40,7 @@ import getPermitQuote from "./getPermitQuote"
 
 describe("mee.getPermitQuote", () => {
   let network: NetworkConfig
+  let testnetNetwork: NetworkConfig
   let eoaAccount: LocalAccount
 
   let feeToken: FeeTokenInfo
@@ -55,6 +56,7 @@ describe("mee.getPermitQuote", () => {
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    testnetNetwork = await toNetwork("TESTNET_FROM_ENV_VARS")
     ;[
       [paymentChain, targetChain],
       [paymentChainTransport, targetChainTransport]
@@ -432,6 +434,152 @@ describe("mee.getPermitQuote", () => {
     // The final amount should be the initial amount plus gas fees
     expect(fusionQuote.trigger.amount).toBe(
       amount + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
+    )
+  })
+
+  test("Trigger amount should be transferred to the custom recipient", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      transports: [http(testnetNetwork.rpcUrl)],
+      signer: eoaAccount
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const amount = parseUnits("1", 6)
+
+    const balanceBefore = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      testnetMcUSDC.addressOn(baseSepolia.id)
+    )
+
+    const trigger: Trigger = {
+      chainId: baseSepolia.id,
+      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+      amount,
+      recipientAddress: eoaAccount.address
+    }
+
+    const zeroTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        amount: 0n,
+        chainId: baseSepolia.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [zeroTransfer],
+      feeToken: {
+        chainId: baseSepolia.id,
+        address: testnetMcUSDC.addressOn(baseSepolia.id)
+      }
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote
+    })
+
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    const balanceAfter = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      testnetMcUSDC.addressOn(baseSepolia.id)
+    )
+
+    expect(balanceBefore).to.eq(
+      balanceAfter + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
+    )
+  })
+
+  test("Trigger max available amount should be transferred to the custom recipient", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [baseSepolia],
+      transports: [http(testnetNetwork.rpcUrl)],
+      signer: eoaAccount
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const balanceBefore = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      testnetMcUSDC.addressOn(baseSepolia.id)
+    )
+
+    const trigger: Trigger = {
+      chainId: baseSepolia.id,
+      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+      recipientAddress: eoaAccount.address,
+      useMaxAvailableFunds: true
+    }
+
+    const zeroTransfer = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        amount: 0n,
+        chainId: baseSepolia.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [zeroTransfer],
+      feeToken: {
+        chainId: baseSepolia.id,
+        address: testnetMcUSDC.addressOn(baseSepolia.id)
+      }
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote
+    })
+
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    const balanceAfter = await getBalance(
+      publicClient,
+      eoaAccount.address,
+      testnetMcUSDC.addressOn(baseSepolia.id)
+    )
+
+    expect(balanceBefore).to.eq(
+      balanceAfter + BigInt(fusionQuote.quote.paymentInfo.tokenWeiAmount)
     )
   })
 })

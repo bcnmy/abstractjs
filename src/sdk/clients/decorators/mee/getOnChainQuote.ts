@@ -105,13 +105,18 @@ export const getOnChainQuote = async (
   }
 
   const sender = account_.signer.address
-  const recipient = account_.addressOn(trigger.chainId, true)
+  const scaAddress = account_.addressOn(trigger.chainId, true)
+
+  // By default the trigger amount will be deposited to sca account.
+  // if a custom recipient is defined ? It will deposit to the recipient address
+  const recipient = trigger.recipientAddress || scaAddress
 
   const { triggerGasLimit, triggerAmount, batchedInstructions } =
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
       sender,
+      scaAddress,
       recipient,
       account: account_
     })
@@ -145,9 +150,16 @@ export const getOnChainQuote = async (
   return {
     quote,
     trigger: {
-      ...trigger,
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId,
+      gasLimit: triggerGasLimit,
       amount,
-      gasLimit: triggerGasLimit
+      ...(trigger.approvalAmount
+        ? { approvalAmount: trigger.approvalAmount }
+        : {}),
+      ...(trigger.recipientAddress
+        ? { recipientAddress: trigger.recipientAddress }
+        : {})
     }
   }
 }

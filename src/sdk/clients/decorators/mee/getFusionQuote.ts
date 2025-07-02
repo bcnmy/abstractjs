@@ -1,5 +1,5 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import { erc20Abi } from "viem"
+import { type Address, erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
@@ -20,6 +20,7 @@ import {
   type Instruction
 } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
+import { type RuntimeValue } from "../../../modules"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote
@@ -135,8 +136,9 @@ export const getFusionQuote = async (
 export type PrepareInstructionsParams = {
   resolvedInstructions: Instruction[]
   trigger: Trigger
-  sender: `0x${string}`
-  recipient: `0x${string}`
+  sender: Address
+  recipient: Address
+  scaAddress: Address
   account: MultichainSmartAccount
 }
 
@@ -144,8 +146,14 @@ export const prepareInstructions = async (
   client: BaseMeeClient,
   parameters: PrepareInstructionsParams
 ) => {
-  const { resolvedInstructions, trigger, sender, recipient, account } =
-    parameters
+  const {
+    resolvedInstructions,
+    trigger,
+    sender,
+    scaAddress,
+    recipient,
+    account
+  } = parameters
 
   let triggerAmount = 0n
 
@@ -167,21 +175,28 @@ export const prepareInstructions = async (
     triggerAmount = trigger.amount
   }
 
-  const isComposable = resolvedInstructions.some(
+  let isComposable = resolvedInstructions.some(
     ({ isComposable }) => isComposable
   )
+
+  let transferFromAmount: bigint | RuntimeValue = 0n
 
   // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
   // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
   // the remaining funds after the fee deduction.
-  const transferFromAmount = trigger.useMaxAvailableFunds
-    ? runtimeERC20AllowanceOf({
-        owner: sender,
-        spender: recipient,
-        tokenAddress: trigger.tokenAddress,
-        constraints: [greaterThanOrEqualTo(1n)]
-      })
-    : triggerAmount
+  if (trigger.useMaxAvailableFunds) {
+    transferFromAmount = runtimeERC20AllowanceOf({
+      owner: sender,
+      spender: scaAddress,
+      tokenAddress: trigger.tokenAddress,
+      constraints: [greaterThanOrEqualTo(1n)]
+    })
+
+    // If max funds is used, it will be always composable
+    isComposable = true
+  } else {
+    transferFromAmount = triggerAmount
+  }
 
   const triggerGasLimit = trigger.gasLimit
     ? trigger.gasLimit

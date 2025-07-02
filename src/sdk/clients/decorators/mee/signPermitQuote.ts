@@ -45,25 +45,36 @@ export type TokenTrigger = {
    */
   chainId: number
   /**
-   * The amount of the token to use, in the token's smallest unit.
-   * @example 1000000n // 1 USDC (6 decimals)
+   * Defaults to EOA's Nexus SCA account address. If this is provided, the trigger.amount will be deposited
+   * to this address
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
    */
-  amount?: bigint
-  /**
-   * A custom amount to approve as the trigger
-   * @example 1000000n // 1 USDC (6 decimals)
-   */
-  approvalAmount?: bigint
+  recipientAddress?: Address
   /**
    * custom gas limit can be added to override the default 50_000 gas limit
    */
   gasLimit?: bigint
-  /**
-   * Whether to use max available funds from the EOA wallet to be pulled into SCA after fee deduction.
-   * default is false
-   */
-  useMaxAvailableFunds?: true
-}
+} & OneOf<
+  | {
+      /**
+       * Whether to use max available funds from the EOA wallet to be pulled into SCA after fee deduction.
+       * default is false
+       */
+      useMaxAvailableFunds: true
+    }
+  | {
+      /**
+       * A custom amount to approve as the trigger
+       * @example 1000000n // 1 USDC (6 decimals)
+       */
+      approvalAmount?: bigint
+      /**
+       * The amount of the token to use, in the token's smallest unit.
+       * @example 1000000n // 1 USDC (6 decimals)
+       */
+      amount: bigint
+    }
+>
 
 export type Trigger = OneOf<TokenTrigger | CustomTrigger>
 

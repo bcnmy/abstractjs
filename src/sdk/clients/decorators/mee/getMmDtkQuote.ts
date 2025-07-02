@@ -90,13 +90,18 @@ export const getMmDtkQuote = async (
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const sender = delegatorSmartAccount.address
-  const recipient = account_.addressOn(trigger.chainId, true)
+  const scaAddress = account_.addressOn(trigger.chainId, true)
+
+  // By default the trigger amount will be deposited to sca account.
+  // if a custom recipient is defined ? It will deposit to the recipient address
+  const recipient = trigger.recipientAddress || scaAddress
 
   const { triggerGasLimit, triggerAmount, batchedInstructions } =
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
       sender,
+      scaAddress,
       recipient,
       account: account_
     })

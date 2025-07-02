@@ -1,6 +1,7 @@
 import {
   type Chain,
   type LocalAccount,
+  parseUnits,
   type Transport,
   zeroAddress
 } from "viem"
@@ -12,7 +13,7 @@ import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAcco
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getFusionQuote from "./getFusionQuote"
-import type { FeeTokenInfo, InstructionLike } from "./getQuote"
+import type { FeeTokenInfo } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
 describe("mee.getFusionQuote", () => {
@@ -92,4 +93,68 @@ describe("mee.getFusionQuote", () => {
   })
 
   // TODO: Add tests for mode selection
+
+  test("Trigger without recipient should not override trigger pull target", async () => {
+    const amount = parseUnits("1", 6)
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress: mcUSDC.addressOn(paymentChain.id),
+      amount
+    }
+
+    const transfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 0n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+
+    expect(fusionQuote.trigger.recipientAddress).not.toBeDefined()
+  })
+
+  test("Trigger with recipient should override trigger pull target", async () => {
+    const amount = parseUnits("1", 6)
+    const trigger: Trigger = {
+      chainId: paymentChain.id,
+      tokenAddress: mcUSDC.addressOn(paymentChain.id),
+      amount,
+      recipientAddress: eoaAccount.address
+    }
+
+    const transfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: mcUSDC.addressOn(paymentChain.id),
+        amount: 0n,
+        chainId: paymentChain.id,
+        recipient: eoaAccount.address
+      }
+    })
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [transfer],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.trigger).toBeDefined()
+
+    expect(fusionQuote.trigger.recipientAddress).toBeDefined()
+    expect(fusionQuote.trigger.recipientAddress?.toLowerCase()).to.be.eq(
+      eoaAccount.address.toLowerCase()
+    )
+  })
 })
