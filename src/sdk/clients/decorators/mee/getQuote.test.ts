@@ -17,13 +17,13 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import {
   type NetworkConfig,
   getBalance,
   setAllowance,
   transferErc20
 } from "../../../../test/testUtils"
+import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
