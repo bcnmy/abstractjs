@@ -182,19 +182,9 @@ describe("mee.getOnChainQuote", () => {
       tokenAddress: mcUSDT.addressOn(base.id)
     }
 
-    const transfer = mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: mcUSDT.addressOn(base.id),
-        amount: 0n,
-        chainId: base.id,
-        recipient: eoaAccount.address
-      }
-    })
-
     const fusionQuote = await meeClient.getFusionQuote({
       trigger,
-      instructions: [transfer],
+      instructions: [],
       feeToken: {
         address: mcUSDT.addressOn(base.id),
         chainId: base.id
@@ -252,19 +242,9 @@ describe("mee.getOnChainQuote", () => {
       tokenAddress: mcUSDT.addressOn(base.id)
     }
 
-    const transfer = mcNexus.buildComposable({
-      type: "transfer",
-      data: {
-        tokenAddress: mcUSDT.addressOn(base.id),
-        amount: 0n,
-        chainId: base.id,
-        recipient: eoaAccount.address
-      }
-    })
-
     const fusionQuote = await meeClient.getFusionQuote({
       trigger,
-      instructions: [transfer],
+      instructions: [],
       feeToken: {
         address: mcUSDT.addressOn(base.id),
         chainId: base.id

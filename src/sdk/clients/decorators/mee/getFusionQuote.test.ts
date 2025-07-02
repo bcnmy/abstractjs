@@ -102,19 +102,9 @@ describe("mee.getFusionQuote", () => {
       amount
     }
 
-    const transfer = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: mcUSDC.addressOn(paymentChain.id),
-        amount: 0n,
-        chainId: paymentChain.id,
-        recipient: eoaAccount.address
-      }
-    })
-
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
-      instructions: [transfer],
+      instructions: [],
       feeToken
     })
 
@@ -133,19 +123,9 @@ describe("mee.getFusionQuote", () => {
       recipientAddress: eoaAccount.address
     }
 
-    const transfer = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: mcUSDC.addressOn(paymentChain.id),
-        amount: 0n,
-        chainId: paymentChain.id,
-        recipient: eoaAccount.address
-      }
-    })
-
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
-      instructions: [transfer],
+      instructions: [],
       feeToken
     })
 

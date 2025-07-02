@@ -465,19 +465,9 @@ describe("mee.getPermitQuote", () => {
       recipientAddress: eoaAccount.address
     }
 
-    const zeroTransfer = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
-        amount: 0n,
-        chainId: baseSepolia.id,
-        recipient: eoaAccount.address
-      }
-    })
-
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
-      instructions: [zeroTransfer],
+      instructions: [],
       feeToken: {
         chainId: baseSepolia.id,
         address: testnetMcUSDC.addressOn(baseSepolia.id)
@@ -537,19 +527,9 @@ describe("mee.getPermitQuote", () => {
       useMaxAvailableFunds: true
     }
 
-    const zeroTransfer = await mcNexus.buildComposable({
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
-        amount: 0n,
-        chainId: baseSepolia.id,
-        recipient: eoaAccount.address
-      }
-    })
-
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger,
-      instructions: [zeroTransfer],
+      instructions: [],
       feeToken: {
         chainId: baseSepolia.id,
         address: testnetMcUSDC.addressOn(baseSepolia.id)
