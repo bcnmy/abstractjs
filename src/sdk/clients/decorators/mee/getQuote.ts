@@ -253,6 +253,21 @@ export type GetQuoteParams = SupertransactionLike & {
 } & OneOf<
     | {
         /**
+         * The address of the account that will pay for the transaction fees
+         */
+        feePayer: Address
+      }
+    | {
+        /**
+         * EOA address to be used for the transaction.
+         * Only required when using permit-enabled tokens
+         */
+        eoa?: Address
+      }
+  > &
+  OneOf<
+    | {
+        /**
          * Token to be used for paying transaction fees
          */
         feeToken: FeeTokenInfo
@@ -336,8 +351,10 @@ type QuoteRequest = {
  * Basic payment information required for a quote request
  */
 export type PaymentInfo = {
-  /** Address of the account paying for the transaction */
+  /** Address of the account used for the transaction */
   sender: Address
+  /** Address of the account paying for the transaction */
+  eoa?: Address
   /** Optional initialization code for account deployment */
   initCode?: Hex
   /** Address of the token used for payment */
@@ -495,6 +512,7 @@ export const getQuote = async (
     account: account_ = client.account,
     instructions,
     cleanUps,
+    feePayer,
     path = "quote",
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
@@ -508,6 +526,12 @@ export const getQuote = async (
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
+
+  // if feePayer is provided, we need to use the /quote-permit path
+  let pathToQuery = path
+  if (feePayer) {
+    pathToQuery = "/quote-permit"
+  }
 
   const validUserOps = resolvedInstructions.every(
     (userOp) =>
@@ -627,11 +651,10 @@ export const getQuote = async (
       }
     )
   )
-
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
 
   let quote = await client.request<GetQuotePayload>({
-    path,
+    path: pathToQuery,
     body: quoteRequest
   })
 
@@ -668,6 +691,7 @@ const preparePaymentInfo = async (
     account: account_ = client.account,
     eoa,
     feeToken,
+    feePayer,
     delegate = false,
     gasLimit,
     authorization,
@@ -680,6 +704,8 @@ const preparePaymentInfo = async (
 
   let paymentInfo: PaymentInfo | undefined = undefined
   let isInitDataProcessed = false
+
+  const eoaOrFeePayer = feePayer || eoa
 
   if (sponsorship) {
     // For sponsorship, the sender should be the sponsorship SCA which will bare the gas payment for developers
@@ -716,7 +742,7 @@ const preparePaymentInfo = async (
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       chainId: chainId.toString(),
       sponsorshipUrl,
-      ...(eoa ? { eoa } : {}),
+      ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       // For sponsorship, the sponsorship paymaster EOA is always assumed to be deployed and funded already
       // So initCode will be always undefined
       initCode: undefined
@@ -776,7 +802,7 @@ const preparePaymentInfo = async (
       nonce: nonce.nonce.toString(),
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       chainId: feeToken.chainId.toString(),
-      ...(eoa ? { eoa } : {}),
+      ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       ...initData,
       shortEncoding: shortEncodingSuperTxn,
       ...paymentVerificationGasLimit

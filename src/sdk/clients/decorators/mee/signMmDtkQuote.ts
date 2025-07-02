@@ -87,6 +87,10 @@ export const signMMDtkQuote = async (
     fusionQuote: { quote, trigger }
   } = parameters
 
+  if (trigger.call) {
+    throw new Error("Custom triggers are not supported for fusion transactions")
+  }
+
   if (!trigger.amount)
     throw new Error("Amount is required to sign a MM DTK quote")
 
@@ -197,6 +201,8 @@ const getDelegationManager = (chainId: number): `0x${string}` => {
 
   // If no delegation manager is found for the chainId, throw an error
   throw new Error(
-    `No delegation manager found for chainId ${chainId}. Supported chains are: ${Object.values(CHAIN_ID).join(", ")}`
+    `No delegation manager found for chainId ${chainId}. Supported chains are: ${Object.values(
+      CHAIN_ID
+    ).join(", ")}`
   )
 }

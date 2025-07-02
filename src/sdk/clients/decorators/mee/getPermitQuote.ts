@@ -28,6 +28,8 @@ export type GetPermitQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+
+  feePayer?: undefined
 }
 
 /**
@@ -101,9 +103,11 @@ export const getPermitQuote = async (
       account: account_
     })
 
+  const eoa = account_.signer.address
+
   const quote = await getQuote(client, {
     path: "quote-permit", // Use different endpoint for permit enabled tokens
-    eoa: account_.signer.address,
+    eoa,
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
     ...(cleanUps ? { cleanUps } : {}),

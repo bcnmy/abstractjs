@@ -45,6 +45,8 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+
+  feePayer?: undefined
   /**
    * Optional delegator smart account
    * If not provided, that means the Delegation Toolkit fusion

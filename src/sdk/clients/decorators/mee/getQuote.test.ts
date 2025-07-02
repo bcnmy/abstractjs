@@ -3,8 +3,12 @@ import {
   type Chain,
   type LocalAccount,
   type Transport,
+  createWalletClient,
+  erc20Abi,
   publicActions
 } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
@@ -13,8 +17,13 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
-import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
+import {
+  type NetworkConfig,
+  getBalance,
+  setAllowance,
+  transferErc20
+} from "../../../../test/testUtils"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
@@ -34,6 +43,7 @@ import {
   DEFAULT_GAS_LIMIT
 } from "./getQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import { Trigger } from "./signPermitQuote"
 
 const getRandomAccountIndex = (min: number, max: number) => {
   const minValue = Math.ceil(min) // Round up to ensure inclusive min
@@ -1059,5 +1069,110 @@ describe("mee.getQuote", () => {
       })
 
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
+  })
+
+  test("should use feePayer if provided", async () => {
+    const chain = baseSepolia
+    const mcNexus = await toMultichainNexusAccount({
+      chains: [chain],
+      signer: eoaAccount,
+      transports: [http(TESTNET_RPC_URLS[chain.id])]
+    })
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const tokenAddress = testnetMcUSDC.addressOn(chain.id)
+    const feeAccount = privateKeyToAccount(generatePrivateKey())
+    const walletClient = createWalletClient({
+      account: feeAccount,
+      chain,
+      transport: http(TESTNET_RPC_URLS[chain.id])
+    })
+    const signerWalletClient = createWalletClient({
+      account: mcNexus.signer,
+      chain,
+      transport: http(TESTNET_RPC_URLS[chain.id])
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        mcNexus.build({
+          type: "transferFrom",
+          data: {
+            // dummy transfer as a transaction
+            amount: 1n,
+            sender: feeAccount.address,
+            tokenAddress,
+            chainId: chain.id,
+            recipient: eoaAccount.address
+          }
+        })
+      ],
+      feePayer: feeAccount.address,
+      feeToken: {
+        chainId: chain.id,
+        address: tokenAddress
+      }
+    })
+    // Estimate gas for approve
+    const approveGas = await publicClient.estimateContractGas({
+      address: feeAccount.address,
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [
+        mcNexus.addressOn(chain.id, true),
+        BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
+      ],
+      account: feeAccount.address // explicitly simulate from their address
+    })
+
+    // Estimate current gas fees
+    const gasFees = await publicClient.estimateFeesPerGas()
+
+    // Add 300% buffer
+    const totalGasWithBuffer = (approveGas * gasFees.maxFeePerGas * 300n) / 100n
+
+    // Transfer ETH to the fee account
+    const sendEthHash = await signerWalletClient.sendTransaction({
+      to: feeAccount.address,
+      value: totalGasWithBuffer
+    })
+
+    await publicClient.waitForTransactionReceipt({
+      hash: sendEthHash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+    // transfer usdc to the fee account
+    await transferErc20({
+      publicClient,
+      walletClient: signerWalletClient,
+      tokenAddress,
+      recipient: feeAccount.address,
+      amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
+    })
+    // set allowance to the fee account on the mcNexus account
+    await setAllowance({
+      publicClient,
+      walletClient,
+      tokenAddress,
+      spender: mcNexus.addressOn(chain.id, true),
+      amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
+    })
+    const { hash } = await meeClient.executeQuote({ quote })
+    // Wait for the transaction to complete
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    const feeAccountErc20Balance = await getBalance(
+      publicClient,
+      feeAccount.address,
+      tokenAddress
+    )
+    expect(feeAccountErc20Balance).toBe(0n)
   })
 })

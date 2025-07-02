@@ -169,8 +169,6 @@ describe("mee.signPermitQuote", () => {
         feeToken
       })
 
-      console.log(quote.hash)
-
       const fusionQuote = {
         quote,
         trigger: {

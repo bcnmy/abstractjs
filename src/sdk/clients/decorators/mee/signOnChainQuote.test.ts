@@ -7,6 +7,7 @@ import {
   createPublicClient,
   createWalletClient,
   isHex,
+  parseEther,
   parseUnits,
   zeroAddress
 } from "viem"
@@ -22,6 +23,7 @@ import {
   type NetworkConfig,
   getAllowance,
   getBalance,
+  pKey,
   setAllowance
 } from "../../../../test/testUtils"
 import {
@@ -500,6 +502,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     })
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
+
   describe("should succeed with custom call trigger", () => {
     test("should succeed with sponsored=true transactions", async () => {
       const fusionQuote = await meeClient.getOnChainQuote({

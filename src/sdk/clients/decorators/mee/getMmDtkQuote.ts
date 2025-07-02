@@ -4,7 +4,7 @@ import type { BaseMeeClient } from "../../createMeeClient"
 import { prepareInstructions } from "./getFusionQuote"
 import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
 /**
  * Response payload for a MM DTK quote request.
@@ -27,12 +27,14 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
    * Trigger information for the MM DTK transaction
    * @see {@link Trigger}
    */
-  trigger: Trigger
+  trigger: TokenTrigger
   /**
    * The MetaMask smart account to use for signing
    * the delegation
    */
   delegatorSmartAccount: MetaMaskSmartAccount
+
+  feePayer?: undefined
 }
 
 /**
@@ -82,10 +84,6 @@ export const getMmDtkQuote = async (
     delegatorSmartAccount,
     ...rest
   } = parameters
-
-  if (trigger.call) {
-    throw new Error("Custom call trigger is not supported for permit quotes")
-  }
 
   const resolvedInstructions = await resolveInstructions(instructions)
 

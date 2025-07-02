@@ -27,6 +27,8 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    * @see {@link Trigger}
    */
   trigger: Trigger
+
+  feePayer?: undefined
 }
 
 /**

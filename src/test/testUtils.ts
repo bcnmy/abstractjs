@@ -368,3 +368,31 @@ export const setAllowance = async ({
     confirmations: TEST_BLOCK_CONFIRMATIONS
   })
 }
+
+/**
+ * Transfer an ERC20 token
+ */
+export const transferErc20 = async ({
+  publicClient,
+  walletClient,
+  tokenAddress,
+  recipient,
+  amount
+}: {
+  publicClient: PublicClient
+  walletClient: WalletClient<Transport, Chain, Account>
+  tokenAddress: Address
+  recipient: Address
+  amount: bigint
+}) => {
+  const hash = await walletClient.writeContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [recipient, amount]
+  })
+  return await publicClient.waitForTransactionReceipt({
+    hash,
+    confirmations: TEST_BLOCK_CONFIRMATIONS
+  })
+}
