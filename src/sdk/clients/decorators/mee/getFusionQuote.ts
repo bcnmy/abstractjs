@@ -3,6 +3,7 @@ import { type Address, erc20Abi } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
+import type { RuntimeValue } from "../../../modules"
 import { isPermitSupported } from "../../../modules/utils/Helpers"
 import {
   greaterThanOrEqualTo,
@@ -20,7 +21,6 @@ import {
   type Instruction
 } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
-import { type RuntimeValue } from "../../../modules"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote

@@ -1,8 +1,8 @@
 import {
   type Chain,
   type LocalAccount,
-  parseUnits,
   type Transport,
+  parseUnits,
   zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"

@@ -5,23 +5,23 @@ import {
   type LocalAccount,
   type Transport
 } from "viem"
+import { base } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  getTestChainConfig,
   MAINNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
-import { getBalance, type NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
+import { getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getOnChainQuote from "./getOnChainQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
-import { getMeeScanLink } from "../../../account"
-import { base } from "viem/chains"
-import { Trigger } from "./signPermitQuote"
+import type { Trigger } from "./signPermitQuote"
 
 describe("mee.getOnChainQuote", () => {
   let network: NetworkConfig
