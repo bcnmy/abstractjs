@@ -214,7 +214,7 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
     chain = network.chain
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
-      transports: [http()],
+      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
       index: 1n
     })
