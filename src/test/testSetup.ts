@@ -16,6 +16,7 @@ import {
 } from "./testUtils"
 
 export const TEST_BLOCK_CONFIRMATIONS = 5
+export const TEST_MEE_API_KEY = "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
 
 export const MAINNET_RPC_URLS: Record<number, string> = {
   [mainnet.id]: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,

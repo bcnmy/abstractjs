@@ -10,7 +10,11 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, test } from "vitest"
-import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  TEST_MEE_API_KEY,
+  toNetwork
+} from "../../../test/testSetup"
 import { type NetworkConfig, getBalance } from "../../../test/testUtils"
 import { DEFAULT_PATHFINDER_URL } from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
@@ -43,7 +47,7 @@ describe("mee.getGasTankBalance", () => {
       options: {
         mee: {
           url: DEFAULT_PATHFINDER_URL,
-          apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+          apiKey: TEST_MEE_API_KEY
         }
       }
     })

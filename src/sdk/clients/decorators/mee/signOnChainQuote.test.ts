@@ -16,6 +16,7 @@ import { optimism } from "viem/chains"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import {
   TEST_BLOCK_CONFIRMATIONS,
+  TEST_MEE_API_KEY,
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
@@ -457,7 +458,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     })
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: TEST_MEE_API_KEY
     })
   })
 

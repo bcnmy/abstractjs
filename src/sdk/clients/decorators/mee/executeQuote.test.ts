@@ -1,7 +1,11 @@
 import type { Chain, Hex, LocalAccount, Transport } from "viem"
 import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test, vi } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  getTestChainConfig,
+  TEST_MEE_API_KEY,
+  toNetwork
+} from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -12,8 +16,6 @@ import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeQuote from "./executeQuote"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
-
-vi.mock("./executeQuote")
 
 describe("mee.executeQuote", () => {
   let network: NetworkConfig
@@ -47,10 +49,14 @@ describe("mee.executeQuote", () => {
       signer: eoaAccount
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: TEST_MEE_API_KEY
+    })
   })
 
   test("should execute a quote using", async () => {
+    // vi.mock("./executeQuote")
     const instructions: Instruction[] = [
       {
         calls: [
@@ -81,5 +87,29 @@ describe("mee.executeQuote", () => {
     const executedQuote = await executeQuote(meeClient, { quote })
 
     expect(executedQuote).toEqual(mockExecuteQuoteResponse)
+  })
+
+  test.only("should always throw an error if the quote has an error", async () => {
+    // vi.resetModules()
+    const instructions: Instruction[] = [
+      {
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 99999999999999999999999999999999n
+          }
+        ],
+        chainId: 1
+      }
+    ]
+
+    const quote = await getQuote(meeClient, {
+      instructions: instructions,
+      sponsorship: true
+    })
+    const res = await executeQuote(meeClient, { quote })
+    console.log(res, "res", quote)
+    await expect(res).rejects.toThrow()
   })
 })

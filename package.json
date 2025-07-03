@@ -102,7 +102,7 @@
     "build": "bun run clean && bun run build:cjs && bun run build:esm && bun run build:types",
     "clean": "rimraf ./dist/_esm ./dist/_cjs ./dist/_types ./dist/tsconfig",
     "coverage": "vitest run -c ./src/test/vitest.config.ts --coverage",
-    "test": "vitest run -c ./src/test/vitest.config.ts",
+    "test": "vitest run -c ./src/test/vitest.config.ts executeQuote.test.ts",
     "test:watch": "vitest --watch -c ./src/test/vitest.config.ts",
     "playground": "RUN_PLAYGROUND=true vitest -c ./src/test/vitest.config.ts -t=playground",
     "playground:watch": "RUN_PLAYGROUND=true bun run test -t=playground --watch",

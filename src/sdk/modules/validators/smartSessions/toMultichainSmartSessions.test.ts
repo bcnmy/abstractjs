@@ -12,6 +12,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   TEST_BLOCK_CONFIRMATIONS,
+  TEST_MEE_API_KEY,
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
@@ -84,7 +85,7 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: TEST_MEE_API_KEY
       //url: "https://mee-node.biconomy.io/v1"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
@@ -338,7 +339,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const dappMeeClient = await createMeeClient({
         account: dappNexusAccount,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: TEST_MEE_API_KEY
       })
       const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 
