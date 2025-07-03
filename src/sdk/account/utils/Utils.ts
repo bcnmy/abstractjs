@@ -1,5 +1,6 @@
 import {
   type Address,
+  Block,
   type Client,
   type Hash,
   type Hex,
@@ -8,6 +9,7 @@ import {
   type TypedDataDomain,
   type TypedDataParameter,
   concat,
+  createPublicClient,
   decodeFunctionResult,
   encodeAbiParameters,
   encodeFunctionData,
@@ -36,6 +38,8 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
+import { Transport } from "viem"
+import { Chain } from "viem/chains"
 
 /**
  * Type guard to check if a value is null or undefined.
@@ -455,36 +459,25 @@ export function parseRequestArguments(input: string[]) {
   const lines = argsString.split("\n").filter((line) => line.trim())
 
   // Create an object from the key-value pairs
-  const result = lines.reduce(
-    (acc, line) => {
-      // Remove extra spaces and split by ':'
-      const [key, value] = line.split(":").map((s) => s.trim())
+  const result = lines.reduce((acc, line) => {
+    // Remove extra spaces and split by ':'
+    const [key, value] = line.split(":").map((s) => s.trim())
 
-      // Clean up the key (remove trailing spaces and colons)
-      const cleanKey = key.trim()
+    // Clean up the key (remove trailing spaces and colons)
+    const cleanKey = key.trim()
 
-      // Clean up the value (remove 'gwei' and other units)
-      const cleanValue: string | number = value.replace("gwei", "").trim()
+    // Clean up the value (remove 'gwei' and other units)
+    const cleanValue: string | number = value.replace("gwei", "").trim()
 
-      if (fieldsToOmit.includes(cleanKey)) {
-        return acc
-      }
-
-      acc[cleanKey] = cleanValue
+    if (fieldsToOmit.includes(cleanKey)) {
       return acc
-    },
-    {} as Record<string, string | number>
-  )
+    }
+
+    acc[cleanKey] = cleanValue
+    return acc
+  }, {} as Record<string, string | number>)
 
   return result
-}
-
-import { http, type Chain, type Transport, createPublicClient } from "viem"
-
-type RpcBlock = {
-  transactions: Array<{ type?: string }>
-  blobGasUsed?: string
-  excessBlobGas?: string
 }
 
 /**
@@ -507,21 +500,12 @@ export async function supportsCancun({
   })
 
   // Fetch the latest block with full transactions
-  const block = (await client.getBlock({
-    blockTag: "latest",
-    includeTransactions: true
-  })) as unknown as RpcBlock
+  const block = await client.getBlock({
+    blockTag: "latest"
+  })
 
   // Check for Cancun-specific block fields
   if (block.blobGasUsed !== undefined || block.excessBlobGas !== undefined) {
-    return true
-  }
-
-  // Check for blob transactions (type 0x05)
-  if (
-    Array.isArray(block.transactions) &&
-    block.transactions.some((tx) => tx.type === "0x5" || tx.type === "0x05")
-  ) {
     return true
   }
 
