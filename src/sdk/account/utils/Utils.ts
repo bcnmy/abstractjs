@@ -221,7 +221,9 @@ export function _hashTypedData(
 
 export function getTypesForEIP712Domain({
   domain
-}: { domain?: TypedDataDomain | undefined }): TypedDataParameter[] {
+}: {
+  domain?: TypedDataDomain | undefined
+}): TypedDataParameter[] {
   return [
     typeof domain?.name === "string" && { name: "name", type: "string" },
     domain?.version && { name: "version", type: "string" },
@@ -475,4 +477,53 @@ export function parseRequestArguments(input: string[]) {
   )
 
   return result
+}
+
+import { http, type Chain, type Transport, createPublicClient } from "viem"
+
+type RpcBlock = {
+  transactions: Array<{ type?: string }>
+  blobGasUsed?: string
+  excessBlobGas?: string
+}
+
+/**
+ * Checks if a chain supports Cancun.
+ *
+ * @param transport - The transport to use
+ * @param chain - The chain to check
+ * @returns True if the chain supports Cancun, false otherwise
+ */
+export async function supportsCancun({
+  transport,
+  chain
+}: {
+  transport: Transport
+  chain: Chain
+}): Promise<boolean> {
+  const client = createPublicClient({
+    chain,
+    transport
+  })
+
+  // Fetch the latest block with full transactions
+  const block = (await client.getBlock({
+    blockTag: "latest",
+    includeTransactions: true
+  })) as unknown as RpcBlock
+
+  // Check for Cancun-specific block fields
+  if (block.blobGasUsed !== undefined || block.excessBlobGas !== undefined) {
+    return true
+  }
+
+  // Check for blob transactions (type 0x05)
+  if (
+    Array.isArray(block.transactions) &&
+    block.transactions.some((tx) => tx.type === "0x5" || tx.type === "0x05")
+  ) {
+    return true
+  }
+
+  return false
 }
