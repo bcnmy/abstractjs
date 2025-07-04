@@ -1,8 +1,8 @@
-import { concatHex, encodeAbiParameters, type Hex } from "viem"
+import { type Hex, concatHex, encodeAbiParameters } from "viem"
 import type { MultichainSmartAccount } from ".."
+import { DEFAULT_PREFIX } from "../../clients/decorators/mee"
 import type { GetQuotePayload } from "../../clients/decorators/mee/getQuote"
 import { createMerkleTree } from "../../modules"
-import { DEFAULT_PREFIX } from "../../clients/decorators/mee"
 
 /**
  * Parameters for signing quote for sponsorship

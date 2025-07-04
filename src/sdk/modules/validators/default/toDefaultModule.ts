@@ -1,11 +1,11 @@
 import { type Hex, concatHex, zeroAddress } from "viem"
+import { DEFAULT_PREFIX } from "../../../clients/decorators/mee"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type Validator,
   type ValidatorParameters,
   toValidator
 } from "../toValidator"
-import { DEFAULT_PREFIX } from "../../../clients/decorators/mee"
 
 const MOCK_SUPERTXN_HASH_AND_TIMESTAMPS: Hex =
   "0x9e1cce57126e9205fe085888ed6b5ca0033f168e26b8927adb1c6da566cf7c5100000000000000000000000000000000000000000000000000000000642622800000000000000000000000000000000000000000000000000000000064262668"
