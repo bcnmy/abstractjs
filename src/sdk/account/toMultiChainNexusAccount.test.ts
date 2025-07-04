@@ -1,12 +1,12 @@
 import {
-  http,
   type Chain,
   type LocalAccount,
   type Transport,
+  http,
   isAddress,
   isHex
 } from "viem"
-import { base, baseSepolia, optimism } from "viem/chains"
+import { base, baseSepolia, optimism, polygon } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   TESTNET_RPC_URLS,
@@ -14,7 +14,7 @@ import {
   toNetwork
 } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
-import { MEE_VALIDATOR_ADDRESS } from "../constants"
+import { MEE_VALIDATOR_ADDRESS, NEXUS_VERSION_LATEST } from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import { toMeeK1Module } from "../modules"
 import {
@@ -156,6 +156,40 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
   })
   describe("nexusVersion", () => {
+    test("should throw an error if the version is not supported", async () => {
+      // await expect(
+      toNexusAccount({
+        chain: baseSepolia,
+        signer: eoaAccount,
+        transport: http(network.rpcUrl),
+        nexusVersion: "1.3.0"
+      })
+      // ).rejects.toThrow()
+    })
+    test("should throw an error if the version is supported but not by the chain", async () => {
+      const notCancunChain = polygon
+      await expect(
+        toNexusAccount({
+          chain: notCancunChain,
+          signer: eoaAccount,
+          transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
+          nexusVersion: "1.2.0"
+        })
+      ).rejects.toThrow()
+    })
+    test("should auto switch to 1.0.2 if the version is not specified and the chain needs it", async () => {
+      const notCancunChain = polygon
+      const nacc = await toNexusAccount({
+        chain: notCancunChain,
+        signer: eoaAccount,
+        transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
+        validators: [
+          toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
+        ]
+      })
+      // @ts-expect-error - accountId is not defined in the NexusAccount type
+      expect(nacc.accountId).toEqual("biconomy.nexus.1.0.2")
+    })
     test("should create an account with the correct nexus version", async () => {
       const nexusAccount = await toMultichainNexusAccount({
         signer: eoaAccount,
@@ -164,7 +198,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           http(TESTNET_RPC_URLS[baseSepolia.id]),
           http(TESTNET_RPC_URLS[base.id])
         ],
-        nexusVersion: ["1.0.2", "1.2.0"],
+        nexusVersion: ["1.0.2", NEXUS_VERSION_LATEST],
         validators: [
           toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
         ]
@@ -172,6 +206,14 @@ describe("mee.toMultiChainNexusAccount", async () => {
       expect(nexusAccount.deployments.length).toEqual(2)
       expect(nexusAccount.deploymentOn(baseSepolia.id)?.address).not.toEqual(
         nexusAccount.deploymentOn(base.id)?.address
+      )
+      // @ts-expect-error - accountId is not defined in the NexusAccount type
+      expect(nexusAccount.deploymentOn(baseSepolia.id)?.accountId).toEqual(
+        "biconomy.nexus.1.0.2"
+      )
+      // @ts-expect-error - accountId is not defined in the NexusAccount type
+      expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(
+        `biconomy.nexus.${NEXUS_VERSION_LATEST}`
       )
     })
   })

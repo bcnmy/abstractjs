@@ -44,7 +44,8 @@ import {
   ENTRY_POINT_ADDRESS,
   NEXUS_ACCOUNT_FACTORY_ADDRESS,
   NEXUS_BOOTSTRAP_ADDRESS,
-  NEXUS_IMPLEMENTATION_ADDRESS
+  NEXUS_IMPLEMENTATION_ADDRESS,
+  NEXUS_VERSION_LATEST
 } from "../constants"
 // Constants
 import { EntrypointAbi } from "../constants/abi"
@@ -85,6 +86,7 @@ import {
   getAccountDomainStructFields,
   getTypesForEIP712Domain,
   isNullOrUndefined,
+  supportsCancun,
   typeToString
 } from "./utils/Utils"
 import {
@@ -309,7 +311,6 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    nexusVersion,
     attesterThreshold = 1,
     useK1Config = false
   } = parameters
@@ -325,8 +326,30 @@ export const toNexusAccount = async (
     registryAddress,
     attesters,
     k1ValidatorAddress,
-    k1FactoryAddress
+    k1FactoryAddress,
+    nexusVersion
   } = parameters
+  // check if the chain supports > 1.2.0
+  const hasCancun = await supportsCancun({
+    chain,
+    transport: transportConfig
+  })
+  const unsupportedVersion =
+    nexusVersion && !isVersionOlder(nexusVersion, "1.2.0") && !hasCancun
+
+  if (unsupportedVersion) {
+    throw new Error(
+      "Nexus version is not supported for this chain. Please use a version earlier than 1.2.0 or a chain that supports Cancun."
+    )
+  }
+
+  if (!nexusVersion) {
+    if (hasCancun) {
+      nexusVersion = NEXUS_VERSION_LATEST
+    } else {
+      nexusVersion = "1.0.2"
+    }
+  }
 
   // if nexus version earlier than 1.2.0 is provided, use the config from the constants
   if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
@@ -384,7 +407,7 @@ export const toNexusAccount = async (
   const prevalidationHooks = customPrevalidationHooks || []
 
   let factoryData: Hex = "0x"
-
+  // console.log("validators", validators)
   if (useK1Config) {
     factoryData = getK1FactoryData({
       signerAddress: signer.address,

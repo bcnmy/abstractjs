@@ -50,7 +50,7 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
-import type { NexusVersion } from "./utils"
+import { type NexusVersion } from "./utils"
 import type { MultichainToken } from "./utils/Types"
 
 /**
@@ -272,15 +272,15 @@ export async function toMultichainNexusAccount(
   }
 
   const deployments = await Promise.all(
-    chains.map((chain, i) => {
-      return toNexusAccount({
+    chains.map(async (chain, i) =>
+      toNexusAccount({
         chain,
         signer: unresolvedSigner,
         transport: transports[i],
         nexusVersion: nexusVersion?.[i],
         ...accountParameters
       })
-    })
+    )
   )
 
   function deploymentOn(

@@ -15,6 +15,7 @@ import type {
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
 import type { NexusVersion } from "../utils/getVersion"
+import { NEXUS_VERSION_LATEST } from "../../constants"
 
 // ============ K1 Factory section ============
 
@@ -115,7 +116,7 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     hook,
     fallbacks,
     bootStrapAddress,
-    nexusVersion = "1.2.0"
+    nexusVersion = NEXUS_VERSION_LATEST
   } = parameters
   return registryAddress && attesters && attesterThreshold
     ? getInitDataWithRegistry({

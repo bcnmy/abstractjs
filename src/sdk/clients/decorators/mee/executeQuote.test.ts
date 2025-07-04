@@ -1,5 +1,4 @@
 import type { Chain, Hex, LocalAccount, Transport } from "viem"
-import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"

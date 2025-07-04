@@ -4,10 +4,12 @@ import {
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
 import type { Hex } from "viem"
-import type { AddressConfig } from "../account/utils/getVersion"
+import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
+
+export const NEXUS_VERSION_LATEST: NexusVersion = "1.2.0"
 
 export const ENTRY_POINT_ADDRESS: Hex =
   "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
