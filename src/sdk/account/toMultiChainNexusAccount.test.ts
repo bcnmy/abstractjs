@@ -14,7 +14,9 @@ import {
   toNetwork
 } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
+import { MEE_VALIDATOR_ADDRESS } from "../constants"
 import { mcUSDC } from "../constants/tokens"
+import { toMeeK1Module } from "../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -152,5 +154,25 @@ describe("mee.toMultiChainNexusAccount", async () => {
     const deployment = mcNexus.deploymentOn(base.id, true)
     expect(deployment).toBeDefined()
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
+  })
+  describe("nexusVersion", () => {
+    test("should create an account with the correct nexus version", async () => {
+      const nexusAccount = await toMultichainNexusAccount({
+        signer: eoaAccount,
+        chains: [baseSepolia, base],
+        transports: [
+          http(TESTNET_RPC_URLS[baseSepolia.id]),
+          http(TESTNET_RPC_URLS[base.id])
+        ],
+        nexusVersion: ["1.0.2", "1.2.0"],
+        validators: [
+          toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
+        ]
+      })
+      expect(nexusAccount.deployments.length).toEqual(2)
+      expect(nexusAccount.deploymentOn(baseSepolia.id)?.address).not.toEqual(
+        nexusAccount.deploymentOn(base.id)?.address
+      )
+    })
   })
 })

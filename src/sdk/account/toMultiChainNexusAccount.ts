@@ -57,7 +57,7 @@ import type { MultichainToken } from "./utils/Types"
  * Parameters required to create a multichain Nexus account
  */
 export type MultichainNexusParams = Partial<
-  Omit<ToNexusSmartAccountParameters, "signer">
+  Omit<ToNexusSmartAccountParameters, "signer" | "nexusVersion">
 > & {
   /** Array of chains where the account will be deployed */
   chains: Chain[]
@@ -272,15 +272,15 @@ export async function toMultichainNexusAccount(
   }
 
   const deployments = await Promise.all(
-    chains.map((chain, i) =>
-      toNexusAccount({
+    chains.map((chain, i) => {
+      return toNexusAccount({
         chain,
         signer: unresolvedSigner,
         transport: transports[i],
         nexusVersion: nexusVersion?.[i],
         ...accountParameters
       })
-    )
+    })
   )
 
   function deploymentOn(

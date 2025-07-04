@@ -117,7 +117,6 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     bootStrapAddress,
     nexusVersion = "1.2.0"
   } = parameters
-
   return registryAddress && attesters && attesterThreshold
     ? getInitDataWithRegistry({
         bootStrapAddress,
