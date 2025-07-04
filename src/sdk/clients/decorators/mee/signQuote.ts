@@ -31,7 +31,7 @@ export type SignQuotePayload = GetQuotePayload & {
   signature: Hex
 }
 
-const DEFAULT_PREFIX = "0x177eee00"
+export const DEFAULT_PREFIX = "0x177eee00"
 
 /**
  * Signs a quote using the provided account's signer or the client's default account.

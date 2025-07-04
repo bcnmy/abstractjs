@@ -5,6 +5,7 @@ import {
   type ValidatorParameters,
   toValidator
 } from "../toValidator"
+import { DEFAULT_PREFIX } from "../../../clients/decorators/mee"
 
 const MOCK_SUPERTXN_HASH_AND_TIMESTAMPS: Hex =
   "0x9e1cce57126e9205fe085888ed6b5ca0033f168e26b8927adb1c6da566cf7c5100000000000000000000000000000000000000000000000000000000642622800000000000000000000000000000000000000000000000000000000064262668"
@@ -50,7 +51,7 @@ export const getMeeK1ModuleStubSignature = (
     return DUMMY_SIGNATURE
   }
   if (signatureType === "simple") {
-    prefix = "0x177eee00"
+    prefix = DEFAULT_PREFIX
     mockModePayload = concatHex([
       MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
       "0x00000000000000000000000000000000000000000000000000000000000000a0",

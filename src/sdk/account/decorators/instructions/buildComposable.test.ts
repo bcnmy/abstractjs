@@ -14,8 +14,7 @@ import {
   fromBytes,
   parseEventLogs,
   parseUnits,
-  toBytes,
-  zeroAddress
+  toBytes
 } from "viem"
 import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, it } from "vitest"
@@ -129,25 +128,14 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
 
     const fusionQuote = await meeClient.getFusionQuote({
       trigger,
-      instructions: [
-        {
-          calls: [
-            {
-              to: zeroAddress,
-              value: 0n
-            }
-          ],
-          chainId: chain.id
-        }
-      ],
+      instructions: [],
       feeToken: {
         chainId: chain.id,
         address: testnetMcUSDC.addressOn(chain.id)
       }
     })
 
-    console.log("trigger.amount", trigger.amount)
-    console.log("fusionQuote.trigger.amount", fusionQuote.trigger.amount)
+    console.log(getMeeScanLink(fusionQuote.quote.hash))
 
     const { hash: hashOne } = await meeClient.executeFusionQuote({
       fusionQuote
@@ -158,6 +146,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
         hash: hashOne,
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
+
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
 
     const transferInstruction = await mcNexus.buildComposable({
@@ -224,25 +213,19 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
       amount: amountToSupply
     }
 
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger,
+      instructions: [],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    console.log(getMeeScanLink(fusionQuote.quote.hash))
+
     const { hash: hashOne } = await meeClient.executeFusionQuote({
-      fusionQuote: await meeClient.getFusionQuote({
-        trigger,
-        instructions: [
-          {
-            calls: [
-              {
-                to: zeroAddress,
-                value: 0n
-              }
-            ],
-            chainId: chain.id
-          }
-        ],
-        feeToken: {
-          chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id)
-        }
-      })
+      fusionQuote
     })
 
     const { transactionStatus: transactionStatusOne, explorerLinks } =
@@ -250,7 +233,9 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
         hash: hashOne,
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
+
     expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
+
     console.log({ explorerLinks, hash: hashOne })
 
     const transferInstruction = await mcNexus.buildComposable({
@@ -280,18 +265,18 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
       }
     })
 
+    const quote = await meeClient.getQuote({
+      instructions: [...transferInstruction, ...instructions, ...instructions],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    console.log(getMeeScanLink(quote.hash))
+
     const { hash: hashTwo } = await meeClient.executeQuote({
-      quote: await meeClient.getQuote({
-        instructions: [
-          ...transferInstruction,
-          ...instructions,
-          ...instructions
-        ],
-        feeToken: {
-          chainId: chain.id,
-          address: testnetMcUSDC.addressOn(chain.id)
-        }
-      })
+      quote
     })
 
     const {
