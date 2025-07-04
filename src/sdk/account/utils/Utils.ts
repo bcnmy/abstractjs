@@ -122,23 +122,30 @@ export function percentage(partialValue: number, totalValue: number) {
 /**
  * Converts a percentage to a factor (e.g., 50% -> 1.5).
  *
- * @param percentage - The percentage value (1-100)
+ * @param percentage - The percentage value (0-100)
  * @returns The converted factor
  * @throws If percentage is outside valid range
  */
 export function convertToFactor(percentage: number | undefined): number {
-  // Check if the input is within the valid range
-  if (percentage) {
-    if (percentage < 1 || percentage > 100) {
-      throw new Error("The percentage value should be between 1 and 100.")
-    }
-
-    // Calculate the factor
-    const factor = percentage / 100 + 1
-
-    return factor
+  // Return default factor if percentage is undefined or null
+  if (percentage === undefined || percentage === null) {
+    return 1
   }
-  return 1
+
+  // Check if the input is within the valid range (0-100)
+  if (percentage < 0 || percentage > 100) {
+    throw new Error("The percentage value should be between 0 and 100.")
+  }
+
+  // Handle special case for 0% (should return 1, not 0)
+  if (percentage === 0) {
+    return 1
+  }
+
+  // Calculate the factor
+  const factor = percentage / 100 + 1
+
+  return factor
 }
 
 /**

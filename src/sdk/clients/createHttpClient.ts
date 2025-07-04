@@ -72,8 +72,22 @@ export const createHttpClient = (url: Url, apiKey?: string): HttpClient => {
     const json = (await result.json()) as AnyData
     if (!result.ok) {
       const error = json?.error ?? json ?? result?.statusText ?? result
-      console.log({ error })
-      throw new Error(parseErrorMessage(error))
+      
+      // Only log errors in development mode to prevent sensitive data exposure
+      const isDevelopment = typeof globalThis !== 'undefined' && 
+        (globalThis as any).__DEV__ === true ||
+        typeof window !== 'undefined' && window.location?.hostname === 'localhost'
+      
+      if (isDevelopment) {
+        console.log({ error })
+      }
+      
+      // Create a safe error message that doesn't expose sensitive information
+      const safeErrorMessage = result.status >= 400 && result.status < 500 
+        ? `Client error: ${result.status} ${result.statusText}`
+        : `Request failed: ${result.status} ${result.statusText}`
+      
+      throw new Error(parseErrorMessage(json?.error?.message ?? safeErrorMessage))
     }
     return json as T
   }

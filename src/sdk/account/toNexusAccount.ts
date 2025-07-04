@@ -419,6 +419,7 @@ export const toNexusAccount = async (
     concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
+  let addressPromise: Promise<Address> | undefined = undefined
 
   const accountId: NexusAccountId = (await publicClient.readContract({
     address: implementationAddress,
@@ -435,28 +436,44 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = useK1Config
-      ? await getK1NexusAddress({
-          k1FactoryAddress: k1FactoryAddress!,
-          index,
-          ownerAddress: signer.address,
-          attesters: attesters!,
-          attesterThreshold,
-          publicClient
-        })
-      : await getNexusAddress({
-          factoryAddress,
-          index,
-          initData: initData!,
-          publicClient
-        })
-
-    if (!addressEquals(addressFromFactory, zeroAddress)) {
-      _accountAddress = addressFromFactory
-      return addressFromFactory
+    // Prevent race condition by checking if address is being computed
+    if (addressPromise) {
+      return addressPromise
     }
 
-    throw new Error("Failed to get account address")
+    addressPromise = (async () => {
+      const addressFromFactory = useK1Config
+        ? await getK1NexusAddress({
+            k1FactoryAddress: k1FactoryAddress!,
+            index,
+            ownerAddress: signer.address,
+            attesters: attesters!,
+            attesterThreshold,
+            publicClient
+          })
+        : await getNexusAddress({
+            factoryAddress,
+            index,
+            initData: initData!,
+            publicClient
+          })
+
+      if (!addressEquals(addressFromFactory, zeroAddress)) {
+        _accountAddress = addressFromFactory
+        return addressFromFactory
+      }
+
+      throw new Error("Failed to get account address")
+    })()
+
+    try {
+      const result = await addressPromise
+      addressPromise = undefined // Clear the promise after successful resolution
+      return result
+    } catch (error) {
+      addressPromise = undefined // Clear the promise on error
+      throw error
+    }
   }
 
   /**
