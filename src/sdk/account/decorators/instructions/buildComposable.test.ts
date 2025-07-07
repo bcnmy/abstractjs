@@ -824,8 +824,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     }
   })
 
-  // Skipping this just because this file takes a long time to run.
-  it.skip("should execute composable transaction for uniswap args", async () => {
+  it("should execute composable transaction for uniswap args", async () => {
     const fusionToken = getMultichainContract<typeof erc20Abi>({
       abi: erc20Abi,
       deployments: [
@@ -1428,9 +1427,7 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-  // Skipping this test. It is working well when running alone. Has some conflicts while running globally.
-  // This is safe to skip
-  it.skip("should composable cleanup execute based on dependency config", async () => {
+  it("should composable cleanup execute based on dependency config", async () => {
     const amountToSupply = parseUnits("0.1", 6)
     const amountToTransfer = parseUnits("0.01", 6)
 

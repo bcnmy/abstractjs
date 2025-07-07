@@ -92,8 +92,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     tokenAddress = mcUSDC.addressOn(optimism.id)
   })
 
-  // Skip this test as it will conflict with the other tests as it uses the same eoa account, and the nonce will be the same
-  test.skip("should execute a quote using signOnChainQuote", async () => {
+  test("should execute a quote using signOnChainQuote", async () => {
     console.time("signOnChainQuote:getQuote")
     console.time("signOnChainQuote:getHash")
     console.time("signOnChainQuote:receipt")
@@ -311,7 +310,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
     })
   })
-  describe.skip("custom approvalAmount", () => {
+  describe("custom approvalAmount", () => {
     test("should fail if approvalAmount is smaller than the trigger amount", async () => {
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.005", 6)
@@ -351,7 +350,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       ).rejects.toThrow()
     })
 
-    test("changes the allowance based on approvalAmount", async () => {
+    // This test is skipped because it uses USDT token which doesn't have fund setup.
+    test.skip("changes the allowance based on approvalAmount", async () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.03", 6)

@@ -134,9 +134,9 @@ describe("mee.signPermitQuote", () => {
     expect(signedPermitQuote).toBeDefined()
   })
 
-  test
-    .runIf(runPaidTests)
-    .skip("should execute a signed fusion quote using signPermitQuote", async () => {
+  test.runIf(runPaidTests)(
+    "should execute a signed fusion quote using signPermitQuote",
+    async () => {
       console.time("signPermitQuote:getQuote")
       console.time("signPermitQuote:getHash")
       console.time("signPermitQuote:receipt")
@@ -196,7 +196,8 @@ describe("mee.signPermitQuote", () => {
         tokenAddress
       )
       expect(balanceOfRecipient).toBe(trigger.amount)
-    })
+    }
+  )
 })
 
 describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
