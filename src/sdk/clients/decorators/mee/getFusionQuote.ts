@@ -190,12 +190,7 @@ export const prepareInstructions = async (
   // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
   // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
   // the remaining funds after the fee deduction.
-  if (trigger.useMaxAvailableFunds) {
-    if (trigger.tokenAddress === zeroAddress) {
-      throw new Error(
-        "Native token trigger is not supported with useMaxAvailableFunds"
-      )
-    }
+  if (trigger.useMaxAvailableFunds && trigger.tokenAddress !== zeroAddress) {
     transferFromAmount = runtimeERC20AllowanceOf({
       owner: sender,
       spender: scaAddress,
@@ -221,7 +216,6 @@ export const prepareInstructions = async (
     })
     return { triggerGasLimit, triggerAmount, batchedInstructions }
   }
-
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {

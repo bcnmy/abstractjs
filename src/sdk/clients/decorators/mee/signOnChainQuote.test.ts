@@ -49,6 +49,7 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
+
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -588,41 +589,86 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
   })
-  test("should handle ETH forwarder trigger call", async () => {
-    const ethTrigger = {
-      chainId: network.chain.id,
-      tokenAddress: zeroAddress,
-      amount: 1n
-    }
-    const feeToken = {
-      address: zeroAddress,
-      chainId: network.chain.id
-    }
-    const { address: recipient } = mcNexus.deploymentOn(network.chain.id, true)
-    const quote = await getOnChainQuote(meeClient, {
-      trigger: ethTrigger,
-      instructions: [
-        mcNexus.build({
-          type: "default",
-          data: {
-            chainId: network.chain.id,
-            calls: [
-              {
-                // dummy transfer to an address, this can be any transaction
-                to: recipient,
-                value: 1n
-              }
-            ]
-          }
-        })
-      ],
-      feeToken
+  describe("should handle ETH forwarder trigger call", () => {
+    test("should handle ETH forwarder trigger call", async () => {
+      const ethTrigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        amount: 1n
+      }
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              chainId: network.chain.id,
+              calls: [
+                {
+                  // dummy transfer to an address, this can be any transaction
+                  to: recipient,
+                  value: 1n
+                }
+              ]
+            }
+          })
+        ],
+        feeToken
+      })
+      // return
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote: quote
+      })
+      // Wait for the transaction to complete
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
-    const { hash } = await meeClient.executeFusionQuote({
-      fusionQuote: quote
+    test("should work with useMaxAvailableFunds", async () => {
+      const ethTrigger: Trigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        useMaxAvailableFunds: true
+      }
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              chainId: network.chain.id,
+              calls: [
+                {
+                  // dummy transfer to an address, this can be any transaction
+                  to: recipient,
+                  value: 1n
+                }
+              ]
+            }
+          })
+        ],
+        feeToken
+      })
+      const balance = await getBalance(
+        mcNexus.deploymentOn(network.chain.id, true).publicClient,
+        mcNexus.signer.address
+      )
+      expect(balance).toBe(quote.trigger.amount)
     })
-    // Wait for the transaction to complete
-    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })
