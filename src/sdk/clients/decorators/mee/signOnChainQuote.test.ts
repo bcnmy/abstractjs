@@ -592,8 +592,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     const ethTrigger = {
       chainId: network.chain.id,
       tokenAddress: zeroAddress,
-      // amount: 1n,
-      useMaxAvailableFunds: true
+      amount: 1n
     }
     const feeToken = {
       address: zeroAddress,
