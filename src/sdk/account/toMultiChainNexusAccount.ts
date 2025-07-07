@@ -272,7 +272,7 @@ export async function toMultichainNexusAccount(
   }
 
   const deployments = await Promise.all(
-    chains.map(async (chain, i) =>
+    chains.map((chain, i) =>
       toNexusAccount({
         chain,
         signer: unresolvedSigner,

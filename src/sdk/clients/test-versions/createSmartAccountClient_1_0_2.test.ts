@@ -37,6 +37,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../createBicoBundlerClient"
+import { getConfigFromNexusVersion } from "../../account"
 
 describe("nexus.client.1.0.2", async () => {
   let network_1_0_2: NetworkConfig
@@ -77,7 +78,7 @@ describe("nexus.client.1.0.2", async () => {
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
-      nexusVersion: "1.0.2"
+      nexusContracts: getConfigFromNexusVersion("1.0.2")
     })
 
     nexusClient_1_0_2_with_k1 = createSmartAccountClient({
@@ -91,7 +92,7 @@ describe("nexus.client.1.0.2", async () => {
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
-      nexusVersion: "1.0.2",
+      nexusContracts: getConfigFromNexusVersion("1.0.2"),
       validators: [
         toMeeK1Module({ signer: account_1_0_2, module: MEE_VALIDATOR_ADDRESS })
       ]
@@ -306,7 +307,6 @@ describe("nexus.client.1.0.2", async () => {
   })
 
   test("should compare signatures of viem and ethers signer", async () => {
-    const viemSigner = privateKeyToAccount(privKey_1_0_2)
     const wallet = new Wallet(privKey_1_0_2)
 
     const ethersAccount = await toNexusAccount({
@@ -314,7 +314,7 @@ describe("nexus.client.1.0.2", async () => {
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
-      nexusVersion: "1.0.2"
+      nexusContracts: getConfigFromNexusVersion("1.0.2")
     })
 
     const ethersNexusClient = createSmartAccountClient({
@@ -328,7 +328,7 @@ describe("nexus.client.1.0.2", async () => {
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
-      nexusVersion: "1.0.2",
+      nexusContracts: getConfigFromNexusVersion("1.0.2"),
       validators: [
         toMeeK1Module({
           signer: await toSigner({ signer: wallet as EthersWallet }),
@@ -362,7 +362,7 @@ describe("nexus.client.1.0.2", async () => {
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
       useK1Config: true,
-      nexusVersion: "1.0.2"
+      nexusContracts: getConfigFromNexusVersion("1.0.2")
     })
 
     const ethersNexusClient = createSmartAccountClient({
@@ -376,7 +376,7 @@ describe("nexus.client.1.0.2", async () => {
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
       useK1Config: false,
-      nexusVersion: "1.0.2",
+      nexusContracts: getConfigFromNexusVersion("1.0.2"),
       validators: [
         toMeeK1Module({
           signer: await toSigner({ signer: ethersWallet as EthersWallet }),

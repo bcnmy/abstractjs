@@ -412,7 +412,7 @@ export const toNexusAccount = async (
   const prevalidationHooks = customPrevalidationHooks || []
 
   let factoryData: Hex = "0x"
-  // console.log("validators", validators)
+
   if (useK1Config) {
     factoryData = getK1FactoryData({
       signerAddress: signer.address,
