@@ -90,10 +90,12 @@ import {
   typeToString
 } from "./utils/Utils"
 import {
+  AddressConfig,
   type AddressConfigsAdditions,
   type NexusAccountId,
   type NexusVersion,
   getConfigFromNexusVersion,
+  isVersionNewer,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
@@ -152,7 +154,7 @@ export type ToNexusSmartAccountParameters = {
   /** Optional implementation address */
   implementationAddress?: Address
   /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
-  nexusVersion?: NexusVersion
+  nexusContracts?: AddressConfig
   /** Optional factory address */
   factoryAddress?: Address
   /** Optional init data */
@@ -318,37 +320,52 @@ export const toNexusAccount = async (
   let {
     initData,
     // those params are 1.2.0 by default
-    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
+    // factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
+    // bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
+    // implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
     // those params are undefined by default and are defined only if explicitly provided
     // or if nexus version is provided
-    registryAddress,
-    attesters,
-    k1ValidatorAddress,
-    k1FactoryAddress,
-    nexusVersion
+    // registryAddress,
+    // attesters,
+    // k1ValidatorAddress,
+    // k1FactoryAddress,
+    nexusContracts
   } = parameters
+
   // check if the chain supports > 1.2.0
   const hasCancun = await supportsCancun({
     chain,
     transport: transportConfig
   })
+  // use latest version if nexusContracts is not provided
+  if (!nexusContracts) {
+    if (hasCancun) {
+      nexusContracts = getConfigFromNexusVersion(NEXUS_VERSION_LATEST)
+    } else {
+      nexusContracts = getConfigFromNexusVersion("1.0.2")
+    }
+  }
+
+  let {
+    factoryAddress,
+    bootStrapAddress,
+    implementationAddress,
+    registryAddress,
+    attesters,
+    k1ValidatorAddress,
+    k1FactoryAddress,
+    version: nexusVersion
+  } = nexusContracts
+
   const unsupportedVersion =
-    nexusVersion && !isVersionOlder(nexusVersion, "1.2.0") && !hasCancun
+    nexusContracts &&
+    !isVersionOlder(nexusContracts.version, "1.2.0") &&
+    !hasCancun
 
   if (unsupportedVersion) {
     throw new Error(
       "Nexus version is not supported for this chain. Please use a version earlier than 1.2.0 or a chain that supports Cancun."
     )
-  }
-
-  if (!nexusVersion) {
-    if (hasCancun) {
-      nexusVersion = NEXUS_VERSION_LATEST
-    } else {
-      nexusVersion = "1.0.2"
-    }
   }
 
   // if nexus version earlier than 1.2.0 is provided, use the config from the constants

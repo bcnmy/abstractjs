@@ -20,6 +20,8 @@ import {
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
+import { MEE_VALIDATOR_ADDRESS } from "../constants"
+import { toMeeK1Module } from "../modules/validators/meeK1"
 
 describe("nexus.account.addresses", async () => {
   let network: NetworkConfig
@@ -109,7 +111,10 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: baseSepolia,
         signer: eoaAccount,
-        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        validators: [
+          toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
+        ]
       }),
       mock: true,
       transport: http(bundlerUrl)

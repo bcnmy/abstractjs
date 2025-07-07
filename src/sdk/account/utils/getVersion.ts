@@ -195,6 +195,8 @@ export type NexusVersion = `${number}.${number}.${number}`
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 
 export type BaseAddressConfig = {
+  /** The version of the Nexus account */
+  version: NexusVersion
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
   accountId: NexusAccountId
   /** The implementation address for the account */
@@ -215,9 +217,7 @@ export type AddressConfig = BaseAddressConfig &
  * @throws Error if the version is not supported
  */
 export function getConfigFromNexusVersion(
-  nexusVersion: Required<
-    NonNullable<ToNexusSmartAccountParameters["nexusVersion"]>
-  >
+  nexusVersion: NexusVersion
 ): AddressConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
   if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {

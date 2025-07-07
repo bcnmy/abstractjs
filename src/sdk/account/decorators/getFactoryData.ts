@@ -8,6 +8,7 @@ import {
   toHex
 } from "viem"
 import { isVersionOlder } from ".."
+import { NEXUS_VERSION_LATEST } from "../../constants"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
@@ -15,7 +16,6 @@ import type {
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
 import type { NexusVersion } from "../utils/getVersion"
-import { NEXUS_VERSION_LATEST } from "../../constants"
 
 // ============ K1 Factory section ============
 

@@ -36,7 +36,16 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
   string,
   AddressConfig
 > = {
+  "1.2.0": {
+    version: "1.2.0",
+    accountId: "biconomy.nexus.1.2.0",
+    factoryAddress: NEXUS_ACCOUNT_FACTORY_ADDRESS,
+    bootStrapAddress: NEXUS_BOOTSTRAP_ADDRESS,
+    implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS,
+    k1ValidatorAddress: MEE_VALIDATOR_ADDRESS
+  },
   "1.0.2": {
+    version: "1.0.2",
     accountId: "biconomy.nexus.1.0.2",
     factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9",
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",

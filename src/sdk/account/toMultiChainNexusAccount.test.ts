@@ -1,8 +1,8 @@
 import {
+  http,
   type Chain,
   type LocalAccount,
   type Transport,
-  http,
   isAddress,
   isHex
 } from "viem"
@@ -22,6 +22,7 @@ import {
   toMultichainNexusAccount
 } from "./toMultiChainNexusAccount"
 import { toNexusAccount } from "./toNexusAccount"
+import { getConfigFromNexusVersion } from "./utils"
 
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig
@@ -157,14 +158,14 @@ describe("mee.toMultiChainNexusAccount", async () => {
   })
   describe("nexusVersion", () => {
     test("should throw an error if the version is not supported", async () => {
-      // await expect(
-      toNexusAccount({
-        chain: baseSepolia,
-        signer: eoaAccount,
-        transport: http(network.rpcUrl),
-        nexusVersion: "1.3.0"
-      })
-      // ).rejects.toThrow()
+      await expect(
+        toNexusAccount({
+          chain: baseSepolia,
+          signer: eoaAccount,
+          transport: http(network.rpcUrl),
+          nexusContracts: getConfigFromNexusVersion("1.3.0")
+        })
+      ).rejects.toThrow()
     })
     test("should throw an error if the version is supported but not by the chain", async () => {
       const notCancunChain = polygon
@@ -173,7 +174,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           chain: notCancunChain,
           signer: eoaAccount,
           transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
-          nexusVersion: "1.2.0"
+          nexusContracts: getConfigFromNexusVersion("1.2.0")
         })
       ).rejects.toThrow()
     })
@@ -198,7 +199,10 @@ describe("mee.toMultiChainNexusAccount", async () => {
           http(TESTNET_RPC_URLS[baseSepolia.id]),
           http(TESTNET_RPC_URLS[base.id])
         ],
-        nexusVersion: ["1.0.2", NEXUS_VERSION_LATEST],
+        nexusContracts: [
+          getConfigFromNexusVersion("1.0.2"),
+          getConfigFromNexusVersion(NEXUS_VERSION_LATEST)
+        ],
         validators: [
           toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
         ]
