@@ -42,8 +42,6 @@ import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY_ADDRESS,
-  NEXUS_BOOTSTRAP_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_VERSION_LATEST
 } from "../constants"
@@ -90,12 +88,10 @@ import {
   typeToString
 } from "./utils/Utils"
 import {
-  AddressConfig,
+  type AddressConfig,
   type AddressConfigsAdditions,
   type NexusAccountId,
-  type NexusVersion,
   getConfigFromNexusVersion,
-  isVersionNewer,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
@@ -319,16 +315,8 @@ export const toNexusAccount = async (
 
   let {
     initData,
-    // those params are 1.2.0 by default
-    // factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    // bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    // implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
     // those params are undefined by default and are defined only if explicitly provided
     // or if nexus version is provided
-    // registryAddress,
-    // attesters,
-    // k1ValidatorAddress,
-    // k1FactoryAddress,
     nexusContracts
   } = parameters
 

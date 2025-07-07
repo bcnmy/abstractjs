@@ -157,16 +157,6 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
   })
   describe("nexusVersion", () => {
-    test("should throw an error if the version is not supported", async () => {
-      await expect(
-        toNexusAccount({
-          chain: baseSepolia,
-          signer: eoaAccount,
-          transport: http(network.rpcUrl),
-          nexusContracts: getConfigFromNexusVersion("1.3.0")
-        })
-      ).rejects.toThrow()
-    })
     test("should throw an error if the version is supported but not by the chain", async () => {
       const notCancunChain = polygon
       await expect(

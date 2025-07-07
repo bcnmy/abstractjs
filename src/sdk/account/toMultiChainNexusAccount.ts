@@ -50,14 +50,14 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
+import type { AddressConfig } from "./utils"
 import type { MultichainToken } from "./utils/Types"
-import { AddressConfig } from "./utils"
 
 /**
  * Parameters required to create a multichain Nexus account
  */
 export type MultichainNexusParams = Partial<
-  Omit<ToNexusSmartAccountParameters, "signer" | "nexusVersion">
+  Omit<ToNexusSmartAccountParameters, "signer" | "nexusContracts">
 > & {
   /** Array of chains where the account will be deployed */
   chains: Chain[]

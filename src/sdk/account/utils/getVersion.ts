@@ -1,6 +1,5 @@
 import type { Hex } from "viem"
 import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
-import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
 
 /**
  * Retrieves the current version of the SDK from package.json
