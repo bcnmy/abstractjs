@@ -1,5 +1,5 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import { type Address, erc20Abi } from "viem"
+import { type Address, erc20Abi, zeroAddress } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
@@ -204,6 +204,15 @@ export const prepareInstructions = async (
     ? trigger.gasLimit
     : DEFAULT_GAS_LIMIT
 
+  // If token address is zero address, we don't need to add transferFrom instruction
+  if (trigger.tokenAddress === zeroAddress) {
+    const batchedInstructions = await batchInstructions({
+      account,
+      instructions: resolvedInstructions
+    })
+    return { triggerGasLimit, triggerAmount, batchedInstructions }
+  }
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
@@ -215,16 +224,14 @@ export const prepareInstructions = async (
       gasLimit: triggerGasLimit
     }
   }
-
   const triggerTransfer = await (isComposable
     ? account.buildComposable(params)
     : account.build(params))
 
   const batchedInstructions = await batchInstructions({
-    account: account,
+    account,
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
-
   return { triggerGasLimit, triggerAmount, batchedInstructions }
 }
 

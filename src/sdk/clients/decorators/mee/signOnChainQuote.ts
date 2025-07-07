@@ -146,7 +146,6 @@ export const signOnChainQuote = async (
     trigger,
     spender
   })
-
   // This will be always a non composable transaction, so don't worry about the composability
   const dataOrPrefix =
     (triggerCall as AbstractCall)?.data ?? FUSION_NATIVE_TRANSFER_PREFIX

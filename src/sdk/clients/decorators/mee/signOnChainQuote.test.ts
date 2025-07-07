@@ -41,6 +41,7 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import executeSignedQuote from "./executeSignedQuote"
+import getOnChainQuote from "./getOnChainQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
@@ -48,7 +49,6 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
-
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -587,5 +587,43 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
+  })
+  test("should handle ETH forwarder trigger call", async () => {
+    const ethTrigger = {
+      chainId: network.chain.id,
+      tokenAddress: zeroAddress,
+      amount: 1n
+    }
+    const feeToken = {
+      address: zeroAddress,
+      chainId: network.chain.id
+    }
+    const sender = mcNexus.signer.address
+    const { address: recipient } = mcNexus.deploymentOn(network.chain.id, true)
+    const quote = await getOnChainQuote(meeClient, {
+      trigger: ethTrigger,
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            chainId: network.chain.id,
+            calls: [
+              {
+                // dummy transfer to an address, this can be any transaction
+                to: recipient,
+                value: 1n
+              }
+            ]
+          }
+        })
+      ],
+      feeToken
+    })
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+    // Wait for the transaction to complete
+    const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })
