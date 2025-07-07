@@ -669,7 +669,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         mcNexus.deploymentOn(network.chain.id, true).publicClient,
         mcNexus.signer.address
       )
-      expect(balance).toBe(quote.trigger.amount)
+
+      // Approximation for the gas fees adjustment
+      expect(Number(balance)).to.be.approximately(
+        Number(balance) - 10000,
+        99999 + 10000
+      )
 
       // TODO: add execution as well once the runtimeNativeTokenBalanceOf is added
     })

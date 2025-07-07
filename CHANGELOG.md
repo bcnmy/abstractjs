@@ -1,5 +1,20 @@
 # @biconomy/abstractjs
 
+## 1.0.19
+
+### Patch Changes
+
+- Features released:
+
+  1. Eth forwarder - It enables native token to be transferred via trigger
+  2. Custom trigger call - It enables the developer to define custom call in trigger instead of just token triggers
+  3. Metamask DTK - Experimental metamask delegation flow is supported
+  4. Custom Recipient for token triggers - It enables developers to add a custom recipient address for token transfers in trigger
+  5. Custom Recipient for Eth Forwarder - It enables developers to add a custom recipient address for native currency transfers in trigger
+  6. Max available Eth Forwarder transfer - It enables developers to transfer maximum available native tokens excluding gas fee via trigger
+  7. Custom fee payer - This enables anyone to provide custom fee payer address which will take care of fee payment via pre approved allowance
+  8. Code and test suite improvements
+
 ## 1.0.18
 
 ### Patch Changes
