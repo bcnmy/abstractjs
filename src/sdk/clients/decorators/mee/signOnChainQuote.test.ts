@@ -631,6 +631,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
+
     test("should work with useMaxAvailableFunds", async () => {
       const ethTrigger: Trigger = {
         chainId: network.chain.id,
@@ -669,6 +670,54 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         mcNexus.signer.address
       )
       expect(balance).toBe(quote.trigger.amount)
+
+      // TODO: add execution as well once the runtimeNativeTokenBalanceOf is added
+    })
+
+    test("should work with useMaxAvailableFunds for custom recipient", async () => {
+      const ethTrigger: Trigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        useMaxAvailableFunds: true,
+        recipientAddress: eoaAccount.address
+      }
+
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+
+      const zeroTransfer = await mcNexus.build({
+        type: "default",
+        data: {
+          chainId: network.chain.id,
+          calls: [
+            {
+              // dummy transfer to an address, this can be any transaction
+              to: recipient,
+              value: 1n
+            }
+          ]
+        }
+      })
+
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [zeroTransfer],
+        feeToken
+      })
+
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote: quote
+      })
+
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
   })
 })
