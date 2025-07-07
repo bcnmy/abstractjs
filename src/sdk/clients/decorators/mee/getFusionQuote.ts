@@ -162,10 +162,27 @@ export const prepareInstructions = async (
   if (trigger.useMaxAvailableFunds) {
     const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
     if (trigger.tokenAddress === zeroAddress) {
+      const [balance, gasPrice, gasLimit] = await Promise.all([
+        publicClient.getBalance({ address: sender }),
+        publicClient.getGasPrice(),
+        publicClient.estimateGas({ account: sender, to: sender, value: 1n }) // Dummy values
+      ])
+
+      // 50% gas limit buffer to avoid failures
+      const gasLimitWithBuffer = (gasLimit * 150n) / 100n
+
+      // 50% buffer for gas price fluctuations
+      const gasBuffer = 1.5
+
+      const baseCost = gasLimitWithBuffer * gasPrice
+      const gasReserve = BigInt(Math.ceil(Number(baseCost) * gasBuffer))
+
+      if (balance <= gasReserve) {
+        throw new Error("Not enough native token to transfer")
+      }
+
       // native token balance maximum available balance fetch
-      triggerAmount = await publicClient.getBalance({
-        address: sender
-      })
+      triggerAmount = balance - gasReserve
     } else {
       // EOA balance maximum available balance fetch
       triggerAmount = await publicClient.readContract({
@@ -216,6 +233,7 @@ export const prepareInstructions = async (
     })
     return { triggerGasLimit, triggerAmount, batchedInstructions }
   }
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
@@ -235,6 +253,7 @@ export const prepareInstructions = async (
     account,
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
+
   return { triggerGasLimit, triggerAmount, batchedInstructions }
 }
 

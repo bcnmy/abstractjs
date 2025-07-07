@@ -93,8 +93,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     tokenAddress = mcUSDC.addressOn(optimism.id)
   })
 
-  // Skip this test as it will conflict with the other tests as it uses the same eoa account, and the nonce will be the same
-  test.skip("should execute a quote using signOnChainQuote", async () => {
+  test("should execute a quote using signOnChainQuote", async () => {
     console.time("signOnChainQuote:getQuote")
     console.time("signOnChainQuote:getHash")
     console.time("signOnChainQuote:receipt")
@@ -312,7 +311,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
     })
   })
-  describe.skip("custom approvalAmount", () => {
+  describe("custom approvalAmount", () => {
     test("should fail if approvalAmount is smaller than the trigger amount", async () => {
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.005", 6)
@@ -352,7 +351,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       ).rejects.toThrow()
     })
 
-    test("changes the allowance based on approvalAmount", async () => {
+    // This test is skipped because it uses USDT token which doesn't have fund setup.
+    test.skip("changes the allowance based on approvalAmount", async () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.03", 6)
@@ -631,6 +631,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
+
     test("should work with useMaxAvailableFunds", async () => {
       const ethTrigger: Trigger = {
         chainId: network.chain.id,
@@ -669,6 +670,54 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         mcNexus.signer.address
       )
       expect(balance).toBe(quote.trigger.amount)
+
+      // TODO: add execution as well once the runtimeNativeTokenBalanceOf is added
+    })
+
+    test("should work with useMaxAvailableFunds for custom recipient", async () => {
+      const ethTrigger: Trigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        useMaxAvailableFunds: true,
+        recipientAddress: eoaAccount.address
+      }
+
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+
+      const zeroTransfer = await mcNexus.build({
+        type: "default",
+        data: {
+          chainId: network.chain.id,
+          calls: [
+            {
+              // dummy transfer to an address, this can be any transaction
+              to: recipient,
+              value: 1n
+            }
+          ]
+        }
+      })
+
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [zeroTransfer],
+        feeToken
+      })
+
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote: quote
+      })
+
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
   })
 })
