@@ -100,8 +100,7 @@ describe("mee.signFusionQuote", () => {
     expect(signedFusionQuote).toBeDefined()
   })
 
-  // Tests below are skipped because they conflict with permit flows when the same nonce for the eoa is used
-  test.skip("should execute a signed fusion quote using signFusionQuote", async () => {
+  test("should execute a signed fusion quote using signFusionQuote", async () => {
     console.time("signFusionQuote:getQuote")
     console.time("signFusionQuote:getHash")
     console.time("signFusionQuote:receipt")

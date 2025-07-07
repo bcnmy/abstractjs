@@ -27,8 +27,7 @@ import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 
-// Tests below are skipped because they conflict with permit flows when the same nonce for the eoa is used
-describe.runIf(runPaidTests).skip("mee.executeFusionQuote", () => {
+describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
