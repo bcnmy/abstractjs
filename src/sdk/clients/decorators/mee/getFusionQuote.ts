@@ -161,16 +161,20 @@ export const prepareInstructions = async (
 
   if (trigger.useMaxAvailableFunds) {
     const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
-
-    // EOA balance maximum available balance fetch
-    const maxAvailableBalance = await publicClient.readContract({
-      address: trigger.tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [sender]
-    })
-
-    triggerAmount = maxAvailableBalance
+    if (trigger.tokenAddress === zeroAddress) {
+      // native token balance maximum available balance fetch
+      triggerAmount = await publicClient.getBalance({
+        address: sender
+      })
+    } else {
+      // EOA balance maximum available balance fetch
+      triggerAmount = await publicClient.readContract({
+        address: trigger.tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [sender]
+      })
+    }
   } else {
     if (!trigger.amount) throw new Error("Trigger amount field is required")
 
@@ -187,6 +191,11 @@ export const prepareInstructions = async (
   // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
   // the remaining funds after the fee deduction.
   if (trigger.useMaxAvailableFunds) {
+    if (trigger.tokenAddress === zeroAddress) {
+      throw new Error(
+        "Native token trigger is not supported with useMaxAvailableFunds"
+      )
+    }
     transferFromAmount = runtimeERC20AllowanceOf({
       owner: sender,
       spender: scaAddress,

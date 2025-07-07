@@ -592,13 +592,13 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     const ethTrigger = {
       chainId: network.chain.id,
       tokenAddress: zeroAddress,
-      amount: 1n
+      // amount: 1n,
+      useMaxAvailableFunds: true
     }
     const feeToken = {
       address: zeroAddress,
       chainId: network.chain.id
     }
-    const sender = mcNexus.signer.address
     const { address: recipient } = mcNexus.deploymentOn(network.chain.id, true)
     const quote = await getOnChainQuote(meeClient, {
       trigger: ethTrigger,
