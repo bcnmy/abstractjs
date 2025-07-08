@@ -179,6 +179,14 @@ export const isVersionNewer = (
 }
 
 export type AddressConfigsAdditions = {
+  "1.0.3": {
+    registryAddress?: Hex
+    attesters?: Hex[]
+    attesterThreshold?: number
+    k1FactoryAddress?: Hex
+    k1ValidatorAddress?: Hex
+    useK1Config?: boolean
+  }
   "1.0.2": {
     registryAddress?: Hex
     attesters?: Hex[]

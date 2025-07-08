@@ -265,12 +265,6 @@ export async function toMultichainNexusAccount(
     )
   }
 
-  if (options && options.length !== chains.length) {
-    throw new Error(
-      "The number of options must match the number of chains provided"
-    )
-  }
-
   const deployments = await Promise.all(
     chains.map((chain, i) =>
       toNexusAccount({

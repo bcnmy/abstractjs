@@ -32,21 +32,22 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
   string,
   AddressConfig
 > = {
-  // "1.2.1": {
-  //   version: "1.2.1",
-  //   accountId: "biconomy.nexus.1.2.1",
-  //   factoryAddress: "0x276ed08A3B562BF77a9E6bcB587e6182fCd8260C", // NEXUS_ACCOUNT_FACTORY_ADDRESS,
-  //   bootStrapAddress: "0x8BD88F2572DCeD62FC2E102225DafA8B19c49125",
-  //   implementationAddress: NEXUS_IMPLEMENTATION_ADDRESS,
-  //   k1ValidatorAddress: "0x808415d5F3fc005C001d5196C0758f74a1fa7B88" //MEE_VALIDATOR_ADDRESS
-  // },
   "1.2.0": {
     version: "1.2.0",
     accountId: "biconomy.nexus.1.2.0",
-    factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de", // NEXUS_ACCOUNT_FACTORY_ADDRESS,
+    factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
-    implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03", // NEXUS_IMPLEMENTATION_ADDRESS,
-    k1ValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95" // MEE_VALIDATOR_ADDRESS
+    implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
+    k1ValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95"
+  },
+  "1.0.3": {
+    version: "1.0.3",
+    accountId: "biconomy.nexus.1.0.3",
+    factoryAddress: "0xEA774bb5A2217391E0E5f9828b68C21E9176F22c",
+    bootStrapAddress: "0xB8aab0c542190daA7546b0ea48B7C8613c0A7454",
+    implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
+    k1ValidatorAddress: "0xe54dd54Af28D0eAEf37C6Ad413CeD4513B9C0B88",
+    k1FactoryAddress: "0xe54dd54Af28D0eAEf37C6Ad413CeD4513B9C0B88"
   },
   "1.0.2": {
     version: "1.0.2",

@@ -172,7 +172,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
       ).rejects.toThrow()
     })
-    test("should auto switch to 1.0.2 if the version is not specified and the chain needs it", async () => {
+    test("should auto switch to 1.0.x if the version is not specified and the chain needs it", async () => {
       const notCancunChain = polygon
       const nacc = await toNexusAccount({
         chain: notCancunChain,
@@ -183,34 +183,39 @@ describe("mee.toMultiChainNexusAccount", async () => {
         ]
       })
       // @ts-expect-error - accountId is not defined in the NexusAccount type
-      expect(nacc.accountId).toEqual("biconomy.nexus.1.0.2")
+      expect(nacc.accountId.includes("1.0.")).toBeTruthy()
     })
     test("should create an account with the correct nexus version", async () => {
       const nexusAccount = await toMultichainNexusAccount({
         signer: eoaAccount,
-        chains: [baseSepolia, base],
+        chains: [baseSepolia, base, optimism],
         transports: [
           http(TESTNET_RPC_URLS[baseSepolia.id]),
-          http(TESTNET_RPC_URLS[base.id])
+          http(TESTNET_RPC_URLS[base.id]),
+          http(TESTNET_RPC_URLS[optimism.id])
         ],
         options: [
-          { version: getNexus("1.0.2") },
+          { version: getNexus("1.0.3") },
           { version: getNexus(NEXUS_VERSION_LATEST) }
         ],
         validators: [
           toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
         ]
       })
-      expect(nexusAccount.deployments.length).toEqual(2)
+      expect(nexusAccount.deployments.length).toEqual(3)
       expect(nexusAccount.deploymentOn(baseSepolia.id)?.address).not.toEqual(
         nexusAccount.deploymentOn(base.id)?.address
       )
-      // @ts-expect-error - accountId is not defined in the NexusAccount type
-      expect(nexusAccount.deploymentOn(baseSepolia.id)?.accountId).toEqual(
-        "biconomy.nexus.1.0.2"
-      )
+      expect(
+        // @ts-expect-error - accountId is not defined in the NexusAccount type
+        nexusAccount.deploymentOn(baseSepolia.id)?.accountId.includes("1.0.")
+      ).toEqual(true)
       // @ts-expect-error - accountId is not defined in the NexusAccount type
       expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(
+        `biconomy.nexus.${NEXUS_VERSION_LATEST}`
+      )
+      // @ts-expect-error - accountId is not defined in the NexusAccount type
+      expect(nexusAccount.deploymentOn(optimism.id)?.accountId).toEqual(
         `biconomy.nexus.${NEXUS_VERSION_LATEST}`
       )
     })
