@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.21
+
+### Patch Changes
+
+- fixed the metamask delegation toolkit import issues
+
 ## 1.0.20
 
 ### Patch Changes
