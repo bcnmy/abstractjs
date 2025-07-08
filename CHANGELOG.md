@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.20
+
+### Patch Changes
+
+- Fixed the metamask delegation tool kit peer dependency issue
+
 ## 1.0.19
 
 ### Patch Changes
