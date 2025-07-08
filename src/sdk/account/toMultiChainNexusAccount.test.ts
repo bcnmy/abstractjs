@@ -4,7 +4,8 @@ import {
   type LocalAccount,
   type Transport,
   isAddress,
-  isHex
+  isHex,
+  parseUnits
 } from "viem"
 import { base, baseSepolia, optimism, polygon } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
@@ -14,6 +15,7 @@ import {
   toNetwork
 } from "../../test/testSetup"
 import type { NetworkConfig } from "../../test/testUtils"
+import { createMeeClient } from "../clients/createMeeClient"
 import { MEE_VALIDATOR_ADDRESS, NEXUS_VERSION_LATEST } from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import { toMeeK1Module } from "../modules"
@@ -22,7 +24,7 @@ import {
   toMultichainNexusAccount
 } from "./toMultiChainNexusAccount"
 import { toNexusAccount } from "./toNexusAccount"
-import { getConfigFromNexusVersion } from "./utils"
+import { getNexus, toFeeToken } from "./utils"
 
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig
@@ -164,7 +166,9 @@ describe("mee.toMultiChainNexusAccount", async () => {
           chain: notCancunChain,
           signer: eoaAccount,
           transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
-          nexusContracts: getConfigFromNexusVersion("1.2.0")
+          options: {
+            version: getNexus("1.2.0")
+          }
         })
       ).rejects.toThrow()
     })
@@ -189,9 +193,9 @@ describe("mee.toMultiChainNexusAccount", async () => {
           http(TESTNET_RPC_URLS[baseSepolia.id]),
           http(TESTNET_RPC_URLS[base.id])
         ],
-        nexusContracts: [
-          getConfigFromNexusVersion("1.0.2"),
-          getConfigFromNexusVersion(NEXUS_VERSION_LATEST)
+        options: [
+          { version: getNexus("1.0.2") },
+          { version: getNexus(NEXUS_VERSION_LATEST) }
         ],
         validators: [
           toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })

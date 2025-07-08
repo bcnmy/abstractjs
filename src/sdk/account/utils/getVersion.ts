@@ -215,9 +215,7 @@ export type AddressConfig = BaseAddressConfig &
  * @returns The configuration containing attester and factory addresses
  * @throws Error if the version is not supported
  */
-export function getConfigFromNexusVersion(
-  nexusVersion: NexusVersion
-): AddressConfig {
+export function getNexus(nexusVersion: NexusVersion): AddressConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
   if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
     return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]

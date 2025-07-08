@@ -6,6 +6,7 @@ import type {
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
   type DelegationParams,
+  type NexusOptions,
   type ToNexusSmartAccountParameters,
   toNexusAccount
 } from "./toNexusAccount"
@@ -50,7 +51,6 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
-import type { AddressConfig } from "./utils"
 import type { MultichainToken } from "./utils/Types"
 
 /**
@@ -65,8 +65,8 @@ export type MultichainNexusParams = Partial<
   transports: Transport[]
   /** The signer instance used for account creation */
   signer: ToNexusSmartAccountParameters["signer"]
-  /** Optional: Nexus version to use for the account, per chain */
-  nexusContracts?: AddressConfig[]
+  /** Optional Nexus options */
+  options?: NexusOptions[]
 }
 
 /**
@@ -251,7 +251,7 @@ export async function toMultichainNexusAccount(
     chains,
     signer: unresolvedSigner,
     transports,
-    nexusContracts,
+    options,
     ...accountParameters
   } = multiChainNexusParams
 
@@ -265,9 +265,9 @@ export async function toMultichainNexusAccount(
     )
   }
 
-  if (nexusContracts && nexusContracts.length !== chains.length) {
+  if (options && options.length !== chains.length) {
     throw new Error(
-      "The number of nexus versions must match the number of chains provided"
+      "The number of options must match the number of chains provided"
     )
   }
 
@@ -277,7 +277,7 @@ export async function toMultichainNexusAccount(
         chain,
         signer: unresolvedSigner,
         transport: transports[i],
-        nexusContracts: nexusContracts?.[i],
+        options: options?.[i],
         ...accountParameters
       })
     )
