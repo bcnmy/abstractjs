@@ -23,7 +23,6 @@ import {
   topUp
 } from "../../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
-import { getNexus } from "../../account"
 import { type NexusAccount, toNexusAccount } from "../../account/toNexusAccount"
 import { Logger } from "../../account/utils/Logger"
 import {
@@ -38,6 +37,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../createBicoBundlerClient"
+import { getNexus } from "../../modules"
 
 describe("nexus.client.1.0.2", async () => {
   let network_1_0_2: NetworkConfig

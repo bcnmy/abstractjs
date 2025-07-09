@@ -91,12 +91,12 @@ import {
   type AddressConfig,
   type AddressConfigsAdditions,
   type NexusAccountId,
-  getNexus,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+import { getNexus } from "../modules"
 
 /**
  * Base module configuration type

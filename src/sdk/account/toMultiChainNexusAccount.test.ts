@@ -24,7 +24,7 @@ import {
   toMultichainNexusAccount
 } from "./toMultiChainNexusAccount"
 import { toNexusAccount } from "./toNexusAccount"
-import { getNexus, toFeeToken } from "./utils"
+import { getNexus } from "../modules/utils"
 
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig
