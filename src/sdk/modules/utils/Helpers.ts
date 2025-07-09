@@ -10,16 +10,16 @@ import {
   pad,
   publicActions,
   toFunctionSelector,
-  toHex,
+  toHex
 } from "viem"
 import {
-  AddressConfig,
+  type AddressConfig,
   ERROR_MESSAGES,
-  NexusVersion,
-  semverCompare,
+  type NexusVersion,
+  semverCompare
 } from "../../account/index.js"
-import type { AnyData, ModularSmartAccount } from "./Types.js"
 import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants/index.js"
+import type { AnyData, ModularSmartAccount } from "./Types.js"
 
 /**
  * Represents a hardcoded hex value reference.
@@ -122,7 +122,7 @@ export const isPermitSupported = async (
       return client
         .call({
           to: tokenAddress,
-          data: `${selector}${padding}` as Hex,
+          data: `${selector}${padding}` as Hex
         })
         .then(() => true)
         .catch((error) => {
@@ -144,7 +144,7 @@ export const isPermitSupported = async (
       checkPermitEnabled(
         noncesSelector,
         `000000000000000000000000${"0".repeat(40)}`
-      ),
+      )
     ])
 
     return hasPermit && hasDomainSeparator && hasNonces

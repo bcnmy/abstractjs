@@ -32,12 +32,12 @@ import {
 } from "../../account/utils/Utils"
 import { getChain } from "../../account/utils/getChain"
 import { toSigner } from "../../account/utils/toSigner"
+import { getNexus } from "../../modules"
 import { toMeeK1Module } from "../../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../createBicoBundlerClient"
-import { getNexus } from "../../modules"
 
 describe("nexus.client.1.0.2", async () => {
   let network_1_0_2: NetworkConfig

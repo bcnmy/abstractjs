@@ -48,6 +48,7 @@ import {
 // Constants
 import { EntrypointAbi } from "../constants/abi"
 import { COMPOSABILITY_MODULE_ABI } from "../constants/abi"
+import { getNexus } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type {
   BaseComposableCall,
@@ -96,7 +97,6 @@ import {
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
-import { getNexus } from "../modules"
 
 /**
  * Base module configuration type

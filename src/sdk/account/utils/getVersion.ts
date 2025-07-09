@@ -1,5 +1,4 @@
 import type { Hex } from "viem"
-import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
 
 /**
  * Retrieves the current version of the SDK from package.json

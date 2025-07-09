@@ -19,12 +19,12 @@ import { createMeeClient } from "../clients/createMeeClient"
 import { MEE_VALIDATOR_ADDRESS, NEXUS_VERSION_LATEST } from "../constants"
 import { mcUSDC } from "../constants/tokens"
 import { toMeeK1Module } from "../modules"
+import { getNexus } from "../modules/utils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "./toMultiChainNexusAccount"
 import { toNexusAccount } from "./toNexusAccount"
-import { getNexus } from "../modules/utils"
 
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig
