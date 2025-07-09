@@ -195,7 +195,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           http(TESTNET_RPC_URLS[optimism.id])
         ],
         options: [
-          { version: getNexus("1.0.3") },
+          { version: getNexus("1.0.2") },
           { version: getNexus(NEXUS_VERSION_LATEST) }
         ],
         validators: [
@@ -207,8 +207,10 @@ describe("mee.toMultiChainNexusAccount", async () => {
         nexusAccount.deploymentOn(base.id)?.address
       )
       expect(
-        // @ts-expect-error - accountId is not defined in the NexusAccount type
-        nexusAccount.deploymentOn(baseSepolia.id)?.accountId.includes("1.0.")
+        nexusAccount
+          .deploymentOn(baseSepolia.id)
+          // @ts-expect-error - accountId is not defined in the NexusAccount type
+          ?.accountId.includes("1.0.")
       ).toEqual(true)
       // @ts-expect-error - accountId is not defined in the NexusAccount type
       expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(

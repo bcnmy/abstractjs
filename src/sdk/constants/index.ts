@@ -40,15 +40,6 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
     k1ValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95"
   },
-  "1.0.3": {
-    version: "1.0.3",
-    accountId: "biconomy.nexus.1.0.3",
-    factoryAddress: "0xEA774bb5A2217391E0E5f9828b68C21E9176F22c",
-    bootStrapAddress: "0xB8aab0c542190daA7546b0ea48B7C8613c0A7454",
-    implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
-    k1ValidatorAddress: "0xe54dd54Af28D0eAEf37C6Ad413CeD4513B9C0B88",
-    k1FactoryAddress: "0xe54dd54Af28D0eAEf37C6Ad413CeD4513B9C0B88"
-  },
   "1.0.2": {
     version: "1.0.2",
     accountId: "biconomy.nexus.1.0.2",
