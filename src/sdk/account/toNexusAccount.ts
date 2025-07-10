@@ -42,13 +42,13 @@ import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
+  MEE_VALIDATOR_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_VERSION_LATEST
 } from "../constants"
 // Constants
-import { EntrypointAbi } from "../constants/abi"
-import { COMPOSABILITY_MODULE_ABI } from "../constants/abi"
-import { getNexus } from "../modules"
+import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
+import { getNexus, toMeeK1Module } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type {
   BaseComposableCall,
@@ -390,7 +390,15 @@ export const toNexusAccount = async (
   const defaultValidator = toDefaultModule({ signer })
 
   // Prepare validator modules
-  const validators = customValidators || []
+  let validators = customValidators || []
+  if (validators.length === 0 && isVersionOlder(nexusVersion, "1.2.0")) {
+    validators = [
+      toMeeK1Module({
+        signer: await toSigner({ signer }),
+        module: MEE_VALIDATOR_ADDRESS
+      })
+    ]
+  }
 
   let k1Validator: Validator | undefined = undefined
 

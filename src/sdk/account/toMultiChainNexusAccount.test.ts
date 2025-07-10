@@ -177,10 +177,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       const nacc = await toNexusAccount({
         chain: notCancunChain,
         signer: eoaAccount,
-        transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
-        validators: [
-          toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
-        ]
+        transport: http(TESTNET_RPC_URLS[notCancunChain.id])
       })
       // @ts-expect-error - accountId is not defined in the NexusAccount type
       expect(nacc.accountId.includes("1.0.")).toBeTruthy()
