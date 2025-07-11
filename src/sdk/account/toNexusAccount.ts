@@ -351,7 +351,12 @@ export const toNexusAccount = async (
     k1FactoryAddress,
     version: nexusVersion
   } = version
-
+  const hasCustomAddressConfig =
+    factoryAddress ||
+    bootStrapAddress ||
+    implementationAddress ||
+    registryAddress ||
+    attesters
   const unsupportedVersion =
     version && !isVersionOlder(version.version, "1.2.0") && !hasCancun
 
@@ -362,7 +367,11 @@ export const toNexusAccount = async (
   }
 
   // if nexus version earlier than 1.2.0 is provided, use the config from the constants
-  if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
+  if (
+    nexusVersion &&
+    isVersionOlder(nexusVersion, "1.2.0") &&
+    !hasCustomAddressConfig
+  ) {
     ;({
       factoryAddress,
       bootStrapAddress,
@@ -460,7 +469,6 @@ export const toNexusAccount = async (
     concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
-
   const accountId: NexusAccountId = (await publicClient.readContract({
     address: implementationAddress,
     abi: parseAbi(["function accountId() public view returns (string)"]),
