@@ -105,7 +105,7 @@ describe("utils", async () => {
     test("should return the correct value if the chain supports Cancun", async () => {
       // polygon should return false
       const doesSupportCancunPolygon = await supportsCancun({
-        transport: http(MAINNET_RPC_URLS[polygon.id]),
+        transport: http(),
         chain: polygon
       })
       expect(doesSupportCancunPolygon).toBe(false)

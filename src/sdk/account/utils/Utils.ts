@@ -458,26 +458,23 @@ export function parseRequestArguments(input: string[]) {
   const lines = argsString.split("\n").filter((line) => line.trim())
 
   // Create an object from the key-value pairs
-  const result = lines.reduce(
-    (acc, line) => {
-      // Remove extra spaces and split by ':'
-      const [key, value] = line.split(":").map((s) => s.trim())
+  const result = lines.reduce((acc, line) => {
+    // Remove extra spaces and split by ':'
+    const [key, value] = line.split(":").map((s) => s.trim())
 
-      // Clean up the key (remove trailing spaces and colons)
-      const cleanKey = key.trim()
+    // Clean up the key (remove trailing spaces and colons)
+    const cleanKey = key.trim()
 
-      // Clean up the value (remove 'gwei' and other units)
-      const cleanValue: string | number = value.replace("gwei", "").trim()
+    // Clean up the value (remove 'gwei' and other units)
+    const cleanValue: string | number = value.replace("gwei", "").trim()
 
-      if (fieldsToOmit.includes(cleanKey)) {
-        return acc
-      }
-
-      acc[cleanKey] = cleanValue
+    if (fieldsToOmit.includes(cleanKey)) {
       return acc
-    },
-    {} as Record<string, string | number>
-  )
+    }
+
+    acc[cleanKey] = cleanValue
+    return acc
+  }, {} as Record<string, string | number>)
 
   return result
 }
@@ -496,6 +493,31 @@ export async function supportsCancun({
   transport: Transport
   chain: Chain
 }): Promise<boolean> {
+  const cancunSupportedChains: Record<string, boolean> = {
+    "1": true,
+    "10": true,
+    "56": true,
+    "97": true,
+    "100": true,
+    "137": false,
+    "8453": true,
+    "10200": true,
+    "42161": false,
+    "43113": true,
+    "43114": true,
+    "80002": false,
+    "84532": true,
+    "421614": false,
+    "534351": false,
+    "534352": false,
+    "11155111": true,
+    "11155420": true
+  }
+
+  if (cancunSupportedChains[chain.id.toString()]) {
+    return cancunSupportedChains[chain.id.toString()]
+  }
+
   const client = createPublicClient({
     chain,
     transport

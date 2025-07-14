@@ -280,6 +280,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Check if the account is delegated to the implementation address */
     isDelegated: () => Promise<boolean>
+
+    /** Account ID */
+    accountId: NexusAccountId
   }
 >
 

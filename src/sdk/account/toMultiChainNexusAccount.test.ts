@@ -187,7 +187,6 @@ describe("mee.toMultiChainNexusAccount", async () => {
         signer: eoaAccount,
         transport: http(TESTNET_RPC_URLS[notCancunChain.id])
       })
-      // @ts-expect-error - accountId is not defined in the NexusAccount type
       expect(nacc.accountId.includes("1.0.")).toBeTruthy()
     })
     test("should create an account with the correct nexus version", async () => {
@@ -212,16 +211,11 @@ describe("mee.toMultiChainNexusAccount", async () => {
         nexusAccount.deploymentOn(base.id)?.address
       )
       expect(
-        nexusAccount
-          .deploymentOn(baseSepolia.id)
-          // @ts-expect-error - accountId is not defined in the NexusAccount type
-          ?.accountId.includes("1.0.")
+        nexusAccount.deploymentOn(baseSepolia.id)?.accountId.includes("1.0.")
       ).toEqual(true)
-      // @ts-expect-error - accountId is not defined in the NexusAccount type
       expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(
         `biconomy.nexus.${NEXUS_VERSION_LATEST}`
       )
-      // @ts-expect-error - accountId is not defined in the NexusAccount type
       expect(nexusAccount.deploymentOn(optimism.id)?.accountId).toEqual(
         `biconomy.nexus.${NEXUS_VERSION_LATEST}`
       )
