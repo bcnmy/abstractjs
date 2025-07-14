@@ -16,7 +16,7 @@ import {
   zeroAddress
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
-import { baseSepolia } from "viem/chains"
+import { baseSepolia, optimismSepolia } from "viem/chains"
 import {
   getChain,
   getCustomChain,
@@ -311,7 +311,10 @@ export const getBundlerUrl = (chainId: number) =>
  */
 export const testnetMcTestUSDC = getMultichainContract<typeof erc20Abi>({
   abi: erc20Abi,
-  deployments: [["0xD0461f0516E2202c86145530494d36A0Ed431Ee7", baseSepolia.id]]
+  deployments: [
+    ["0xD0461f0516E2202c86145530494d36A0Ed431Ee7", baseSepolia.id],
+    ["0x2eadb16b44743c3a670ce6fc4d4c0e9eb41ca5c7", optimismSepolia.id]
+  ]
 })
 
 /**
@@ -319,17 +322,8 @@ export const testnetMcTestUSDC = getMultichainContract<typeof erc20Abi>({
  */
 export const testnetMcTestUSDCP = getMultichainContract<typeof erc20Abi>({
   abi: erc20Abi,
-  deployments: [["0x016b744B7E8d7EF72349a8e17178721Fd6126424", baseSepolia.id]]
+  deployments: [
+    ["0x016b744B7E8d7EF72349a8e17178721Fd6126424", baseSepolia.id],
+    ["0xcb90606250ff24cb6b1261117ba29823af768230", optimismSepolia.id]
+  ]
 })
-
-/**
- * Fund an address with internal testnet USDC token.
- * @param chainId - The chain ID. Base Sepolia supported only.
- * @param address - The address to fund to.
- */
-const fundAddressWithInternalTestnetUSDC = async (
-  chainId: number,
-  fromAccount: ReturnType<typeof privateKeyToAccount>
-) => {
-  const chain = getChain(chainId)
-}
