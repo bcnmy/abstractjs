@@ -9,9 +9,3 @@ export const setup = async ({ provide }) => {
 }
 
 export const teardown = async () => {}
-
-declare module "vitest" {
-  export interface ProvidedContext {
-    settings: { runPaidTests: boolean }
-  }
-}

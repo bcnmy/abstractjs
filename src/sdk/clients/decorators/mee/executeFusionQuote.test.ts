@@ -24,7 +24,6 @@ import getFusionQuote from "./getFusionQuote"
 import type { FeeTokenInfo } from "./getQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe.runIf(runPaidTests)("mee.executeFusionQuote", () => {

@@ -47,7 +47,6 @@ import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {

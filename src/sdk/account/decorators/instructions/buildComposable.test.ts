@@ -44,7 +44,6 @@ import {
 import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe.runIf(runPaidTests)("mee.buildComposable", () => {
