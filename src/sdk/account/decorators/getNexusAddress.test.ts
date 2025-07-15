@@ -18,6 +18,9 @@ import {
 } from "../../clients/createBicoBundlerClient"
 import { type NexusAccount, toNexusAccount } from "../toNexusAccount"
 
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
 describe("account.decorators.getNexusAddress.local", () => {
   let network: NetworkConfig
   let chain: Chain
@@ -68,51 +71,54 @@ describe("account.decorators.getNexusAddress.local", () => {
   })
 })
 
-describe("account.decorators.getNexusAddress.testnet", () => {
-  let network: NetworkConfig
-  let chain: Chain
-  let bundlerUrl: string
+describe.runIf(runLifecycleTests)(
+  "account.decorators.getNexusAddress.testnet",
+  () => {
+    let network: NetworkConfig
+    let chain: Chain
+    let bundlerUrl: string
 
-  // Test utils
-  let publicClient: PublicClient
-  let eoaAccount: LocalAccount
+    // Test utils
+    let publicClient: PublicClient
+    let eoaAccount: LocalAccount
 
-  beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    beforeAll(async () => {
+      network = await toNetwork("TESTNET_FROM_ENV_VARS")
 
-    chain = network.chain
-    bundlerUrl = network.bundlerUrl
-    eoaAccount = network.account!
-    publicClient = createPublicClient({
-      chain,
-      transport: http(network.rpcUrl)
-    })
-  })
-
-  test("init testnet network", async () => {
-    const account = await toNexusAccount({
-      chain,
-      transport: http(network.rpcUrl),
-      signer: eoaAccount
+      chain = network.chain
+      bundlerUrl = network.bundlerUrl
+      eoaAccount = network.account!
+      publicClient = createPublicClient({
+        chain,
+        transport: http(network.rpcUrl)
+      })
     })
 
-    const nexusClient = createBicoBundlerClient({
-      account,
-      transport: http(
-        `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${process.env.PIMLICO_API_KEY}`
-      )
-    })
+    test("init testnet network", async () => {
+      const account = await toNexusAccount({
+        chain,
+        transport: http(network.rpcUrl),
+        signer: eoaAccount
+      })
 
-    const hash = await nexusClient.sendUserOperation({
-      calls: [
-        {
-          to: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", // vitalik.eth,
-          value: 0n
-        }
-      ]
-    })
+      const nexusClient = createBicoBundlerClient({
+        account,
+        transport: http(
+          `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${process.env.PIMLICO_API_KEY}`
+        )
+      })
 
-    const tx = await nexusClient.waitForUserOperationReceipt({ hash })
-    expect(tx.success).toBeTruthy()
-  })
-})
+      const hash = await nexusClient.sendUserOperation({
+        calls: [
+          {
+            to: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", // vitalik.eth,
+            value: 0n
+          }
+        ]
+      })
+
+      const tx = await nexusClient.waitForUserOperationReceipt({ hash })
+      expect(tx.success).toBeTruthy()
+    })
+  }
+)

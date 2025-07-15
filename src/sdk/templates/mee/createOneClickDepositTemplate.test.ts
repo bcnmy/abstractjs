@@ -16,6 +16,10 @@ import { AavePoolAbi } from "../../constants/abi"
 import { testnetMcUSDC } from "../../constants/tokens"
 import { runtimeERC20BalanceOf } from "../../modules"
 import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
+
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
 const mocks = vi.hoisted(async () => {
   const { testnetMcUSDC } = await import("../../constants/tokens")
 
@@ -42,7 +46,7 @@ vi.mock("../../account/decorators/getUnifiedERC20Balance", async () => {
   }
 })
 
-describe("createOneClickDepositTemplate", () => {
+describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
   let eoaAccount: LocalAccount
   let sourceChain: Chain
   let destinationChain: Chain

@@ -8,7 +8,10 @@ import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
-describe("mee.sponsorSupertransaction", () => {
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
+describe.runIf(runLifecycleTests)("mee.sponsorSupertransaction", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

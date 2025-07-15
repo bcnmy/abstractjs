@@ -39,7 +39,8 @@ import { type Trigger, signPermitQuote } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runPaidTests, runLifecycleTests } = inject("settings")
+
 describe("mee.signPermitQuote", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -200,7 +201,7 @@ describe("mee.signPermitQuote", () => {
   )
 })
 
-describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
+describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

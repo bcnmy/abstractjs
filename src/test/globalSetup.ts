@@ -4,13 +4,16 @@ config()
 
 export const setup = async ({ provide }) => {
   const runPaidTests = process.env.RUN_PAID_TESTS?.toString() === "true"
-  provide("settings", { runPaidTests })
+  const runLifecycleTests =
+    process.env.RUN_LIFECYCLE_TESTS?.toString() === "true"
+
+  provide("settings", { runPaidTests, runLifecycleTests })
 }
 
 export const teardown = async () => {}
 
 declare module "vitest" {
   export interface ProvidedContext {
-    settings: { runPaidTests: boolean }
+    settings: { runPaidTests: boolean; runLifecycleTests: boolean }
   }
 }

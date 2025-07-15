@@ -45,9 +45,9 @@ import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runLifecycleTests } = inject("settings")
 
-describe.runIf(runPaidTests)("mee.buildComposable", () => {
+describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

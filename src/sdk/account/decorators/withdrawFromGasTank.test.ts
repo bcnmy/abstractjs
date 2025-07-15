@@ -18,9 +18,9 @@ import { runtimeERC20BalanceOf } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runLifecycleTests } = inject("settings")
 
-describe("mee.withdrawFromGasTank", () => {
+describe.runIf(runLifecycleTests)("mee.withdrawFromGasTank", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
   let gasTankEoaAccount: LocalAccount

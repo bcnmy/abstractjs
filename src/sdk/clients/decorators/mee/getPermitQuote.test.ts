@@ -38,7 +38,10 @@ import {
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
 
-describe("mee.getPermitQuote", () => {
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
+describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
   let network: NetworkConfig
   let testnetNetwork: NetworkConfig
   let eoaAccount: LocalAccount

@@ -48,7 +48,7 @@ import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runPaidTests, runLifecycleTests } = inject("settings")
 
 describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let network: NetworkConfig
@@ -437,7 +437,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   })
 })
 
-describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
+describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

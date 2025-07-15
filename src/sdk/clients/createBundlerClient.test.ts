@@ -30,7 +30,7 @@ import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runLifecycleTests } = inject("settings")
 
 const COMPETITORS = [
   {
@@ -54,68 +54,71 @@ const calls = [
   }
 ]
 
-describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
-  let network: NetworkConfig
-  let eoaAccount: LocalAccount
+describe.runIf(runLifecycleTests)(
+  "nexus.interoperability with 'MeeNode'",
+  () => {
+    let network: NetworkConfig
+    let eoaAccount: LocalAccount
 
-  let mcNexus: MultichainSmartAccount
-  let meeClient: MeeClient
+    let mcNexus: MultichainSmartAccount
+    let meeClient: MeeClient
 
-  let chain: Chain
+    let chain: Chain
 
-  beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
-    eoaAccount = network.account!
-    chain = baseSepolia
+    beforeAll(async () => {
+      network = await toNetwork("TESTNET_FROM_ENV_VARS")
+      eoaAccount = network.account!
+      chain = baseSepolia
 
-    mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
-      signer: eoaAccount
+      mcNexus = await toMultichainNexusAccount({
+        chains: [chain],
+        transports: [http(network.rpcUrl)],
+        signer: eoaAccount
+      })
+
+      meeClient = await createMeeClient({ account: mcNexus })
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
-  })
+    /**
+     * This test doesn't utilise Fusion =>  there is not trigger Txn,
+     * and Nexus is NOT prefunded before userOp =>
+     * => Nexus account SHOULD have its own USDC balance
+     * Otherwise the test will fail
+     */
+    test("should send a transaction through the MeeNode", async () => {
+      const usdcBalance = await createPublicClient({
+        chain: baseSepolia,
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+      }).getBalance({
+        address: mcNexus.addressOn(baseSepolia.id, true)
+      })
 
-  /**
-   * This test doesn't utilise Fusion =>  there is not trigger Txn,
-   * and Nexus is NOT prefunded before userOp =>
-   * => Nexus account SHOULD have its own USDC balance
-   * Otherwise the test will fail
-   */
-  test("should send a transaction through the MeeNode", async () => {
-    const usdcBalance = await createPublicClient({
-      chain: baseSepolia,
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
-    }).getBalance({
-      address: mcNexus.addressOn(baseSepolia.id, true)
-    })
+      if (usdcBalance === 0n) {
+        throw new Error("Insufficient balance")
+      }
 
-    if (usdcBalance === 0n) {
-      throw new Error("Insufficient balance")
-    }
-
-    const { hash } = await meeClient.execute({
-      instructions: [
-        {
-          calls,
+      const { hash } = await meeClient.execute({
+        instructions: [
+          {
+            calls,
+            chainId: baseSepolia.id
+          }
+        ],
+        feeToken: {
+          address: testnetMcUSDC.addressOn(baseSepolia.id),
           chainId: baseSepolia.id
         }
-      ],
-      feeToken: {
-        address: testnetMcUSDC.addressOn(baseSepolia.id),
-        chainId: baseSepolia.id
-      }
-    })
-
-    const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({
-        hash,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
-    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-  })
-})
+
+      const { transactionStatus } =
+        await meeClient.waitForSupertransactionReceipt({
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+      expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    })
+  }
+)
 
 describe.runIf(runPaidTests).each(COMPETITORS)(
   "nexus.interoperability with $name bundler",

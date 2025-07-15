@@ -17,7 +17,7 @@ import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runLifecycleTests } = inject("settings")
 
 describe("mee.getGasTankBalance", () => {
   let network: NetworkConfig
@@ -49,7 +49,7 @@ describe("mee.getGasTankBalance", () => {
     })
   })
 
-  test.runIf(runPaidTests)("Deploy gas tank", async () => {
+  test.runIf(runLifecycleTests)("Deploy gas tank", async () => {
     const { address: gasTankAddress } = await gasTankAccount.getAddress()
     const deployed = await gasTankAccount.isDeployed()
 
