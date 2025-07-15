@@ -8,11 +8,14 @@
     "declaration": true,
     "declarationMap": true,
     "noEmit": false,
-    "rootDir": "../src/sdk"
+    "rootDir": "../src/sdk",
+    "types": ["vitest"],
+    "typeRoots": ["./node_modules/@types", "./types"]
   },
   "exclude": [
     "../src/test/**/*.*",
     "../src/sdk/**/*.test.*",
-    "../src/sdk/**/*.spec.*",
-  ]
+    "../src/sdk/**/*.spec.*"
+  ],
+  "include": ["src/**/*", "vitest.d.ts"]
 }
