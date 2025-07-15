@@ -176,7 +176,43 @@ async function processChain(
         console.log(`USDC Transaction: ${usdcTxReceipt.transactionHash}`)
       }
     } else if (usdcAddress) {
-      console.log(`Nexus account already has sufficient USDC on ${chain.name}`)
+      console.log(
+        `Nexus account already has sufficient USDC on ${
+          chain.name
+        }. ${formatUnits(nexusUsdcBalance, 6)} USDC`
+      )
+    }
+
+    // Fund with USDCP if needed todo
+    if (
+      testUsdcPAddress &&
+      nexusTestnetMcTestUSDCPBalance < USDC_TOKEN_AMOUNT
+    ) {
+      if (masterTestnetMcTestUSDCPBalance < USDC_TOKEN_AMOUNT) {
+        console.warn(
+          `Insufficient master account USDCP balance on ${chain.name}`
+        )
+      } else {
+        console.log(`Funding Nexus account with USDCP on ${chain.name}...`)
+        const usdcPTx = await walletClient.sendTransaction({
+          to: testUsdcPAddress,
+          data: encodeFunctionData({
+            abi: TokenWithPermitAbi,
+            functionName: "transfer",
+            args: [nexusAddress, USDC_TOKEN_AMOUNT]
+          })
+        })
+        const usdcPTxReceipt = await walletClient.waitForTransactionReceipt({
+          hash: usdcPTx
+        })
+        console.log(`USDCP Transaction: ${usdcPTxReceipt.transactionHash}`)
+      }
+    } else if (testUsdcPAddress) {
+      console.log(
+        `Nexus account already has sufficient USDCP on ${
+          chain.name
+        }. ${formatUnits(nexusTestnetMcTestUSDCPBalance, 6)} USDCP`
+      )
     }
 
     console.log(`\n✅ Completed processing for ${chain.name} (${chainId})`)
@@ -198,7 +234,8 @@ function isTestnetChain(chainId: number): boolean {
     84532, // Base Sepolia
     421613, // Arbitrum Goerli
     421614, // Arbitrum Sepolia
-    11155111 // Sepolia
+    11155111, // Sepolia
+    11155420 // OP Sepolia
   ]
   return testnetChains.includes(Number(chainId))
 }
