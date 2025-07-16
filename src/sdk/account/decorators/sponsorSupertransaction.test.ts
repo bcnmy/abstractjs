@@ -1,6 +1,6 @@
 import { http, type Chain, type LocalAccount } from "viem"
 import { generatePrivateKey } from "viem/accounts"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, inject, it } from "vitest"
 import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"

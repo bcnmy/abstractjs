@@ -9,7 +9,7 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import {
   TESTNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,

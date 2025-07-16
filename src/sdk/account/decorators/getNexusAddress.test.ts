@@ -8,7 +8,7 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
 import type { MasterClient, NetworkConfig } from "../../../test/testUtils"
 import { getTestAccount, toTestClient, topUp } from "../../../test/testUtils"

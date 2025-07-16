@@ -6,7 +6,7 @@ import {
   zeroAddress
 } from "viem"
 import { sepolia } from "viem/chains"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, inject, it, vi } from "vitest"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
 import {
   type MultichainSmartAccount,

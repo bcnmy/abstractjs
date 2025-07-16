@@ -9,7 +9,7 @@ import {
   createWalletClient,
   parseUnits
 } from "viem"
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { afterAll, beforeAll, describe, expect, inject, test } from "vitest"
 import {
   TEST_BLOCK_CONFIRMATIONS,
   paymasterTruthy,
