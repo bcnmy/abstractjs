@@ -1,4 +1,5 @@
 import {
+  http,
   type Address,
   type Chain,
   type PrivateKeyAccount,
@@ -6,7 +7,6 @@ import {
   type WalletClient,
   createPublicClient,
   createWalletClient,
-  http,
   parseEther
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"

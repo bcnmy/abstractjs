@@ -1,6 +1,6 @@
 import type { Address, Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
-import { isStaging } from "../account/utils/Helpers"
+import { isStaging, isTesting } from "../account/utils/Helpers"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
@@ -11,11 +11,11 @@ export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v1"
 /**
  * Default URL for the MEE node service
  */
-export const DEFAULT_PATHFINDER_URL = "https://mee-node-staging.biconomy.io/v1"
-const DEFAULT_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
+export const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
+const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
 export const DEFAULT_STAGING_PATHFINDER_URL =
-  "https://staging-network.biconomy.io/v1"
+  "https://mee-node-staging.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
 /**
@@ -65,11 +65,15 @@ export type BaseMeeClient = Prettify<
 export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 
 export const createMeeClient = async (params: CreateMeeClientParams) => {
+  const stagingOrTesting = isStaging() || isTesting()
+  console.log("stagingOrTesting", stagingOrTesting)
   const {
     account,
     pollingInterval = 1000,
-    url = isStaging() ? DEFAULT_STAGING_PATHFINDER_URL : DEFAULT_PATHFINDER_URL,
-    apiKey = isStaging()
+    url = stagingOrTesting
+      ? DEFAULT_STAGING_PATHFINDER_URL
+      : DEFAULT_PATHFINDER_URL,
+    apiKey = stagingOrTesting
       ? DEFAULT_STAGING_PATHFINDER_API_KEY
       : DEFAULT_PATHFINDER_API_KEY
   } = params

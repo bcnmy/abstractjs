@@ -23,8 +23,8 @@ import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../../test/testSetup"
 import {
-  testnetMcTestUSDCP,
-  type NetworkConfig
+  type NetworkConfig,
+  testnetMcTestUSDCP
 } from "../../../../test/testUtils"
 import {
   type MeeClient,

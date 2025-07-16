@@ -9,7 +9,7 @@ import {
   zeroAddress
 } from "viem"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
