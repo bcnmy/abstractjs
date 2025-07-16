@@ -22,10 +22,8 @@ import { beforeAll, describe, expect, inject, it } from "vitest"
 import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts/abi/ComposabilityRuntimeTransferAbi"
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../../test/testSetup"
-import {
-  type NetworkConfig,
-  testnetMcTestUSDCP
-} from "../../../../test/testUtils"
+import { type NetworkConfig } from "../../../../test/testUtils"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type MeeClient,
   createMeeClient

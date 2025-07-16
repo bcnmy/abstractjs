@@ -30,7 +30,7 @@ import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
 
 // @ts-ignore
-const { runLifecycleTests } = inject("settings")
+const { runLifecycleTests, runPaidTests } = inject("settings")
 
 const COMPETITORS = [
   {
