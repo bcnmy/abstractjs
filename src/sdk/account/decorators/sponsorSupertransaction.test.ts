@@ -3,7 +3,8 @@ import { generatePrivateKey } from "viem/accounts"
 import { beforeAll, describe, expect, it } from "vitest"
 import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
-import { type NetworkConfig, testnetMcTestUSDCP } from "../../../test/testUtils"
+import { testnetMcTestUSDCP } from "../../../test/testTokens"
+import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
@@ -33,7 +34,7 @@ describe.runIf(runLifecycleTests)("mee.sponsorSupertransaction", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     gasTankAccount = await toGasTankAccount({

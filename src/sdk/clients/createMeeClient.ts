@@ -15,7 +15,7 @@ export const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
 const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
 export const DEFAULT_STAGING_PATHFINDER_URL =
-  "https://mee-node-staging.biconomy.io/v1"
+  "https://staging-network.biconomy.io/v1"
 const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
 /**
@@ -66,7 +66,6 @@ export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 
 export const createMeeClient = async (params: CreateMeeClientParams) => {
   const stagingOrTesting = isStaging() || isTesting()
-  console.log("stagingOrTesting", stagingOrTesting)
   const {
     account,
     pollingInterval = 1000,
@@ -77,7 +76,6 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
       ? DEFAULT_STAGING_PATHFINDER_API_KEY
       : DEFAULT_PATHFINDER_API_KEY
   } = params
-
   const httpClient = createHttpClient(url, apiKey)
   const info = await getInfo(httpClient)
   const baseMeeClient = Object.assign(httpClient, {

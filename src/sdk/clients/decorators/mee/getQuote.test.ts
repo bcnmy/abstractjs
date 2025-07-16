@@ -276,7 +276,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -334,7 +334,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -385,7 +385,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -443,7 +443,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -513,7 +513,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const amountToTrigger = 1n
@@ -537,7 +537,6 @@ describe("mee.getQuote", () => {
         }
       ]
     })
-
     expect(fusionQuote).toBeDefined()
 
     // This ensure no fees are covered in trigger amount
@@ -583,7 +582,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -634,7 +633,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -683,7 +682,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -754,7 +753,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -831,7 +830,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getFusionQuote({
@@ -909,7 +908,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const transferInx = await mcNexus.build({
@@ -975,7 +974,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -1026,7 +1025,7 @@ describe("mee.getQuote", () => {
     const meeClient = await createMeeClient({
       account: mcNexus,
 
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getFusionQuote({

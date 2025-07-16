@@ -129,7 +129,6 @@ export const getFusionQuote = async (
       `Payment token (${parameters.trigger.tokenAddress}) not supported for chain ${parameters.trigger.chainId}`
     )
   }
-
   return permitEnabled
     ? getPermitQuote(client, parameters)
     : getOnChainQuote(client, parameters)

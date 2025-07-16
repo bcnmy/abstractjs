@@ -19,12 +19,12 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type NetworkConfig,
   getAllowance,
   getBalance,
-  setAllowance,
-  testnetMcTestUSDCP
+  setAllowance
 } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
