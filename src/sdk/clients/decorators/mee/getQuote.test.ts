@@ -51,6 +51,7 @@ const getRandomAccountIndex = (min: number, max: number) => {
   return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue
 }
 
+// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe("mee.getQuote", () => {

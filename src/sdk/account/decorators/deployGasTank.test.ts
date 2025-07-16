@@ -11,9 +11,12 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { waitForTransactionReceipt } from "viem/actions"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
-import { type NetworkConfig, getBalance } from "../../../test/testUtils"
+import {
+  type NetworkConfig,
+  getBalance,
+  testnetMcTestUSDCP
+} from "../../../test/testUtils"
 import { DEFAULT_PATHFINDER_URL } from "../../clients/createMeeClient"
-import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
@@ -50,6 +53,7 @@ describe("mee.getGasTankBalance", () => {
   })
 
   test.runIf(runLifecycleTests)("Deploy gas tank", async () => {
+    const token = testnetMcTestUSDCP.addressOn(chain.id)
     const { address: gasTankAddress } = await gasTankAccount.getAddress()
     const deployed = await gasTankAccount.isDeployed()
 
@@ -63,7 +67,7 @@ describe("mee.getGasTankBalance", () => {
 
     // Funds the gas tank EOA account. So the gas tank account can be deployed with deposit
     const hash = await wallet.writeContract({
-      address: testnetMcUSDC.addressOn(chain.id),
+      address: token,
       abi: erc20Abi,
       functionName: "transfer",
       args: [gasTankEoaAccount.address, parseUnits("0.3", 6)]
@@ -75,18 +79,14 @@ describe("mee.getGasTankBalance", () => {
     })
 
     const { isDeployed, address } = await gasTankAccount.deploy({
-      tokenAddress: testnetMcUSDC.addressOn(chain.id),
+      tokenAddress: token,
       amount: parseUnits("0.1", 6)
     })
 
     expect(isDeployed).to.eq(true)
     expect(address).to.eq(gasTankAddress)
 
-    const balance = await getBalance(
-      wallet,
-      gasTankAddress,
-      testnetMcUSDC.addressOn(chain.id)
-    )
+    const balance = await getBalance(wallet, gasTankAddress, token)
 
     expect(balance).to.eq(parseUnits("0.1", 6))
   })

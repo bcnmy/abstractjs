@@ -11,7 +11,7 @@ export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v1"
 /**
  * Default URL for the MEE node service
  */
-export const DEFAULT_PATHFINDER_URL = "https://staging-network.biconomy.io/v1"
+export const DEFAULT_PATHFINDER_URL = "https://mee-node-staging.biconomy.io/v1"
 const DEFAULT_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
 export const DEFAULT_STAGING_PATHFINDER_URL =

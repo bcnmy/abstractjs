@@ -3,9 +3,8 @@ import { generatePrivateKey } from "viem/accounts"
 import { beforeAll, describe, expect, it } from "vitest"
 import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
-import type { NetworkConfig } from "../../../test/testUtils"
+import { type NetworkConfig, testnetMcTestUSDCP } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
@@ -64,7 +63,7 @@ describe.runIf(runLifecycleTests)("mee.sponsorSupertransaction", () => {
       ],
       // This is actually not required for sponsorship request. To mock the singature util, I've added this here
       feeToken: {
-        address: testnetMcUSDC.addressOn(chain.id),
+        address: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id
       }
     })

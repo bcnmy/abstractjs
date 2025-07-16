@@ -23,7 +23,8 @@ import {
   type NetworkConfig,
   getAllowance,
   getBalance,
-  setAllowance
+  setAllowance,
+  testnetMcTestUSDCP
 } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -214,6 +215,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
     chain = network.chain
+
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http(network.rpcUrl)],
@@ -267,8 +269,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.03", 6)
-      const token = testnetMcUSDC.addressOn(chain.id)
-
+      const token = testnetMcTestUSDCP.addressOn(chain.id)
       // Create a wallet client for sending transactions and a public client for reading blockchain state
       const walletClient = createWalletClient({
         account: eoaAccount,
