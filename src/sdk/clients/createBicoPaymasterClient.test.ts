@@ -33,7 +33,7 @@ import {
 const { runLifecycleTests } = inject("settings")
 
 // NB These tests require ERC20 tokens to be available on testnet, so they are mostly skipped
-describe.skipIf(!paymasterTruthy() && runLifecycleTests)(
+describe.skipIf(!paymasterTruthy() || !runLifecycleTests)(
   "bico.paymaster",
   async () => {
     let network: NetworkConfig
