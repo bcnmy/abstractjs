@@ -3,6 +3,11 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
     inputs: [
       {
         internalType: "address",
+        name: "tokenAddress",
+        type: "address"
+      },
+      {
+        internalType: "address",
         name: "recipient",
         type: "address"
       },
@@ -25,6 +30,11 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
   },
   {
     inputs: [
+      {
+        internalType: "address",
+        name: "tokenAddress",
+        type: "address"
+      },
       {
         internalType: "bytes",
         name: "",
@@ -56,6 +66,11 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
     inputs: [
       {
         internalType: "address",
+        name: "tokenAddress",
+        type: "address"
+      },
+      {
+        internalType: "address",
         name: "",
         type: "address"
       },
@@ -84,6 +99,11 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
   {
     inputs: [
       {
+        internalType: "address",
+        name: "tokenAddress",
+        type: "address"
+      },
+      {
         internalType: "address[]",
         name: "addresses",
         type: "address[]"
@@ -107,6 +127,11 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
   },
   {
     inputs: [
+      {
+        internalType: "address",
+        name: "tokenAddress",
+        type: "address"
+      },
       {
         internalType: "string",
         name: "",
@@ -136,6 +161,11 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
   },
   {
     inputs: [
+      {
+        internalType: "address",
+        name: "tokenAddress",
+        type: "address"
+      },
       {
         internalType: "address",
         name: "selfContractAddress",
@@ -168,30 +198,6 @@ export const COMPOSABILITY_RUNTIME_TRANSFER_ABI = [
       }
     ],
     stateMutability: "nonpayable",
-    type: "function"
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "tokenAddress",
-        type: "address"
-      }
-    ],
-    stateMutability: "nonpayable",
-    type: "constructor"
-  },
-  {
-    inputs: [],
-    name: "token",
-    outputs: [
-      {
-        internalType: "contract IERC20",
-        name: "",
-        type: "address"
-      }
-    ],
-    stateMutability: "view",
     type: "function"
   }
 ]

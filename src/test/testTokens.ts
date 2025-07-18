@@ -8,8 +8,8 @@ import { getMultichainContract } from "../sdk/account/utils/getMultichainContrac
 export const testnetMcTestUSDC = getMultichainContract<typeof erc20Abi>({
   abi: erc20Abi,
   deployments: [
-    ["0xD0461f0516E2202c86145530494d36A0Ed431Ee7", baseSepolia.id],
-    ["0x2eadb16b44743c3a670ce6fc4d4c0e9eb41ca5c7", optimismSepolia.id]
+    ["0xb394e82fd251de530c9d71cbee9527a4cf690e57", baseSepolia.id],
+    ["0xbb4ba1a6875d76a6175239ef8644be85f671851c", optimismSepolia.id]
   ]
 })
 
@@ -19,7 +19,7 @@ export const testnetMcTestUSDC = getMultichainContract<typeof erc20Abi>({
 export const testnetMcTestUSDCP = getMultichainContract<typeof erc20Abi>({
   abi: erc20Abi,
   deployments: [
-    ["0x016b744B7E8d7EF72349a8e17178721Fd6126424", baseSepolia.id],
-    ["0xcb90606250ff24cb6b1261117ba29823af768230", optimismSepolia.id]
+    ["0x8976987ebee0806924ae17eed12229cf4789cb1f", baseSepolia.id],
+    ["0x6db5b92627d073e602ef08ee1699de2e4b5e557d", optimismSepolia.id]
   ]
 })

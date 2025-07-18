@@ -60,7 +60,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   let runtimeTransferAddress: Address
   let fooContractAddress: Address
   let chain: Chain
-  let token: Address
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
@@ -81,13 +80,12 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     meeClient = await createMeeClient({
       account: mcNexus
     })
-    tokenAddress = token
-    token = testnetMcTestUSDCP.addressOn(chain.id)
+    tokenAddress = testnetMcTestUSDCP.addressOn(chain.id)
     console.log("mcNexus", mcNexus.addressOn(chain.id, true))
     console.log("eoa.address", eoaAccount.address)
 
     // Mock testing contract for composability testing
-    runtimeTransferAddress = "0xb46e85b8Bd24D1dca043811D5b8B18b2a8c5F95D"
+    runtimeTransferAddress = "0x7c3b315E1d72CFdB8999A68a12e87fc3cc490fec"
     fooContractAddress = "0x40Ad19a280cdD7649981A7c3C76A5D725840efCF"
   })
 
@@ -105,7 +103,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             mcNexus.addressOn(chain.id, true),
             runtimeERC20BalanceOf({
               targetAddress: eoaAccount.address,
-              tokenAddress: token,
+              tokenAddress,
               constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
             })
           ],
@@ -124,7 +122,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -143,7 +141,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       ],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -165,7 +163,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -178,10 +176,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFunds",
         args: [
+          tokenAddress,
           eoaAccount.address,
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token
+            tokenAddress
           })
         ],
         chainId: chain.id
@@ -200,11 +199,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: batchedInstructions,
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
-
     const { transactionStatus: transactionStatusTwo, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({
         hash: hashTwo,
@@ -221,7 +219,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -241,7 +239,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         ],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -258,7 +256,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -271,10 +269,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFunds",
         args: [
+          tokenAddress,
           eoaAccount.address,
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token
+            tokenAddress
           })
         ],
         chainId: chain.id
@@ -290,7 +289,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         ],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -312,7 +311,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -320,7 +319,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -333,10 +332,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFunds",
         args: [
+          tokenAddress,
           eoaAccount.address,
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token
+            tokenAddress
           })
         ],
         chainId: chain.id
@@ -348,7 +348,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstruction, ...instructions, ...instructions],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -369,7 +369,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -377,7 +377,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -390,10 +390,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFunds",
         args: [
+          tokenAddress,
           eoaAccount.address,
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token
+            tokenAddress
           })
         ],
         chainId: chain.id
@@ -413,7 +414,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: batchedInstructions,
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -432,7 +433,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const amountToSupply = parseUnits("0.1", 6)
 
     const balanceBefore = await publicClient.readContract({
-      address: token,
+      address: tokenAddress,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [eoaAccount.address]
@@ -440,7 +441,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -448,7 +449,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -461,10 +462,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFunds",
         args: [
+          tokenAddress,
           eoaAccount.address,
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token
+            tokenAddress
           })
         ],
         chainId: chain.id
@@ -477,7 +479,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -490,7 +492,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
     const balanceAfter = await publicClient.readContract({
-      address: token,
+      address: tokenAddress,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [eoaAccount.address]
@@ -513,7 +515,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -521,7 +523,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -534,12 +536,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithStruct",
         args: [
+          tokenAddress,
           runtimeTransferAddress,
           {
             recipient: eoaAccount.address,
             amount: runtimeERC20BalanceOf({
               targetAddress: runtimeTransferAddress,
-              tokenAddress: token,
+              tokenAddress,
               constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
             })
           }
@@ -554,7 +557,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -574,7 +577,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -582,7 +585,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -595,11 +598,12 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithDynamicArray",
         args: [
+          tokenAddress,
           runtimeTransferAddress,
           [runtimeTransferAddress, eoaAccount.address],
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token,
+            tokenAddress,
             constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
           })
         ],
@@ -613,7 +617,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -633,7 +637,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -641,7 +645,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -654,11 +658,12 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithString",
         args: [
+          tokenAddress,
           "random_string_this_doesnt_matter",
           [runtimeTransferAddress, eoaAccount.address],
           runtimeERC20BalanceOf({
             targetAddress: runtimeTransferAddress,
-            tokenAddress: token,
+            tokenAddress,
             constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
           })
         ],
@@ -672,7 +677,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -691,7 +696,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
   })
@@ -702,7 +707,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -710,7 +715,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToSupply,
         chainId: chain.id
       }
@@ -723,11 +728,12 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
         functionName: "transferFundsWithRuntimeParamInsideArray",
         args: [
+          tokenAddress,
           [runtimeTransferAddress, eoaAccount.address],
           [
             runtimeERC20BalanceOf({
               targetAddress: runtimeTransferAddress,
-              tokenAddress: token,
+              tokenAddress,
               constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
             })
           ]
@@ -742,7 +748,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [transferInstruction, ...instructions],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -767,7 +773,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
           const trigger = {
             chainId: chain.id,
-            tokenAddress: token,
+            tokenAddress,
             amount: amountToSupply
           }
 
@@ -775,7 +781,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             type: "transfer",
             data: {
               recipient: runtimeTransferAddress as Address,
-              tokenAddress: token,
+              tokenAddress,
               amount: amountToSupply,
               chainId: chain.id
             },
@@ -789,11 +795,12 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
               abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
               functionName: "transferFundsWithBytes",
               args: [
+                tokenAddress,
                 fromBytes(toBytes("random_string_this_doesnt_matter"), "hex"),
                 [runtimeTransferAddress, eoaAccount.address],
                 runtimeERC20BalanceOf({
                   targetAddress: runtimeTransferAddress,
-                  tokenAddress: token,
+                  tokenAddress,
                   constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))] // 6 decimals for USDC
                 })
               ],
@@ -808,7 +815,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
               instructions: [transferInstruction, ...instructions],
               feeToken: {
                 chainId: chain.id,
-                address: token
+                address: tokenAddress
               }
             })
           })
@@ -910,7 +917,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amount
     }
 
@@ -919,10 +926,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       data: {
         amount: runtimeERC20BalanceOf({
           targetAddress: mcNexus.addressOn(chain.id, true),
-          tokenAddress: token
+          tokenAddress
         }),
         chainId: chain.id,
-        tokenAddress: token,
+        tokenAddress,
         spender: mcNexus.addressOn(chain.id, true)
       }
     })
@@ -931,10 +938,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transferFrom",
       data: {
         chainId: chain.id,
-        tokenAddress: token,
+        tokenAddress,
         amount: runtimeERC20BalanceOf({
           targetAddress: mcNexus.addressOn(chain.id, true),
-          tokenAddress: token
+          tokenAddress
         }),
         sender: mcNexus.addressOn(chain.id, true),
         recipient: eoaAccount.address
@@ -947,7 +954,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [...approval, ...transfer],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -965,7 +972,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amount
     }
 
@@ -978,7 +985,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const approval = await mcNexus.buildComposable({
       type: "rawCalldata",
       data: {
-        to: token,
+        to: tokenAddress,
         calldata: rawCalldata,
         chainId: chain.id
       }
@@ -990,7 +997,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [...approval],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -1003,7 +1010,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
     const tokenApproval = await publicClient.readContract({
-      address: token,
+      address: tokenAddress,
       abi: erc20Abi,
       functionName: "allowance",
       args: [mcNexus.addressOn(chain.id, true), runtimeTransferAddress]
@@ -1017,7 +1024,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -1025,10 +1032,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: runtimeERC20BalanceOf({
           targetAddress: mcNexus.addressOn(chain.id, true),
-          tokenAddress: token
+          tokenAddress
         }),
         chainId: chain.id
       }
@@ -1040,7 +1047,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [...transferInstruction],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     })
@@ -1054,7 +1061,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
 
     const nexusUSDCBalance = await publicClient.readContract({
-      address: token,
+      address: tokenAddress,
       abi: erc20Abi,
       functionName: "balanceOf",
       args: [mcNexus.addressOn(chain.id, true)]
@@ -1069,7 +1076,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -1077,7 +1084,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: runtimeTransferAddress as Address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1091,10 +1098,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
           functionName: "transferFunds",
           args: [
+            tokenAddress,
             eoaAccount.address,
             runtimeERC20BalanceOf({
               targetAddress: runtimeTransferAddress,
-              tokenAddress: token
+              tokenAddress
             })
           ],
           chainId: chain.id
@@ -1105,7 +1113,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       trigger,
       cleanUps: [
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address
         }
@@ -1113,7 +1121,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstruction, ...transferFundsInstructions],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -1151,7 +1159,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -1159,7 +1167,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1169,7 +1177,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       trigger,
       cleanUps: [
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address
         }
@@ -1177,7 +1185,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -1215,7 +1223,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -1223,7 +1231,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1233,7 +1241,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       trigger,
       cleanUps: [
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address
         }
@@ -1241,7 +1249,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -1281,7 +1289,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const tx = await mcNexus
       .deploymentOn(chain.id)
       ?.walletClient.writeContract({
-        address: token,
+        address: tokenAddress,
         abi: erc20Abi,
         functionName: "transfer",
         args: [mcNexus.addressOn(chain.id, true), amountToSupply],
@@ -1297,7 +1305,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1306,7 +1314,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const quote = await meeClient.getQuote({
       cleanUps: [
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address
         }
@@ -1314,7 +1322,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -1363,7 +1371,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     const trigger = {
       chainId: chain.id,
-      tokenAddress: token,
+      tokenAddress,
       amount: amountToSupply
     }
 
@@ -1371,7 +1379,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1381,13 +1389,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       trigger,
       cleanUps: [
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address,
           amount: parseUnits("0.01", 6)
         },
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address,
           amount: parseUnits("0.01", 6)
@@ -1396,7 +1404,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -1435,7 +1443,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const tx = await mcNexus
       .deploymentOn(chain.id)
       ?.walletClient.writeContract({
-        address: token,
+        address: tokenAddress,
         abi: erc20Abi,
         functionName: "transfer",
         args: [mcNexus.addressOn(chain.id, true), amountToSupply],
@@ -1451,7 +1459,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1461,7 +1469,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: token,
+        tokenAddress,
         amount: amountToTransfer,
         chainId: chain.id
       }
@@ -1471,7 +1479,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       instructions: [...transferInstructionOne, ...transferInstructionTwo],
       cleanUps: [
         {
-          tokenAddress: token,
+          tokenAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address,
           amount: amountToTransfer,
@@ -1480,7 +1488,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       ],
       feeToken: {
         chainId: chain.id,
-        address: token
+        address: tokenAddress
       }
     })
 
@@ -1520,7 +1528,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         type: "transfer",
         data: {
           recipient: eoaAccount.address,
-          tokenAddress: token,
+          tokenAddress,
           amount: amountToSupply,
           chainId: chain.id
         }
@@ -1530,7 +1538,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [...transferInstruction],
         cleanUps: [
           {
-            tokenAddress: token,
+            tokenAddress,
             chainId: chain.id,
             recipientAddress: eoaAccount.address,
             dependsOn: [userOp(1), userOp(2)]
@@ -1538,7 +1546,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         ],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     } catch (e) {
@@ -1556,7 +1564,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         type: "transfer",
         data: {
           recipient: eoaAccount.address,
-          tokenAddress: token,
+          tokenAddress,
           amount: amountToSupply,
           chainId: chain.id
         }
@@ -1566,7 +1574,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         instructions: [...transferInstruction],
         cleanUps: [
           {
-            tokenAddress: token,
+            tokenAddress,
             chainId: chain.id,
             recipientAddress: eoaAccount.address,
             dependsOn: [userOp(0), userOp(1)]
@@ -1574,7 +1582,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         ],
         feeToken: {
           chainId: chain.id,
-          address: token
+          address: tokenAddress
         }
       })
     } catch (e) {
