@@ -13,7 +13,10 @@ import { beforeAll, describe, expect, inject, test } from "vitest"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../../test/testUtils"
-import { DEFAULT_PATHFINDER_URL } from "../../clients/createMeeClient"
+import {
+  DEFAULT_STAGING_PATHFINDER_API_KEY,
+  DEFAULT_STAGING_PATHFINDER_URL
+} from "../../clients/createMeeClient"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
@@ -42,8 +45,8 @@ describe("mee.getGasTankBalance", () => {
       privateKey: gasTankPk,
       options: {
         mee: {
-          url: DEFAULT_PATHFINDER_URL,
-          apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+          url: DEFAULT_STAGING_PATHFINDER_URL,
+          apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
         }
       }
     })
