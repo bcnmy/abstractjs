@@ -37,6 +37,7 @@ import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
   DEFAULT_PATHFINDER_URL,
+  DEFAULT_STAGING_PATHFINDER_API_KEY,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -458,7 +459,7 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
     })
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
   })
 

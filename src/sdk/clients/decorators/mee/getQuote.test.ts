@@ -34,6 +34,7 @@ import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
   DEFAULT_PATHFINDER_URL,
+  DEFAULT_STAGING_PATHFINDER_API_KEY,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -276,7 +277,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const quote = await meeClient.getQuote({
@@ -334,7 +335,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const quote = await meeClient.getQuote({
@@ -385,7 +386,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const quote = await meeClient.getQuote({
@@ -443,7 +444,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const quote = await meeClient.getQuote({
@@ -513,7 +514,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const amountToTrigger = 1n
@@ -582,7 +583,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
 
       const quote = await meeClient.getQuote({
@@ -633,7 +634,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
 
       const quote = await meeClient.getQuote({
@@ -682,7 +683,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
 
       const quote = await meeClient.getQuote({
@@ -753,7 +754,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
 
       const quote = await meeClient.getQuote({
@@ -830,7 +831,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
 
       const quote = await meeClient.getFusionQuote({
@@ -908,7 +909,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
 
       const transferInx = await mcNexus.build({
@@ -974,7 +975,7 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const quote = await meeClient.getQuote({
@@ -1025,7 +1026,7 @@ describe("mee.getQuote", () => {
     const meeClient = await createMeeClient({
       account: mcNexus,
 
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     const quote = await meeClient.getFusionQuote({

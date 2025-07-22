@@ -5,7 +5,11 @@ import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import type { NetworkConfig } from "../../../test/testUtils"
-import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import {
+  DEFAULT_STAGING_PATHFINDER_API_KEY,
+  type MeeClient,
+  createMeeClient
+} from "../../clients/createMeeClient"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
@@ -34,7 +38,7 @@ describe.runIf(runLifecycleTests)("mee.sponsorSupertransaction", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
     })
 
     gasTankAccount = await toGasTankAccount({

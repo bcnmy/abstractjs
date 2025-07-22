@@ -21,6 +21,7 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import {
+  DEFAULT_STAGING_PATHFINDER_API_KEY,
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
@@ -84,7 +85,7 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       //url: "https://mee-node.biconomy.io/v1"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
@@ -338,7 +339,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const dappMeeClient = await createMeeClient({
         account: dappNexusAccount,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
       })
       const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 

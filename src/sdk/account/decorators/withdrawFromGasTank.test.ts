@@ -13,7 +13,10 @@ import { beforeAll, describe, expect, inject, test } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../../test/testUtils"
-import { DEFAULT_PATHFINDER_URL } from "../../clients/createMeeClient"
+import {
+  DEFAULT_PATHFINDER_URL,
+  DEFAULT_STAGING_PATHFINDER_API_KEY
+} from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
 import { runtimeERC20BalanceOf } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
@@ -45,7 +48,7 @@ describe.runIf(runLifecycleTests)("mee.withdrawFromGasTank", () => {
       options: {
         mee: {
           url: DEFAULT_PATHFINDER_URL,
-          apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+          apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
         }
       }
     })
