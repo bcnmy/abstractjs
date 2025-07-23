@@ -38,12 +38,7 @@ export type GetUniversalAddressParams<
 export const getNexusAddress = async (
   params: GetUniversalAddressParams<PublicClient>
 ): Promise<Address> => {
-  const {
-    publicClient,
-    initData,
-    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    index = 0n
-  } = params
+  const { publicClient, initData, factoryAddress, index = 0n } = params
 
   const salt = pad(toHex(index), { size: 32 })
 

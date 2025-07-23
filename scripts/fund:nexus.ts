@@ -12,10 +12,11 @@ import {
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { toNexusAccount } from "../src/sdk/account"
+import { NexusOptions, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
+import { getNexus } from "../src/sdk/modules/utils/Helpers"
 
 dotenv.config()
 
@@ -51,15 +52,30 @@ async function main() {
   for (const chainId of chainIds) {
     // Two account will be available from now. For collision issues in tests, use a fallback account with index one
     // Default: Index zero will be used for most of the tests
-    await processChain(chainId, account, ACCOUNT_INDEX)
-    await processChain(chainId, account, ACCOUNT_INDEX_ONE)
+    await processChain(chainId, account, { accountIndex: ACCOUNT_INDEX })
+    await processChain(chainId, account, { accountIndex: ACCOUNT_INDEX_ONE })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      options: {
+        version: getNexus("1.2.1")
+      }
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX_ONE,
+      options: {
+        version: getNexus("1.0.2")
+      }
+    })
   }
 }
 
 async function processChain(
   chainId: number,
   account: ReturnType<typeof privateKeyToAccount>,
-  accountIndex: bigint
+  nexusParams: {
+    accountIndex?: bigint
+    options?: NexusOptions
+  }
 ) {
   try {
     const chain = getChain(chainId)
@@ -99,7 +115,8 @@ async function processChain(
       chain,
       signer: account,
       transport: http(),
-      index: accountIndex
+      index: nexusParams.accountIndex ?? 0n,
+      options: nexusParams.options
     })
 
     const nexusAddress = await nexus.getAddress()

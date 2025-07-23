@@ -15,14 +15,13 @@ import {
 import { getAction, parseAccount } from "viem/utils"
 import type { Call } from "../../../account"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import { NEXUS_IMPLEMENTATION_ADDRESS } from "../../../constants"
 import type { ModularSmartAccount } from "../../../modules"
 
 export type UpgradeSmartAccountParameters<
   TSmartAccount extends SmartAccount | undefined
 > = { account?: TSmartAccount } & {
   /** Optional custom implementation address. If not provided, the latest default implementation will be used */
-  implementationAddress?: Hex
+  implementationAddress: Hex
   /** Optional initialization data to pass to the new implementation */
   initData?: Hex
   maxFeePerGas?: bigint
@@ -53,14 +52,14 @@ export async function upgradeSmartAccount<
   TSmartAccount extends SmartAccount | undefined
 >(
   client: Client<Transport, Chain | undefined, TSmartAccount>,
-  parameters?: UpgradeSmartAccountParameters<TSmartAccount>
+  parameters: UpgradeSmartAccountParameters<TSmartAccount>
 ): Promise<Hash> {
   const {
     account: account_ = client.account,
     maxFeePerGas,
     maxPriorityFeePerGas,
     nonce,
-    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
+    implementationAddress,
     initData = "0x",
     ...rest
   } = parameters ?? {}

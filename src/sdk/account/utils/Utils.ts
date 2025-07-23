@@ -458,23 +458,26 @@ export function parseRequestArguments(input: string[]) {
   const lines = argsString.split("\n").filter((line) => line.trim())
 
   // Create an object from the key-value pairs
-  const result = lines.reduce((acc, line) => {
-    // Remove extra spaces and split by ':'
-    const [key, value] = line.split(":").map((s) => s.trim())
+  const result = lines.reduce(
+    (acc, line) => {
+      // Remove extra spaces and split by ':'
+      const [key, value] = line.split(":").map((s) => s.trim())
 
-    // Clean up the key (remove trailing spaces and colons)
-    const cleanKey = key.trim()
+      // Clean up the key (remove trailing spaces and colons)
+      const cleanKey = key.trim()
 
-    // Clean up the value (remove 'gwei' and other units)
-    const cleanValue: string | number = value.replace("gwei", "").trim()
+      // Clean up the value (remove 'gwei' and other units)
+      const cleanValue: string | number = value.replace("gwei", "").trim()
 
-    if (fieldsToOmit.includes(cleanKey)) {
+      if (fieldsToOmit.includes(cleanKey)) {
+        return acc
+      }
+
+      acc[cleanKey] = cleanValue
       return acc
-    }
-
-    acc[cleanKey] = cleanValue
-    return acc
-  }, {} as Record<string, string | number>)
+    },
+    {} as Record<string, string | number>
+  )
 
   return result
 }

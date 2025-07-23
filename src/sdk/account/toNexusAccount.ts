@@ -43,18 +43,20 @@ import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
   MEE_VALIDATOR_ADDRESS,
-  NEXUS_IMPLEMENTATION_ADDRESS,
   NEXUS_VERSION_LATEST
 } from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
+import { toComposableExecutor, toComposableFallback } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
+import { getNexus } from "../modules/utils/Helpers"
 import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toLegacyK1Module } from "../modules/validators/legacyK1/toLegacyK1Module"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
   getFactoryData,
@@ -96,9 +98,6 @@ import {
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
-import { getNexus } from "../modules/utils/Helpers"
-import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
-import { toComposableExecutor, toComposableFallback } from "../modules"
 
 /**
  * Base module configuration type
@@ -319,7 +318,7 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    attesterThreshold = 0,
+    attesterThreshold = 1,
     useK1Config = false
   } = parameters
 
@@ -636,6 +635,7 @@ export const toNexusAccount = async (
       moduleAddress?: Address
     }
   ): Promise<NonceInfo> => {
+    // console.log({ parameters })
     const defaultNonceKey = await getDefaultNonceKey(accountAddress, chain.id)
 
     const {
@@ -647,7 +647,7 @@ export const toNexusAccount = async (
     return getNonceWithKeyUtil(publicClient, accountAddress, {
       key,
       validationMode,
-      moduleAddress
+      moduleAddress: MEE_VALIDATOR_ADDRESS
     })
   }
 
@@ -797,7 +797,7 @@ export const toNexusAccount = async (
       !!code &&
       code
         ?.toLowerCase()
-        .includes(NEXUS_IMPLEMENTATION_ADDRESS.substring(2).toLowerCase())
+        .includes(implementationAddress.substring(2).toLowerCase())
     )
   }
 
