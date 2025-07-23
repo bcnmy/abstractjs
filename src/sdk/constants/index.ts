@@ -3,7 +3,7 @@ import {
   REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
-import { type Hex, zeroAddress } from "viem"
+import { type Hex } from "viem"
 import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"

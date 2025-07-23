@@ -43,7 +43,7 @@ describe("mee.getGasTankBalance", () => {
       options: {
         mee: {
           url: DEFAULT_PATHFINDER_URL,
-          apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+          apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
         }
       }
     })

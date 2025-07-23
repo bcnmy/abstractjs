@@ -94,7 +94,6 @@ import {
   type AddressConfig,
   type AddressConfigsAdditions,
   type NexusAccountId,
-  isVersionNewer,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
@@ -429,7 +428,7 @@ export const toNexusAccount = async (
   let module = k1Validator || customValidators?.[0] || defaultValidator
   // Prepare executor modules
 
-  let executors = customExecutors || []
+  const executors = customExecutors || []
 
   // if using <=1.0.2, add the composable executor if it's not already present
   if (

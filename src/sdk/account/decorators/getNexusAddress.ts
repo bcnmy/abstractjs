@@ -1,6 +1,5 @@
 import { type Address, pad, parseAbi, toHex } from "viem"
 import type { PublicClient } from "viem"
-import { NEXUS_ACCOUNT_FACTORY_ADDRESS } from "../../constants"
 import { AccountFactoryAbi } from "../../constants/abi/AccountFactory"
 
 /**
