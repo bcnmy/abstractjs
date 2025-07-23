@@ -30,7 +30,7 @@ const index = 0n
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
 
-describe.skipIf(!playgroundTrue() && runLifecycleTests)("playground", () => {
+describe.skipIf(!playgroundTrue() || !runLifecycleTests)("playground", () => {
   let network: NetworkConfig
   // Nexus Config
   let chain: Chain
