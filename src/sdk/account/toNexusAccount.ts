@@ -41,6 +41,7 @@ import {
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
+  COMPOSABLE_MODULE_ADDRESS,
   ENTRY_POINT_ADDRESS,
   MEE_VALIDATOR_ADDRESS,
   NEXUS_VERSION_LATEST
@@ -93,6 +94,7 @@ import {
   type AddressConfig,
   type AddressConfigsAdditions,
   type NexusAccountId,
+  isVersionNewer,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
@@ -429,9 +431,12 @@ export const toNexusAccount = async (
 
   let executors = customExecutors || []
 
-  // if using <=1.0.2, add the composable executor if there are no custom executors
-  if (isVersionOlder(nexusVersion, "1.2.0") && executors.length === 0) {
-    executors = [toComposableExecutor()]
+  // if using <=1.0.2, add the composable executor if it's not already present
+  if (
+    isVersionOlder(nexusVersion, "1.2.0") &&
+    !executors.find((executor) => executor.module === COMPOSABLE_MODULE_ADDRESS)
+  ) {
+    executors.push(toComposableExecutor())
   }
 
   // Prepare hook module
@@ -635,19 +640,22 @@ export const toNexusAccount = async (
       moduleAddress?: Address
     }
   ): Promise<NonceInfo> => {
-    // console.log({ parameters })
     const defaultNonceKey = await getDefaultNonceKey(accountAddress, chain.id)
 
-    const {
+    let {
       key = defaultNonceKey,
       validationMode = "0x00",
       moduleAddress = module.module
     } = parameters ?? {}
 
+    if (isVersionOlder(nexusVersion, "1.2.0")) {
+      moduleAddress = MEE_VALIDATOR_ADDRESS
+    }
+
     return getNonceWithKeyUtil(publicClient, accountAddress, {
       key,
       validationMode,
-      moduleAddress: MEE_VALIDATOR_ADDRESS
+      moduleAddress
     })
   }
 
@@ -662,10 +670,6 @@ export const toNexusAccount = async (
     moduleAddress?: Address
   }): Promise<bigint> => {
     const accountAddress = await getAddress()
-
-    if (parameters?.moduleAddress && isVersionOlder(nexusVersion, "1.2.0")) {
-      parameters.moduleAddress = MEE_VALIDATOR_ADDRESS
-    }
 
     const { nonce } = await getNonceWithKey(accountAddress, parameters)
     return nonce

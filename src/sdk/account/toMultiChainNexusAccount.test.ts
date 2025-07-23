@@ -221,16 +221,12 @@ describe("mee.toMultiChainNexusAccount", async () => {
       )
     })
 
-    describe.only("should work with a different versions", async () => {
+    describe("should work with a different versions", async () => {
       const newSigner = privateKeyToAccount(`0x${process.env.PRIVATE_KEY!}`)
       const executeTx = async (nexusAccount: MultichainSmartAccount) => {
         const meeClient = await createMeeClient({
           account: nexusAccount
         })
-        console.log(
-          "nexus account: ",
-          nexusAccount.deploymentOn(baseSepolia.id)?.address
-        )
         const quote = await meeClient.getQuote({
           instructions: [
             mcNexus.build({

@@ -12,7 +12,7 @@ import {
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { NexusOptions, toNexusAccount } from "../src/sdk/account"
+import { type NexusOptions, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
