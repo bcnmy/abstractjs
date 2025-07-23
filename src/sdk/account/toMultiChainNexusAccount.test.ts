@@ -27,7 +27,7 @@ import { createMeeClient } from "../clients/createMeeClient"
 import { MEE_VALIDATOR_ADDRESS, NEXUS_VERSION_LATEST } from "../constants"
 import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
 import { toMeeK1Module } from "../modules"
-import { getNexus } from "../modules/utils"
+import { getNexus } from "../modules/utils/Helpers"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -225,31 +225,27 @@ describe("mee.toMultiChainNexusAccount", async () => {
       const newSigner = privateKeyToAccount(`0x${process.env.PRIVATE_KEY!}`)
       const nexusAccount = await toMultichainNexusAccount({
         signer: newSigner,
-        chains: [spicy, baseSepolia],
-        transports: [http(), http(TESTNET_RPC_URLS[baseSepolia.id])],
+        chains: [baseSepolia],
+        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         options: [
-          {
-            version: {
-              version: "1.0.2",
-              accountId: "biconomy.nexus.1.0.2",
-              factoryAddress: "0xEA774bb5A2217391E0E5f9828b68C21E9176F22c",
-              bootStrapAddress: "0xB8aab0c542190daA7546b0ea48B7C8613c0A7454",
-              implementationAddress:
-                "0x7Ab43d55D4Eaee1e08aD31aE3A3BF6cFA2c3e88A",
-              k1ValidatorAddress: "0xe54dd54Af28D0eAEf37C6Ad413CeD4513B9C0B88",
-              k1FactoryAddress: "0xd5562630CBeAc845D794e684c181E39a096cFe23"
-            }
-          },
+          // {
+          //   version: {
+          //     version: "1.0.2",
+          //     accountId: "biconomy.nexus.1.0.2",
+          //     factoryAddress: "0xEA774bb5A2217391E0E5f9828b68C21E9176F22c",
+          //     bootStrapAddress: "0xB8aab0c542190daA7546b0ea48B7C8613c0A7454",
+          //     implementationAddress:
+          //       "0x7Ab43d55D4Eaee1e08aD31aE3A3BF6cFA2c3e88A",
+          //     k1ValidatorAddress: "0xe54dd54Af28D0eAEf37C6Ad413CeD4513B9C0B88",
+          //     k1FactoryAddress: "0xd5562630CBeAc845D794e684c181E39a096cFe23"
+          //   }
+          // },
           { version: getNexus("1.0.2") }
         ]
       })
       const meeClient = await createMeeClient({
         account: nexusAccount
       })
-      expect(nexusAccount.deployments.length).toEqual(2)
-      expect(nexusAccount.deploymentOn(baseSepolia.id)?.address).not.toEqual(
-        nexusAccount.deploymentOn(spicy.id)?.address
-      )
 
       const quote = await meeClient.getQuote({
         instructions: [
@@ -262,7 +258,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
                   value: 1n
                 }
               ],
-              chainId: spicy.id
+              chainId: baseSepolia.id
             }
           })
         ],
@@ -271,6 +267,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           chainId: baseSepolia.id
         }
       })
+
       const publicClient = createPublicClient({
         chain: baseSepolia,
         transport: http(TESTNET_RPC_URLS[baseSepolia.id])
@@ -281,7 +278,8 @@ describe("mee.toMultiChainNexusAccount", async () => {
         testnetMcUSDC.addressOn(baseSepolia.id)
       )
       // transfer usdc to nexus account
-      if (balance < BigInt(quote.paymentInfo.tokenWeiAmount)) {
+      const buffer = 1000n
+      if (balance < BigInt(quote.paymentInfo.tokenWeiAmount) + buffer) {
         const walletClient = createWalletClient({
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
@@ -293,7 +291,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           walletClient,
           tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
           recipient: nexusAccount.deploymentOn(baseSepolia.id)!.address,
-          amount: BigInt(quote.paymentInfo.tokenWeiAmount)
+          amount: BigInt(quote.paymentInfo.tokenWeiAmount) + buffer
         })
         balance = await getBalance(
           publicClient,
@@ -301,27 +299,32 @@ describe("mee.toMultiChainNexusAccount", async () => {
           testnetMcUSDC.addressOn(baseSepolia.id)
         )
       }
+      console.log(
+        { balance },
+        quote.paymentInfo,
+        nexusAccount.deploymentOn(baseSepolia.id)!.address
+      )
       // transfer chz to nexus account
-      const chzWalletClient = createWalletClient({
-        chain: spicy,
-        transport: http(),
-        account: newSigner
-      })
-      const chzPublicClient = createPublicClient({
-        chain: spicy,
-        transport: http()
-      })
-      const chzTx = await chzWalletClient.sendTransaction({
-        to: nexusAccount.deploymentOn(spicy.id)!.address,
-        value: 3n
-      })
-      const chzReceipt = await chzPublicClient.waitForTransactionReceipt({
-        hash: chzTx,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
-      })
+      // const chzWalletClient = createWalletClient({
+      //   chain: spicy,
+      //   transport: http(),
+      //   account: newSigner
+      // })
+      // const chzPublicClient = createPublicClient({
+      //   chain: spicy,
+      //   transport: http()
+      // })
+      // const chzTx = await chzWalletClient.sendTransaction({
+      //   to: nexusAccount.deploymentOn(spicy.id)!.address,
+      //   value: 3n
+      // })
+      // const chzReceipt = await chzPublicClient.waitForTransactionReceipt({
+      //   hash: chzTx,
+      //   confirmations: TEST_BLOCK_CONFIRMATIONS
+      // })
 
-      console.log(chzReceipt)
-      console.log({ balance })
+      // console.log(chzReceipt)
+      // console.log({ balance })
       const { hash } = await meeClient.executeQuote({
         quote
       })

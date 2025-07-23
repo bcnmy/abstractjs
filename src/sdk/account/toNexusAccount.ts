@@ -48,7 +48,6 @@ import {
 } from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
-import { getNexus, toMeeK1Module } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type {
   BaseComposableCall,
@@ -97,6 +96,9 @@ import {
 import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+import { getNexus } from "../modules/utils/Helpers"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
+import { toComposableExecutor, toComposableFallback } from "../modules"
 
 /**
  * Base module configuration type
@@ -317,7 +319,7 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    attesterThreshold = 1,
+    attesterThreshold = 0,
     useK1Config = false
   } = parameters
 
@@ -403,6 +405,7 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   let validators = customValidators || []
+
   if (validators.length === 0 && isVersionOlder(nexusVersion, "1.2.0")) {
     validators = [
       toMeeK1Module({
@@ -423,15 +426,25 @@ export const toNexusAccount = async (
 
   // The default validator should be the defaultValidator unless custom validators have been set or k1Validator is set
   let module = k1Validator || customValidators?.[0] || defaultValidator
-
   // Prepare executor modules
-  const executors = customExecutors || []
+
+  let executors = customExecutors || []
+
+  // if using <=1.0.2, add the composable executor if there are no custom executors
+  if (isVersionOlder(nexusVersion, "1.2.0") && executors.length === 0) {
+    executors = [toComposableExecutor()]
+  }
 
   // Prepare hook module
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  const fallbacks = customFallbacks || []
+  let fallbacks = customFallbacks || []
+
+  // if using <=1.0.2, add the composable fallback if there are no custom fallbacks
+  if (isVersionOlder(nexusVersion, "1.2.0") && fallbacks.length === 0) {
+    fallbacks = [toComposableFallback()]
+  }
 
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []
@@ -649,6 +662,10 @@ export const toNexusAccount = async (
     moduleAddress?: Address
   }): Promise<bigint> => {
     const accountAddress = await getAddress()
+
+    if (parameters?.moduleAddress && isVersionOlder(nexusVersion, "1.2.0")) {
+      parameters.moduleAddress = MEE_VALIDATOR_ADDRESS
+    }
 
     const { nonce } = await getNonceWithKey(accountAddress, parameters)
     return nonce

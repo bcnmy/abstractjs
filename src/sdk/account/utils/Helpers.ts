@@ -12,6 +12,14 @@ export const isDebugging = () => {
   }
 }
 
+export const isTesting = () => {
+  try {
+    return process?.env?.NODE_ENV?.toString() === "test"
+  } catch (e) {
+    return false
+  }
+}
+
 export const isStaging = () => {
   try {
     return process?.env?.STAGING?.toString() === "true"

@@ -5,7 +5,8 @@ import {
   encodeFunctionData,
   pad,
   parseAbi,
-  toHex
+  toHex,
+  zeroAddress
 } from "viem"
 import { isVersionOlder } from ".."
 import { NEXUS_VERSION_LATEST } from "../../constants"
@@ -118,24 +119,25 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     bootStrapAddress,
     nexusVersion = NEXUS_VERSION_LATEST
   } = parameters
-  return registryAddress && attesters && attesterThreshold
-    ? getInitDataWithRegistry({
-        bootStrapAddress,
-        validators,
-        registryAddress,
-        attesters,
-        attesterThreshold,
-        nexusVersion
-      })
-    : getInitDataNoRegistry({
-        defaultValidator,
-        prevalidationHooks,
-        validators,
-        executors,
-        hook,
-        fallbacks,
-        bootStrapAddress
-      })
+  if (isVersionOlder(nexusVersion, "1.2.0")) {
+    return getInitDataWithRegistry({
+      bootStrapAddress,
+      validators,
+      registryAddress: registryAddress || zeroAddress,
+      attesters: attesters || [],
+      attesterThreshold: attesterThreshold || 0,
+      nexusVersion
+    })
+  }
+  return getInitDataNoRegistry({
+    defaultValidator,
+    prevalidationHooks,
+    validators,
+    executors,
+    hook,
+    fallbacks,
+    bootStrapAddress
+  })
 }
 
 export type GetInitDataWithRegistryParams = {

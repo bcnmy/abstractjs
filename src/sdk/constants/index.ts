@@ -3,7 +3,7 @@ import {
   REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
-import type { Hex } from "viem"
+import { zeroAddress, type Hex } from "viem"
 import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
@@ -12,9 +12,9 @@ export * from "./protocols"
 export const NEXUS_VERSION_LATEST: NexusVersion = "1.2.0"
 
 export const ENTRY_POINT_ADDRESS: Hex =
-  "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+  "0x5BBA76308670E555b348204fC767Dcc62Ad1F197"
 export const MEE_VALIDATOR_ADDRESS: Hex =
-  "0x00000000d12897DDAdC2044614A9677B191A2d95"
+  "0x5DDC050F3129aff964307C3508c07995d9d1f4ee"
 export const BICONOMY_ATTESTER_ADDRESS: Hex =
   "0xF9ff902Cdde729b47A4cDB55EF16DF3683a04EAB"
 export const BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1: Hex =
@@ -32,13 +32,22 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
   string,
   AddressConfig
 > = {
+  "1.2.1": {
+    // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
+    version: "1.2.1",
+    accountId: "biconomy.nexus.1.2.1",
+    factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
+    bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
+    implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
+    k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE" // https://docs.biconomy.io/contracts-and-audits/#biconomy-network-genesis-mainnet-release
+  },
   "1.2.0": {
     version: "1.2.0",
     accountId: "biconomy.nexus.1.2.0",
     factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
-    k1ValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95"
+    k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE"
   },
   "1.0.2": {
     version: "1.0.2",

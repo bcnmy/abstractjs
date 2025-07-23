@@ -111,10 +111,7 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: baseSepolia,
         signer: eoaAccount,
-        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-        validators: [
-          toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
-        ]
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
       }),
       mock: true,
       transport: http(bundlerUrl)
