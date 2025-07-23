@@ -42,6 +42,7 @@ import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   ENTRY_POINT_ADDRESS,
+  MEE_VALIDATOR_ADDRESS,
   NEXUS_ACCOUNT_FACTORY_ADDRESS,
   NEXUS_BOOTSTRAP_ADDRESS,
   NEXUS_IMPLEMENTATION_ADDRESS
@@ -49,6 +50,11 @@ import {
 // Constants
 import { EntrypointAbi } from "../constants/abi"
 import { COMPOSABILITY_MODULE_ABI } from "../constants/abi"
+import {
+  toComposableExecutor,
+  toComposableFallback,
+  toMeeK1Module
+} from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type {
   BaseComposableCall,
@@ -303,14 +309,14 @@ export const toNexusAccount = async (
     transport: transportConfig,
     signer: _signer,
     index = 0n,
-    validators: customValidators,
+    validators: customValidators_,
     executors: customExecutors,
     hook: customHook,
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
     nexusVersion,
-    attesterThreshold = 1,
+    attesterThreshold = 0,
     useK1Config = false
   } = parameters
 
@@ -353,8 +359,15 @@ export const toNexusAccount = async (
   })
   const publicClient = createPublicClient({ chain, transport: transportConfig })
 
+  const customValidators = [
+    toMeeK1Module({
+      signer: await toSigner({ signer }),
+      module: MEE_VALIDATOR_ADDRESS
+    })
+  ]
+
   // Prepare default validator module
-  const defaultValidator = toDefaultModule({ signer })
+  const defaultValidator = customValidators?.[0] || toDefaultModule({ signer })
 
   // Prepare validator modules
   const validators = customValidators || []
@@ -372,13 +385,13 @@ export const toNexusAccount = async (
   let module = k1Validator || customValidators?.[0] || defaultValidator
 
   // Prepare executor modules
-  const executors = customExecutors || []
+  const executors = [toComposableExecutor()]
 
   // Prepare hook module
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  const fallbacks = customFallbacks || []
+  const fallbacks = [toComposableFallback()]
 
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []

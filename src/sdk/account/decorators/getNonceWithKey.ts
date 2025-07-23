@@ -67,7 +67,7 @@ class NonceManager {
       const key: string = concat([
         toHex(adjustedKey, { size: 3 }),
         validationMode,
-        moduleAddress
+        "0x5DDC050F3129aff964307C3508c07995d9d1f4ee"
       ])
 
       const entryPointContract = getContract({

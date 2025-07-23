@@ -5,7 +5,8 @@ import {
   encodeFunctionData,
   pad,
   parseAbi,
-  toHex
+  toHex,
+  zeroAddress
 } from "viem"
 import { isVersionOlder } from ".."
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
@@ -118,24 +119,14 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     nexusVersion = "1.2.0"
   } = parameters
 
-  return registryAddress && attesters && attesterThreshold
-    ? getInitDataWithRegistry({
-        bootStrapAddress,
-        validators,
-        registryAddress,
-        attesters,
-        attesterThreshold,
-        nexusVersion
-      })
-    : getInitDataNoRegistry({
-        defaultValidator,
-        prevalidationHooks,
-        validators,
-        executors,
-        hook,
-        fallbacks,
-        bootStrapAddress
-      })
+  return getInitDataWithRegistry({
+    bootStrapAddress,
+    validators,
+    registryAddress: registryAddress || zeroAddress,
+    attesters: attesters || [],
+    attesterThreshold: attesterThreshold || 0,
+    nexusVersion
+  })
 }
 
 export type GetInitDataWithRegistryParams = {
@@ -151,6 +142,14 @@ export type GetInitDataWithRegistryParams = {
 export const getInitDataWithRegistry = (
   params: GetInitDataWithRegistryParams
 ): Hex => {
+  console.log(params.nexusVersion, [
+    params.validators[0].module,
+    params.validators[0].data,
+    params.registryAddress,
+    params.attesters,
+    params.attesterThreshold
+  ])
+
   const bootstrapData = isVersionOlder(params.nexusVersion, "1.2.0")
     ? encodeFunctionData({
         abi: NexusLegacyBootstrapAbi,

@@ -266,6 +266,7 @@ export async function toMultichainNexusAccount(
       toNexusAccount({
         chain,
         signer: unresolvedSigner,
+        nexusVersion: "1.0.2",
         transport: transports[i],
         ...accountParameters
       })
