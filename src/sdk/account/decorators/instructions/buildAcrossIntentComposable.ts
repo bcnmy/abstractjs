@@ -5,27 +5,33 @@ import {
   encodeFunctionData,
   formatUnits,
   getAddress,
-  isAddress,
   padHex,
   parseAbi,
-  parseUnits,
   zeroAddress
 } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
 import type { BaseInstructionsParams } from "../build"
-import buildApprove from "./buildApprove"
 import { buildRawComposable } from "./buildRawComposable"
 import buildTransfer from "./buildTransfer"
+import { createChainAddressMap } from "../../../modules/utils/createChainAddressMap"
+import { base, optimism } from "viem/chains"
 
-export const ACROSS_INTENT_WRAPPER_ADDRESS =
-  "0xfE86086f5B4731459cB43128e2Dba8248b90600E" // OPTIMISM MAINNET ONLY
+const acrossIntentWrappers = createChainAddressMap([
+  [Number(base.id), "0xB78dEafFE8448230b89f0979Ef861F453b3F1e02"],
+  [Number(optimism.id), "0xfE86086f5B4731459cB43128e2Dba8248b90600E"]
+])
+
+// 🚀 Across SpokePool addresses
+const acrossSpokePool = createChainAddressMap([
+  [Number(base.id), "0x09aea4b2242abc8bb4bb78d537a67a245a7bec64"],
+  [Number(optimism.id), "0x6f26Bf09B1C792e3228e5467807a900A503c0281"]
+])
 
 /**
  * Parameters for building a raw composable instruction
  */
 export type BuildAcrossIntentComposableParams = {
-  pool: Address
   depositor: Address
   recipient: Address
   inputToken: Address
@@ -35,6 +41,7 @@ export type BuildAcrossIntentComposableParams = {
   destinationChainId: number
   message?: Hex
   relayerAddress?: Address
+  pool?: Address
   gasLimit?: bigint
 }
 
@@ -46,7 +53,6 @@ export const buildAcrossIntentComposable = async (
   parameters: BuildAcrossIntentComposableParams
 ): Promise<Instruction[]> => {
   const {
-    pool,
     depositor,
     recipient,
     inputToken,
@@ -56,10 +62,14 @@ export const buildAcrossIntentComposable = async (
     message,
     relayerAddress,
     gasLimit,
-    approximateExpectedInputAmount
+    approximateExpectedInputAmount,
+    pool = acrossSpokePool[originChainId]
   } = parameters
 
   // 1. Transfer from Nexus to Wrapper
+  // It is required because Across SpokePool deposit functions
+  // do transferFrom(msg.sender, address(this), amount)
+  // so we need Wrapper to actually have this balance
   const transferFromNexusToWrapperInstruction = await buildTransfer(
     baseParams,
     {
@@ -70,12 +80,11 @@ export const buildAcrossIntentComposable = async (
         targetAddress: depositor,
         tokenAddress: inputToken
       }),
-      recipient: ACROSS_INTENT_WRAPPER_ADDRESS
+      recipient: acrossIntentWrappers[originChainId]
     }
   )
 
   // 2. Deposit to Pool
-
   const fees = await getAcrossSuggestedFees({
     amount: approximateExpectedInputAmount,
     originChainId,
@@ -99,13 +108,12 @@ export const buildAcrossIntentComposable = async (
 
   console.log("outputRatio", outputRatio)
 
-  //make a packed uint256 where the first (most significant) 16 bits are the output ratio and the last 16 bits (least significant) are the output ratio precision
+  // make a packed uint256 where the first (most significant) 16 bits are the output ratio
+  // and the last 16 bits (least significant) are the output ratio precision
   const outputRatioPacked = concatHex([
     padHex(outputRatio.toString(16) as `0x${string}`, { size: 16 }),
     padHex(outputRatioPrecision.toString(16) as `0x${string}`, { size: 16 })
   ])
-
-  // console.log('outputRatioPacked', outputRatioPacked.toString(16))
 
   // Define Across SpokePool WRAPPER ABI
   const acrossSpokePoolWrapperAbi = parseAbi([
@@ -137,7 +145,7 @@ export const buildAcrossIntentComposable = async (
   }
 
   const depositToPoolInstruction = await buildRawComposable(baseParams, {
-    to: ACROSS_INTENT_WRAPPER_ADDRESS, // TODO: make this dynamic based on the chain id
+    to: acrossIntentWrappers[originChainId],
     calldata: transactionRequest.data,
     chainId: originChainId,
     gasLimit
@@ -248,8 +256,6 @@ export async function getAcrossSuggestedFees(
     url.searchParams.append("referrer", getAddress(referrer))
   }
 
-  console.log("url", url.toString())
-
   const response = await fetch(url.toString(), {
     method: "GET",
     headers: {
@@ -258,7 +264,9 @@ export async function getAcrossSuggestedFees(
   })
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+    throw new Error(
+      `HTTP error! status: ${response.status} with url: ${url.toString()}`
+    )
   }
 
   const data = (await response.json()) as {

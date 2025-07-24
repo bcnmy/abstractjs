@@ -8,7 +8,6 @@ import {
   createPublicClient,
   erc20Abi,
   parseUnits,
-  readContract,
   zeroAddress
 } from "viem"
 import { base } from "viem/chains"
@@ -27,12 +26,7 @@ import {
 import type { FeeTokenInfo } from "../../../clients/decorators/mee/getQuote"
 import type { Trigger } from "../../../clients/decorators/mee/signPermitQuote"
 import { mcUSDC } from "../../../constants/tokens"
-import {
-  createChainAddressMap,
-  greaterThanOrEqualTo,
-  runtimeERC20BalanceOf
-} from "../../../modules"
-import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
+import { createChainAddressMap } from "../../../modules"
 import type { MultichainSmartAccount } from "../../toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../toMultiChainNexusAccount"
 
@@ -98,24 +92,6 @@ describe("mee.buildAcrossIntentComposable", () => {
   test.runIf(runPaidTests)(
     "should build and execute an across intent composable userOp",
     async () => {
-      // 🏦 AAVE Pool addresses
-      const aavePoolAddresses = createChainAddressMap([
-        [base.id, "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5"],
-        [optimism.id, "0x794a61358D6845594F94dc1DB02A252b5b4814aD"]
-      ])
-
-      // 💎 aUSDC (AAVE interest-bearing USDC)
-      const aUSDCAddresses = createChainAddressMap([
-        [base.id, "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB"],
-        [optimism.id, "0x625E7708f30cA75bfd92586e17077590C60eb4cD"]
-      ])
-
-      // 🚀 Across SpokePool addresses
-      const acrossSpokePool = createChainAddressMap([
-        [base.id, "0x09aea4b2242abc8bb4bb78d537a67a245a7bec64"],
-        [optimism.id, "0x6f26Bf09B1C792e3228e5467807a900A503c0281"]
-      ])
-
       const orchOnTargetBalanceBefore = await pubClientTarget.readContract({
         address: mcUSDC.addressOn(base.id),
         abi: erc20Abi,
@@ -123,7 +99,7 @@ describe("mee.buildAcrossIntentComposable", () => {
         args: [mcNexus.addressOn(base.id)!]
       })
 
-      const actualInputAmount = parseUnits("1", decimals)
+      const actualInputAmount = parseUnits("0.5", decimals)
       const benchmarkInputAmount = parseUnits("2", decimals)
 
       const trigger: Trigger = {
@@ -135,8 +111,7 @@ describe("mee.buildAcrossIntentComposable", () => {
       const callAcrossInstructions = await mcNexus.buildComposable({
         type: "acrossIntent",
         data: {
-          pool: acrossSpokePool[optimism.id],
-          depositor: mcNexus.addressOn(optimism.id)!, // WOULD IT EVEN WORK? FUNDING USEROP/ACTION SHOULD BE THERE => NEED TO CHECK IT IN THE USEROP
+          depositor: mcNexus.addressOn(optimism.id)!,
           recipient: mcNexus.addressOn(base.id)!,
           inputToken: mcUSDC.addressOn(optimism.id),
           outputToken: mcUSDC.addressOn(base.id),
