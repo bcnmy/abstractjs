@@ -1,7 +1,6 @@
 import {
   type Ecosystem,
   type Infra,
-  MEE_VALIDATOR_ADDRESS,
   toClients,
   toEcosystem
 } from "@biconomy/ecosystem"
@@ -19,6 +18,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
+import { getNexus } from "../../utils/Helpers"
 import type { Validator } from "../toValidator"
 import { toMeeK1Module } from "./toMeeK1Module"
 
@@ -47,7 +47,7 @@ describe("modules.toMeeK1Module", () => {
 
     meeModule = toMeeK1Module({
       signer: eoaAccount,
-      module: MEE_VALIDATOR_ADDRESS
+      module: getNexus().meeValidatorAddress
     })
 
     nexusAccount = await toNexusAccount({

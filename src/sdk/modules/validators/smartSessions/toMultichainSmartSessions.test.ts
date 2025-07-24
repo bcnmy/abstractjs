@@ -84,7 +84,7 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
       //url: "https://mee-node.biconomy.io/v1"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
@@ -338,7 +338,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const dappMeeClient = await createMeeClient({
         account: dappNexusAccount,
-        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+        apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
       })
       const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 

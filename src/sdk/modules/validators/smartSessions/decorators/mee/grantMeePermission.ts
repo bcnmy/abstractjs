@@ -4,10 +4,10 @@ import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   type ActionData,
-  MEE_VALIDATOR_ADDRESS,
   getSpendingLimitsPolicy
 } from "../../../../../constants"
 
+import { getNexus } from "../../../../utils/Helpers"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import {
   type GrantPermissionResponse,
@@ -78,11 +78,14 @@ export const grantMeePermission = async <
     redeemer,
     actions,
     feeToken,
-    maxPaymentAmount
+    maxPaymentAmount,
+    account: _account
   }: GrantMeePermissionParams<TModularSmartAccount>,
   mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
+  const version = _account?.version
+  const meeValidatorAddress = getNexus(version).meeValidatorAddress
 
   // make some reliable maxPaymentAmount
   if (feeToken && !maxPaymentAmount) {
@@ -127,7 +130,7 @@ export const grantMeePermission = async <
         ...actions.map((action) => ({ ...action, actionTarget })),
         ...(paymentActionPolicy ? [paymentActionPolicy] : [])
       ],
-      sessionValidator: MEE_VALIDATOR_ADDRESS,
+      sessionValidator: meeValidatorAddress,
       sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
       permitERC4337Paymaster: true
     }

@@ -3,19 +3,17 @@ import {
   REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
-import { type Hex } from "viem"
+import { type Hex, zeroAddress } from "viem"
 import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
 
-export const NEXUS_VERSION_LATEST: NexusVersion = "1.2.0"
+export const NEXUS_VERSION_DEFAULT: NexusVersion = "1.2.0"
 export const ENTRY_POINT_ADDRESS: Hex =
   "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
 export const ENTRYPOINT_SIMULATIONS_ADDRESS: Hex =
   "0x74Cb5e4eE81b86e70f9045036a1C5477de69eE87"
-export const MEE_VALIDATOR_ADDRESS: Hex =
-  "0x00000000d12897DDAdC2044614A9677B191A2d95"
 export const BICONOMY_ATTESTER_ADDRESS: Hex =
   "0xF9ff902Cdde729b47A4cDB55EF16DF3683a04EAB"
 export const BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1: Hex =
@@ -36,6 +34,7 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
+    meeValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95",
     k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE" // https://docs.biconomy.io/contracts-and-audits/#biconomy-network-genesis-mainnet-release
   },
   "1.2.0": {
@@ -44,15 +43,31 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
-    k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE"
+    k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE",
+    meeValidatorAddress: zeroAddress
   },
   "1.0.2": {
+    useK1Config: false,
     version: "1.0.2",
     accountId: "biconomy.nexus.1.0.2",
     factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9",
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
     implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
     k1ValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa", // K1 validator address
+    meeValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95",
+    k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc",
+    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+    registryAddress: REGISTRY_ADDRESS
+  },
+  "1.0.2-legacy": {
+    useK1Config: true,
+    version: "1.0.2-legacy",
+    accountId: "biconomy.nexus.1.0.2",
+    factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9",
+    bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
+    implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
+    k1ValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa", // K1 validator address
+    meeValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa",
     k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc",
     attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
     registryAddress: REGISTRY_ADDRESS

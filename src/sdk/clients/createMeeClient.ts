@@ -16,7 +16,7 @@ const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
 export const DEFAULT_STAGING_PATHFINDER_URL =
   "https://staging-network.biconomy.io/v1"
-const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
 
 /**
  * Constants for sponshorshipxw

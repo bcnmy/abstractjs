@@ -1,4 +1,4 @@
-import { COUNTER_ADDRESS, MEE_VALIDATOR_ADDRESS } from "@biconomy/ecosystem"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { Wallet, ethers } from "ethers"
 import {
   http,
@@ -32,7 +32,7 @@ import {
 } from "../../account/utils/Utils"
 import { getChain } from "../../account/utils/getChain"
 import { toSigner } from "../../account/utils/toSigner"
-import { getNexus } from "../../modules"
+import { getNexus } from "../../modules/utils/Helpers"
 import { toMeeK1Module } from "../../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
@@ -67,7 +67,6 @@ describe("nexus.client.1.0.2", async () => {
     eoaAccount = getTestAccount(0)
     recipientAccount = getTestAccount(1)
     recipientAddress = recipientAccount.address
-
     testClient_1_0_2 = toTestClient(chain_1_0_2, getTestAccount(5))
 
     privKey_1_0_2 = generatePrivateKey()
@@ -77,8 +76,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: account_1_0_2,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      useK1Config: true,
-      options: { version: getNexus("1.0.2") }
+      options: { contractAddresses: getNexus("1.0.2-legacy") }
     })
 
     nexusClient_1_0_2_with_k1 = createSmartAccountClient({
@@ -91,10 +89,14 @@ describe("nexus.client.1.0.2", async () => {
       signer: account_1_0_2,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      useK1Config: false,
-      options: { version: getNexus("1.0.2") },
+      options: {
+        contractAddresses: getNexus("1.0.2")
+      },
       validators: [
-        toMeeK1Module({ signer: account_1_0_2, module: MEE_VALIDATOR_ADDRESS })
+        toMeeK1Module({
+          signer: account_1_0_2,
+          module: getNexus("1.0.2").meeValidatorAddress
+        })
       ]
     })
 
@@ -313,8 +315,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      useK1Config: true,
-      options: { version: getNexus("1.0.2") }
+      options: { contractAddresses: getNexus("1.0.2-legacy") }
     })
 
     const ethersNexusClient = createSmartAccountClient({
@@ -327,12 +328,11 @@ describe("nexus.client.1.0.2", async () => {
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      useK1Config: false,
-      options: { version: getNexus("1.0.2") },
+      options: { contractAddresses: getNexus("1.0.2") },
       validators: [
         toMeeK1Module({
           signer: await toSigner({ signer: wallet as EthersWallet }),
-          module: MEE_VALIDATOR_ADDRESS
+          module: getNexus("1.0.2").meeValidatorAddress
         })
       ]
     })
@@ -361,8 +361,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      useK1Config: true,
-      options: { version: getNexus("1.0.2") }
+      options: { contractAddresses: getNexus("1.0.2-legacy") }
     })
 
     const ethersNexusClient = createSmartAccountClient({
@@ -375,12 +374,11 @@ describe("nexus.client.1.0.2", async () => {
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      useK1Config: false,
-      options: { version: getNexus("1.0.2") },
+      options: { contractAddresses: getNexus("1.0.2") },
       validators: [
         toMeeK1Module({
           signer: await toSigner({ signer: ethersWallet as EthersWallet }),
-          module: MEE_VALIDATOR_ADDRESS
+          module: getNexus("1.0.2").meeValidatorAddress
         })
       ]
     })

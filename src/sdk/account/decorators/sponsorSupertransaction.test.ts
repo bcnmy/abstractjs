@@ -31,7 +31,7 @@ describe("mee.sponsorSupertransaction", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
     })
 
     gasTankAccount = await toGasTankAccount({

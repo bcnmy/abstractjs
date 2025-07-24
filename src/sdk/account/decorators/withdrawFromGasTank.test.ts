@@ -44,7 +44,7 @@ describe("mee.withdrawFromGasTank", () => {
       options: {
         mee: {
           url: DEFAULT_PATHFINDER_URL,
-          apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+          apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
         }
       }
     })

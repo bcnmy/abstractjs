@@ -43,8 +43,7 @@ import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import {
   COMPOSABLE_MODULE_ADDRESS,
   ENTRY_POINT_ADDRESS,
-  MEE_VALIDATOR_ADDRESS,
-  NEXUS_VERSION_LATEST
+  NEXUS_VERSION_DEFAULT
 } from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
@@ -94,6 +93,7 @@ import {
   type AddressConfig,
   type AddressConfigsAdditions,
   type NexusAccountId,
+  type NexusVersion,
   isVersionOlder
 } from "./utils/getVersion"
 import { toInitData } from "./utils/toInitData"
@@ -120,8 +120,8 @@ export type PrevalidationHookModuleConfig = GenericModuleConfig & {
 }
 
 export type NexusOptions = {
-  /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
-  version?: AddressConfig
+  /** Optional contract addresses of the Nexus Smart Account. If undefined, the latest version contract addresses will be used. */
+  contractAddresses?: AddressConfig
 }
 /**
  * Parameters for creating a Nexus Smart Account
@@ -285,6 +285,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Account ID */
     accountId: NexusAccountId
+
+    /** Nexus version */
+    version: NexusVersion
   }
 >
 
@@ -319,10 +322,10 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    attesterThreshold = 1,
-    useK1Config = false
+    attesterThreshold = 1
   } = parameters
-
+  const useK1Config =
+    parameters.options?.contractAddresses?.useK1Config ?? false
   let {
     initData,
     // those params are undefined by default and are defined only if explicitly provided
@@ -330,7 +333,7 @@ export const toNexusAccount = async (
     options
   } = parameters
 
-  let version = options?.version
+  let contractAddresses = options?.contractAddresses
 
   // check if the chain supports > 1.2.0
   const hasCancun = await supportsCancun({
@@ -338,11 +341,11 @@ export const toNexusAccount = async (
     transport: transportConfig
   })
   // use latest version if nexusContracts is not provided
-  if (!version) {
+  if (!contractAddresses) {
     if (hasCancun) {
-      version = getNexus(NEXUS_VERSION_LATEST)
+      contractAddresses = getNexus(NEXUS_VERSION_DEFAULT)
     } else {
-      version = getNexus("1.0.2")
+      contractAddresses = getNexus("1.0.2")
     }
   }
 
@@ -354,16 +357,21 @@ export const toNexusAccount = async (
     attesters,
     k1ValidatorAddress,
     k1FactoryAddress,
-    version: nexusVersion
-  } = version
+    version: nexusVersion,
+    meeValidatorAddress
+  } = contractAddresses
+
   const hasCustomAddressConfig =
     factoryAddress ||
     bootStrapAddress ||
     implementationAddress ||
     registryAddress ||
     attesters
+
   const unsupportedVersion =
-    version && !isVersionOlder(version.version, "1.2.0") && !hasCancun
+    contractAddresses &&
+    !isVersionOlder(contractAddresses.version, "1.2.0") &&
+    !hasCancun
 
   if (unsupportedVersion) {
     throw new Error(
@@ -372,23 +380,9 @@ export const toNexusAccount = async (
   }
 
   // if nexus version earlier than 1.2.0 is provided, use the config from the constants
-  if (
-    nexusVersion &&
-    isVersionOlder(nexusVersion, "1.2.0") &&
-    !hasCustomAddressConfig
-  ) {
-    ;({
-      factoryAddress,
-      bootStrapAddress,
-      implementationAddress,
-      registryAddress,
-      attesters,
-      k1ValidatorAddress,
-      k1FactoryAddress
-    } = getNexus(nexusVersion))
-    if (useK1Config) {
-      factoryAddress = k1FactoryAddress!
-    }
+
+  if (useK1Config) {
+    factoryAddress = k1FactoryAddress!
   }
 
   const signer = await toSigner({ signer: _signer })
@@ -410,7 +404,7 @@ export const toNexusAccount = async (
     validators = [
       toMeeK1Module({
         signer: await toSigner({ signer }),
-        module: MEE_VALIDATOR_ADDRESS
+        module: meeValidatorAddress
       })
     ]
   }
@@ -433,7 +427,9 @@ export const toNexusAccount = async (
   // if using <=1.0.2, add the composable executor if it's not already present
   if (
     isVersionOlder(nexusVersion, "1.2.0") &&
-    !executors.find((executor) => executor.module === COMPOSABLE_MODULE_ADDRESS)
+    !executors.find(
+      (executor) => executor.module.toLowerCase() === COMPOSABLE_MODULE_ADDRESS
+    )
   ) {
     executors.push(toComposableExecutor())
   }
@@ -442,11 +438,16 @@ export const toNexusAccount = async (
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  let fallbacks = customFallbacks || []
+  const fallbacks = customFallbacks || []
 
-  // if using <=1.0.2, add the composable fallback if there are no custom fallbacks
-  if (isVersionOlder(nexusVersion, "1.2.0") && fallbacks.length === 0) {
-    fallbacks = [toComposableFallback()]
+  // if using <=1.0.2, add the composable fallback if it's not already present
+  if (
+    isVersionOlder(nexusVersion, "1.2.0") &&
+    !fallbacks.find(
+      (fallback) => fallback.module.toLowerCase() === COMPOSABLE_MODULE_ADDRESS
+    )
+  ) {
+    fallbacks.push(toComposableFallback())
   }
 
   // Generate the initialization data for the account using the initNexus function
@@ -648,7 +649,7 @@ export const toNexusAccount = async (
     } = parameters ?? {}
 
     if (isVersionOlder(nexusVersion, "1.2.0")) {
-      moduleAddress = MEE_VALIDATOR_ADDRESS
+      moduleAddress = meeValidatorAddress
     }
 
     return getNonceWithKeyUtil(publicClient, accountAddress, {
@@ -906,7 +907,8 @@ export const toNexusAccount = async (
       publicClient,
       chain,
       setModule,
-      getModule: () => module
+      getModule: () => module,
+      version: nexusVersion
     }
   })
 }

@@ -9,7 +9,7 @@ import {
   zeroAddress
 } from "viem"
 import { isVersionOlder } from ".."
-import { NEXUS_VERSION_LATEST } from "../../constants"
+import { NEXUS_VERSION_DEFAULT } from "../../constants"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
@@ -117,8 +117,13 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     hook,
     fallbacks,
     bootStrapAddress,
-    nexusVersion = NEXUS_VERSION_LATEST
+    nexusVersion = NEXUS_VERSION_DEFAULT
   } = parameters
+  console.log(
+    "nexusVersion",
+    nexusVersion,
+    isVersionOlder(nexusVersion, "1.2.0")
+  )
   if (isVersionOlder(nexusVersion, "1.2.0")) {
     return getInitDataWithRegistry({
       bootStrapAddress,

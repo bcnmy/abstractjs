@@ -57,13 +57,19 @@ async function main() {
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
       options: {
-        version: getNexus("1.2.1")
+        contractAddresses: getNexus("1.2.1")
       }
     })
     await processChain(chainId, account, {
-      accountIndex: ACCOUNT_INDEX_ONE,
+      accountIndex: ACCOUNT_INDEX,
       options: {
-        version: getNexus("1.0.2")
+        contractAddresses: getNexus("1.0.2")
+      }
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      options: {
+        contractAddresses: getNexus("1.0.2-legacy")
       }
     })
   }

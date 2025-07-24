@@ -19,8 +19,6 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import { MEE_VALIDATOR_ADDRESS } from "../constants"
-import { toMeeK1Module } from "../modules/validators/meeK1"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 
 describe("nexus.account.addresses", async () => {
