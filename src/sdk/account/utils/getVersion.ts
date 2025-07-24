@@ -178,16 +178,13 @@ export const isVersionNewer = (
 }
 
 export type AddressConfigsAdditions = {
-  "1.0.2-legacy": Omit<AddressConfigsAdditions["1.0.2"], "useK1Config"> & {
-    useK1Config?: true
-  }
+  "1.0.2-legacy": AddressConfigsAdditions["1.0.2"]
   "1.0.2": {
     registryAddress?: Hex
     attesters?: Hex[]
     attesterThreshold?: number
     k1FactoryAddress?: Hex
     k1ValidatorAddress?: Hex
-    useK1Config?: false
   }
 }
 

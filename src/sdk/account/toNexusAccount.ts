@@ -324,8 +324,6 @@ export const toNexusAccount = async (
     accountAddress: accountAddress_,
     attesterThreshold = 1
   } = parameters
-  const useK1Config =
-    parameters.options?.contractAddresses?.useK1Config ?? false
   let {
     initData,
     // those params are undefined by default and are defined only if explicitly provided
@@ -374,10 +372,6 @@ export const toNexusAccount = async (
 
   // if nexus version earlier than 1.2.0 is provided, use the config from the constants
 
-  if (useK1Config) {
-    factoryAddress = k1FactoryAddress!
-  }
-
   const signer = await toSigner({ signer: _signer })
   const walletClient = toWalletClient({
     unresolvedSigner: _signer,
@@ -404,7 +398,7 @@ export const toNexusAccount = async (
 
   let k1Validator: Validator | undefined = undefined
 
-  if (useK1Config && k1ValidatorAddress) {
+  if (nexusVersion === "1.0.2-legacy" && k1ValidatorAddress) {
     k1Validator = toLegacyK1Module({
       signer,
       module: k1ValidatorAddress
@@ -448,7 +442,7 @@ export const toNexusAccount = async (
 
   let factoryData: Hex = "0x"
 
-  if (useK1Config) {
+  if (nexusVersion === "1.0.2-legacy") {
     factoryData = getK1FactoryData({
       signerAddress: signer.address,
       index,
@@ -479,7 +473,10 @@ export const toNexusAccount = async (
    * @returns The init code as a hexadecimal string
    */
   const getInitCode = () =>
-    concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
+    concatHex([
+      nexusVersion === "1.0.2-legacy" ? k1FactoryAddress! : factoryAddress,
+      factoryData
+    ])
 
   let _accountAddress: Address | undefined = accountAddress_
   const accountId: NexusAccountId = (await publicClient.readContract({
@@ -497,21 +494,22 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = useK1Config
-      ? await getK1NexusAddress({
-          k1FactoryAddress: k1FactoryAddress!,
-          index,
-          ownerAddress: signer.address,
-          attesters: attesters!,
-          attesterThreshold,
-          publicClient
-        })
-      : await getNexusAddress({
-          factoryAddress,
-          index,
-          initData: initData!,
-          publicClient
-        })
+    const addressFromFactory =
+      nexusVersion === "1.0.2-legacy"
+        ? await getK1NexusAddress({
+            k1FactoryAddress: k1FactoryAddress!,
+            index,
+            ownerAddress: signer.address,
+            attesters: attesters!,
+            attesterThreshold,
+            publicClient
+          })
+        : await getNexusAddress({
+            factoryAddress,
+            index,
+            initData: initData!,
+            publicClient
+          })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
       _accountAddress = addressFromFactory
@@ -642,7 +640,10 @@ export const toNexusAccount = async (
     } = parameters ?? {}
 
     if (isVersionOlder(nexusVersion, "1.2.0")) {
-      moduleAddress = meeValidatorAddress
+      moduleAddress =
+        nexusVersion === "1.0.2-legacy"
+          ? k1ValidatorAddress!
+          : meeValidatorAddress
     }
 
     return getNonceWithKeyUtil(publicClient, accountAddress, {
