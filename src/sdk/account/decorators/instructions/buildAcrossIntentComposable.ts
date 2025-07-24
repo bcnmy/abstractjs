@@ -2,24 +2,26 @@ import {
   type Address,
   type Hex,
   concatHex,
-  encodeFunctionData,
   formatUnits,
   getAddress,
   padHex,
   parseAbi,
   zeroAddress
 } from "viem"
-import type { Instruction } from "../../../clients/decorators/mee"
-import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
-import type { BaseInstructionsParams } from "../build"
-import { buildRawComposable } from "./buildRawComposable"
-import buildTransfer from "./buildTransfer"
-import { createChainAddressMap } from "../../../modules/utils/createChainAddressMap"
 import { base, optimism } from "viem/chains"
+import type { Instruction } from "../../../clients/decorators/mee"
+import {
+  runtimeERC20BalanceOf,
+  type RuntimeERC20BalanceOfParams
+} from "../../../modules/utils/composabilityCalls"
+import { createChainAddressMap } from "../../../modules/utils/createChainAddressMap"
+import type { BaseInstructionsParams } from "../build"
+import { buildComposableUtil } from "./buildComposable"
+import buildTransfer from "./buildTransfer"
 
 const acrossIntentWrappers = createChainAddressMap([
-  [Number(base.id), "0xB78dEafFE8448230b89f0979Ef861F453b3F1e02"],
-  [Number(optimism.id), "0xfE86086f5B4731459cB43128e2Dba8248b90600E"]
+  [Number(base.id), "0xB9F82b52Afde09D0E2CC0748a66D1Df76C18A1c7"],
+  [Number(optimism.id), "0x74FebC53e98d85827E57E27F5c4ECD5A138a70A5"]
 ])
 
 // 🚀 Across SpokePool addresses
@@ -36,6 +38,7 @@ export type BuildAcrossIntentComposableParams = {
   recipient: Address
   inputToken: Address
   outputToken: Address
+  runtimeParams: RuntimeERC20BalanceOfParams
   approximateExpectedInputAmount: bigint // approximate amount of deposited tokens.
   originChainId: number
   destinationChainId: number
@@ -57,12 +60,13 @@ export const buildAcrossIntentComposable = async (
     recipient,
     inputToken,
     outputToken,
+    runtimeParams,
+    approximateExpectedInputAmount,
     originChainId,
     destinationChainId,
     message,
     relayerAddress,
     gasLimit,
-    approximateExpectedInputAmount,
     pool = acrossSpokePool[originChainId]
   } = parameters
 
@@ -75,11 +79,7 @@ export const buildAcrossIntentComposable = async (
     {
       chainId: originChainId,
       tokenAddress: inputToken,
-      amount: runtimeERC20BalanceOf({
-        // transfers the entire balance
-        targetAddress: depositor,
-        tokenAddress: inputToken
-      }),
+      amount: runtimeERC20BalanceOf(runtimeParams), // use without changes
       recipient: acrossIntentWrappers[originChainId]
     }
   )
@@ -106,8 +106,6 @@ export const buildAcrossIntentComposable = async (
     (approximateExpectedOutputAmount * outputRatioPrecision) /
     approximateExpectedInputAmount
 
-  console.log("outputRatio", outputRatio)
-
   // make a packed uint256 where the first (most significant) 16 bits are the output ratio
   // and the last 16 bits (least significant) are the output ratio precision
   const outputRatioPacked = concatHex([
@@ -117,14 +115,20 @@ export const buildAcrossIntentComposable = async (
 
   // Define Across SpokePool WRAPPER ABI
   const acrossSpokePoolWrapperAbi = parseAbi([
-    "function depositV3Composable(address pool, address depositor, address recipient, address inputToken, address outputToken, uint256 outputRatioPacked, uint256 destinationChainId, address exclusiveRelayer, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes calldata message) external payable"
+    "function depositV3Composable(address pool, address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputRatioPacked, uint256 destinationChainId, address exclusiveRelayer, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes calldata message) external payable"
   ])
 
-  // Build the deposit transaction
-  const transactionRequest = {
-    to: pool,
-    chainId: originChainId,
-    data: encodeFunctionData({
+  const wrapperRuntimeBalance = runtimeERC20BalanceOf({
+    targetAddress: acrossIntentWrappers[originChainId],
+    tokenAddress: runtimeParams.tokenAddress,
+    constraints: runtimeParams.constraints
+  })
+
+  const depositToPoolInstruction = await buildComposableUtil(
+    baseParams,
+    {
+      // BuildComposableParameters
+      to: acrossIntentWrappers[originChainId],
       abi: acrossSpokePoolWrapperAbi,
       functionName: "depositV3Composable",
       args: [
@@ -133,23 +137,20 @@ export const buildAcrossIntentComposable = async (
         recipient,
         inputToken,
         outputToken,
-        BigInt(outputRatioPacked),
-        BigInt(destinationChainId),
+        wrapperRuntimeBalance, // the runtime param
+        outputRatioPacked,
+        destinationChainId,
         relayerAddress ?? zeroAddress,
         Number(fees.timestamp),
         Number(fees.fillDeadline),
-        0, // exclusivityDeadline
-        message ?? "0x" // message
-      ]
-    })
-  }
-
-  const depositToPoolInstruction = await buildRawComposable(baseParams, {
-    to: acrossIntentWrappers[originChainId],
-    calldata: transactionRequest.data,
-    chainId: originChainId,
-    gasLimit
-  })
+        0,
+        message ?? "0x"
+      ],
+      chainId: originChainId,
+      gasLimit
+    },
+    true // efficientMode
+  )
 
   return [...transferFromNexusToWrapperInstruction, ...depositToPoolInstruction]
 }

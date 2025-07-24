@@ -26,7 +26,6 @@ import {
 import type { FeeTokenInfo } from "../../../clients/decorators/mee/getQuote"
 import type { Trigger } from "../../../clients/decorators/mee/signPermitQuote"
 import { mcUSDC } from "../../../constants/tokens"
-import { createChainAddressMap } from "../../../modules"
 import type { MultichainSmartAccount } from "../../toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../toMultiChainNexusAccount"
 
@@ -115,6 +114,11 @@ describe("mee.buildAcrossIntentComposable", () => {
           recipient: mcNexus.addressOn(base.id)!,
           inputToken: mcUSDC.addressOn(optimism.id),
           outputToken: mcUSDC.addressOn(base.id),
+          runtimeParams: {
+            targetAddress: mcNexus.addressOn(optimism.id)!,
+            tokenAddress: mcUSDC.addressOn(optimism.id),
+            constraints: []
+          },
           approximateExpectedInputAmount: benchmarkInputAmount,
           originChainId: optimism.id,
           destinationChainId: base.id,
@@ -130,7 +134,6 @@ describe("mee.buildAcrossIntentComposable", () => {
       })
 
       const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
-      console.log(hash)
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
         hash,
