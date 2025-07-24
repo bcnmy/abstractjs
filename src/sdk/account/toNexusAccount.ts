@@ -361,13 +361,6 @@ export const toNexusAccount = async (
     meeValidatorAddress
   } = contractAddresses
 
-  const hasCustomAddressConfig =
-    factoryAddress ||
-    bootStrapAddress ||
-    implementationAddress ||
-    registryAddress ||
-    attesters
-
   const unsupportedVersion =
     contractAddresses &&
     !isVersionOlder(contractAddresses.version, "1.2.0") &&
