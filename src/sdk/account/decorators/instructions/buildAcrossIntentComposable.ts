@@ -11,8 +11,8 @@ import {
 import { base, optimism } from "viem/chains"
 import type { Instruction } from "../../../clients/decorators/mee"
 import {
-  runtimeERC20BalanceOf,
-  type RuntimeERC20BalanceOfParams
+  type RuntimeERC20BalanceOfParams,
+  runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
 import { createChainAddressMap } from "../../../modules/utils/createChainAddressMap"
 import type { BaseInstructionsParams } from "../build"
@@ -38,7 +38,7 @@ export type BuildAcrossIntentComposableParams = {
   recipient: Address
   inputToken: Address
   outputToken: Address
-  runtimeParams: RuntimeERC20BalanceOfParams
+  inputAmountRuntimeParams: RuntimeERC20BalanceOfParams
   approximateExpectedInputAmount: bigint // approximate amount of deposited tokens.
   originChainId: number
   destinationChainId: number
@@ -60,7 +60,7 @@ export const buildAcrossIntentComposable = async (
     recipient,
     inputToken,
     outputToken,
-    runtimeParams,
+    inputAmountRuntimeParams,
     approximateExpectedInputAmount,
     originChainId,
     destinationChainId,
@@ -79,7 +79,7 @@ export const buildAcrossIntentComposable = async (
     {
       chainId: originChainId,
       tokenAddress: inputToken,
-      amount: runtimeERC20BalanceOf(runtimeParams), // use without changes
+      amount: runtimeERC20BalanceOf(inputAmountRuntimeParams), // use without changes
       recipient: acrossIntentWrappers[originChainId]
     }
   )
@@ -120,8 +120,8 @@ export const buildAcrossIntentComposable = async (
 
   const wrapperRuntimeBalance = runtimeERC20BalanceOf({
     targetAddress: acrossIntentWrappers[originChainId],
-    tokenAddress: runtimeParams.tokenAddress,
-    constraints: runtimeParams.constraints
+    tokenAddress: inputAmountRuntimeParams.tokenAddress,
+    constraints: inputAmountRuntimeParams.constraints
   })
 
   const depositToPoolInstruction = await buildComposableUtil(

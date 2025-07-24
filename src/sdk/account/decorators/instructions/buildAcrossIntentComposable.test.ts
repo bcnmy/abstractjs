@@ -114,7 +114,7 @@ describe("mee.buildAcrossIntentComposable", () => {
           recipient: mcNexus.addressOn(base.id)!,
           inputToken: mcUSDC.addressOn(optimism.id),
           outputToken: mcUSDC.addressOn(base.id),
-          runtimeParams: {
+          inputAmountRuntimeParams: {
             targetAddress: mcNexus.addressOn(optimism.id)!,
             tokenAddress: mcUSDC.addressOn(optimism.id),
             constraints: []
