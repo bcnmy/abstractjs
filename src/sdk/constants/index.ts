@@ -34,7 +34,7 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
-    meeValidatorAddress: zeroAddress,
+    meeValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95",
     k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE" // https://docs.biconomy.io/contracts-and-audits/#biconomy-network-genesis-mainnet-release
   },
   "1.2.0": {
@@ -44,7 +44,7 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
     k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE",
-    meeValidatorAddress: zeroAddress
+    meeValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95"
   },
   "1.0.2": {
     version: "1.0.2",

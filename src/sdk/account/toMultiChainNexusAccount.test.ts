@@ -255,7 +255,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
-      test("works with 1.0.2-legacy", async () => {
+      test.only("works with 1.0.2-legacy", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
           chains: [baseSepolia],

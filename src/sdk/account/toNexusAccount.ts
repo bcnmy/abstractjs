@@ -347,7 +347,7 @@ export const toNexusAccount = async (
     }
   }
 
-  let {
+  const {
     factoryAddress,
     bootStrapAddress,
     implementationAddress,
@@ -388,10 +388,15 @@ export const toNexusAccount = async (
   let validators = customValidators || []
 
   if (validators.length === 0 && isVersionOlder(nexusVersion, "1.2.0")) {
+    const module =
+      nexusVersion === "1.0.2-legacy"
+        ? k1ValidatorAddress!
+        : meeValidatorAddress
+
     validators = [
       toMeeK1Module({
         signer: await toSigner({ signer }),
-        module: meeValidatorAddress
+        module
       })
     ]
   }
@@ -645,7 +650,6 @@ export const toNexusAccount = async (
           ? k1ValidatorAddress!
           : meeValidatorAddress
     }
-
     return getNonceWithKeyUtil(publicClient, accountAddress, {
       key,
       validationMode,
