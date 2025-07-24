@@ -119,11 +119,6 @@ export const getInitData = (parameters: GetInitDataParams): Hex => {
     bootStrapAddress,
     nexusVersion = NEXUS_VERSION_DEFAULT
   } = parameters
-  console.log(
-    "nexusVersion",
-    nexusVersion,
-    isVersionOlder(nexusVersion, "1.2.0")
-  )
   if (isVersionOlder(nexusVersion, "1.2.0")) {
     return getInitDataWithRegistry({
       bootStrapAddress,
