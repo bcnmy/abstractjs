@@ -20,8 +20,8 @@ import { buildComposableUtil } from "./buildComposable"
 import buildTransfer from "./buildTransfer"
 
 const acrossIntentWrappers = createChainAddressMap([
-  [Number(base.id), "0xB9F82b52Afde09D0E2CC0748a66D1Df76C18A1c7"],
-  [Number(optimism.id), "0x74FebC53e98d85827E57E27F5c4ECD5A138a70A5"]
+  [Number(base.id), "0x000000E2E47D694bDAa5a46056A894e747ED2854"],
+  [Number(optimism.id), "0x000000E2E47D694bDAa5a46056A894e747ED2854"]
 ])
 
 // 🚀 Across SpokePool addresses
