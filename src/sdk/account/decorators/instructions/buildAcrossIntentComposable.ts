@@ -1,18 +1,31 @@
-import { type Address, type Hex, isAddress, getAddress, formatUnits, parseUnits, parseAbi, encodeFunctionData, zeroAddress, concatHex, padHex } from "viem"
+import {
+  type Address,
+  type Hex,
+  concatHex,
+  encodeFunctionData,
+  formatUnits,
+  getAddress,
+  isAddress,
+  padHex,
+  parseAbi,
+  parseUnits,
+  zeroAddress
+} from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
+import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
 import type { BaseInstructionsParams } from "../build"
+import buildApprove from "./buildApprove"
 import { buildRawComposable } from "./buildRawComposable"
 import buildTransfer from "./buildTransfer"
-import { runtimeERC20BalanceOf } from "../../../modules/utils/composabilityCalls"
-import buildApprove from "./buildApprove"
 
-export const ACROSS_INTENT_WRAPPER_ADDRESS = '0xfE86086f5B4731459cB43128e2Dba8248b90600E' // OPTIMISM MAINNET ONLY
+export const ACROSS_INTENT_WRAPPER_ADDRESS =
+  "0xfE86086f5B4731459cB43128e2Dba8248b90600E" // OPTIMISM MAINNET ONLY
 
 /**
  * Parameters for building a raw composable instruction
  */
 export type BuildAcrossIntentComposableParams = {
-  pool: Address,
+  pool: Address
   depositor: Address
   recipient: Address
   inputToken: Address
@@ -32,19 +45,34 @@ export const buildAcrossIntentComposable = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildAcrossIntentComposableParams
 ): Promise<Instruction[]> => {
-  
-  const { pool, depositor, recipient, inputToken, outputToken, originChainId, destinationChainId, message, relayerAddress, gasLimit, approximateExpectedInputAmount } = parameters
+  const {
+    pool,
+    depositor,
+    recipient,
+    inputToken,
+    outputToken,
+    originChainId,
+    destinationChainId,
+    message,
+    relayerAddress,
+    gasLimit,
+    approximateExpectedInputAmount
+  } = parameters
 
   // 1. Transfer from Nexus to Wrapper
-  const transferFromNexusToWrapperInstruction = await buildTransfer(baseParams, {
-    chainId: originChainId,
-    tokenAddress: inputToken,
-    amount: runtimeERC20BalanceOf({ // transfers the entire balance
-      targetAddress: depositor,
-      tokenAddress: inputToken
-    }),
-    recipient: ACROSS_INTENT_WRAPPER_ADDRESS
-  })
+  const transferFromNexusToWrapperInstruction = await buildTransfer(
+    baseParams,
+    {
+      chainId: originChainId,
+      tokenAddress: inputToken,
+      amount: runtimeERC20BalanceOf({
+        // transfers the entire balance
+        targetAddress: depositor,
+        tokenAddress: inputToken
+      }),
+      recipient: ACROSS_INTENT_WRAPPER_ADDRESS
+    }
+  )
 
   // 2. Deposit to Pool
 
@@ -57,15 +85,19 @@ export const buildAcrossIntentComposable = async (
   })
 
   // Calculate output amount after fees
-  const { outputAmount: approximateExpectedOutputAmount } = calculateAcrossFees({
-    fees,
-    amount: approximateExpectedInputAmount
-  })
+  const { outputAmount: approximateExpectedOutputAmount } = calculateAcrossFees(
+    {
+      fees,
+      amount: approximateExpectedInputAmount
+    }
+  )
 
   const outputRatioPrecision = 10000n // 5 decimal places
-  const outputRatio = (approximateExpectedOutputAmount * outputRatioPrecision) / approximateExpectedInputAmount
-  
-  console.log('outputRatio', outputRatio)
+  const outputRatio =
+    (approximateExpectedOutputAmount * outputRatioPrecision) /
+    approximateExpectedInputAmount
+
+  console.log("outputRatio", outputRatio)
 
   //make a packed uint256 where the first (most significant) 16 bits are the output ratio and the last 16 bits (least significant) are the output ratio precision
   const outputRatioPacked = concatHex([
@@ -77,7 +109,7 @@ export const buildAcrossIntentComposable = async (
 
   // Define Across SpokePool WRAPPER ABI
   const acrossSpokePoolWrapperAbi = parseAbi([
-    'function depositV3Composable(address pool, address depositor, address recipient, address inputToken, address outputToken, uint256 outputRatioPacked, uint256 destinationChainId, address exclusiveRelayer, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes calldata message) external payable'
+    "function depositV3Composable(address pool, address depositor, address recipient, address inputToken, address outputToken, uint256 outputRatioPacked, uint256 destinationChainId, address exclusiveRelayer, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes calldata message) external payable"
   ])
 
   // Build the deposit transaction
@@ -86,7 +118,7 @@ export const buildAcrossIntentComposable = async (
     chainId: originChainId,
     data: encodeFunctionData({
       abi: acrossSpokePoolWrapperAbi,
-      functionName: 'depositV3Composable',
+      functionName: "depositV3Composable",
       args: [
         pool,
         depositor,
@@ -98,8 +130,8 @@ export const buildAcrossIntentComposable = async (
         relayerAddress ?? zeroAddress,
         Number(fees.timestamp),
         Number(fees.fillDeadline),
-        0,                                        // exclusivityDeadline
-        message ?? '0x'                                      // message
+        0, // exclusivityDeadline
+        message ?? "0x" // message
       ]
     })
   }
@@ -111,10 +143,7 @@ export const buildAcrossIntentComposable = async (
     gasLimit
   })
 
-  return [
-    ...transferFromNexusToWrapperInstruction,
-    ...depositToPoolInstruction
-  ]
+  return [...transferFromNexusToWrapperInstruction, ...depositToPoolInstruction]
 }
 
 export default buildAcrossIntentComposable
@@ -124,51 +153,51 @@ export default buildAcrossIntentComposable
  *  Across Protocol Quote Service — typed with viem
  * -------------------------------------------------------------
  */
- 
+
 export type SuggestedFeesParameters = {
-  inputToken: Address;
-  outputToken: Address;
-  originChainId: number;
-  destinationChainId: number;
-  amount: bigint;
-  depositor?: Address;
-  recipient?: Address;
-  message?: Hex;
-  relayerAddress?: Address;
-  referrer?: Address;
-};
- 
+  inputToken: Address
+  outputToken: Address
+  originChainId: number
+  destinationChainId: number
+  amount: bigint
+  depositor?: Address
+  recipient?: Address
+  message?: Hex
+  relayerAddress?: Address
+  referrer?: Address
+}
+
 export type Fee = {
-  pct: bigint;
-  total: bigint;
-};
- 
+  pct: bigint
+  total: bigint
+}
+
 export type Limits = {
-  minDeposit: bigint;
-  maxDeposit: bigint;
-  maxDepositInstant: bigint;
-  maxDepositShortDelay: bigint;
-  recommendedDepositInstant: bigint;
-};
- 
+  minDeposit: bigint
+  maxDeposit: bigint
+  maxDepositInstant: bigint
+  maxDepositShortDelay: bigint
+  recommendedDepositInstant: bigint
+}
+
 export type SuggestedFeesReturnType = {
-  totalRelayFee: Fee;
-  relayerCapitalFee: Fee;
-  relayerGasFee: Fee;
-  lpFee: Fee;
-  timestamp: bigint;
-  isAmountTooLow: boolean;
-  quoteBlock: bigint;
-  spokePoolAddress: Address;
-  fillDeadline: bigint;
-  limits: Limits;
-};
- 
-export type GetSuggestedFeesErrorType = Error;
- 
+  totalRelayFee: Fee
+  relayerCapitalFee: Fee
+  relayerGasFee: Fee
+  lpFee: Fee
+  timestamp: bigint
+  isAmountTooLow: boolean
+  quoteBlock: bigint
+  spokePoolAddress: Address
+  fillDeadline: bigint
+  limits: Limits
+}
+
+export type GetSuggestedFeesErrorType = Error
+
 /**
  * Gets suggested fees for Across Protocol bridge transfer
- * 
+ *
  * @example
  * const fees = await getAcrossSuggestedFees({
  *   inputToken: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
@@ -192,66 +221,66 @@ export async function getAcrossSuggestedFees(
     message,
     relayerAddress,
     referrer
-  } = parameters;
- 
-  const url = new URL('https://app.across.to/api/suggested-fees');
-  
+  } = parameters
+
+  const url = new URL("https://app.across.to/api/suggested-fees")
+
   // Validate and format addresses
-  url.searchParams.append('inputToken', getAddress(inputToken));
-  url.searchParams.append('outputToken', getAddress(outputToken));
-  url.searchParams.append('originChainId', originChainId.toString());
-  url.searchParams.append('destinationChainId', destinationChainId.toString());
-  url.searchParams.append('amount', amount.toString());
-  
+  url.searchParams.append("inputToken", getAddress(inputToken))
+  url.searchParams.append("outputToken", getAddress(outputToken))
+  url.searchParams.append("originChainId", originChainId.toString())
+  url.searchParams.append("destinationChainId", destinationChainId.toString())
+  url.searchParams.append("amount", amount.toString())
+
   if (depositor) {
-    url.searchParams.append('depositor', getAddress(depositor));
+    url.searchParams.append("depositor", getAddress(depositor))
   }
   if (recipient) {
-    url.searchParams.append('recipient', getAddress(recipient));
+    url.searchParams.append("recipient", getAddress(recipient))
   }
   if (message) {
-    url.searchParams.append('message', message);
+    url.searchParams.append("message", message)
   }
   if (relayerAddress) {
-    url.searchParams.append('relayerAddress', getAddress(relayerAddress));
+    url.searchParams.append("relayerAddress", getAddress(relayerAddress))
   }
   if (referrer) {
-    url.searchParams.append('referrer', getAddress(referrer));
+    url.searchParams.append("referrer", getAddress(referrer))
   }
 
-  console.log("url", url.toString());
- 
+  console.log("url", url.toString())
+
   const response = await fetch(url.toString(), {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Accept': 'application/json',
-    },
-  });
- 
+      Accept: "application/json"
+    }
+  })
+
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`HTTP error! status: ${response.status}`)
   }
- 
-  const data = await response.json() as {
-    totalRelayFee: { pct: string; total: string };
-    relayerCapitalFee: { pct: string; total: string };
-    relayerGasFee: { pct: string; total: string };
-    lpFee: { pct: string; total: string };
-    timestamp: string;
-    isAmountTooLow: boolean;
-    quoteBlock: string;
-    spokePoolAddress: string;
-    expectedFillTimeSec: string;
-    fillDeadline: string;
+
+  const data = (await response.json()) as {
+    totalRelayFee: { pct: string; total: string }
+    relayerCapitalFee: { pct: string; total: string }
+    relayerGasFee: { pct: string; total: string }
+    lpFee: { pct: string; total: string }
+    timestamp: string
+    isAmountTooLow: boolean
+    quoteBlock: string
+    spokePoolAddress: string
+    expectedFillTimeSec: string
+    fillDeadline: string
     limits: {
-      minDeposit: string;
-      maxDeposit: string;
-      maxDepositInstant: string;
-      maxDepositShortDelay: string;
-      recommendedDepositInstant: string;
-    };
-  };
-  
+      minDeposit: string
+      maxDeposit: string
+      maxDepositInstant: string
+      maxDepositShortDelay: string
+      recommendedDepositInstant: string
+    }
+  }
+
   // Parse response to bigint types
   return {
     totalRelayFee: {
@@ -282,60 +311,60 @@ export async function getAcrossSuggestedFees(
       maxDepositShortDelay: BigInt(data.limits.maxDepositShortDelay),
       recommendedDepositInstant: BigInt(data.limits.recommendedDepositInstant)
     }
-  };
+  }
 }
- 
+
 /**
  * Calculates total fees from suggested fees response
- * 
+ *
  * @example
  * const result = calculateAcrossFees({
  *   fees,
  *   amount: parseEther('1')
  * })
- * 
+ *
  * console.log(result.totalFees) // 0.005n (example)
  * console.log(result.outputAmount) // 0.995n (example)
  */
 export type CalculateAcrossFeesParameters = {
-  fees: SuggestedFeesReturnType;
-  amount: bigint;
-};
- 
+  fees: SuggestedFeesReturnType
+  amount: bigint
+}
+
 export type CalculateAcrossFeesReturnType = {
-  totalFees: bigint;
-  relayerFees: bigint;
-  lpFees: bigint;
-  outputAmount: bigint;
-};
- 
+  totalFees: bigint
+  relayerFees: bigint
+  lpFees: bigint
+  outputAmount: bigint
+}
+
 export function calculateAcrossFees(
   parameters: CalculateAcrossFeesParameters
 ): CalculateAcrossFeesReturnType {
-  const { fees, amount } = parameters;
-  
+  const { fees, amount } = parameters
+
   // Calculate fees based on percentages (denominated in 1e18)
-  const PRECISION = 10n ** 18n;
-  
-  const relayerFees = (amount * fees.totalRelayFee.pct) / PRECISION;
-  const lpFees = (amount * fees.lpFee.pct) / PRECISION;
-  const totalFees = relayerFees + lpFees;
-  const outputAmount = amount - totalFees;
-  
+  const PRECISION = 10n ** 18n
+
+  const relayerFees = (amount * fees.totalRelayFee.pct) / PRECISION
+  const lpFees = (amount * fees.lpFee.pct) / PRECISION
+  const totalFees = relayerFees + lpFees
+  const outputAmount = amount - totalFees
+
   return {
     totalFees,
     relayerFees,
     lpFees,
     outputAmount
-  };
+  }
 }
- 
+
 /**
  * Formats Across fee percentage to human readable format
- * 
+ *
  * @example
  * formatAcrossFeePercentage(376607094864283n) // "0.0376607094864283"
  */
 export function formatAcrossFeePercentage(pct: bigint): string {
-  return formatUnits(pct, 16); // Across uses 1e18 for 100%, so 1e16 for 1%
+  return formatUnits(pct, 16) // Across uses 1e18 for 100%, so 1e16 for 1%
 }

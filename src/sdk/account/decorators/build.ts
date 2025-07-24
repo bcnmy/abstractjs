@@ -2,6 +2,9 @@ import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { RuntimeValue } from "../../modules"
 import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
+import buildAcrossIntentComposable, {
+  type BuildAcrossIntentComposableParams
+} from "./instructions/buildAcrossIntentComposable"
 import {
   type BuildApproveParameters,
   buildApprove
@@ -38,9 +41,6 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
-import buildAcrossIntentComposable, {
-  type BuildAcrossIntentComposableParams
-} from "./instructions/buildAcrossIntentComposable"
 
 /**
  * Parameters for a token builders
