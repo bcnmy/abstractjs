@@ -1053,7 +1053,7 @@ const resolveVerificationGasLimitForPaymentChain = (
       if (index === 0) {
         // return increased verification gas limit for the first userOp
         // as it this userOp will be enabling the permission => requires more gas
-        return { verificationGasLimit: 10_00_000n }
+        return { verificationGasLimit: 1_000_000n }
       }
     }
     // return slighly increased verification gas limit
@@ -1082,7 +1082,7 @@ const resolveVerificationGasLimitForNonPaymentChain = (
     if (index === 0) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
-      return { verificationGasLimit: 10_00_000n }
+      return { verificationGasLimit: 1_000_000n }
     }
     // for all other userOps, return USE session verification gas limit
     return { verificationGasLimit: 250_000n }
@@ -1109,7 +1109,7 @@ const resolvePaymentUserOpVerificationGasLimit = (
     if (!sponsorship) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
-      return { verificationGasLimit: 10_00_000n }
+      return { verificationGasLimit: 1_000_000n }
     }
     // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
     // so doesn't need any custom verification gas limit
