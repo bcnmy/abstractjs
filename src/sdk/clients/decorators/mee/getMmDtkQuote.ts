@@ -6,6 +6,8 @@ import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
+export const DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK = 200_000n
+
 /**
  * Response payload for a MM DTK quote request.
  * Combines the standard quote payload with MM DTK-specific trigger information.
@@ -81,6 +83,7 @@ export const getMmDtkQuote = async (
     cleanUps,
     instructions,
     gasLimit,
+    verificationGasLimit,
     delegatorSmartAccount,
     ...rest
   } = parameters
@@ -112,6 +115,8 @@ export const getMmDtkQuote = async (
     eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
+    verificationGasLimit:
+      verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })
