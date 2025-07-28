@@ -578,7 +578,7 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    let addressFromFactory = await getNexusAddress({
+    const addressFromFactory = await getNexusAddress({
       factoryAddress: nexusConfig.factoryAddress,
       index,
       initData,
