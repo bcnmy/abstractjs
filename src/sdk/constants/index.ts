@@ -1,8 +1,4 @@
-import {
-  GLOBAL_CONSTANTS,
-  REGISTRY_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
-} from "@rhinestone/module-sdk"
+import { GLOBAL_CONSTANTS } from "@rhinestone/module-sdk"
 import { type Address, type Hex, zeroAddress } from "viem"
 import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
 export * from "./abi"
@@ -21,10 +17,6 @@ export const FORWARDER_ADDRESS: Address =
 
 const MEE_VALIDATOR_ADDRESS: Address =
   "0x00000000d12897DDAdC2044614A9677B191A2d95"
-const K1_VALIDATOR_ADDRESS: Address =
-  "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa"
-const BICONOMY_ATTESTER_ADDRESS: Address =
-  "0xF9ff902Cdde729b47A4cDB55EF16DF3683a04EAB"
 
 export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
   string,
@@ -61,20 +53,6 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
       registryAddress: zeroAddress,
       attesters: [],
       attesterThreshold: 0
-    }
-  },
-  "1.0.2.legacy": {
-    version: "1.0.2.legacy",
-    accountId: "biconomy.nexus.1.0.2",
-    factoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc", // K1 Factory Address
-    bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
-    implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
-    validatorAddress: K1_VALIDATOR_ADDRESS,
-    defaultValidatorAddress: K1_VALIDATOR_ADDRESS,
-    moduleRegistry: {
-      registryAddress: REGISTRY_ADDRESS,
-      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-      attesterThreshold: 1
     }
   }
 }

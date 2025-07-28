@@ -177,9 +177,7 @@ export const isVersionNewer = (
   return comparison > 0
 }
 
-export type NexusVersion =
-  | `${number}.${number}.${number}`
-  | `${number}.${number}.${number}.${string}`
+export type NexusVersion = `${number}.${number}.${number}`
 
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 

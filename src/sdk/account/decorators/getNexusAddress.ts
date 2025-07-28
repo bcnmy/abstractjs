@@ -1,4 +1,4 @@
-import { type Address, pad, parseAbi, toHex } from "viem"
+import { type Address, pad, toHex } from "viem"
 import type { PublicClient } from "viem"
 import { AccountFactoryAbi } from "../../constants/abi/AccountFactory"
 
@@ -66,25 +66,3 @@ export type GetK1NexusAddressParams<ExtendedPublicClient extends PublicClient> =
     attesterThreshold: number
     index: bigint
   }
-
-export const getK1NexusAddress = async (
-  params: GetK1NexusAddressParams<PublicClient>
-): Promise<Address> => {
-  const {
-    publicClient,
-    factoryAddress,
-    ownerAddress,
-    attesters,
-    attesterThreshold,
-    index = 0n
-  } = params
-
-  return await publicClient.readContract({
-    address: factoryAddress,
-    abi: parseAbi([
-      "function computeAccountAddress(address owner, uint256 index, address[] attesters, uint8 threshold) public view returns (address)"
-    ]),
-    functionName: "computeAccountAddress",
-    args: [ownerAddress, index, attesters, attesterThreshold]
-  })
-}

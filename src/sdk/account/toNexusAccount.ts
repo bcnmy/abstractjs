@@ -51,19 +51,14 @@ import type {
   ComposableCall
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
-import { toLegacyK1Module } from "../modules/validators/legacyK1/toLegacyK1Module"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
   getFactoryData,
   getInitDataNoRegistry,
-  getInitDataWithRegistry,
-  getK1FactoryData
+  getInitDataWithRegistry
 } from "./decorators/getFactoryData"
-import {
-  getK1NexusAddress,
-  getNexusAddress
-} from "./decorators/getNexusAddress"
+import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   getDefaultNonceKey,
   getNonceWithKeyUtil
@@ -356,27 +351,13 @@ const prepareValidators = async (
     return customValidators
   }
 
-  if (isVersionOlder(nexusConfig.version, "1.2.0")) {
-    switch (nexusConfig.version) {
-      case "1.0.2":
-        validators = [
-          toMeeK1Module({
-            signer: await toSigner({ signer }),
-            module: nexusConfig.defaultValidatorAddress
-          })
-        ]
-        break
-      case "1.0.2.legacy":
-        validators = [
-          toLegacyK1Module({
-            signer,
-            module: nexusConfig.defaultValidatorAddress
-          })
-        ]
-        break
-      default:
-        throw new Error("Unsupported old nexus version")
-    }
+  if (nexusConfig.version === "1.0.2") {
+    validators = [
+      toMeeK1Module({
+        signer: await toSigner({ signer }),
+        module: nexusConfig.defaultValidatorAddress
+      })
+    ]
   } else {
     // Default validator address is zeroAddress
     // This default validator will be used for 1.2.X versions further
@@ -441,18 +422,6 @@ const prepareFactoryData = (
   let initData: Hex = "0x"
 
   switch (nexusConfig.version) {
-    case "1.0.2.legacy":
-      if (!nexusConfig.moduleRegistry) {
-        throw new Error("Module registry not found in nexus config")
-      }
-
-      factoryData = getK1FactoryData({
-        signerAddress: signer.address,
-        index: initDataParams.accountIndex,
-        attesters: nexusConfig.moduleRegistry.attesters,
-        attesterThreshold: nexusConfig.moduleRegistry.attesterThreshold
-      })
-      break
     case "1.0.2": {
       if (!nexusConfig.moduleRegistry) {
         throw new Error("Module registry not found in nexus config")
@@ -609,29 +578,12 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    let addressFromFactory: Address = zeroAddress
-
-    if (nexusConfig.version === "1.0.2.legacy") {
-      if (!nexusConfig.moduleRegistry) {
-        throw new Error("Module registry not found in nexus config")
-      }
-
-      addressFromFactory = await getK1NexusAddress({
-        factoryAddress: nexusConfig.factoryAddress,
-        index,
-        ownerAddress: signer.address,
-        attesters: nexusConfig.moduleRegistry?.attesters,
-        attesterThreshold: nexusConfig.moduleRegistry?.attesterThreshold,
-        publicClient
-      })
-    } else {
-      addressFromFactory = await getNexusAddress({
-        factoryAddress: nexusConfig.factoryAddress,
-        index,
-        initData,
-        publicClient
-      })
-    }
+    let addressFromFactory = await getNexusAddress({
+      factoryAddress: nexusConfig.factoryAddress,
+      index,
+      initData,
+      publicClient
+    })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
       _accountAddress = addressFromFactory

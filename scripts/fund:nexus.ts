@@ -66,12 +66,6 @@ async function main() {
         nexusConfig: getNexus("1.0.2")
       }
     })
-    await processChain(chainId, account, {
-      accountIndex: ACCOUNT_INDEX,
-      options: {
-        nexusConfig: getNexus("1.0.2.legacy")
-      }
-    })
   }
 }
 
