@@ -59,7 +59,7 @@ export const getNexusAddress = async (
  */
 export type GetK1NexusAddressParams<ExtendedPublicClient extends PublicClient> =
   {
-    k1FactoryAddress: Address
+    factoryAddress: Address
     publicClient: ExtendedPublicClient
     ownerAddress: Address
     attesters: Address[]
@@ -72,7 +72,7 @@ export const getK1NexusAddress = async (
 ): Promise<Address> => {
   const {
     publicClient,
-    k1FactoryAddress,
+    factoryAddress,
     ownerAddress,
     attesters,
     attesterThreshold,
@@ -80,7 +80,7 @@ export const getK1NexusAddress = async (
   } = params
 
   return await publicClient.readContract({
-    address: k1FactoryAddress,
+    address: factoryAddress,
     abi: parseAbi([
       "function computeAccountAddress(address owner, uint256 index, address[] attesters, uint8 threshold) public view returns (address)"
     ]),

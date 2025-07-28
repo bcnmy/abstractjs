@@ -5,11 +5,9 @@ import {
   encodeFunctionData,
   pad,
   parseAbi,
-  toHex,
-  zeroAddress
+  toHex
 } from "viem"
 import { isVersionOlder } from ".."
-import { NEXUS_VERSION_LATEST } from "../../constants"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
@@ -88,55 +86,6 @@ export const getFactoryData = (parameters: GetFactoryDataParams): Hex => {
     ]),
     functionName: "createAccount",
     args: [initData, salt]
-  })
-}
-
-export type GetInitDataParams = {
-  defaultValidator: GenericModuleConfig
-  prevalidationHooks: PrevalidationHookModuleConfig[]
-  validators: GenericModuleConfig[]
-  executors: GenericModuleConfig[]
-  hook: GenericModuleConfig
-  fallbacks: GenericModuleConfig[]
-  bootStrapAddress: Address
-  registryAddress?: Address
-  attesters?: Address[]
-  attesterThreshold?: number
-  nexusVersion?: NexusVersion
-}
-
-export const getInitData = (parameters: GetInitDataParams): Hex => {
-  const {
-    registryAddress,
-    attesters,
-    attesterThreshold,
-    defaultValidator,
-    prevalidationHooks,
-    validators,
-    executors,
-    hook,
-    fallbacks,
-    bootStrapAddress,
-    nexusVersion = NEXUS_VERSION_LATEST
-  } = parameters
-  if (isVersionOlder(nexusVersion, "1.2.0")) {
-    return getInitDataWithRegistry({
-      bootStrapAddress,
-      validators,
-      registryAddress: registryAddress || zeroAddress,
-      attesters: attesters || [],
-      attesterThreshold: attesterThreshold || 0,
-      nexusVersion
-    })
-  }
-  return getInitDataNoRegistry({
-    defaultValidator,
-    prevalidationHooks,
-    validators,
-    executors,
-    hook,
-    fallbacks,
-    bootStrapAddress
   })
 }
 

@@ -1,4 +1,4 @@
-import { type Address, type Hex, type OneOf, zeroAddress } from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -698,7 +698,7 @@ const preparePaymentInfo = async (
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
-    moduleAddress = zeroAddress as Address,
+    moduleAddress: validatorAddress,
     paymentVerificationGasLimit
   } = parameters
 
@@ -778,7 +778,7 @@ const preparePaymentInfo = async (
 
     const [nonce, isAccountDeployed, initCode] = await Promise.all([
       validPaymentAccount.getNonceWithKey(validPaymentAccount.address, {
-        moduleAddress
+        moduleAddress: validatorAddress
       }),
       validPaymentAccount.isDeployed(),
       validPaymentAccount.getInitCode()
@@ -822,7 +822,7 @@ const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
   isCleanUpUserOps = false,
-  moduleAddress?: Address
+  validatorAddress?: Address
 ) => {
   return await Promise.all(
     instructions.map((userOp) => {
@@ -856,7 +856,9 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey(accountAddress, { moduleAddress }),
+        deployment.getNonceWithKey(accountAddress, {
+          moduleAddress: validatorAddress
+        }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,

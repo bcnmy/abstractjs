@@ -1,4 +1,4 @@
-import type { Hex } from "viem"
+import type { Address } from "viem"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -177,33 +177,31 @@ export const isVersionNewer = (
   return comparison > 0
 }
 
-export type AddressConfigsAdditions = {
-  "1.0.2": {
-    registryAddress?: Hex
-    attesters?: Hex[]
-    attesterThreshold?: number
-    k1FactoryAddress?: Hex
-    k1ValidatorAddress?: Hex
-    useK1Config?: boolean
-  }
-}
-
-export type NexusVersion = `${number}.${number}.${number}`
+export type NexusVersion =
+  | `${number}.${number}.${number}`
+  | `${number}.${number}.${number}.${string}`
 
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 
-export type BaseAddressConfig = {
+export type AddressConfig = {
   /** The version of the Nexus account */
   version: NexusVersion
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
   accountId: NexusAccountId
   /** The implementation address for the account */
-  implementationAddress: Hex
+  implementationAddress: Address
   /** The bootstrap address for the account */
-  bootStrapAddress: Hex
+  bootStrapAddress: Address
   /** The factory address for the account */
-  factoryAddress: Hex
+  factoryAddress: Address
+  /** The validator address for the account */
+  validatorAddress: Address
+  /** The default validator address for the account */
+  defaultValidatorAddress: Address
+  /** The module registry for the account */
+  moduleRegistry?: {
+    registryAddress: Address
+    attesters: Address[]
+    attesterThreshold: number
+  }
 }
-
-export type AddressConfig = BaseAddressConfig &
-  AddressConfigsAdditions[keyof AddressConfigsAdditions]

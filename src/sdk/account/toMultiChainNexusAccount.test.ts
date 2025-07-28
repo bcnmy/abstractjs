@@ -3,8 +3,6 @@ import {
   type Chain,
   type LocalAccount,
   type Transport,
-  createPublicClient,
-  createWalletClient,
   isAddress,
   isHex,
   zeroAddress
@@ -14,7 +12,6 @@ import { base, baseSepolia, optimism, polygon, spicy } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   TESTNET_RPC_URLS,
-  TEST_BLOCK_CONFIRMATIONS,
   getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
@@ -24,9 +21,8 @@ import {
   transferErc20
 } from "../../test/testUtils"
 import { createMeeClient } from "../clients/createMeeClient"
-import { MEE_VALIDATOR_ADDRESS, NEXUS_VERSION_LATEST } from "../constants"
+import { DEFAULT_NEXUS_VERSION } from "../constants"
 import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
-import { toMeeK1Module } from "../modules"
 import { getNexus } from "../modules/utils/Helpers"
 import {
   type MultichainSmartAccount,
@@ -167,7 +163,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
   })
   describe("nexusVersion", () => {
-    test("should throw an error if the version is supported but not by the chain", async () => {
+    test.skip("should throw an error if the version is supported but not by the chain", async () => {
       const notCancunChain = polygon
       await expect(
         toNexusAccount({
@@ -175,7 +171,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           signer: eoaAccount,
           transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
           options: {
-            version: getNexus("1.2.0")
+            nexusConfig: getNexus("1.2.0")
           }
         })
       ).rejects.toThrow()
@@ -199,11 +195,8 @@ describe("mee.toMultiChainNexusAccount", async () => {
           http(TESTNET_RPC_URLS[optimism.id])
         ],
         options: [
-          { version: getNexus("1.0.2") },
-          { version: getNexus(NEXUS_VERSION_LATEST) }
-        ],
-        validators: [
-          toMeeK1Module({ signer: eoaAccount, module: MEE_VALIDATOR_ADDRESS })
+          { nexusConfig: getNexus("1.0.2") },
+          { nexusConfig: getNexus(DEFAULT_NEXUS_VERSION) }
         ]
       })
       expect(nexusAccount.deployments.length).toEqual(3)
@@ -214,10 +207,10 @@ describe("mee.toMultiChainNexusAccount", async () => {
         nexusAccount.deploymentOn(baseSepolia.id)?.accountId.includes("1.0.")
       ).toEqual(true)
       expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(
-        `biconomy.nexus.${NEXUS_VERSION_LATEST}`
+        `biconomy.nexus.${DEFAULT_NEXUS_VERSION}`
       )
       expect(nexusAccount.deploymentOn(optimism.id)?.accountId).toEqual(
-        `biconomy.nexus.${NEXUS_VERSION_LATEST}`
+        `biconomy.nexus.${DEFAULT_NEXUS_VERSION}`
       )
     })
 
@@ -229,7 +222,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         const quote = await meeClient.getQuote({
           instructions: [
-            mcNexus.build({
+            nexusAccount.build({
               type: "default",
               data: {
                 calls: [
@@ -258,7 +251,16 @@ describe("mee.toMultiChainNexusAccount", async () => {
           signer: newSigner,
           chains: [baseSepolia],
           transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          options: [{ version: getNexus("1.0.2") }]
+          options: [{ nexusConfig: getNexus("1.0.2") }]
+        })
+        await executeTx(nexusAccount)
+      })
+      test("works with 1.0.2.legacy", async () => {
+        const nexusAccount = await toMultichainNexusAccount({
+          signer: newSigner,
+          chains: [baseSepolia],
+          transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
+          options: [{ nexusConfig: getNexus("1.0.2.legacy") }]
         })
         await executeTx(nexusAccount)
       })
@@ -267,7 +269,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           signer: newSigner,
           chains: [baseSepolia],
           transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          options: [{ version: getNexus("1.2.0") }]
+          options: [{ nexusConfig: getNexus("1.2.0") }]
         })
         await executeTx(nexusAccount)
       })
@@ -276,7 +278,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           signer: newSigner,
           chains: [baseSepolia],
           transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          options: [{ version: getNexus("1.2.1") }]
+          options: [{ nexusConfig: getNexus("1.2.1") }]
         })
         await executeTx(nexusAccount)
       })

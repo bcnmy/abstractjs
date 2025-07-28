@@ -40,12 +40,7 @@ import {
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
-import {
-  COMPOSABLE_MODULE_ADDRESS,
-  ENTRY_POINT_ADDRESS,
-  MEE_VALIDATOR_ADDRESS,
-  NEXUS_VERSION_LATEST
-} from "../constants"
+import { DEFAULT_NEXUS_VERSION, ENTRY_POINT_ADDRESS } from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor, toComposableFallback } from "../modules"
@@ -61,7 +56,8 @@ import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
   getFactoryData,
-  getInitData,
+  getInitDataNoRegistry,
+  getInitDataWithRegistry,
   getK1FactoryData
 } from "./decorators/getFactoryData"
 import {
@@ -72,6 +68,7 @@ import {
   getDefaultNonceKey,
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
+import { toInitData } from "./utils"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -92,13 +89,22 @@ import {
 } from "./utils/Utils"
 import {
   type AddressConfig,
-  type AddressConfigsAdditions,
   type NexusAccountId,
+  type NexusVersion,
   isVersionOlder
 } from "./utils/getVersion"
-import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+
+export type GetInitDataParams = {
+  accountIndex: bigint
+  prevalidationHooks: PrevalidationHookModuleConfig[]
+  validators: GenericModuleConfig[]
+  executors: GenericModuleConfig[]
+  hook: GenericModuleConfig
+  fallbacks: GenericModuleConfig[]
+  customInitData?: Hex
+}
 
 /**
  * Base module configuration type
@@ -120,8 +126,8 @@ export type PrevalidationHookModuleConfig = GenericModuleConfig & {
 }
 
 export type NexusOptions = {
-  /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
-  version?: AddressConfig
+  /** Optional nexus config for the Nexus Smart Account. If undefined, the latest version will be used. */
+  nexusConfig?: AddressConfig
 }
 /**
  * Parameters for creating a Nexus Smart Account
@@ -162,19 +168,18 @@ export type ToNexusSmartAccountParameters = {
   factoryAddress?: Address
   /** Optional init data */
   initData?: Hex
-} & AddressConfigsAdditions[keyof AddressConfigsAdditions] &
-  Prettify<
-    Pick<
-      ClientConfig<Transport, Chain, Account, RpcSchema>,
-      | "account"
-      | "cacheTime"
-      | "chain"
-      | "key"
-      | "name"
-      | "pollingInterval"
-      | "rpcSchema"
-    >
+} & Prettify<
+  Pick<
+    ClientConfig<Transport, Chain, Account, RpcSchema>,
+    | "account"
+    | "cacheTime"
+    | "chain"
+    | "key"
+    | "name"
+    | "pollingInterval"
+    | "rpcSchema"
   >
+>
 /**
  * Nexus Smart Account type
  */
@@ -285,8 +290,222 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Account ID */
     accountId: NexusAccountId
+
+    /** Nexus version */
+    version: NexusVersion
   }
 >
+
+// Resolves the latest default nexus version or resolves the user defined version for nexus smart account
+const resolveNexusConfig = async (
+  hasCancun: boolean,
+  customNexusConfig?: AddressConfig
+): Promise<AddressConfig> => {
+  let nexusConfig: AddressConfig
+
+  if (customNexusConfig) {
+    // If the old version + no cancun ? new nexus is not supported
+    const unsupportedVersion =
+      !isVersionOlder(customNexusConfig.version, "1.2.0") && !hasCancun
+
+    if (unsupportedVersion) {
+      throw new Error(
+        "Nexus version is not supported for this chain. Please use a version earlier than 1.2.0 or a chain that supports Cancun."
+      )
+    }
+
+    const defaultNexusConfig = getNexus(customNexusConfig.version)
+
+    nexusConfig = {
+      version: customNexusConfig.version || defaultNexusConfig.version,
+      accountId: customNexusConfig.accountId || defaultNexusConfig.accountId,
+      implementationAddress:
+        customNexusConfig.implementationAddress ||
+        defaultNexusConfig.implementationAddress,
+      bootStrapAddress:
+        customNexusConfig.bootStrapAddress ||
+        defaultNexusConfig.bootStrapAddress,
+      factoryAddress:
+        customNexusConfig.factoryAddress || defaultNexusConfig.factoryAddress,
+      validatorAddress:
+        customNexusConfig.validatorAddress ||
+        defaultNexusConfig.validatorAddress,
+      defaultValidatorAddress:
+        customNexusConfig.defaultValidatorAddress ||
+        defaultNexusConfig.defaultValidatorAddress,
+      moduleRegistry:
+        customNexusConfig.moduleRegistry || defaultNexusConfig.moduleRegistry
+    }
+  } else {
+    nexusConfig = hasCancun
+      ? getNexus(DEFAULT_NEXUS_VERSION)
+      : getNexus("1.0.2")
+  }
+
+  return nexusConfig
+}
+
+const prepareValidators = async (
+  signer: Signer,
+  nexusConfig: AddressConfig,
+  customValidators?: Validator[]
+): Promise<Validator[]> => {
+  let validators: Validator[] = []
+
+  if (customValidators && customValidators.length > 0) {
+    return customValidators
+  }
+
+  if (isVersionOlder(nexusConfig.version, "1.2.0")) {
+    switch (nexusConfig.version) {
+      case "1.0.2":
+        validators = [
+          toMeeK1Module({
+            signer: await toSigner({ signer }),
+            module: nexusConfig.defaultValidatorAddress
+          })
+        ]
+        break
+      case "1.0.2.legacy":
+        validators = [
+          toLegacyK1Module({
+            signer,
+            module: nexusConfig.defaultValidatorAddress
+          })
+        ]
+        break
+      default:
+        throw new Error("Unsupported old nexus version")
+    }
+  } else {
+    // Default validator address is zeroAddress
+    // This default validator will be used for 1.2.X versions further
+    validators = [toDefaultModule({ signer })]
+  }
+
+  return validators
+}
+
+const prepareExecutors = (
+  nexusConfig: AddressConfig,
+  customExecutors?: GenericModuleConfig[]
+): GenericModuleConfig[] => {
+  let executors: GenericModuleConfig[] = []
+
+  if (isVersionOlder(nexusConfig.version, "1.2.0")) {
+    // if using <=1.0.2, add the composable executor
+    const composableExecutor = toComposableExecutor()
+    executors = [composableExecutor]
+
+    for (let executor of customExecutors || []) {
+      if (!addressEquals(executor.module, composableExecutor.module)) {
+        executors.push(executor)
+      }
+    }
+  } else {
+    executors = customExecutors || []
+  }
+
+  return executors
+}
+
+const prepareFallbacks = (
+  nexusConfig: AddressConfig,
+  customFallbacks?: GenericModuleConfig[]
+): GenericModuleConfig[] => {
+  let fallbacks: GenericModuleConfig[] = []
+
+  if (isVersionOlder(nexusConfig.version, "1.2.0")) {
+    // if nexus version <=1.0.2, add the composable fallback
+    const composableFallback = toComposableFallback()
+    fallbacks = [composableFallback]
+
+    for (let fallback of customFallbacks || []) {
+      if (!addressEquals(fallback.module, composableFallback.module)) {
+        fallbacks.push(fallback)
+      }
+    }
+  } else {
+    fallbacks = customFallbacks || []
+  }
+
+  return fallbacks
+}
+
+const prepareFactoryData = (
+  signer: Signer,
+  nexusConfig: AddressConfig,
+  initDataParams: GetInitDataParams
+): { initData: Hex; factoryData: Hex } => {
+  let factoryData: Hex = "0x"
+  let initData: Hex = "0x"
+
+  switch (nexusConfig.version) {
+    case "1.0.2.legacy":
+      if (!nexusConfig.moduleRegistry) {
+        throw new Error("Module registry not found in nexus config")
+      }
+
+      factoryData = getK1FactoryData({
+        signerAddress: signer.address,
+        index: initDataParams.accountIndex,
+        attesters: nexusConfig.moduleRegistry.attesters,
+        attesterThreshold: nexusConfig.moduleRegistry.attesterThreshold
+      })
+      break
+    case "1.0.2": {
+      if (initDataParams.customInitData) {
+        initData = initDataParams.customInitData
+        break
+      }
+
+      if (!nexusConfig.moduleRegistry) {
+        throw new Error("Module registry not found in nexus config")
+      }
+
+      initData = getInitDataWithRegistry({
+        bootStrapAddress: nexusConfig.bootStrapAddress,
+        validators: initDataParams.validators,
+        registryAddress: nexusConfig.moduleRegistry.registryAddress,
+        attesters: nexusConfig.moduleRegistry.attesters,
+        attesterThreshold: nexusConfig.moduleRegistry.attesterThreshold,
+        nexusVersion: nexusConfig.version
+      })
+
+      factoryData = getFactoryData({
+        initData,
+        index: initDataParams.accountIndex
+      })
+      break
+    }
+
+    default: {
+      if (initDataParams.customInitData) {
+        initData = initDataParams.customInitData
+        break
+      }
+
+      // All the nexus version 1.2.x will be deployed with no registry
+      initData = getInitDataNoRegistry({
+        defaultValidator: toInitData(toDefaultModule({ signer })),
+        prevalidationHooks: initDataParams.prevalidationHooks,
+        validators: initDataParams.validators,
+        executors: initDataParams.executors,
+        hook: initDataParams.hook,
+        fallbacks: initDataParams.fallbacks,
+        bootStrapAddress: nexusConfig.bootStrapAddress
+      })
+
+      factoryData = getFactoryData({
+        initData,
+        index: initDataParams.accountIndex
+      })
+      break
+    }
+  }
+
+  return { initData, factoryData }
+}
 
 /**
  * @description Create a Nexus Smart Account.
@@ -319,177 +538,70 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    attesterThreshold = 1,
-    useK1Config = false
+    initData: customInitData,
+    options = {}
   } = parameters
-
-  let {
-    initData,
-    // those params are undefined by default and are defined only if explicitly provided
-    // or if nexus version is provided
-    options
-  } = parameters
-
-  let version = options?.version
 
   // check if the chain supports > 1.2.0
   const hasCancun = await supportsCancun({
     chain,
     transport: transportConfig
   })
-  // use latest version if nexusContracts is not provided
-  if (!version) {
-    if (hasCancun) {
-      version = getNexus(NEXUS_VERSION_LATEST)
-    } else {
-      version = getNexus("1.0.2")
-    }
-  }
 
-  let {
-    factoryAddress,
-    bootStrapAddress,
-    implementationAddress,
-    registryAddress,
-    attesters,
-    k1ValidatorAddress,
-    k1FactoryAddress,
-    version: nexusVersion
-  } = version
-  const hasCustomAddressConfig =
-    factoryAddress ||
-    bootStrapAddress ||
-    implementationAddress ||
-    registryAddress ||
-    attesters
-  const unsupportedVersion =
-    version && !isVersionOlder(version.version, "1.2.0") && !hasCancun
-
-  if (unsupportedVersion) {
-    throw new Error(
-      "Nexus version is not supported for this chain. Please use a version earlier than 1.2.0 or a chain that supports Cancun."
-    )
-  }
-
-  // if nexus version earlier than 1.2.0 is provided, use the config from the constants
-  if (
-    nexusVersion &&
-    isVersionOlder(nexusVersion, "1.2.0") &&
-    !hasCustomAddressConfig
-  ) {
-    ;({
-      factoryAddress,
-      bootStrapAddress,
-      implementationAddress,
-      registryAddress,
-      attesters,
-      k1ValidatorAddress,
-      k1FactoryAddress
-    } = getNexus(nexusVersion))
-    if (useK1Config) {
-      factoryAddress = k1FactoryAddress!
-    }
-  }
+  const nexusConfig = await resolveNexusConfig(hasCancun, options.nexusConfig)
 
   const signer = await toSigner({ signer: _signer })
+
   const walletClient = toWalletClient({
     unresolvedSigner: _signer,
     resolvedSigner: signer,
     chain,
     transport: transportConfig
   })
+
   const publicClient = createPublicClient({ chain, transport: transportConfig })
 
-  // Prepare default validator module
-  const defaultValidator = toDefaultModule({ signer })
-
   // Prepare validator modules
-  let validators = customValidators || []
+  const validators: Validator[] = await prepareValidators(
+    signer,
+    nexusConfig,
+    customValidators
+  )
 
-  if (validators.length === 0 && isVersionOlder(nexusVersion, "1.2.0")) {
-    validators = [
-      toMeeK1Module({
-        signer: await toSigner({ signer }),
-        module: MEE_VALIDATOR_ADDRESS
-      })
-    ]
-  }
+  let module = validators[0]
 
-  let k1Validator: Validator | undefined = undefined
-
-  if (useK1Config && k1ValidatorAddress) {
-    k1Validator = toLegacyK1Module({
-      signer,
-      module: k1ValidatorAddress
-    })
-  }
-
-  // The default validator should be the defaultValidator unless custom validators have been set or k1Validator is set
-  let module = k1Validator || customValidators?.[0] || defaultValidator
   // Prepare executor modules
-
-  const executors = customExecutors || []
-
-  // if using <=1.0.2, add the composable executor if it's not already present
-  if (
-    isVersionOlder(nexusVersion, "1.2.0") &&
-    !executors.find((executor) => executor.module === COMPOSABLE_MODULE_ADDRESS)
-  ) {
-    executors.push(toComposableExecutor())
-  }
+  const executors = prepareExecutors(nexusConfig, customExecutors)
 
   // Prepare hook module
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  let fallbacks = customFallbacks || []
-
-  // if using <=1.0.2, add the composable fallback if there are no custom fallbacks
-  if (isVersionOlder(nexusVersion, "1.2.0") && fallbacks.length === 0) {
-    fallbacks = [toComposableFallback()]
-  }
+  const fallbacks = prepareFallbacks(nexusConfig, customFallbacks)
 
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []
 
-  let factoryData: Hex = "0x"
-
-  if (useK1Config) {
-    factoryData = getK1FactoryData({
-      signerAddress: signer.address,
-      index,
-      attesters: attesters!,
-      attesterThreshold
-    })
-  } else {
-    if (!initData) {
-      initData = getInitData({
-        defaultValidator: toInitData(defaultValidator),
-        prevalidationHooks,
-        validators: validators.map(toInitData),
-        executors: executors.map(toInitData),
-        hook: toInitData(hook),
-        fallbacks: fallbacks.map(toInitData),
-        bootStrapAddress,
-        registryAddress,
-        attesters,
-        attesterThreshold,
-        nexusVersion
-      })
-      factoryData = getFactoryData({ initData, index })
-    }
-  }
+  // prepare factory data
+  const { initData, factoryData } = prepareFactoryData(signer, nexusConfig, {
+    accountIndex: index,
+    prevalidationHooks,
+    validators: validators.map(toInitData),
+    executors: executors.map(toInitData),
+    hook: toInitData(hook),
+    fallbacks: fallbacks.map(toInitData),
+    customInitData
+  })
 
   /**
    * @description Gets the init code for the account
    * @returns The init code as a hexadecimal string
    */
-  const getInitCode = () =>
-    concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
+  const getInitCode = () => concatHex([nexusConfig.factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
   const accountId: NexusAccountId = (await publicClient.readContract({
-    address: implementationAddress,
+    address: nexusConfig.implementationAddress,
     abi: parseAbi(["function accountId() public view returns (string)"]),
     functionName: "accountId",
     args: []
@@ -503,21 +615,29 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = useK1Config
-      ? await getK1NexusAddress({
-          k1FactoryAddress: k1FactoryAddress!,
-          index,
-          ownerAddress: signer.address,
-          attesters: attesters!,
-          attesterThreshold,
-          publicClient
-        })
-      : await getNexusAddress({
-          factoryAddress,
-          index,
-          initData: initData!,
-          publicClient
-        })
+    let addressFromFactory: Address = zeroAddress
+
+    if (nexusConfig.version === "1.0.2.legacy") {
+      if (!nexusConfig.moduleRegistry) {
+        throw new Error("Module registry not found in nexus config")
+      }
+
+      addressFromFactory = await getK1NexusAddress({
+        factoryAddress: nexusConfig.factoryAddress,
+        index,
+        ownerAddress: signer.address,
+        attesters: nexusConfig.moduleRegistry?.attesters,
+        attesterThreshold: nexusConfig.moduleRegistry?.attesterThreshold,
+        publicClient
+      })
+    } else {
+      addressFromFactory = await getNexusAddress({
+        factoryAddress: nexusConfig.factoryAddress,
+        index,
+        initData,
+        publicClient
+      })
+    }
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
       _accountAddress = addressFromFactory
@@ -641,15 +761,11 @@ export const toNexusAccount = async (
   ): Promise<NonceInfo> => {
     const defaultNonceKey = await getDefaultNonceKey(accountAddress, chain.id)
 
-    let {
+    const {
       key = defaultNonceKey,
       validationMode = "0x00",
       moduleAddress = module.module
     } = parameters ?? {}
-
-    if (isVersionOlder(nexusVersion, "1.2.0")) {
-      moduleAddress = MEE_VALIDATOR_ADDRESS
-    }
 
     return getNonceWithKeyUtil(publicClient, accountAddress, {
       key,
@@ -773,7 +889,8 @@ export const toNexusAccount = async (
       delegatedContract
     } = params || {}
 
-    const contractAddress = delegatedContract || implementationAddress
+    const contractAddress =
+      delegatedContract || nexusConfig.implementationAddress
 
     const authorization: SignAuthorizationReturnType =
       authorization_ ||
@@ -800,7 +917,7 @@ export const toNexusAccount = async (
       !!code &&
       code
         ?.toLowerCase()
-        .includes(implementationAddress.substring(2).toLowerCase())
+        .includes(nexusConfig.implementationAddress.substring(2).toLowerCase())
     )
   }
 
@@ -846,7 +963,7 @@ export const toNexusAccount = async (
         : encodeExecuteBatch(calls)
     },
     getFactoryArgs: async () => ({
-      factory: factoryAddress,
+      factory: nexusConfig.factoryAddress,
       factoryData
     }),
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
@@ -899,14 +1016,16 @@ export const toNexusAccount = async (
       encodeExecuteComposable,
       getUserOpHash,
       factoryData,
-      factoryAddress,
-      registryAddress,
+      factoryAddress: nexusConfig.factoryAddress,
+      registryAddress:
+        nexusConfig.moduleRegistry?.registryAddress || zeroAddress,
       signer,
       walletClient,
       publicClient,
       chain,
       setModule,
-      getModule: () => module
+      getModule: () => module,
+      version: nexusConfig.version
     }
   })
 }

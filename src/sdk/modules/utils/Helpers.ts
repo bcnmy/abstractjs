@@ -18,7 +18,10 @@ import {
   type NexusVersion,
   semverCompare
 } from "../../account/index.js"
-import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants/index.js"
+import {
+  DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION,
+  DEFAULT_NEXUS_VERSION
+} from "../../constants/index.js"
 import type { AnyData, ModularSmartAccount } from "./Types.js"
 
 /**
@@ -160,7 +163,9 @@ export const isPermitSupported = async (
  * @returns The configuration containing attester and factory addresses
  * @throws Error if the version is not supported
  */
-export function getNexus(nexusVersion: NexusVersion): AddressConfig {
+export function getNexus(
+  nexusVersion: NexusVersion = DEFAULT_NEXUS_VERSION
+): AddressConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
   if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
     return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]

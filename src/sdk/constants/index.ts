@@ -3,27 +3,28 @@ import {
   REGISTRY_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS
 } from "@rhinestone/module-sdk"
-import { type Hex } from "viem"
+import { type Address, type Hex, zeroAddress } from "viem"
 import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
 
-export const NEXUS_VERSION_LATEST: NexusVersion = "1.2.0"
-export const ENTRY_POINT_ADDRESS: Hex =
-  "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
-export const ENTRYPOINT_SIMULATIONS_ADDRESS: Hex =
-  "0x74Cb5e4eE81b86e70f9045036a1C5477de69eE87"
-export const MEE_VALIDATOR_ADDRESS: Hex =
-  "0x00000000d12897DDAdC2044614A9677B191A2d95"
-export const BICONOMY_ATTESTER_ADDRESS: Hex =
-  "0xF9ff902Cdde729b47A4cDB55EF16DF3683a04EAB"
-export const BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1: Hex =
-  "0xDE8FD2dBcC0CA847d11599AF5964fe2AEa153699"
-export const COMPOSABLE_MODULE_ADDRESS: Hex =
+export const DEFAULT_NEXUS_VERSION: NexusVersion = "1.2.0"
+export const COMPOSABLE_MODULE_ADDRESS: Address =
   "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10"
-export const FORWARDER_ADDRESS: Hex =
+export const ENTRY_POINT_ADDRESS: Address =
+  "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+export const ENTRYPOINT_SIMULATIONS_ADDRESS: Address =
+  "0x74Cb5e4eE81b86e70f9045036a1C5477de69eE87"
+export const FORWARDER_ADDRESS: Address =
   "0x000000Afe527A978Ecb761008Af475cfF04132a1"
+
+const MEE_VALIDATOR_ADDRESS: Address =
+  "0x00000000d12897DDAdC2044614A9677B191A2d95"
+const K1_VALIDATOR_ADDRESS: Address =
+  "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa"
+const BICONOMY_ATTESTER_ADDRESS: Address =
+  "0xF9ff902Cdde729b47A4cDB55EF16DF3683a04EAB"
 
 export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
   string,
@@ -36,7 +37,8 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
-    k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE" // https://docs.biconomy.io/contracts-and-audits/#biconomy-network-genesis-mainnet-release
+    validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
+    defaultValidatorAddress: zeroAddress
   },
   "1.2.0": {
     version: "1.2.0",
@@ -44,18 +46,36 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
-    k1ValidatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE"
+    validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
+    defaultValidatorAddress: zeroAddress
   },
   "1.0.2": {
     version: "1.0.2",
     accountId: "biconomy.nexus.1.0.2",
-    factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9",
+    factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9", // Nexus Factory Address
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
     implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
-    k1ValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa", // K1 validator address
-    k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc",
-    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-    registryAddress: REGISTRY_ADDRESS
+    validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
+    defaultValidatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
+    moduleRegistry: {
+      registryAddress: zeroAddress,
+      attesters: [],
+      attesterThreshold: 0
+    }
+  },
+  "1.0.2.legacy": {
+    version: "1.0.2.legacy",
+    accountId: "biconomy.nexus.1.0.2",
+    factoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc", // K1 Factory Address
+    bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
+    implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
+    validatorAddress: K1_VALIDATOR_ADDRESS,
+    defaultValidatorAddress: K1_VALIDATOR_ADDRESS,
+    moduleRegistry: {
+      registryAddress: REGISTRY_ADDRESS,
+      attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
+      attesterThreshold: 1
+    }
   }
 }
 

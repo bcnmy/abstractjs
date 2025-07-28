@@ -1,7 +1,6 @@
 import {
   type Ecosystem,
   type Infra,
-  MEE_VALIDATOR_ADDRESS,
   toClients,
   toEcosystem
 } from "@biconomy/ecosystem"
@@ -47,7 +46,7 @@ describe("modules.toMeeK1Module", () => {
 
     meeModule = toMeeK1Module({
       signer: eoaAccount,
-      module: MEE_VALIDATOR_ADDRESS
+      module: "0x00000000d12897DDAdC2044614A9677B191A2d95" // MEE validator address
     })
 
     nexusAccount = await toNexusAccount({
