@@ -1,4 +1,5 @@
 import type { Chain, Hex, Transport } from "viem"
+
 import type {
   Instruction,
   MeeAuthorization
@@ -32,6 +33,7 @@ import {
   type IsDelegatedPayload,
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
+
 import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
@@ -52,7 +54,6 @@ import {
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
 import type { MultichainToken } from "./utils/Types"
-
 /**
  * Parameters required to create a multichain Nexus account
  */

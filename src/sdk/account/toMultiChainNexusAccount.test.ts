@@ -23,7 +23,7 @@ import {
 import { createMeeClient } from "../clients/createMeeClient"
 import { DEFAULT_NEXUS_VERSION } from "../constants"
 import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
-import { getNexus } from "../modules/utils/Helpers"
+import { getNexus } from "../modules/utils/getNexus"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -163,7 +163,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
   })
   describe("nexusVersion", () => {
-    test.skip("should throw an error if the version is supported but not by the chain", async () => {
+    test("should throw an error if the version is supported but not by the chain", async () => {
       const notCancunChain = polygon
       await expect(
         toNexusAccount({

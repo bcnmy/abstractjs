@@ -7,8 +7,8 @@ import {
   getSpendingLimitsPolicy
 } from "../../../../../constants"
 
-import { getNexus } from "../../../../utils"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
+import { getNexus } from "../../../../utils/getNexus"
 import {
   type GrantPermissionResponse,
   grantPermissionPersonalSign,

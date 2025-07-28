@@ -16,11 +16,11 @@ import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import type { Call } from "../../../account/utils/Types"
 import { addressEquals } from "../../../account/utils/Utils"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import { getNexus } from "../../../modules/utils/Helpers"
 import type {
   ModularSmartAccount,
   ModuleMeta
 } from "../../../modules/utils/Types"
+import { getNexus } from "../../../modules/utils/getNexus"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type InstallModuleParameters<

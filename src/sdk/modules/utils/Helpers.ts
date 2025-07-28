@@ -12,16 +12,7 @@ import {
   toFunctionSelector,
   toHex
 } from "viem"
-import {
-  type AddressConfig,
-  ERROR_MESSAGES,
-  type NexusVersion,
-  semverCompare
-} from "../../account/index.js"
-import {
-  DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION,
-  DEFAULT_NEXUS_VERSION
-} from "../../constants/index.js"
+import { ERROR_MESSAGES } from "../../account/index.js"
 import type { AnyData, ModularSmartAccount } from "./Types.js"
 
 /**
@@ -155,32 +146,4 @@ export const isPermitSupported = async (
     console.error("Error checking permit support:", err)
     return false
   }
-}
-
-/**
- * Returns the appropriate configuration based on the SDK version
- * @param version - The SDK version string (e.g., "0.2.0")
- * @returns The configuration containing attester and factory addresses
- * @throws Error if the version is not supported
- */
-export function getNexus(
-  nexusVersion: NexusVersion = DEFAULT_NEXUS_VERSION
-): AddressConfig {
-  // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
-  if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
-    return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]
-  }
-
-  // If the version is not explicitly listed, find the closest compatible version
-  // Sort the available versions in descending order
-  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION).sort(
-    (a, b) => semverCompare(b, a)
-  )
-
-  // If no compatible version is found, throw an error
-  throw new Error(
-    `Unsupported Nexus version: ${nexusVersion}. Compatible versions are: ${allVersions.join(
-      ", "
-    )}`
-  )
 }
