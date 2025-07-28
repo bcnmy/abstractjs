@@ -454,23 +454,20 @@ const prepareFactoryData = (
       })
       break
     case "1.0.2": {
-      if (initDataParams.customInitData) {
-        initData = initDataParams.customInitData
-        break
-      }
-
       if (!nexusConfig.moduleRegistry) {
         throw new Error("Module registry not found in nexus config")
       }
 
-      initData = getInitDataWithRegistry({
-        bootStrapAddress: nexusConfig.bootStrapAddress,
-        validators: initDataParams.validators,
-        registryAddress: nexusConfig.moduleRegistry.registryAddress,
-        attesters: nexusConfig.moduleRegistry.attesters,
-        attesterThreshold: nexusConfig.moduleRegistry.attesterThreshold,
-        nexusVersion: nexusConfig.version
-      })
+      initData =
+        initDataParams.customInitData ||
+        getInitDataWithRegistry({
+          bootStrapAddress: nexusConfig.bootStrapAddress,
+          validators: initDataParams.validators,
+          registryAddress: nexusConfig.moduleRegistry.registryAddress,
+          attesters: nexusConfig.moduleRegistry.attesters,
+          attesterThreshold: nexusConfig.moduleRegistry.attesterThreshold,
+          nexusVersion: nexusConfig.version
+        })
 
       factoryData = getFactoryData({
         initData,
@@ -480,21 +477,18 @@ const prepareFactoryData = (
     }
 
     default: {
-      if (initDataParams.customInitData) {
-        initData = initDataParams.customInitData
-        break
-      }
-
       // All the nexus version 1.2.x will be deployed with no registry
-      initData = getInitDataNoRegistry({
-        defaultValidator: toInitData(toDefaultModule({ signer })),
-        prevalidationHooks: initDataParams.prevalidationHooks,
-        validators: initDataParams.validators,
-        executors: initDataParams.executors,
-        hook: initDataParams.hook,
-        fallbacks: initDataParams.fallbacks,
-        bootStrapAddress: nexusConfig.bootStrapAddress
-      })
+      initData =
+        initDataParams.customInitData ||
+        getInitDataNoRegistry({
+          defaultValidator: toInitData(toDefaultModule({ signer })),
+          prevalidationHooks: initDataParams.prevalidationHooks,
+          validators: initDataParams.validators,
+          executors: initDataParams.executors,
+          hook: initDataParams.hook,
+          fallbacks: initDataParams.fallbacks,
+          bootStrapAddress: nexusConfig.bootStrapAddress
+        })
 
       factoryData = getFactoryData({
         initData,
