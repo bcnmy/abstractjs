@@ -397,7 +397,7 @@ const prepareExecutors = (
     const composableExecutor = toComposableExecutor()
     executors = [composableExecutor]
 
-    for (let executor of customExecutors || []) {
+    for (const executor of customExecutors || []) {
       if (!addressEquals(executor.module, composableExecutor.module)) {
         executors.push(executor)
       }
@@ -420,7 +420,7 @@ const prepareFallbacks = (
     const composableFallback = toComposableFallback()
     fallbacks = [composableFallback]
 
-    for (let fallback of customFallbacks || []) {
+    for (const fallback of customFallbacks || []) {
       if (!addressEquals(fallback.module, composableFallback.module)) {
         fallbacks.push(fallback)
       }
