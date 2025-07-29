@@ -16,7 +16,7 @@ import { type NexusOptions, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
-import { getNexus } from "../src/sdk/modules/utils/getNexus"
+import { getMeeConfig } from "../src/sdk/modules/utils/getNexus"
 
 dotenv.config()
 
@@ -57,13 +57,13 @@ async function main() {
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
       options: {
-        nexusConfig: getNexus("1.2.1")
+        meeConfig: getMeeConfig("2.1.0")
       }
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
       options: {
-        nexusConfig: getNexus("1.0.2")
+        meeConfig: getMeeConfig("1.0.0")
       }
     })
   }

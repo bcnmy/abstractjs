@@ -14,7 +14,7 @@ import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
-import type { NexusVersion } from "../utils/getVersion"
+import type { MEEVersion } from "../utils/getVersion"
 
 // =================================================
 // ============ Account Factory section ============
@@ -46,14 +46,14 @@ export type GetInitDataWithRegistryParams = {
   registryAddress: Address
   attesters: Address[]
   attesterThreshold: number
-  nexusVersion: NexusVersion
+  meeVersion: MEEVersion
 }
 
-// Nexus 1.0.2 case: initializing it with single validator (validators[0]) and registry
+// Mee 1.0.0 / Nexus 1.0.2 case: initializing it with single validator (validators[0]) and registry
 export const getInitDataWithRegistry = (
   params: GetInitDataWithRegistryParams
 ): Hex => {
-  const bootstrapData = isVersionOlder(params.nexusVersion, "1.2.0")
+  const bootstrapData = isVersionOlder(params.meeVersion, "2.0.0")
     ? encodeFunctionData({
         abi: NexusLegacyBootstrapAbi,
         functionName: "initNexusWithSingleValidator",

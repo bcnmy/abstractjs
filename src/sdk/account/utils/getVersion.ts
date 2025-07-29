@@ -177,13 +177,13 @@ export const isVersionNewer = (
   return comparison > 0
 }
 
-export type NexusVersion = `${number}.${number}.${number}`
+export type MEEVersion = `${number}.${number}.${number}`
 
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 
 export type AddressConfig = {
   /** The version of the Nexus account */
-  version: NexusVersion
+  version: MEEVersion
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
   accountId: NexusAccountId
   /** The implementation address for the account */

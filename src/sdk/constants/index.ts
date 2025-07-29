@@ -1,11 +1,11 @@
 import { GLOBAL_CONSTANTS } from "@rhinestone/module-sdk"
 import { type Address, type Hex, zeroAddress } from "viem"
-import type { AddressConfig, NexusVersion } from "../account/utils/getVersion"
+import type { AddressConfig, MEEVersion } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
 
-export const DEFAULT_NEXUS_VERSION: NexusVersion = "1.2.0"
+export const DEFAULT_MEE_VERSION: MEEVersion = "2.0.0"
 export const COMPOSABLE_MODULE_ADDRESS: Address =
   "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10"
 export const ENTRY_POINT_ADDRESS: Address =
@@ -18,13 +18,13 @@ export const FORWARDER_ADDRESS: Address =
 const MEE_VALIDATOR_ADDRESS: Address =
   "0x00000000d12897DDAdC2044614A9677B191A2d95"
 
-export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
+export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   string,
   AddressConfig
 > = {
-  "1.2.1": {
+  "2.1.0": {
     // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
-    version: "1.2.1",
+    version: "2.1.0",
     accountId: "biconomy.nexus.1.2.1",
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
@@ -32,8 +32,8 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress
   },
-  "1.2.0": {
-    version: "1.2.0",
+  "2.0.0": {
+    version: "2.0.0",
     accountId: "biconomy.nexus.1.2.0",
     factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
@@ -41,8 +41,8 @@ export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
     validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress
   },
-  "1.0.2": {
-    version: "1.0.2",
+  "1.0.0": {
+    version: "1.0.0",
     accountId: "biconomy.nexus.1.0.2",
     factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9", // Nexus Factory Address
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",

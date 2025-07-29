@@ -8,7 +8,7 @@ import {
 } from "../../../../../constants"
 
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
-import { getNexus } from "../../../../utils/getNexus"
+import { getMeeConfig } from "../../../../utils/getNexus"
 import {
   type GrantPermissionResponse,
   grantPermissionPersonalSign,
@@ -85,7 +85,7 @@ export const grantMeePermission = async <
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
   const version = _account?.version
-  const meeValidatorAddress = getNexus(version).validatorAddress
+  const meeValidatorAddress = getMeeConfig(version).validatorAddress
 
   // make some reliable maxPaymentAmount
   if (feeToken && !maxPaymentAmount) {

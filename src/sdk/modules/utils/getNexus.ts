@@ -1,11 +1,11 @@
 import {
   type AddressConfig,
-  type NexusVersion,
+  type MEEVersion,
   semverCompare
 } from "../../account/utils/getVersion"
 import {
-  DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION,
-  DEFAULT_NEXUS_VERSION
+  DEFAULT_CONFIGURATIONS_BY_MEE_VERSION,
+  DEFAULT_MEE_VERSION
 } from "../../constants"
 
 /**
@@ -14,23 +14,23 @@ import {
  * @returns The configuration containing attester and factory addresses
  * @throws Error if the version is not supported
  */
-export function getNexus(
-  nexusVersion: NexusVersion = DEFAULT_NEXUS_VERSION
+export function getMeeConfig(
+  meeVersion: MEEVersion = DEFAULT_MEE_VERSION
 ): AddressConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
-  if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
-    return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]
+  if (meeVersion in DEFAULT_CONFIGURATIONS_BY_MEE_VERSION) {
+    return DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[meeVersion]
   }
 
   // If the version is not explicitly listed, find the closest compatible version
   // Sort the available versions in descending order
-  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION).sort(
+  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_MEE_VERSION).sort(
     (a, b) => semverCompare(b, a)
   )
 
   // If no compatible version is found, throw an error
   throw new Error(
-    `Unsupported Nexus version: ${nexusVersion}. Compatible versions are: ${allVersions.join(
+    `Unsupported MEE version: ${meeVersion}. Compatible versions are: ${allVersions.join(
       ", "
     )}`
   )

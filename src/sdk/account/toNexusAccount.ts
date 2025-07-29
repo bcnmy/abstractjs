@@ -40,7 +40,7 @@ import {
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
-import { DEFAULT_NEXUS_VERSION, ENTRY_POINT_ADDRESS } from "../constants"
+import { DEFAULT_MEE_VERSION, ENTRY_POINT_ADDRESS } from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor, toComposableFallback } from "../modules"
@@ -49,7 +49,7 @@ import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
-import { getNexus } from "../modules/utils/getNexus"
+import { getMeeConfig } from "../modules/utils/getNexus"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
@@ -85,7 +85,7 @@ import {
 import {
   type AddressConfig,
   type NexusAccountId,
-  type NexusVersion,
+  type MEEVersion,
   isVersionOlder
 } from "./utils/getVersion"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
@@ -123,7 +123,7 @@ export type PrevalidationHookModuleConfig = GenericModuleConfig & {
 
 export type NexusOptions = {
   /** Optional nexus config for the Nexus Smart Account. If undefined, the latest version will be used. */
-  nexusConfig?: AddressConfig
+  meeConfig?: AddressConfig
 }
 /**
  * Parameters for creating a Nexus Smart Account
@@ -288,62 +288,60 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     accountId: NexusAccountId
 
     /** Nexus version */
-    version: NexusVersion
+    version: MEEVersion
   }
 >
 
 // Resolves the latest default nexus version or resolves the user defined version for nexus smart account
-const resolveNexusConfig = async (
+const resolveMeeConfig = async (
   hasCancun: boolean,
-  customNexusConfig?: AddressConfig
+  customMeeConfig?: AddressConfig
 ): Promise<AddressConfig> => {
-  let nexusConfig: AddressConfig
+  let meeConfig: AddressConfig
 
-  if (customNexusConfig) {
+  if (customMeeConfig) {
     // If the old version + no cancun ? new nexus is not supported
     const unsupportedVersion =
-      !isVersionOlder(customNexusConfig.version, "1.2.0") && !hasCancun
+      !isVersionOlder(customMeeConfig.version, "2.0.0") && !hasCancun
 
     if (unsupportedVersion) {
       throw new Error(
-        "Nexus version is not supported for this chain. Please use a version earlier than 1.2.0 or a chain that supports Cancun."
+        "MEE version is not supported for this chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun."
       )
     }
 
-    const defaultNexusConfig = getNexus(customNexusConfig.version)
+    const defaultMeeConfig = getMeeConfig(customMeeConfig.version)
 
-    nexusConfig = {
-      version: customNexusConfig.version || defaultNexusConfig.version,
-      accountId: customNexusConfig.accountId || defaultNexusConfig.accountId,
+    meeConfig = {
+      version: customMeeConfig.version || defaultMeeConfig.version,
+      accountId: customMeeConfig.accountId || defaultMeeConfig.accountId,
       implementationAddress:
-        customNexusConfig.implementationAddress ||
-        defaultNexusConfig.implementationAddress,
+        customMeeConfig.implementationAddress ||
+        defaultMeeConfig.implementationAddress,
       bootStrapAddress:
-        customNexusConfig.bootStrapAddress ||
-        defaultNexusConfig.bootStrapAddress,
+        customMeeConfig.bootStrapAddress || defaultMeeConfig.bootStrapAddress,
       factoryAddress:
-        customNexusConfig.factoryAddress || defaultNexusConfig.factoryAddress,
+        customMeeConfig.factoryAddress || defaultMeeConfig.factoryAddress,
       validatorAddress:
-        customNexusConfig.validatorAddress ||
-        defaultNexusConfig.validatorAddress,
+        customMeeConfig.validatorAddress || defaultMeeConfig.validatorAddress,
       defaultValidatorAddress:
-        customNexusConfig.defaultValidatorAddress ||
-        defaultNexusConfig.defaultValidatorAddress,
+        customMeeConfig.defaultValidatorAddress ||
+        defaultMeeConfig.defaultValidatorAddress,
       moduleRegistry:
-        customNexusConfig.moduleRegistry || defaultNexusConfig.moduleRegistry
+        customMeeConfig.moduleRegistry || defaultMeeConfig.moduleRegistry
     }
   } else {
-    nexusConfig = hasCancun
-      ? getNexus(DEFAULT_NEXUS_VERSION)
-      : getNexus("1.0.2")
+    meeConfig = hasCancun
+      ? getMeeConfig(DEFAULT_MEE_VERSION)
+      : getMeeConfig("1.0.0")
   }
 
-  return nexusConfig
+  return meeConfig
 }
 
 const prepareValidators = async (
   signer: Signer,
-  nexusConfig: AddressConfig,
+  meeConfig: AddressConfig,
   customValidators?: Validator[]
 ): Promise<Validator[]> => {
   let validators: Validator[] = []
@@ -352,11 +350,11 @@ const prepareValidators = async (
     return customValidators
   }
 
-  if (nexusConfig.version === "1.0.2") {
+  if (meeConfig.version === "1.0.0") {
     validators = [
       toMeeK1Module({
         signer: await toSigner({ signer }),
-        module: nexusConfig.defaultValidatorAddress
+        module: meeConfig.defaultValidatorAddress
       })
     ]
   } else {
@@ -369,13 +367,13 @@ const prepareValidators = async (
 }
 
 const prepareExecutors = (
-  nexusConfig: AddressConfig,
+  meeConfig: AddressConfig,
   customExecutors?: GenericModuleConfig[]
 ): GenericModuleConfig[] => {
   let executors: GenericModuleConfig[] = []
 
-  if (isVersionOlder(nexusConfig.version, "1.2.0")) {
-    // if using <=1.0.2, add the composable executor
+  if (isVersionOlder(meeConfig.version, "2.0.0")) {
+    // if using <=1.0.0, add the composable executor
     const composableExecutor = toComposableExecutor()
     executors = [composableExecutor]
 
@@ -392,13 +390,13 @@ const prepareExecutors = (
 }
 
 const prepareFallbacks = (
-  nexusConfig: AddressConfig,
+  meeConfig: AddressConfig,
   customFallbacks?: GenericModuleConfig[]
 ): GenericModuleConfig[] => {
   let fallbacks: GenericModuleConfig[] = []
 
-  if (isVersionOlder(nexusConfig.version, "1.2.0")) {
-    // if nexus version <=1.0.2, add the composable fallback
+  if (isVersionOlder(meeConfig.version, "2.0.0")) {
+    // if nexus version <=1.0.0, add the composable fallback
     const composableFallback = toComposableFallback()
     fallbacks = [composableFallback]
 
@@ -415,27 +413,27 @@ const prepareFallbacks = (
 }
 
 const prepareFactoryData = (
-  nexusConfig: AddressConfig,
+  meeConfig: AddressConfig,
   initDataParams: GetInitDataParams
 ): { initData: Hex; factoryData: Hex } => {
   let factoryData: Hex = "0x"
   let initData: Hex = "0x"
 
-  switch (nexusConfig.version) {
-    case "1.0.2": {
-      if (!nexusConfig.moduleRegistry) {
+  switch (meeConfig.version) {
+    case "1.0.0": {
+      if (!meeConfig.moduleRegistry) {
         throw new Error("Module registry not found in nexus config")
       }
 
       initData =
         initDataParams.customInitData ||
         getInitDataWithRegistry({
-          bootStrapAddress: nexusConfig.bootStrapAddress,
+          bootStrapAddress: meeConfig.bootStrapAddress,
           validators: initDataParams.validators,
-          registryAddress: nexusConfig.moduleRegistry.registryAddress,
-          attesters: nexusConfig.moduleRegistry.attesters,
-          attesterThreshold: nexusConfig.moduleRegistry.attesterThreshold,
-          nexusVersion: nexusConfig.version
+          registryAddress: meeConfig.moduleRegistry.registryAddress,
+          attesters: meeConfig.moduleRegistry.attesters,
+          attesterThreshold: meeConfig.moduleRegistry.attesterThreshold,
+          meeVersion: meeConfig.version
         })
 
       factoryData = getFactoryData({
@@ -456,7 +454,7 @@ const prepareFactoryData = (
           executors: initDataParams.executors,
           hook: initDataParams.hook,
           fallbacks: initDataParams.fallbacks,
-          bootStrapAddress: nexusConfig.bootStrapAddress
+          bootStrapAddress: meeConfig.bootStrapAddress
         })
 
       factoryData = getFactoryData({
@@ -511,7 +509,7 @@ export const toNexusAccount = async (
     transport: transportConfig
   })
 
-  const nexusConfig = await resolveNexusConfig(hasCancun, options.nexusConfig)
+  const meeConfig = await resolveMeeConfig(hasCancun, options.meeConfig)
 
   const signer = await toSigner({ signer: _signer })
 
@@ -527,7 +525,7 @@ export const toNexusAccount = async (
   // Prepare validator modules
   const validators: Validator[] = await prepareValidators(
     signer,
-    nexusConfig,
+    meeConfig,
     customValidators
   )
 
@@ -537,19 +535,19 @@ export const toNexusAccount = async (
   let module = validators[0] || defaultValidator
 
   // Prepare executor modules
-  const executors = prepareExecutors(nexusConfig, customExecutors)
+  const executors = prepareExecutors(meeConfig, customExecutors)
 
   // Prepare hook module
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  const fallbacks = prepareFallbacks(nexusConfig, customFallbacks)
+  const fallbacks = prepareFallbacks(meeConfig, customFallbacks)
 
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []
 
   // prepare factory data
-  const { initData, factoryData } = prepareFactoryData(nexusConfig, {
+  const { initData, factoryData } = prepareFactoryData(meeConfig, {
     accountIndex: index,
     defaultValidator: toInitData(defaultValidator),
     prevalidationHooks,
@@ -564,11 +562,11 @@ export const toNexusAccount = async (
    * @description Gets the init code for the account
    * @returns The init code as a hexadecimal string
    */
-  const getInitCode = () => concatHex([nexusConfig.factoryAddress, factoryData])
+  const getInitCode = () => concatHex([meeConfig.factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
   const accountId: NexusAccountId = (await publicClient.readContract({
-    address: nexusConfig.implementationAddress,
+    address: meeConfig.implementationAddress,
     abi: parseAbi(["function accountId() public view returns (string)"]),
     functionName: "accountId",
     args: []
@@ -583,7 +581,7 @@ export const toNexusAccount = async (
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
     const addressFromFactory = await getNexusAddress({
-      factoryAddress: nexusConfig.factoryAddress,
+      factoryAddress: meeConfig.factoryAddress,
       index,
       initData,
       publicClient
@@ -839,8 +837,7 @@ export const toNexusAccount = async (
       delegatedContract
     } = params || {}
 
-    const contractAddress =
-      delegatedContract || nexusConfig.implementationAddress
+    const contractAddress = delegatedContract || meeConfig.implementationAddress
 
     const authorization: SignAuthorizationReturnType =
       authorization_ ||
@@ -867,7 +864,7 @@ export const toNexusAccount = async (
       !!code &&
       code
         ?.toLowerCase()
-        .includes(nexusConfig.implementationAddress.substring(2).toLowerCase())
+        .includes(meeConfig.implementationAddress.substring(2).toLowerCase())
     )
   }
 
@@ -913,7 +910,7 @@ export const toNexusAccount = async (
         : encodeExecuteBatch(calls)
     },
     getFactoryArgs: async () => ({
-      factory: nexusConfig.factoryAddress,
+      factory: meeConfig.factoryAddress,
       factoryData
     }),
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
@@ -966,16 +963,15 @@ export const toNexusAccount = async (
       encodeExecuteComposable,
       getUserOpHash,
       factoryData,
-      factoryAddress: nexusConfig.factoryAddress,
-      registryAddress:
-        nexusConfig.moduleRegistry?.registryAddress || zeroAddress,
+      factoryAddress: meeConfig.factoryAddress,
+      registryAddress: meeConfig.moduleRegistry?.registryAddress || zeroAddress,
       signer,
       walletClient,
       publicClient,
       chain,
       setModule,
       getModule: () => module,
-      version: nexusConfig.version
+      version: meeConfig.version
     }
   })
 }

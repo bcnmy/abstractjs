@@ -31,7 +31,7 @@ import {
   makeInstallDataAndHash
 } from "../../account/utils/Utils"
 import { getChain } from "../../account/utils/getChain"
-import { getNexus } from "../../modules"
+import { getMeeConfig } from "../../modules"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -73,7 +73,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: account_1_0_2,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      options: { nexusConfig: getNexus("1.0.2") }
+      options: { meeConfig: getMeeConfig("1.0.0") }
     })
 
     nexusClient_1_0_2_custom_validator = createSmartAccountClient({
@@ -287,7 +287,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: wallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      options: { nexusConfig: getNexus("1.0.2") }
+      options: { meeConfig: getMeeConfig("1.0.0") }
     })
 
     const ethersNexusClient2 = createSmartAccountClient({
@@ -311,7 +311,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      options: { nexusConfig: getNexus("1.0.2") }
+      options: { meeConfig: getMeeConfig("1.0.0") }
     })
 
     const ethersNexusClient = createSmartAccountClient({
@@ -324,7 +324,7 @@ describe("nexus.client.1.0.2", async () => {
       signer: ethersWallet as EthersWallet,
       chain: chain_1_0_2,
       transport: http(network_1_0_2.rpcUrl),
-      options: { nexusConfig: getNexus("1.0.2") }
+      options: { meeConfig: getMeeConfig("1.0.0") }
     })
 
     const ethersNexusClient2 = createSmartAccountClient({
