@@ -93,6 +93,7 @@ import { toWalletClient } from "./utils/toWalletClient"
 
 export type GetInitDataParams = {
   accountIndex: bigint
+  defaultValidator: GenericModuleConfig
   prevalidationHooks: PrevalidationHookModuleConfig[]
   validators: GenericModuleConfig[]
   executors: GenericModuleConfig[]
@@ -359,9 +360,9 @@ const prepareValidators = async (
       })
     ]
   } else {
-    // Default validator address is zeroAddress
-    // This default validator will be used for 1.2.X versions further
-    validators = [toDefaultModule({ signer })]
+    // No need to explicitly add validator for 1.2.X versions. default validator will be used which is
+    // mee k1 validator
+    validators = []
   }
 
   return validators
@@ -450,7 +451,7 @@ const prepareFactoryData = (
       initData =
         initDataParams.customInitData ||
         getInitDataNoRegistry({
-          defaultValidator: toInitData(toDefaultModule({ signer })),
+          defaultValidator: initDataParams.defaultValidator,
           prevalidationHooks: initDataParams.prevalidationHooks,
           validators: initDataParams.validators,
           executors: initDataParams.executors,
@@ -531,7 +532,10 @@ export const toNexusAccount = async (
     customValidators
   )
 
-  let module = validators[0]
+  const defaultValidator = toDefaultModule({ signer })
+
+  // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
+  let module = validators[0] || defaultValidator
 
   // Prepare executor modules
   const executors = prepareExecutors(nexusConfig, customExecutors)
@@ -548,6 +552,7 @@ export const toNexusAccount = async (
   // prepare factory data
   const { initData, factoryData } = prepareFactoryData(signer, nexusConfig, {
     accountIndex: index,
+    defaultValidator: toInitData(defaultValidator),
     prevalidationHooks,
     validators: validators.map(toInitData),
     executors: executors.map(toInitData),
