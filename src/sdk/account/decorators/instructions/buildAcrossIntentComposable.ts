@@ -70,6 +70,10 @@ export const buildAcrossIntentComposable = async (
     pool = acrossSpokePool[originChainId]
   } = parameters
 
+  if (destinationChainId === originChainId) {
+    throw new Error("Destination chain and origin should be different")
+  }
+
   // 1. Transfer from Nexus to Wrapper
   // It is required because Across SpokePool deposit functions
   // do transferFrom(msg.sender, address(this), amount)
@@ -266,7 +270,7 @@ export async function getAcrossSuggestedFees(
 
   if (!response.ok) {
     throw new Error(
-      `HTTP error! status: ${response.status} with url: ${url.toString()}`
+      `HTTP error! status: ${response.status}, message: ${response.statusText} <= with url: ${url.toString()}`
     )
   }
 
