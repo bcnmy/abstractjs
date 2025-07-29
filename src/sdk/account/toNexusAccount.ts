@@ -415,7 +415,6 @@ const prepareFallbacks = (
 }
 
 const prepareFactoryData = (
-  signer: Signer,
   nexusConfig: AddressConfig,
   initDataParams: GetInitDataParams
 ): { initData: Hex; factoryData: Hex } => {
@@ -550,7 +549,7 @@ export const toNexusAccount = async (
   const prevalidationHooks = customPrevalidationHooks || []
 
   // prepare factory data
-  const { initData, factoryData } = prepareFactoryData(signer, nexusConfig, {
+  const { initData, factoryData } = prepareFactoryData(nexusConfig, {
     accountIndex: index,
     defaultValidator: toInitData(defaultValidator),
     prevalidationHooks,
