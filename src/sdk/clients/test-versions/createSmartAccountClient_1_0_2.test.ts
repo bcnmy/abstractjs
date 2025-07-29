@@ -31,9 +31,7 @@ import {
   makeInstallDataAndHash
 } from "../../account/utils/Utils"
 import { getChain } from "../../account/utils/getChain"
-import { toSigner } from "../../account/utils/toSigner"
 import { getNexus } from "../../modules"
-import { toMeeK1Module } from "../../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
   createSmartAccountClient

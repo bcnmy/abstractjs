@@ -16,7 +16,7 @@ import { type NexusOptions, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
-import { getNexus } from "../src/sdk/modules/utils/Helpers"
+import { getNexus } from "../src/sdk/modules/utils/getNexus"
 
 dotenv.config()
 

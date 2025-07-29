@@ -45,11 +45,11 @@ import { DEFAULT_NEXUS_VERSION, ENTRY_POINT_ADDRESS } from "../constants"
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor, toComposableFallback } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import { getNexus } from "../modules/utils/Helpers"
 import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
+import { getNexus } from "../modules/utils/getNexus"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"

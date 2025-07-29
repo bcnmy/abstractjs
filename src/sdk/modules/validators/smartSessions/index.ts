@@ -2,6 +2,7 @@ export * from "./Helpers"
 export * from "./Types"
 export * from "./toSmartSessionsModule"
 export * from "./decorators"
+export { getNexus } from "../../utils/getNexus"
 
 import { toDisableActionPoliciesCalls } from "./decorators/toDisableActionPoliciesCalls"
 import { toDisableERC1271PoliciesCalls } from "./decorators/toDisableERC1271PoliciesCalls"
