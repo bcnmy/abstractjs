@@ -11,6 +11,7 @@ import { privateKeyToAccount } from "viem/accounts"
 import { base, baseSepolia, optimism, polygon, spicy } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
+  MAINNET_RPC_URLS,
   TESTNET_RPC_URLS,
   getTestChainConfig,
   toNetwork
@@ -23,7 +24,7 @@ import {
 import { createMeeClient } from "../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION } from "../constants"
 import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
-import { getMeeConfig } from "../modules/utils/getNexus"
+import { getMeeConfig } from "../modules/utils/getMeeConfig"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -191,7 +192,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         chains: [baseSepolia, base, optimism],
         transports: [
           http(TESTNET_RPC_URLS[baseSepolia.id]),
-          http(TESTNET_RPC_URLS[base.id]),
+          http(MAINNET_RPC_URLS[base.id]),
           http(TESTNET_RPC_URLS[optimism.id])
         ],
         options: [
@@ -207,10 +208,10 @@ describe("mee.toMultiChainNexusAccount", async () => {
         nexusAccount.deploymentOn(baseSepolia.id)?.accountId.includes("1.0.")
       ).toEqual(true)
       expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(
-        `biconomy.nexus.${DEFAULT_MEE_VERSION}`
+        `biconomy.nexus.1.2.0` // 2.0.0 is 1.2.0
       )
       expect(nexusAccount.deploymentOn(optimism.id)?.accountId).toEqual(
-        `biconomy.nexus.${DEFAULT_MEE_VERSION}`
+        `biconomy.nexus.1.2.0` // 2.0.0 is 1.2.0
       )
     })
 

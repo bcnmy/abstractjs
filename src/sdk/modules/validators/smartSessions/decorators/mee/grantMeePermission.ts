@@ -8,7 +8,7 @@ import {
 } from "../../../../../constants"
 
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
-import { getMeeConfig } from "../../../../utils/getNexus"
+import { getMeeConfig } from "../../../../utils/getMeeConfig"
 import {
   type GrantPermissionResponse,
   grantPermissionPersonalSign,

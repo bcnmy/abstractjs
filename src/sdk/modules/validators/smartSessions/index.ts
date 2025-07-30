@@ -2,7 +2,7 @@ export * from "./Helpers"
 export * from "./Types"
 export * from "./toSmartSessionsModule"
 export * from "./decorators"
-export { getMeeConfig } from "../../utils/getNexus"
+export { getMeeConfig } from "../../utils/getMeeConfig"
 
 import { toDisableActionPoliciesCalls } from "./decorators/toDisableActionPoliciesCalls"
 import { toDisableERC1271PoliciesCalls } from "./decorators/toDisableERC1271PoliciesCalls"

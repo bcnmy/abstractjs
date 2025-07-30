@@ -25,7 +25,7 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   "2.1.0": {
     // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
     version: "2.1.0",
-    accountId: "biconomy.nexus.1.2.1",
+    accountId: "biconomy.nexus.2.1.0",
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
@@ -34,7 +34,7 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   },
   "2.0.0": {
     version: "2.0.0",
-    accountId: "biconomy.nexus.1.2.0",
+    accountId: "biconomy.nexus.2.0.0",
     factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
@@ -43,7 +43,7 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   },
   "1.0.0": {
     version: "1.0.0",
-    accountId: "biconomy.nexus.1.0.2",
+    accountId: "biconomy.nexus.1.0.0",
     factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9", // Nexus Factory Address
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
     implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",

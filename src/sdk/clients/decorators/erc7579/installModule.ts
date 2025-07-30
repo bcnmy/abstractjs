@@ -20,7 +20,7 @@ import type {
   ModularSmartAccount,
   ModuleMeta
 } from "../../../modules/utils/Types"
-import { getMeeConfig } from "../../../modules/utils/getNexus"
+import { getMeeConfig } from "../../../modules/utils/getMeeConfig"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type InstallModuleParameters<

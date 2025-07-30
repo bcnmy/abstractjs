@@ -49,7 +49,7 @@ import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
-import { getMeeConfig } from "../modules/utils/getNexus"
+import { getMeeConfig } from "../modules/utils/getMeeConfig"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
@@ -84,8 +84,8 @@ import {
 } from "./utils/Utils"
 import {
   type AddressConfig,
-  type NexusAccountId,
   type MEEVersion,
+  type NexusAccountId,
   isVersionOlder
 } from "./utils/getVersion"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
