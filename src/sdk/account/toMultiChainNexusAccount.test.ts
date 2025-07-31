@@ -9,7 +9,7 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { base, baseSepolia, optimism, polygon, spicy } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, test, vi } from "vitest"
 import {
   MAINNET_RPC_URLS,
   TESTNET_RPC_URLS,
@@ -275,5 +275,24 @@ describe("mee.toMultiChainNexusAccount", async () => {
         await executeTx(nexusAccount)
       })
     })
+  })
+
+  test("should work with overrides", async () => {
+    const nexusAccount = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chains: [baseSepolia],
+      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
+      options: [
+        {
+          meeConfig: {
+            ...getMeeConfig("2.0.0"),
+            factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837"
+          }
+        }
+      ]
+    })
+    expect(nexusAccount.deployments[0].factoryAddress).toEqual(
+      "0x0000006648ED9B2B842552BE63Af870bC74af837"
+    )
   })
 })
