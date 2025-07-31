@@ -3,14 +3,14 @@ import {
   type Hex,
   concatHex,
   encodeAbiParameters,
+  erc20Abi,
   zeroAddress
 } from "viem"
 import { encodeFunctionData } from "viem"
-import type { BuildApproveParameters } from "../../../account/decorators/instructions/buildApprove"
-import type { BuildDefaultParameters } from "../../../account/decorators/instructions/buildDefaultInstructions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { FORWARDER_ADDRESS } from "../../../constants"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
+import type { AnyData } from "../../../modules"
 import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
@@ -40,15 +40,13 @@ export const ON_CHAIN_PREFIX = "0x177eee01"
  * @private
  */
 const generateTriggerCallFromTrigger = async ({
-  account,
   trigger,
-  recipient,
-  scaAddress
+  spender,
+  recipient
 }: {
-  account: MultichainSmartAccount
-  recipient: Address
-  scaAddress: Address
   trigger: Trigger
+  spender: Address
+  recipient: Address
 }) => {
   let triggerCall: AbstractCall | ComposableCall
   // build custom call
@@ -61,23 +59,13 @@ const generateTriggerCallFromTrigger = async ({
       functionName: "forward",
       args: [recipient]
     })
-    const [
-      {
-        calls: [ethForwardCall]
-      }
-    ] = await account.build({
-      type: "default",
-      data: {
-        calls: [
-          {
-            to: FORWARDER_ADDRESS,
-            data: forwardCalldata,
-            value: trigger.amount
-          }
-        ],
-        chainId: trigger.chainId
-      } as BuildDefaultParameters
-    })
+
+    const ethForwardCall: AbstractCall = {
+      to: FORWARDER_ADDRESS,
+      data: forwardCalldata,
+      value: trigger.amount
+    }
+
     triggerCall = ethForwardCall
   } else {
     // erc20 trigger
@@ -95,22 +83,67 @@ const generateTriggerCallFromTrigger = async ({
 
     const amount = trigger.approvalAmount ?? trigger.amount
 
-    const [
-      {
-        calls: [approveCall]
-      }
-    ] = await account.build({
-      type: "approve",
-      data: {
-        spender: scaAddress,
-        tokenAddress: trigger.tokenAddress,
-        chainId: trigger.chainId,
-        amount
-      } as BuildApproveParameters
-    })
+    if (!amount) throw new Error("Invalid trigger amount")
+
+    const approveCall: AbstractCall = {
+      to: trigger.tokenAddress,
+      data: encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [spender, amount]
+      })
+    }
+
     triggerCall = approveCall
   }
+
   return triggerCall
+}
+
+export const prepareExecutableOnChainQuotePayload = async (
+  quoteParams: GetOnChainQuotePayload,
+  spender: Address,
+  recipient: Address
+) => {
+  const { quote, trigger } = quoteParams
+
+  const triggerCall = await generateTriggerCallFromTrigger({
+    trigger,
+    spender,
+    recipient
+  })
+
+  // This will be always a non composable transaction, so don't worry about the composability
+  const dataOrPrefix =
+    (triggerCall as AbstractCall)?.data ?? FUSION_NATIVE_TRANSFER_PREFIX
+
+  const call = { ...triggerCall, data: concatHex([dataOrPrefix, quote.hash]) }
+
+  return {
+    executablePayload: call,
+    metadata: {}
+  }
+}
+
+export const formatSignedOnChainQuotePayload = (
+  quoteParams: GetOnChainQuotePayload,
+  _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
+  hash: Hex
+) => {
+  const { quote, trigger } = quoteParams
+
+  const signature = concatHex([
+    ON_CHAIN_PREFIX,
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "uint256" }],
+      [hash, BigInt(trigger.chainId)]
+    )
+  ])
+
+  return {
+    ...quote,
+    signature
+  }
 }
 
 /**
@@ -132,50 +165,32 @@ export const signOnChainQuote = async (
   const {
     confirmations = 2,
     companionAccount: account_ = client.account,
-    fusionQuote: { quote, trigger }
+    fusionQuote: { trigger }
   } = params
 
-  const chainId = trigger.chainId
-
-  const {
-    chain,
-    walletClient,
-    address: scaAddress
-  } = account_.deploymentOn(chainId, true)
+  const { walletClient, address: spender } = account_.deploymentOn(
+    trigger.chainId,
+    true
+  )
 
   // By default the trigger amount will be deposited to sca account.
   // if a custom recipient is defined ? It will deposit to the recipient address
-  const recipient = trigger.recipientAddress || scaAddress
+  const recipient = trigger.recipientAddress || spender
 
-  const triggerCall = await generateTriggerCallFromTrigger({
-    account: account_,
-    trigger,
-    recipient,
-    scaAddress
-  })
-  // This will be always a non composable transaction, so don't worry about the composability
-  const dataOrPrefix =
-    (triggerCall as AbstractCall)?.data ?? FUSION_NATIVE_TRANSFER_PREFIX
-  const call = { ...triggerCall, data: concatHex([dataOrPrefix, quote.hash]) }
+  const { executablePayload, metadata } =
+    await prepareExecutableOnChainQuotePayload(
+      params.fusionQuote,
+      spender, // In terms of token approval. Spender will be used for approving for SCA
+      recipient // In terms of native token deposit, this recipient will be used for target deposit address
+    )
 
   // @ts-ignore
-  const hash = await walletClient.sendTransaction(call)
+  const hash = await walletClient.sendTransaction(executablePayload)
 
   // @ts-ignore
   await walletClient.waitForTransactionReceipt({ hash, confirmations })
 
-  const signature = concatHex([
-    ON_CHAIN_PREFIX,
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "uint256" }],
-      [hash, BigInt(chain.id)]
-    )
-  ])
-
-  return {
-    ...quote,
-    signature
-  }
+  return formatSignedOnChainQuotePayload(params.fusionQuote, metadata, hash)
 }
 
 export default signOnChainQuote

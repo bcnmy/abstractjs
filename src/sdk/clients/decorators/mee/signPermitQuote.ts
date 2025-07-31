@@ -2,6 +2,9 @@ import {
   type Address,
   type Hex,
   type OneOf,
+  type PublicClient,
+  type SignTypedDataParameters,
+  type WalletClient,
   concatHex,
   encodeAbiParameters,
   getContract,
@@ -13,6 +16,26 @@ import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
+
+/**
+ * Signable permit quote payload which can be signed by pure/custom signers
+ */
+export type SignablePermitPayload = Omit<SignTypedDataParameters, "account">
+
+export interface PermitMetadata {
+  nonce: bigint
+  name: string
+  version: string
+  domainSeparator: Hex
+  owner: Address
+  spender: Address
+  amount: bigint
+}
+
+export interface SignablePermitQuotePayload {
+  signablePayload: SignablePermitPayload
+  metadata: PermitMetadata
+}
 
 /**
  * Custom trigger for arbitrary calls
@@ -107,6 +130,138 @@ export type SignPermitQuotePayload = GetQuotePayload & {
 
 const PERMIT_PREFIX = "0x177eee02"
 
+export const prepareSignablePermitQuotePayload = async (
+  quoteParams: GetPermitQuotePayload,
+  owner: Address,
+  spender: Address,
+  publicClient: PublicClient | WalletClient
+): Promise<SignablePermitQuotePayload> => {
+  const { quote, trigger } = quoteParams
+
+  // Type guard to ensure we have a TokenTrigger
+  if (trigger.call) {
+    throw new Error("Custom triggers are not supported for permit quotes")
+  }
+
+  if (!trigger.amount)
+    throw new Error("Amount is required to sign a permit quote")
+
+  // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
+  if (
+    trigger.approvalAmount &&
+    trigger.amount !== undefined &&
+    trigger.approvalAmount < trigger.amount
+  ) {
+    throw new Error(
+      `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
+    )
+  }
+
+  const amount = trigger.approvalAmount ?? trigger.amount
+
+  const token = getContract({
+    abi: TokenWithPermitAbi,
+    address: trigger.tokenAddress,
+    client: publicClient
+  })
+
+  const values = await Promise.allSettled([
+    token.read.nonces([owner]),
+    token.read.name(),
+    token.read.version(),
+    token.read.DOMAIN_SEPARATOR()
+  ])
+
+  const [nonce, name, version, domainSeparator] = values.map((value, i) => {
+    const key = ["nonce", "name", "version", "domainSeparator"][i]
+    if (value.status === "fulfilled") {
+      return value.value
+    }
+    if (value.status === "rejected" && key === "version") {
+      return "1"
+    }
+    throw new Error(`Failed to get value: ${value.reason}`)
+  }) as [bigint, string, string, `0x${string}`]
+
+  const signablePermitQuotePayload = {
+    domain: {
+      name,
+      version,
+      chainId: trigger.chainId,
+      verifyingContract: trigger.tokenAddress
+    },
+    types: {
+      Permit: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" }
+      ]
+    },
+    primaryType: "Permit",
+    message: {
+      owner: owner,
+      spender: spender,
+      value: amount,
+      nonce,
+      deadline: BigInt(quote.hash)
+    }
+  }
+
+  return {
+    signablePayload: signablePermitQuotePayload,
+    metadata: {
+      nonce,
+      name,
+      version,
+      domainSeparator,
+      owner,
+      spender,
+      amount
+    }
+  }
+}
+
+export const formatSignedPermitQuotePayload = (
+  quoteParams: GetPermitQuotePayload,
+  metadata: PermitMetadata,
+  signature: Hex
+): SignPermitQuotePayload => {
+  const { quote, trigger } = quoteParams
+
+  const sigComponents = parseSignature(signature)
+
+  const encodedSignature = encodeAbiParameters(
+    [
+      { name: "token", type: "address" },
+      { name: "spender", type: "address" },
+      { name: "domainSeparator", type: "bytes32" },
+      { name: "permitTypehash", type: "bytes32" },
+      { name: "amount", type: "uint256" },
+      { name: "chainId", type: "uint256" },
+      { name: "nonce", type: "uint256" },
+      { name: "v", type: "uint256" },
+      { name: "r", type: "bytes32" },
+      { name: "s", type: "bytes32" }
+    ],
+    [
+      trigger.tokenAddress!,
+      metadata.spender,
+      metadata.domainSeparator,
+      PERMIT_TYPEHASH,
+      metadata.amount,
+      BigInt(trigger.chainId),
+      metadata.nonce,
+      sigComponents.v!,
+      sigComponents.r,
+      sigComponents.s
+    ]
+  )
+
+  return { ...quote, signature: concatHex([PERMIT_PREFIX, encodedSignature]) }
+}
+
 /**
  * Signs a permit quote using EIP-2612 permit signatures. This enables gasless
  * approvals for ERC20 tokens that implement the permit extension.
@@ -139,119 +294,35 @@ export const signPermitQuote = async (
 ): Promise<SignPermitQuotePayload> => {
   const {
     companionAccount: account_ = client.account,
-    fusionQuote: { quote, trigger }
+    fusionQuote: { trigger }
   } = parameters
 
-  // Type guard to ensure we have a TokenTrigger
-  if (trigger.call) {
-    throw new Error("Custom triggers are not supported for permit quotes")
-  }
-
   const signer = account_.signer
-
-  if (!trigger.amount)
-    throw new Error("Amount is required to sign a permit quote")
-
-  // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
-  if (
-    trigger.approvalAmount &&
-    trigger.amount !== undefined &&
-    trigger.approvalAmount < trigger.amount
-  ) {
-    throw new Error(
-      `Approval amount must be bigger or equal with the amount from the trigger (triggerAmount: ${trigger.amount} amount: ${trigger.approvalAmount})`
-    )
-  }
-
-  const amount = trigger.approvalAmount ?? trigger.amount
 
   const { walletClient, address: spender } = account_.deploymentOn(
     trigger.chainId,
     true
   )
+
   const owner = signer.address
 
-  const token = getContract({
-    abi: TokenWithPermitAbi,
-    address: trigger.tokenAddress,
-    client: walletClient
-  })
-
-  const values = await Promise.allSettled([
-    token.read.nonces([owner]),
-    token.read.name(),
-    token.read.version(),
-    token.read.DOMAIN_SEPARATOR()
-  ])
-
-  const [nonce, name, version, domainSeparator] = values.map((value, i) => {
-    const key = ["nonce", "name", "version", "domainSeparator"][i]
-    if (value.status === "fulfilled") {
-      return value.value
-    }
-    if (value.status === "rejected" && key === "version") {
-      return "1"
-    }
-    throw new Error(`Failed to get value: ${value.reason}`)
-  }) as [bigint, string, string, `0x${string}`]
+  const { signablePayload, metadata } = await prepareSignablePermitQuotePayload(
+    parameters.fusionQuote,
+    owner,
+    spender,
+    walletClient
+  )
 
   const signature = await walletClient.signTypedData({
-    domain: {
-      name,
-      version,
-      chainId: trigger.chainId,
-      verifyingContract: trigger.tokenAddress
-    },
-    types: {
-      Permit: [
-        { name: "owner", type: "address" },
-        { name: "spender", type: "address" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" }
-      ]
-    },
-    primaryType: "Permit",
-    message: {
-      owner,
-      spender: spender,
-      value: amount,
-      nonce,
-      deadline: BigInt(quote.hash)
-    },
+    ...signablePayload,
     account: walletClient.account!
   })
 
-  const sigComponents = parseSignature(signature)
-
-  const encodedSignature = encodeAbiParameters(
-    [
-      { name: "token", type: "address" },
-      { name: "spender", type: "address" },
-      { name: "domainSeparator", type: "bytes32" },
-      { name: "permitTypehash", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-      { name: "chainId", type: "uint256" },
-      { name: "nonce", type: "uint256" },
-      { name: "v", type: "uint256" },
-      { name: "r", type: "bytes32" },
-      { name: "s", type: "bytes32" }
-    ],
-    [
-      trigger.tokenAddress,
-      spender,
-      domainSeparator,
-      PERMIT_TYPEHASH,
-      amount,
-      BigInt(trigger.chainId),
-      nonce,
-      sigComponents.v!,
-      sigComponents.r,
-      sigComponents.s
-    ]
+  return formatSignedPermitQuotePayload(
+    parameters.fusionQuote,
+    metadata,
+    signature
   )
-
-  return { ...quote, signature: concatHex([PERMIT_PREFIX, encodedSignature]) }
 }
 
 export default signPermitQuote

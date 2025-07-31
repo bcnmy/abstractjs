@@ -2,6 +2,7 @@ import { type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"
 
+import type { AnyData } from "../../../modules"
 import type { GetQuotePayload } from "./getQuote"
 
 /**
@@ -33,6 +34,26 @@ export type SignQuotePayload = GetQuotePayload & {
 
 const DEFAULT_PREFIX = "0x177eee00"
 
+export const prepareSignableQuotePayload = (quote: GetQuotePayload) => {
+  return {
+    signablePayload: {
+      message: { raw: quote.hash }
+    },
+    metadata: {}
+  }
+}
+
+export const formatSignedQuotePayload = (
+  quote: GetQuotePayload,
+  _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
+  signature: Hex
+) => {
+  return {
+    ...quote,
+    signature: concatHex([DEFAULT_PREFIX, signature])
+  }
+}
+
 /**
  * Signs a quote using the provided account's signer or the client's default account.
  * The signature is required for executing the quote through the MEE service.
@@ -60,14 +81,11 @@ export const signQuote = async (
 
   const signer = account_.signer
 
-  const signedMessage = await signer.signMessage({
-    message: { raw: quote.hash }
-  })
+  const { signablePayload, metadata } = prepareSignableQuotePayload(quote)
 
-  return {
-    ...quote,
-    signature: concatHex([DEFAULT_PREFIX, signedMessage])
-  }
+  const signedMessage = await signer.signMessage(signablePayload)
+
+  return formatSignedQuotePayload(quote, metadata, signedMessage)
 }
 
 export default signQuote
