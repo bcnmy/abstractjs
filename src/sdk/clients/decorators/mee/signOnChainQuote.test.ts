@@ -3,14 +3,14 @@ import {
   type Chain,
   type Hex,
   type LocalAccount,
+  type PublicClient,
   type Transport,
+  type WalletClient,
   createPublicClient,
   createWalletClient,
   isHex,
   parseUnits,
-  zeroAddress,
-  WalletClient,
-  PublicClient
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { optimism } from "viem/chains"
@@ -43,19 +43,19 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import executeSignedQuote from "./executeSignedQuote"
+import getFusionQuote from "./getFusionQuote"
 import getOnChainQuote from "./getOnChainQuote"
+import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
+import { getQuoteType } from "./getQuoteType"
 import {
-  formatSignedOnChainQuotePayload,
   ON_CHAIN_PREFIX,
+  formatSignedOnChainQuotePayload,
   prepareExecutableOnChainQuotePayload,
   signOnChainQuote
 } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
-import getFusionQuote from "./getFusionQuote"
-import getPaymentToken, { GetPaymentTokenPayload } from "./getPaymentToken"
-import { getQuoteType } from "./getQuoteType"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

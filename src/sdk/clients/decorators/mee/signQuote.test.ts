@@ -1,9 +1,9 @@
 import {
+  http,
   type Chain,
   type LocalAccount,
-  WalletClient,
+  type WalletClient,
   createWalletClient,
-  http,
   isHex
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
@@ -20,12 +20,12 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import type { Instruction } from "./getQuote"
+import { getQuoteType } from "./getQuoteType"
 import {
   formatSignedQuotePayload,
   prepareSignableQuotePayload,
   signQuote
 } from "./signQuote"
-import { getQuoteType } from "./getQuoteType"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig
