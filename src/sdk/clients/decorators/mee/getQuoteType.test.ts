@@ -16,7 +16,7 @@ import {
 import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { getQuoteType } from "./getQuoteType"
 
-describe("mee.signQuote", () => {
+describe("mee.getQuoteType", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
   let mcNexus: MultichainSmartAccount

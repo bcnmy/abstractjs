@@ -18,10 +18,16 @@ import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
 
 /**
- * Signable permit quote payload which can be signed by pure/custom signers
+ * Represents the payload for a signable permit quote, omitting the "account" field from SignTypedDataParameters.
+ * This type is used for EIP-712 signing of permit quotes by pure or custom signers.
  */
 export type SignablePermitPayload = Omit<SignTypedDataParameters, "account">
 
+/**
+ * Metadata required for signing a permit quote.
+ * This includes all necessary EIP-2612 domain and permit parameters,
+ * as well as the computed domain separator and involved addresses.
+ */
 export interface PermitMetadata {
   nonce: bigint
   name: string
@@ -32,6 +38,11 @@ export interface PermitMetadata {
   amount: bigint
 }
 
+/**
+ * The payload structure for a signable permit quote.
+ * Contains the EIP-712 signable payload and associated metadata
+ * needed for formatting and encoding the final permit signature.
+ */
 export interface SignablePermitQuotePayload {
   signablePayload: SignablePermitPayload
   metadata: PermitMetadata
@@ -130,6 +141,30 @@ export type SignPermitQuotePayload = GetQuotePayload & {
 
 const PERMIT_PREFIX = "0x177eee02"
 
+/**
+ * Prepares the payload required for signing a permit quote.
+ * This function validates the trigger, fetches necessary token data (nonce, name, version, domain separator),
+ * and constructs the EIP-712 signable payload for an ERC20 permit signature.
+ * The returned object contains the signable payload and metadata required for formatting the final signed quote.
+ *
+ * @param quoteParams - The permit quote parameters, including the quote and trigger
+ * @param owner - The address of the token owner (signer)
+ * @param spender - The address that will be approved to spend the tokens
+ * @param publicClient - The public or wallet client to interact with the token contract
+ * @returns Promise resolving to an object containing the signable payload and metadata
+ *
+ * @example
+ * ```typescript
+ * const { signablePayload, metadata } = await prepareSignablePermitQuotePayload(
+ *   fusionQuote,
+ *   ownerAddress,
+ *   spenderAddress,
+ *   publicClient
+ * );
+ * // signablePayload: EIP-712 structured data for permit
+ * // metadata: { nonce, name, version, domainSeparator, owner, spender, amount }
+ * ```
+ */
 export const prepareSignablePermitQuotePayload = async (
   quoteParams: GetPermitQuotePayload,
   owner: Address,
@@ -146,7 +181,7 @@ export const prepareSignablePermitQuotePayload = async (
   if (!trigger.amount)
     throw new Error("Amount is required to sign a permit quote")
 
-  // check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
+  // Check if we have an explicit `approvalAmount` set and error if it's smaller than the trigger amount
   if (
     trigger.approvalAmount &&
     trigger.amount !== undefined &&
@@ -165,6 +200,7 @@ export const prepareSignablePermitQuotePayload = async (
     client: publicClient
   })
 
+  // Fetch required token data for EIP-712 domain and permit
   const values = await Promise.allSettled([
     token.read.nonces([owner]),
     token.read.name(),
@@ -178,6 +214,7 @@ export const prepareSignablePermitQuotePayload = async (
       return value.value
     }
     if (value.status === "rejected" && key === "version") {
+      // Some tokens do not implement version; default to "1"
       return "1"
     }
     throw new Error(`Failed to get value: ${value.reason}`)
@@ -223,6 +260,27 @@ export const prepareSignablePermitQuotePayload = async (
   }
 }
 
+/**
+ * Formats the signed permit quote payload by encoding the signature and permit parameters,
+ * and attaching the result to the original quote. The signature is prefixed and concatenated
+ * as required by the MEE service for permit quotes.
+ * Metadata is used to provide the necessary context for encoding.
+ *
+ * @param quoteParams - The original permit quote parameters
+ * @param metadata - Metadata returned from prepareSignablePermitQuotePayload
+ * @param signature - The EIP-712 signature to attach to the quote
+ * @returns The signed permit quote payload with the signature field
+ *
+ * @example
+ * ```typescript
+ * const signedPermitQuote = formatSignedPermitQuotePayload(
+ *   fusionQuote,
+ *   metadata,
+ *   signature
+ * );
+ * // signedPermitQuote: { ...quote, signature: '0x177eee02<encodedPermitSignature>' }
+ * ```
+ */
 export const formatSignedPermitQuotePayload = (
   quoteParams: GetPermitQuotePayload,
   metadata: PermitMetadata,

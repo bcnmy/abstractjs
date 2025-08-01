@@ -10,7 +10,9 @@ import {
   keccak256,
   parseUnits,
   toBytes,
-  zeroAddress
+  zeroAddress,
+  isHex,
+  WalletClient
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
@@ -31,12 +33,23 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { PERMIT_TYPEHASH, TokenWithPermitAbi } from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
-import { type MeeClient, createMeeClient } from "../../createMeeClient"
+import {
+  DEFAULT_STAGING_PATHFINDER_URL,
+  type MeeClient,
+  createMeeClient
+} from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
-import { type Trigger, signPermitQuote } from "./signPermitQuote"
+import {
+  type Trigger,
+  formatSignedPermitQuotePayload,
+  prepareSignablePermitQuotePayload,
+  signPermitQuote
+} from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { getQuoteType } from "./getQuoteType"
+import getPaymentToken, { GetPaymentTokenPayload } from "./getPaymentToken"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -209,10 +222,19 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
 
   let chain: Chain
 
+  let walletClient: WalletClient
+
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
     chain = network.chain
+
+    walletClient = createWalletClient({
+      account: eoaAccount,
+      chain,
+      transport: http(network.rpcUrl)
+    })
+
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http(network.rpcUrl)],
@@ -220,7 +242,9 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
       index: 1n
     })
     meeClient = await createMeeClient({
-      account: mcNexus
+      account: mcNexus,
+      url: DEFAULT_STAGING_PATHFINDER_URL,
+      apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
     })
   })
 
@@ -344,5 +368,82 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)
     })
+  })
+
+  test("should sign a quote using signPermitQuote with modular signing functions", async () => {
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger: {
+        chainId: chain.id,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: 1n
+      },
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        })
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const signedPermitQuote = await signPermitQuote(meeClient, { fusionQuote })
+    expect(signedPermitQuote).toBeDefined()
+    expect(signedPermitQuote.signature).toBeDefined()
+    expect(isHex(signedPermitQuote.signature)).toEqual(true)
+
+    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+
+    if (fusionQuote.trigger.tokenAddress) {
+      paymentTokenInfo = await getPaymentToken(meeClient, {
+        tokenAddress: fusionQuote.trigger.tokenAddress,
+        chainId: fusionQuote.trigger.chainId
+      })
+    }
+
+    const quoteType = await getQuoteType(
+      walletClient,
+      fusionQuote,
+      paymentTokenInfo
+    )
+
+    expect(quoteType).toEqual("permit")
+
+    const { signablePayload, metadata } =
+      await prepareSignablePermitQuotePayload(
+        fusionQuote,
+        eoaAccount.address,
+        mcNexus.addressOn(chain.id, true),
+        walletClient
+      )
+
+    const signature = await walletClient.signTypedData({
+      ...signablePayload,
+      account: walletClient.account!
+    })
+
+    const manuallySignedPermitQuote = formatSignedPermitQuotePayload(
+      fusionQuote,
+      metadata,
+      signature
+    )
+
+    expect(manuallySignedPermitQuote).toBeDefined()
+    expect(manuallySignedPermitQuote.signature).toBeDefined()
+    expect(isHex(manuallySignedPermitQuote.signature)).toEqual(true)
+
+    expect(signedPermitQuote.signature).toEqual(
+      manuallySignedPermitQuote.signature
+    )
   })
 })

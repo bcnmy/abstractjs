@@ -100,6 +100,28 @@ const generateTriggerCallFromTrigger = async ({
   return triggerCall
 }
 
+/**
+ * Prepares the executable payload required for sending an on-chain quote transaction.
+ * This function generates the appropriate call data for the trigger (either native or ERC20),
+ * appends the quote hash to the call data, and returns the payload ready for execution.
+ * The returned object contains the executable payload and optional metadata (currently empty, but can be extended).
+ *
+ * @param quoteParams - The on-chain quote parameters, including the quote and trigger
+ * @param spender - The address that will be used as the spender (for token approvals)
+ * @param recipient - The address that will receive the funds (for native transfers)
+ * @returns An object containing the executable payload and metadata
+ *
+ * @example
+ * ```typescript
+ * const { executablePayload, metadata } = await prepareExecutableOnChainQuotePayload(
+ *   fusionQuote,
+ *   spenderAddress,
+ *   recipientAddress
+ * );
+ * // executablePayload: { to, data, value } (ready for sendTransaction)
+ * // metadata: {}
+ * ```
+ */
 export const prepareExecutableOnChainQuotePayload = async (
   quoteParams: GetOnChainQuotePayload,
   spender: Address,
@@ -113,7 +135,7 @@ export const prepareExecutableOnChainQuotePayload = async (
     recipient
   })
 
-  // This will be always a non composable transaction, so don't worry about the composability
+  // This will always be a non-composable transaction, so composability is not a concern here.
   const dataOrPrefix =
     (triggerCall as AbstractCall)?.data ?? FUSION_NATIVE_TRANSFER_PREFIX
 
@@ -125,11 +147,31 @@ export const prepareExecutableOnChainQuotePayload = async (
   }
 }
 
+/**
+ * Formats the signed on-chain quote payload by attaching the transaction hash and chainId,
+ * and encoding them as required by the MEE service for on-chain quotes.
+ * Metadata is currently unused but reserved for future extensibility.
+ *
+ * @param quoteParams - The original on-chain quote parameters
+ * @param _metadata - Optional metadata (currently unused)
+ * @param hash - The transaction hash to attach to the quote
+ * @returns The signed on-chain quote payload with the signature field
+ *
+ * @example
+ * ```typescript
+ * const signedOnChainQuote = formatSignedOnChainQuotePayload(
+ *   fusionQuote,
+ *   {},
+ *   txHash
+ * );
+ * // signedOnChainQuote: { ...quote, signature: '0x177eee01<encodedHashAndChainId>' }
+ * ```
+ */
 export const formatSignedOnChainQuotePayload = (
   quoteParams: GetOnChainQuotePayload,
   _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
   hash: Hex
-) => {
+): SignOnChainQuotePayload => {
   const { quote, trigger } = quoteParams
 
   const signature = concatHex([
