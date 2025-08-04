@@ -289,7 +289,7 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
     test("changes the allowance based on approvalAmount", async () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
-      const approvalAmount = parseUnits("0.03", 6)
+      const approvalAmount = parseUnits("0.06", 6)
       const token = testnetMcUSDC.addressOn(chain.id)
 
       // Create a wallet client for sending transactions and a public client for reading blockchain state

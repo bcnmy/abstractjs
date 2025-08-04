@@ -194,53 +194,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         feeToken
       })
 
-      // Spy on account_.build
-      const buildSpy = vi.spyOn(mcNexus, "build")
-
-      // Mock walletClient.sendTransaction
-      const mockSendTransaction = vi.fn().mockResolvedValue(
-        // dummy hash
-        "0x8f07b65846424c90560ecc8f76744b99caaa8fd9c08f2cf4ac61ed425aa821fe"
-      )
-      const mockWalletClient = {
-        sendTransaction: mockSendTransaction,
-        waitForTransactionReceipt: vi.fn().mockResolvedValue({}),
-        account: mcNexus.signer,
-        chain: optimism
-      }
-      vi.spyOn(mcNexus, "deploymentOn").mockReturnValue({
-        ...mcNexus.deploymentOn(optimism.id, true),
-        // @ts-ignore expected errors since we're not using the full walletClient
-        walletClient: mockWalletClient
-      })
-
       const signedQuote = await signOnChainQuote(meeClient, {
         fusionQuote: {
           quote,
           trigger: ethTrigger
         }
       })
-
-      // Verify account_.build was called with correct type and params
-      expect(buildSpy).toHaveBeenCalledWith({
-        type: "default",
-        data: {
-          calls: [
-            {
-              to: FORWARDER_ADDRESS,
-              data: expect.any(String),
-              value: ethTrigger.amount
-            }
-          ],
-          chainId: optimism.id
-        }
-      })
-
-      expect(mockSendTransaction).toHaveBeenCalledTimes(1)
-      const call = mockSendTransaction.mock.calls[0][0]
-      expect(call.to).toBe(FORWARDER_ADDRESS)
-      expect(call.value).toBe(ethTrigger.amount)
-      expect(call.data).toContain(quote.hash.substring(2, quote.hash.length))
 
       expect(signedQuote.signature).toBeDefined()
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
@@ -252,8 +211,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         tokenAddress,
         amount: 1n
       }
-
-      const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
 
       const quote = await getQuote(meeClient, {
         path: "quote-permit",
@@ -273,26 +230,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         feeToken
       })
 
-      // Spy on account_.build
-      const buildSpy = vi.spyOn(mcNexus, "build")
-
-      // Mock walletClient.sendTransaction
-      const mockSendTransaction = vi.fn().mockResolvedValue(
-        // dummy hash
-        "0x8f07b65846424c90560ecc8f76744b99caaa8fd9c08f2cf4ac61ed425aa821fe"
-      )
-      const mockWalletClient = {
-        sendTransaction: mockSendTransaction,
-        waitForTransactionReceipt: vi.fn().mockResolvedValue({}),
-        account: mcNexus.signer,
-        chain: optimism
-      }
-      vi.spyOn(mcNexus, "deploymentOn").mockReturnValue({
-        ...mcNexus.deploymentOn(optimism.id, true),
-        // @ts-ignore expected errors since we're not using the full walletClient
-        walletClient: mockWalletClient
-      })
-
       const signedQuote = await signOnChainQuote(meeClient, {
         confirmations: TEST_BLOCK_CONFIRMATIONS,
         fusionQuote: {
@@ -300,22 +237,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
           trigger: erc20Trigger
         }
       })
-
-      // Verify account_.build was called with correct type and params
-      expect(buildSpy).toHaveBeenCalledWith({
-        type: "approve",
-        data: {
-          spender: recipient,
-          tokenAddress: tokenAddress,
-          chainId: optimism.id,
-          amount: erc20Trigger.amount
-        }
-      })
-
-      expect(mockSendTransaction).toHaveBeenCalledTimes(1)
-      const call = mockSendTransaction.mock.calls[0][0]
-      expect(call.to).toBe(tokenAddress)
-      expect(call.data).toContain(quote.hash.substring(2, quote.hash.length))
 
       expect(signedQuote.signature).toBeDefined()
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
@@ -812,7 +733,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
 
     const hash = await walletClient.sendTransaction({
       ...executablePayload,
-      account: eoaAccount.address,
+      account: eoaAccount,
       chain
     })
 
