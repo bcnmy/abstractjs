@@ -97,6 +97,7 @@ describe("mee.createMeeClient", async () => {
         index,
         versions: [
           getMEEVersion(DEFAULT_MEE_VERSION),
+          getMEEVersion(DEFAULT_MEE_VERSION),
           getMEEVersion(DEFAULT_MEE_VERSION)
         ]
       })
@@ -209,7 +210,6 @@ describe("mee.createMeeClient", async () => {
         signer: eoaAccount,
         transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
         versions: [
-          getMEEVersion(DEFAULT_MEE_VERSION),
           getMEEVersion(DEFAULT_MEE_VERSION)
         ],
         index

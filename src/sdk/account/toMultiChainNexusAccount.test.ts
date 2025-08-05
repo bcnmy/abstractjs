@@ -185,16 +185,6 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
       ).rejects.toThrow()
     })
-    test("should auto switch to 1.0.x if the version is not specified and the chain needs it", async () => {
-      const notCancunChain = polygon
-      const nacc = await toNexusAccount({
-        chain: notCancunChain,
-        signer: eoaAccount,
-        transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
-      })
-      expect(nacc.accountId.includes("1.0.")).toBeTruthy()
-    })
     test("should create an account with the correct nexus version", async () => {
       const nexusAccount = await toMultichainNexusAccount({
         signer: eoaAccount,

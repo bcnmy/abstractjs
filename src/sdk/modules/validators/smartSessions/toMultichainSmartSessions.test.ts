@@ -103,7 +103,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.1", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.6", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
