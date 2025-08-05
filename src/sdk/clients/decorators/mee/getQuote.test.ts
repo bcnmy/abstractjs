@@ -1044,7 +1044,6 @@ describe("mee.getQuote", () => {
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 

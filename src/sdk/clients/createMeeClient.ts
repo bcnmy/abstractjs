@@ -4,24 +4,22 @@ import { isStaging, isTesting } from "../account/utils/Helpers"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
-export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v1"
-/**
-  const STAKEPOOL_MEE_NODE_URL = "https://mainnet.mee.stakepool.dev.br/v3"
-*/
+const isStagingOrTesting = isStaging() || isTesting()
+
 /**
  * Default URL for the MEE node service
  */
-export const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
-const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
+export const DEFAULT_PATHFINDER_URL = isStagingOrTesting
+  ? "https://staging-network.biconomy.io/v1"
+  : "https://network.biconomy.io/v1"
 
-export const DEFAULT_STAGING_PATHFINDER_URL =
-  "https://staging-network.biconomy.io/v1"
-const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+export const DEFAULT_PATHFINDER_API_KEY = isStagingOrTesting
+  ? "mee_3ZhZhHx3hmKrBQxacr283dHt"
+  : "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
 
 /**
- * Constants for sponshorshipxw
+ * Constants for sponshorship
  */
-
 // Sponsorship Nexus Account Address
 export const DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT: Address =
   "0x18eAc826f3dD77d065E75E285d3456B751AC80d5"
@@ -65,17 +63,11 @@ export type BaseMeeClient = Prettify<
 export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 
 export const createMeeClient = async (params: CreateMeeClientParams) => {
-  const stagingOrTesting = isStaging() || isTesting()
-
   const {
     account,
     pollingInterval = 1000,
-    url = stagingOrTesting
-      ? DEFAULT_STAGING_PATHFINDER_URL
-      : DEFAULT_PATHFINDER_URL,
-    apiKey = stagingOrTesting
-      ? DEFAULT_STAGING_PATHFINDER_API_KEY
-      : DEFAULT_PATHFINDER_API_KEY
+    url = DEFAULT_PATHFINDER_URL,
+    apiKey = DEFAULT_PATHFINDER_API_KEY
   } = params
 
   const httpClient = createHttpClient(url, apiKey)

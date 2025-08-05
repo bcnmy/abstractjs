@@ -21,8 +21,7 @@ import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL,
-  DEFAULT_STAGING_PATHFINDER_URL
+  DEFAULT_PATHFINDER_URL
 } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -668,7 +667,7 @@ export const getQuote = async (
   if (sponsorship && sponsorshipOptions) {
     const isSelfHostedSponsorship = ![
       DEFAULT_PATHFINDER_URL,
-      DEFAULT_STAGING_PATHFINDER_URL
+      DEFAULT_PATHFINDER_URL
     ].includes(sponsorshipOptions.url)
 
     if (isSelfHostedSponsorship) {
