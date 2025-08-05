@@ -66,7 +66,7 @@ describe("mee.getQuoteType", () => {
       transport: http(network.rpcUrl)
     })
 
-    expect(await getQuoteType(walletClient, quoteParam)).to.eq("normal")
+    expect(await getQuoteType(walletClient, quoteParam)).to.eq("simple")
   })
 
   test("Should get quote type for normal quote payload", async () => {
@@ -94,7 +94,7 @@ describe("mee.getQuoteType", () => {
       transport: http(network.rpcUrl)
     })
 
-    expect(await getQuoteType(walletClient, quote)).to.eq("normal")
+    expect(await getQuoteType(walletClient, quote)).to.eq("simple")
   })
 
   test("Should get quote type for permit quote param", async () => {

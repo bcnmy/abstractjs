@@ -7,7 +7,7 @@ import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
 
-export type QuoteType = "normal" | "onchain" | "permit"
+export type QuoteType = "simple" | "onchain" | "permit"
 
 export const isPermitTokenInfo = async (
   walletClient: WalletClient,
@@ -121,7 +121,7 @@ export const getQuoteType = async (
 ): Promise<QuoteType> => {
   // If the quote payload doesn't have trigger ? It is considered as normal quote
   if (isNormalQuote(quoteParams)) {
-    return "normal"
+    return "simple"
   }
 
   if (await isPermitQuote(walletClient, quoteParams, paymentTokenInfo)) {

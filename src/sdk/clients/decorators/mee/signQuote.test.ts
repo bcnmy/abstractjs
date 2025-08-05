@@ -122,7 +122,7 @@ describe("mee.signQuote", () => {
 
     const quoteType = await getQuoteType(walletClient, quote)
 
-    expect(quoteType).toEqual("normal")
+    expect(quoteType).toEqual("simple")
 
     const { signablePayload, metadata } = prepareSignableQuotePayload(quote)
 
