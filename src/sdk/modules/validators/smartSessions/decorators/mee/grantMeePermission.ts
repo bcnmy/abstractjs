@@ -5,8 +5,8 @@ import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   type ActionData,
   DEFAULT_MEE_VERSION,
-  getSpendingLimitsPolicy,
-  MEEVersion
+  type MEEVersion,
+  getSpendingLimitsPolicy
 } from "../../../../../constants"
 
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"

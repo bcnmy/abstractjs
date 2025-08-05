@@ -22,10 +22,10 @@ import {
 } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { mcUSDC } from "../../constants/tokens"
-import { batchInstructions } from "./batchInstructions"
 import { DEFAULT_MEE_VERSION } from "../../constants"
+import { mcUSDC } from "../../constants/tokens"
 import { getMEEVersion } from "../../modules"
+import { batchInstructions } from "./batchInstructions"
 
 const createBaseApproval = (account: MultichainSmartAccount, amount: string) =>
   buildApprove(

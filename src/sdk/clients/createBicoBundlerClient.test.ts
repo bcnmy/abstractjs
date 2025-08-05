@@ -9,13 +9,13 @@ import {
 } from "../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import {
   type BicoBundlerClient,
   createBicoBundlerClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
-import { DEFAULT_MEE_VERSION } from "../constants"
-import { getMEEVersion } from "../modules"
 
 describe("bico.bundler", async () => {
   let network: NetworkConfig

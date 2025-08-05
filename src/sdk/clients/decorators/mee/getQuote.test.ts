@@ -25,7 +25,9 @@ import {
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -44,8 +46,6 @@ import {
   type Instruction,
   getQuote
 } from "./getQuote"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
 
 const getRandomAccountIndex = (min: number, max: number) => {
   const minValue = Math.ceil(min) // Round up to ensure inclusive min

@@ -7,10 +7,10 @@ import {
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { mcUSDC } from "../../constants/tokens"
-import { getUnifiedERC20Balance } from "./getUnifiedERC20Balance"
 import { DEFAULT_MEE_VERSION } from "../../constants"
+import { mcUSDC } from "../../constants/tokens"
 import { getMEEVersion } from "../../modules"
+import { getUnifiedERC20Balance } from "./getUnifiedERC20Balance"
 
 describe("mee.getUnifiedERC20Balance", () => {
   let network: NetworkConfig

@@ -16,9 +16,9 @@ import {
   type NexusClient,
   createBicoBundlerClient
 } from "../../clients/createBicoBundlerClient"
-import { type NexusAccount, toNexusAccount } from "../toNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../constants"
 import { getMEEVersion } from "../../modules"
+import { type NexusAccount, toNexusAccount } from "../toNexusAccount"
 
 describe("account.decorators.getNexusAddress.local", () => {
   let network: NetworkConfig

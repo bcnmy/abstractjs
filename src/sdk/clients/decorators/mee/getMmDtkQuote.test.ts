@@ -37,6 +37,7 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NexusAccount } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion, toMeeK1Module } from "../../../modules"
 import {
@@ -50,7 +51,6 @@ import {
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
 import { signMMDtkQuote } from "./signMmDtkQuote"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

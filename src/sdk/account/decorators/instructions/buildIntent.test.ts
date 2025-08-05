@@ -8,14 +8,14 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import buildIntent from "./buildIntent"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
 
 describe("mee.buildIntent", () => {
   let network: NetworkConfig

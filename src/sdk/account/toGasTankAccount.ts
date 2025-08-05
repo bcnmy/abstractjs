@@ -10,6 +10,8 @@ import { type NonceInfo, toMultichainNexusAccount } from "."
 import type { Url } from "../clients/createHttpClient"
 import { createMeeClient } from "../clients/createMeeClient"
 import type { GetQuotePayload } from "../clients/decorators/mee"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import deployGasTank, {
   type DeployGasTankParams,
   type GasTankDeployPayload
@@ -32,8 +34,6 @@ import withdrawFromGasTank, {
   type WithdrawFromGasTankParams,
   type WithdrawFromGasTankPayload
 } from "./decorators/withdrawFromGasTank"
-import { getMEEVersion } from "../modules"
-import { DEFAULT_MEE_VERSION } from "../constants"
 
 /**
  * Parameters required to create a gas tank account

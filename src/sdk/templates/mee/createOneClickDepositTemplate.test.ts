@@ -12,11 +12,11 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { AavePoolAbi } from "../../constants/abi"
 import { testnetMcUSDC } from "../../constants/tokens"
 import { getMEEVersion, runtimeERC20BalanceOf } from "../../modules"
 import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
-import { DEFAULT_MEE_VERSION } from "../../constants"
 const mocks = vi.hoisted(async () => {
   const { testnetMcUSDC } = await import("../../constants/tokens")
 

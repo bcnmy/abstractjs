@@ -16,17 +16,17 @@ import {
   toFunctionSelector
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { getMEEVersion } from "../.."
 import { getTestAccount, killNetwork } from "../../../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../../../account"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { ownableActions } from "./decorators"
 import { toOwnableModule } from "./toOwnableModule"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../.."
 
 describe("modules.toOwnableModule", () => {
   let ecosystem: Ecosystem

@@ -43,7 +43,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
+import { getMEEVersion } from "../modules"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
   addressEquals,
@@ -58,8 +60,6 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
-import { DEFAULT_MEE_VERSION } from "../constants"
-import { getMEEVersion } from "../modules"
 
 describe("nexus.account", async () => {
   let network: NetworkConfig

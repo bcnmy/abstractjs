@@ -26,10 +26,10 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
-import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
-import type { NetworkConfig } from "./testUtils"
 import { DEFAULT_MEE_VERSION } from "../sdk/constants"
 import { getMEEVersion } from "../sdk/modules"
+import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
+import type { NetworkConfig } from "./testUtils"
 
 const index = 0n
 

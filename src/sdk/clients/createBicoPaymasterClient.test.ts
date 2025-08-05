@@ -19,6 +19,8 @@ import { getBalance, killNetwork } from "../../test/testUtils"
 import type { NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { BICONOMY_TOKEN_PAYMASTER } from "../account/utils/Constants"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import {
   type NexusClient,
   createSmartAccountClient
@@ -28,8 +30,6 @@ import {
   createBicoPaymasterClient,
   toBiconomyTokenPaymasterContext
 } from "./createBicoPaymasterClient"
-import { DEFAULT_MEE_VERSION } from "../constants"
-import { getMEEVersion } from "../modules"
 
 // NB These tests require ERC20 tokens to be available on testnet, so they are mostly skipped
 describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {

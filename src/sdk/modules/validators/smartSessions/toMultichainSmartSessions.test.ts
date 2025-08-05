@@ -26,14 +26,14 @@ import {
 } from "../../../clients/createMeeClient"
 import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleInstalled"
 import type { FeeTokenInfo } from "../../../clients/decorators/mee"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../utils"
 import type { AnyData } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../utils"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

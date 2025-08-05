@@ -16,9 +16,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./clients/createBicoBundlerClient"
-import { toSmartSessionsModule } from "./modules/validators/smartSessions/toSmartSessionsModule"
 import { DEFAULT_MEE_VERSION } from "./constants"
 import { getMEEVersion } from "./modules"
+import { toSmartSessionsModule } from "./modules/validators/smartSessions/toSmartSessionsModule"
 
 describe("core", async () => {
   let network: NetworkConfig

@@ -3,13 +3,13 @@ import { beforeAll, describe, expect, test } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { mcUSDC } from "../../constants/tokens"
+import { getMEEVersion } from "../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION } from "../../constants"
-import { getMEEVersion } from "../../modules"
 
 describe("mee.toFeeToken", () => {
   let network: NetworkConfig

@@ -4,7 +4,7 @@ import {
 } from "../../account/utils/getVersion"
 import {
   DEFAULT_CONFIGURATIONS_BY_MEE_VERSION,
-  MEEVersion
+  type MEEVersion
 } from "../../constants"
 
 /**

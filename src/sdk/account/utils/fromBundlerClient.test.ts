@@ -4,6 +4,8 @@ import { privateKeyToAccount } from "viem/accounts"
 import { mainnet } from "viem/chains"
 import { describe, expect, it } from "vitest"
 import { MAINNET_RPC_URLS } from "../../../test/testSetup"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { toNexusAccount } from "../toNexusAccount"
 import {
   type BundlerClientTypes,
@@ -14,8 +16,6 @@ import {
   fromBundlerClientToSigner
 } from "./fromBundlerClient"
 import { toSigner } from "./toSigner"
-import { DEFAULT_MEE_VERSION } from "../../constants"
-import { getMEEVersion } from "../../modules"
 
 describe("utils.fromBundlerClient", async () => {
   // Create real instances for testing

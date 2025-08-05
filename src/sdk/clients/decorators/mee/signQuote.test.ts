@@ -7,10 +7,10 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, mcUSDC } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import { signQuote } from "./signQuote"
-import { getMEEVersion } from "../../../modules"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig

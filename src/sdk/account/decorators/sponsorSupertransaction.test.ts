@@ -6,8 +6,8 @@ import { toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../constants"
-import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 import { getMEEVersion } from "../../modules"
+import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.sponsorSupertransaction", () => {
   let network: NetworkConfig

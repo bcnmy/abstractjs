@@ -20,7 +20,9 @@ import type {
   Instruction,
   InstructionLike
 } from "../../../clients/decorators/mee"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { toDefaultModule } from "../../../modules/validators/default/toDefaultModule"
 import { toOwnableModule } from "../../../modules/validators/ownable/toOwnableModule"
 import { toSmartSessionsModule } from "../../../modules/validators/smartSessions/toSmartSessionsModule"
@@ -30,8 +32,6 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { toInstallData } from "../../utils/toInstallData"
 import buildMultichainInstructions from "./buildMultichainInstructions"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
 
 describe("mee.buildMultichainInstructions", () => {
   let network: NetworkConfig

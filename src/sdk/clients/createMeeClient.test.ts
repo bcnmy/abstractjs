@@ -28,12 +28,12 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../constants"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
+import { getMEEVersion } from "../modules"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
-import { DEFAULT_MEE_VERSION } from "../constants"
-import { getMEEVersion } from "../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

@@ -6,9 +6,9 @@ import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import type { MeeFilledUserOpDetails } from "../../clients/decorators/mee/getQuote"
 import type { UserOpStatus } from "../../clients/decorators/mee/getSupertransactionReceipt"
-import { parseTransactionStatus } from "./parseTransactionStatus"
 import { DEFAULT_MEE_VERSION } from "../../constants"
 import { getMEEVersion } from "../../modules"
+import { parseTransactionStatus } from "./parseTransactionStatus"
 
 const DUMMY_RECEIPT: TransactionReceipt = {
   status: "success",

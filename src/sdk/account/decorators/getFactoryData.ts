@@ -8,13 +8,13 @@ import {
   toHex
 } from "viem"
 import { isVersionOlder } from ".."
+import type { MEEVersion } from "../../constants"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
-import { MEEVersion } from "../../constants"
 
 // =================================================
 // ============ Account Factory section ============

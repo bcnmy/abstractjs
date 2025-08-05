@@ -52,8 +52,8 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
+import type { MEEVersionConfig } from "./utils"
 import type { MultichainToken } from "./utils/Types"
-import { type MEEVersionConfig } from "./utils"
 
 /**
  * Parameters required to create a multichain Nexus account

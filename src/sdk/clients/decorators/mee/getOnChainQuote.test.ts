@@ -17,13 +17,13 @@ import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getOnChainQuote from "./getOnChainQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
 
 describe("mee.getOnChainQuote", () => {
   let network: NetworkConfig

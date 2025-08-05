@@ -6,10 +6,10 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
-import createHttpClient from "./createHttpClient"
-import { type MeeClient, createMeeClient } from "./createMeeClient"
 import { DEFAULT_MEE_VERSION } from "../constants"
 import { getMEEVersion } from "../modules"
+import createHttpClient from "./createHttpClient"
+import { type MeeClient, createMeeClient } from "./createMeeClient"
 
 describe("mee.createHttpClient", async () => {
   let network: NetworkConfig

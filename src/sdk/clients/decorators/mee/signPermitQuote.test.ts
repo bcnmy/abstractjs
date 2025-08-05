@@ -35,13 +35,13 @@ import {
   TokenWithPermitAbi
 } from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { type Trigger, signPermitQuote } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
-import { getMEEVersion } from "../../../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

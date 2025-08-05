@@ -4,11 +4,11 @@ import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, getSmartSessionsValidator } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { getMEEVersion } from "../../modules"
 
 describe("mee.multichainRead", () => {
   let network: NetworkConfig

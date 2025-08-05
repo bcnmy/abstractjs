@@ -18,10 +18,10 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import type { Validator } from "../toValidator"
-import { toMeeK1Module } from "./toMeeK1Module"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { getMEEVersion } from "../smartSessions"
+import type { Validator } from "../toValidator"
+import { toMeeK1Module } from "./toMeeK1Module"
 
 describe("modules.toMeeK1Module", () => {
   let ecosystem: Ecosystem

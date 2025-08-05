@@ -218,10 +218,10 @@ describe("mee.toMultiChainNexusAccount", async () => {
         nexusAccount.deploymentOn(baseSepolia.id)?.accountId.includes("1.0.")
       ).toEqual(true)
       expect(nexusAccount.deploymentOn(base.id)?.accountId).toEqual(
-        `biconomy.nexus.1.2.0` // 2.0.0 is 1.2.0
+        'biconomy.nexus.1.2.0' // 2.0.0 is 1.2.0
       )
       expect(nexusAccount.deploymentOn(optimism.id)?.accountId).toEqual(
-        `biconomy.nexus.1.2.0` // 2.0.0 is 1.2.0
+        'biconomy.nexus.1.2.0' // 2.0.0 is 1.2.0
       )
     })
 

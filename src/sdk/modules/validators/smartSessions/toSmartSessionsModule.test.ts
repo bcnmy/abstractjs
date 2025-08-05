@@ -27,10 +27,10 @@ import {
 } from "../../../clients/createBicoBundlerClient"
 import { DEFAULT_MEE_VERSION, getSudoPolicy } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
+import { getMEEVersion } from "../../utils"
 import { smartSessionActions } from "./decorators"
 import type { GrantPermissionResponse } from "./decorators/grantPermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
-import { getMEEVersion } from "../../utils"
 
 describe("modules.toSmartSessionsModule", () => {
   let ecosystem: Ecosystem

@@ -32,6 +32,7 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, FORWARDER_ADDRESS } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -45,7 +46,6 @@ import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
-import { getMEEVersion } from "../../../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

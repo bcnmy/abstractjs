@@ -23,12 +23,12 @@ import {
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../constants"
+import { getMEEVersion } from "../modules"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
-import { getMEEVersion } from "../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

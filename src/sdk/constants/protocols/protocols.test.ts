@@ -2,13 +2,13 @@ import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 
 import { aave } from "."
+import { DEFAULT_MEE_VERSION } from ".."
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION } from ".."
 import { getMEEVersion } from "../../modules"
 
 describe("mee.protocols", async () => {

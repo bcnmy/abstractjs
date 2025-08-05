@@ -20,12 +20,12 @@ import {
   type NexusAccount,
   toNexusAccount
 } from "../../../account/toNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../../createBicoBundlerClient"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
 
 describe("erc7579.decorators", async () => {
   let network: NetworkConfig

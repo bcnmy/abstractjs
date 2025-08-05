@@ -12,7 +12,7 @@ import {
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
+import { type MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import {
   DEFAULT_MEE_VERSION,

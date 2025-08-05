@@ -6,8 +6,8 @@ import { toNexusAccount } from "../src/sdk/account/toNexusAccount"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { createBicoBundlerClient } from "../src/sdk/clients/createBicoBundlerClient"
 import { biconomySponsoredPaymasterContext } from "../src/sdk/clients/createBicoPaymasterClient"
-import { getMEEVersion } from "../src/sdk/modules"
 import { DEFAULT_MEE_VERSION } from "../src/sdk/constants"
+import { getMEEVersion } from "../src/sdk/modules"
 
 config()
 

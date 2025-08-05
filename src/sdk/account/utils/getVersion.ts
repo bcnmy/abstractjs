@@ -1,5 +1,5 @@
 import type { Address } from "viem"
-import { MEEVersion } from "../../constants"
+import type { MEEVersion } from "../../constants"
 
 /**
  * Retrieves the current version of the SDK from package.json

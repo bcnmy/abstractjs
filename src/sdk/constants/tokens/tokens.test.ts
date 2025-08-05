@@ -2,6 +2,7 @@ import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 
 import * as tokens from "."
+import { DEFAULT_MEE_VERSION } from ".."
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
@@ -9,7 +10,6 @@ import {
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
 import { addressEquals } from "../../account/utils/Utils"
-import { DEFAULT_MEE_VERSION } from ".."
 import { getMEEVersion } from "../../modules"
 
 describe("mee.tokens", async () => {

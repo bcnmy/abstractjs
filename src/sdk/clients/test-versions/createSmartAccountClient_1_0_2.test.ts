@@ -31,12 +31,12 @@ import {
   makeInstallDataAndHash
 } from "../../account/utils/Utils"
 import { getChain } from "../../account/utils/getChain"
+import { MEEVersion } from "../../constants"
 import { getMEEVersion } from "../../modules"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../createBicoBundlerClient"
-import { MEEVersion } from "../../constants"
 
 describe("nexus.client.1.0.2", async () => {
   let network_1_0_2: NetworkConfig
