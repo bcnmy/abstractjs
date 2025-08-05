@@ -673,7 +673,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
     })
   })
 
-  test("should sign a quote using signPermitQuote with modular signing functions", async () => {
+  test("should sign a quote using signOnChainQuote with modular signing functions", async () => {
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger: {
         chainId: chain.id,
