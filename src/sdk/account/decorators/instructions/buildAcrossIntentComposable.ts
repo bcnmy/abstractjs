@@ -22,7 +22,8 @@ import buildTransfer from "./buildTransfer"
 /**
  * Default Across Intent Wrapper address
  */
-const defaultAcrossIntentWrapperAddress = "0x000000E2E47D694bDAa5a46056A894e747ED2854"
+const defaultAcrossIntentWrapperAddress =
+  "0x000000E2E47D694bDAa5a46056A894e747ED2854"
 
 /**
  * Across Intent Wrapper address per chain
@@ -395,8 +396,9 @@ export function formatAcrossFeePercentage(pct: bigint): string {
 }
 
 const _getAcrossIntentWrapper = (chainId: number) => {
-  if (acrossIntentWrappers[chainId]) {
-    return acrossIntentWrappers[chainId]
+  const acrossIntentWrapper = acrossIntentWrappers.get(chainId)
+  if (acrossIntentWrapper) {
+    return acrossIntentWrapper
   }
   return defaultAcrossIntentWrapperAddress
 }
