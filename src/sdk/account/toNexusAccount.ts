@@ -457,17 +457,38 @@ export const toNexusAccount = async (
 
   const publicClient = createPublicClient({ chain, transport: transportConfig })
 
-  // Checks if the nexus implementation contracts is deployed or not
-  // This ensures the MEE version suite is supported or not for the chain
-  const nexusImplementationBytecode = await publicClient.getCode({
-    address: meeConfig.implementationAddress
-  })
+  const addressesToDeploymentSet = new Set([
+    meeConfig.bootStrapAddress,
+    meeConfig.defaultValidatorAddress,
+    meeConfig.factoryAddress,
+    meeConfig.implementationAddress,
+    meeConfig.validatorAddress
+  ])
 
-  if (!nexusImplementationBytecode || nexusImplementationBytecode === "0x") {
-    throw new Error(
-      `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
-    )
+  if (meeConfig.moduleRegistry) {
+    addressesToDeploymentSet.add(meeConfig.moduleRegistry.registryAddress)
   }
+
+  // Filtering zero address because sometimes the default validator is zeroAddress which needs to be excluded
+  const addressesToDeploymentCheck = [...addressesToDeploymentSet].filter(
+    (address) => address !== zeroAddress
+  )
+
+  await Promise.all(
+    addressesToDeploymentCheck.map(async (address) => {
+      // Checks if the MEE contracts are deployed or not
+      // This ensures the MEE version suite is supported or not for the chain
+      const bytecode = await publicClient.getCode({
+        address
+      })
+
+      if (!bytecode || bytecode === "0x") {
+        throw new Error(
+          `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
+        )
+      }
+    })
+  )
 
   // If the old version + no cancun ? new nexus is not supported
   if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {

@@ -19,7 +19,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import { DEFAULT_MEE_VERSION } from "../constants"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
 import { getMEEVersion } from "../modules"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 
@@ -56,7 +56,7 @@ describe("nexus.account.addresses", async () => {
       chain,
       signer: eoaAccount,
       transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      version: getMEEVersion(MEEVersion.V1_0_0)
     })
 
     nexusClient = createSmartAccountClient({
@@ -80,7 +80,7 @@ describe("nexus.account.addresses", async () => {
       chain,
       signer: eoaAccount,
       transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      version: getMEEVersion(MEEVersion.V1_0_0)
     })
 
     const newNexusClient = createSmartAccountClient({

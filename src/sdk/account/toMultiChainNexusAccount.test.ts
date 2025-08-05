@@ -8,19 +8,15 @@ import {
   zeroAddress
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { base, baseSepolia, optimism, polygon, spicy } from "viem/chains"
-import { beforeAll, describe, expect, test, vi } from "vitest"
+import { base, baseSepolia, optimism, polygon } from "viem/chains"
+import { beforeAll, describe, expect, test } from "vitest"
 import {
   MAINNET_RPC_URLS,
   TESTNET_RPC_URLS,
   getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
-import {
-  type NetworkConfig,
-  getBalance,
-  transferErc20
-} from "../../test/testUtils"
+import { type NetworkConfig } from "../../test/testUtils"
 import { createMeeClient } from "../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
 import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
@@ -182,9 +178,9 @@ describe("mee.toMultiChainNexusAccount", async () => {
           transport: http(TESTNET_RPC_URLS[base.id]),
           version: {
             ...getMEEVersion(MEEVersion.V2_0_0),
-            // Forcefully override this address as zero, so it doesn't have any byte code.
+            // Forcefully override this address, so it doesn't have any byte code.
             // This indirectly tests the MEE version contract unavailability for brand new chains
-            implementationAddress: zeroAddress
+            implementationAddress: "0x0000000000000000000000000000000000000001"
           }
         })
       ).rejects.toThrow()
