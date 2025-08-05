@@ -174,6 +174,21 @@ describe("mee.toMultiChainNexusAccount", async () => {
     expect(() => mcNexus.deploymentOn(baseSepolia.id, true)).toThrowError()
   })
   describe("nexusVersion", () => {
+    test("should throw an error if the version is not supported or deployed for the chain", async () => {
+      await expect(
+        toNexusAccount({
+          chain: base,
+          signer: eoaAccount,
+          transport: http(TESTNET_RPC_URLS[base.id]),
+          version: {
+            ...getMEEVersion(MEEVersion.V2_0_0),
+            // Forcefully override this address as zero, so it doesn't have any byte code.
+            // This indirectly tests the MEE version contract unavailability for brand new chains
+            implementationAddress: zeroAddress
+          }
+        })
+      ).rejects.toThrow()
+    })
     test("should throw an error if the version is supported but not by the chain", async () => {
       const notCancunChain = polygon
       await expect(

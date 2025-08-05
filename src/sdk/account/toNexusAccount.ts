@@ -455,6 +455,20 @@ export const toNexusAccount = async (
     version: meeConfig
   } = parameters
 
+  const publicClient = createPublicClient({ chain, transport: transportConfig })
+
+  // Checks if the nexus implementation contracts is deployed or not
+  // This ensures the MEE version suite is supported or not for the chain
+  const nexusImplementationBytecode = await publicClient.getCode({
+    address: meeConfig.implementationAddress
+  })
+
+  if (!nexusImplementationBytecode || nexusImplementationBytecode === "0x") {
+    throw new Error(
+      `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
+    )
+  }
+
   // If the old version + no cancun ? new nexus is not supported
   if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     // check if the chain supports > 1.2.0
@@ -465,7 +479,7 @@ export const toNexusAccount = async (
 
     if (!hasCancun) {
       throw new Error(
-        "MEE version is not supported for this chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun."
+        `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun.`
       )
     }
   }
@@ -478,8 +492,6 @@ export const toNexusAccount = async (
     chain,
     transport: transportConfig
   })
-
-  const publicClient = createPublicClient({ chain, transport: transportConfig })
 
   // Prepare validator modules
   const validators: Validator[] = await prepareValidators(
