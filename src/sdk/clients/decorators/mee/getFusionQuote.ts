@@ -1,5 +1,5 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import { type Address, erc20Abi } from "viem"
+import { type Address, erc20Abi, zeroAddress } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
@@ -161,16 +161,37 @@ export const prepareInstructions = async (
 
   if (trigger.useMaxAvailableFunds) {
     const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
+    if (trigger.tokenAddress === zeroAddress) {
+      const [balance, gasPrice, gasLimit] = await Promise.all([
+        publicClient.getBalance({ address: sender }),
+        publicClient.getGasPrice(),
+        publicClient.estimateGas({ account: sender, to: sender, value: 1n }) // Dummy values
+      ])
 
-    // EOA balance maximum available balance fetch
-    const maxAvailableBalance = await publicClient.readContract({
-      address: trigger.tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [sender]
-    })
+      // 50% gas limit buffer to avoid failures
+      const gasLimitWithBuffer = (gasLimit * 150n) / 100n
 
-    triggerAmount = maxAvailableBalance
+      // 50% buffer for gas price fluctuations
+      const gasBuffer = 1.5
+
+      const baseCost = gasLimitWithBuffer * gasPrice
+      const gasReserve = BigInt(Math.ceil(Number(baseCost) * gasBuffer))
+
+      if (balance <= gasReserve) {
+        throw new Error("Not enough native token to transfer")
+      }
+
+      // native token balance maximum available balance fetch
+      triggerAmount = balance - gasReserve
+    } else {
+      // EOA balance maximum available balance fetch
+      triggerAmount = await publicClient.readContract({
+        address: trigger.tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [sender]
+      })
+    }
   } else {
     if (!trigger.amount) throw new Error("Trigger amount field is required")
 
@@ -186,7 +207,7 @@ export const prepareInstructions = async (
   // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
   // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
   // the remaining funds after the fee deduction.
-  if (trigger.useMaxAvailableFunds) {
+  if (trigger.useMaxAvailableFunds && trigger.tokenAddress !== zeroAddress) {
     transferFromAmount = runtimeERC20AllowanceOf({
       owner: sender,
       spender: scaAddress,
@@ -204,6 +225,15 @@ export const prepareInstructions = async (
     ? trigger.gasLimit
     : DEFAULT_GAS_LIMIT
 
+  // If token address is zero address, we don't need to add transferFrom instruction
+  if (trigger.tokenAddress === zeroAddress) {
+    const batchedInstructions = await batchInstructions({
+      account,
+      instructions: resolvedInstructions
+    })
+    return { triggerGasLimit, triggerAmount, batchedInstructions }
+  }
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
@@ -215,13 +245,12 @@ export const prepareInstructions = async (
       gasLimit: triggerGasLimit
     }
   }
-
   const triggerTransfer = await (isComposable
     ? account.buildComposable(params)
     : account.build(params))
 
   const batchedInstructions = await batchInstructions({
-    account: account,
+    account,
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 

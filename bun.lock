@@ -41,6 +41,7 @@
         "yargs": "^17.7.2",
       },
       "peerDependencies": {
+        "@metamask/delegation-toolkit": "^0.11.0",
         "@rhinestone/module-sdk": "0.2.7",
         "typescript": "^5.8.2",
         "viem": "^2.26.2",

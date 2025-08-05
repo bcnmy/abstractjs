@@ -41,11 +41,13 @@ export const ON_CHAIN_PREFIX = "0x177eee01"
  */
 const generateTriggerCallFromTrigger = async ({
   account,
-  spender,
-  trigger
+  trigger,
+  recipient,
+  scaAddress
 }: {
   account: MultichainSmartAccount
-  spender: Address
+  recipient: Address
+  scaAddress: Address
   trigger: Trigger
 }) => {
   let triggerCall: AbstractCall | ComposableCall
@@ -57,7 +59,7 @@ const generateTriggerCallFromTrigger = async ({
     const forwardCalldata = encodeFunctionData({
       abi: ForwarderAbi,
       functionName: "forward",
-      args: [spender]
+      args: [recipient]
     })
     const [
       {
@@ -100,7 +102,7 @@ const generateTriggerCallFromTrigger = async ({
     ] = await account.build({
       type: "approve",
       data: {
-        spender,
+        spender: scaAddress,
         tokenAddress: trigger.tokenAddress,
         chainId: trigger.chainId,
         amount
@@ -138,15 +140,19 @@ export const signOnChainQuote = async (
   const {
     chain,
     walletClient,
-    address: spender
+    address: scaAddress
   } = account_.deploymentOn(chainId, true)
+
+  // By default the trigger amount will be deposited to sca account.
+  // if a custom recipient is defined ? It will deposit to the recipient address
+  const recipient = trigger.recipientAddress || scaAddress
 
   const triggerCall = await generateTriggerCallFromTrigger({
     account: account_,
     trigger,
-    spender
+    recipient,
+    scaAddress
   })
-
   // This will be always a non composable transaction, so don't worry about the composability
   const dataOrPrefix =
     (triggerCall as AbstractCall)?.data ?? FUSION_NATIVE_TRANSFER_PREFIX
@@ -154,6 +160,7 @@ export const signOnChainQuote = async (
 
   // @ts-ignore
   const hash = await walletClient.sendTransaction(call)
+
   // @ts-ignore
   await walletClient.waitForTransactionReceipt({ hash, confirmations })
 

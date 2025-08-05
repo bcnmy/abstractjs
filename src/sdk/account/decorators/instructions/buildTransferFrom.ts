@@ -99,7 +99,6 @@ export const buildTransferFrom = async (
   ]
 
   const functionContext = getFunctionContextFromAbi(functionSig, abi)
-
   // Check for the runtime arguments and detect the need for composable call
   const isComposableCall = forceComposableEncoding
     ? true

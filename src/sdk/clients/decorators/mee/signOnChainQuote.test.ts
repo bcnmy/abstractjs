@@ -42,6 +42,7 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import executeSignedQuote from "./executeSignedQuote"
+import getOnChainQuote from "./getOnChainQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
@@ -97,8 +98,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     tokenAddress = mcUSDC.addressOn(optimism.id)
   })
 
-  // Skip this test as it will conflict with the other tests as it uses the same eoa account, and the nonce will be the same
-  test.skip("should execute a quote using signOnChainQuote", async () => {
+  test("should execute a quote using signOnChainQuote", async () => {
     console.time("signOnChainQuote:getQuote")
     console.time("signOnChainQuote:getHash")
     console.time("signOnChainQuote:receipt")
@@ -316,7 +316,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
     })
   })
-  describe.skip("custom approvalAmount", () => {
+  describe("custom approvalAmount", () => {
     test("should fail if approvalAmount is smaller than the trigger amount", async () => {
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.005", 6)
@@ -356,7 +356,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       ).rejects.toThrow()
     })
 
-    test("changes the allowance based on approvalAmount", async () => {
+    // This test is skipped because it uses USDT token which doesn't have fund setup.
+    test.skip("changes the allowance based on approvalAmount", async () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.03", 6)
@@ -590,6 +591,142 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
         fusionQuote
       })
       // Wait for the transaction to complete
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    })
+  })
+  describe("should handle ETH forwarder trigger call", () => {
+    test("should handle ETH forwarder trigger call", async () => {
+      const ethTrigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        amount: 1n
+      }
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              chainId: network.chain.id,
+              calls: [
+                {
+                  // dummy transfer to an address, this can be any transaction
+                  to: recipient,
+                  value: 1n
+                }
+              ]
+            }
+          })
+        ],
+        feeToken
+      })
+      // return
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote: quote
+      })
+      // Wait for the transaction to complete
+      const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    })
+
+    test("should work with useMaxAvailableFunds", async () => {
+      const ethTrigger: Trigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        useMaxAvailableFunds: true
+      }
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              chainId: network.chain.id,
+              calls: [
+                {
+                  // dummy transfer to an address, this can be any transaction
+                  to: recipient,
+                  value: 1n
+                }
+              ]
+            }
+          })
+        ],
+        feeToken
+      })
+      const balance = await getBalance(
+        mcNexus.deploymentOn(network.chain.id, true).publicClient,
+        mcNexus.signer.address
+      )
+
+      // Approximation for the gas fees adjustment
+      expect(Number(balance)).to.be.approximately(
+        Number(balance) - 10000,
+        99999 + 10000
+      )
+
+      // TODO: add execution as well once the runtimeNativeTokenBalanceOf is added
+    })
+
+    test("should work with useMaxAvailableFunds for custom recipient", async () => {
+      const ethTrigger: Trigger = {
+        chainId: network.chain.id,
+        tokenAddress: zeroAddress,
+        useMaxAvailableFunds: true,
+        recipientAddress: eoaAccount.address
+      }
+
+      const feeToken = {
+        address: zeroAddress,
+        chainId: network.chain.id
+      }
+
+      const { address: recipient } = mcNexus.deploymentOn(
+        network.chain.id,
+        true
+      )
+
+      const zeroTransfer = await mcNexus.build({
+        type: "default",
+        data: {
+          chainId: network.chain.id,
+          calls: [
+            {
+              // dummy transfer to an address, this can be any transaction
+              to: recipient,
+              value: 1n
+            }
+          ]
+        }
+      })
+
+      const quote = await getOnChainQuote(meeClient, {
+        trigger: ethTrigger,
+        instructions: [zeroTransfer],
+        feeToken
+      })
+
+      const { hash } = await meeClient.executeFusionQuote({
+        fusionQuote: quote
+      })
+
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
