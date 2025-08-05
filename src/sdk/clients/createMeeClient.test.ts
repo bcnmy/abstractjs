@@ -209,9 +209,7 @@ describe("mee.createMeeClient", async () => {
         chains: [baseSepolia],
         signer: eoaAccount,
         transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        versions: [
-          getMEEVersion(DEFAULT_MEE_VERSION)
-        ],
+        versions: [getMEEVersion(DEFAULT_MEE_VERSION)],
         index
       })
 
