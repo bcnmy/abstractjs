@@ -1,11 +1,34 @@
 import { GLOBAL_CONSTANTS } from "@rhinestone/module-sdk"
 import { type Address, type Hex, zeroAddress } from "viem"
-import type { AddressConfig, MEEVersion } from "../account/utils/getVersion"
+import type { MEEVersionConfig } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
 
-export const DEFAULT_MEE_VERSION: MEEVersion = "2.0.0"
+/**
+ * Supported MEE versions with descriptions.
+ */
+export enum MEEVersion {
+  /** New K1 Mee module introduced that allows ERC-7702-delegated EOAs owning Nexus accounts */
+  V2_1_0 = "2.1.0",
+
+  /** Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
+   * MEE K1 Validator is pre-installed as a default validator module.
+   */
+  V2_0_0 = "2.0.0",
+
+  /** First release for the MEE contracts suite, based on Nexus 1.0.2
+   * Requires installing MEE K1 validator and Composability module explicitly
+   */
+  V1_0_0 = "1.0.0"
+}
+
+// NOTE: Update this description, whenever changing the new default version
+/** Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
+ * MEE K1 Validator is pre-installed as a default validator module.
+ */
+export const DEFAULT_MEE_VERSION: MEEVersion = MEEVersion.V2_0_0
+
 export const COMPOSABLE_MODULE_ADDRESS: Address =
   "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10"
 export const ENTRY_POINT_ADDRESS: Address =
@@ -19,12 +42,12 @@ const MEE_VALIDATOR_ADDRESS: Address =
   "0x00000000d12897DDAdC2044614A9677B191A2d95"
 
 export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
-  string,
-  AddressConfig
+  MEEVersion,
+  MEEVersionConfig
 > = {
-  "2.1.0": {
+  [MEEVersion.V2_1_0]: {
     // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
-    version: "2.1.0",
+    version: MEEVersion.V2_1_0,
     accountId: "biconomy.nexus.1.2.1",
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837",
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
@@ -32,8 +55,8 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress
   },
-  "2.0.0": {
-    version: "2.0.0",
+  [MEEVersion.V2_0_0]: {
+    version: MEEVersion.V2_0_0,
     accountId: "biconomy.nexus.1.2.0",
     factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de",
     bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
@@ -41,8 +64,8 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     validatorAddress: MEE_VALIDATOR_ADDRESS, // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress
   },
-  "1.0.0": {
-    version: "1.0.0",
+  [MEEVersion.V1_0_0]: {
+    version: MEEVersion.V1_0_0,
     accountId: "biconomy.nexus.1.0.2",
     factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9", // Nexus Factory Address
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",

@@ -25,11 +25,12 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import { getSudoPolicy } from "../../../constants"
+import { DEFAULT_MEE_VERSION, getSudoPolicy } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { smartSessionActions } from "./decorators"
 import type { GrantPermissionResponse } from "./decorators/grantPermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
+import { getMEEVersion } from "../../utils"
 
 describe("modules.toSmartSessionsModule", () => {
   let ecosystem: Ecosystem
@@ -79,7 +80,8 @@ describe("modules.toSmartSessionsModule", () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const { testClient } = await toClients(infra.network)
@@ -97,7 +99,8 @@ describe("modules.toSmartSessionsModule", () => {
     secondChainNexusAccount = await toNexusAccount({
       ...nexusAccount,
       chain: secondChain,
-      transport: http(secondInfra.network.rpcUrl)
+      transport: http(secondInfra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     secondChainNexusClient = createSmartAccountClient({
@@ -193,7 +196,8 @@ describe("modules.toSmartSessionsModule", () => {
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -243,7 +247,8 @@ describe("modules.toSmartSessionsModule", () => {
       accountAddress: secondChainNexusAccount.address,
       signer: redeemerAccount,
       chain: secondChain,
-      transport: http(secondInfra.network.rpcUrl)
+      transport: http(secondInfra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -287,7 +292,8 @@ describe("modules.toSmartSessionsModule", () => {
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -354,7 +360,8 @@ describe("modules.toSmartSessionsModule", () => {
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -390,7 +397,8 @@ describe("modules.toSmartSessionsModule", () => {
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -427,7 +435,8 @@ describe("modules.toSmartSessionsModule", () => {
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const emulatedClient = createSmartAccountClient({

@@ -11,6 +11,8 @@ import { getGasToken } from "./getGasToken"
 import getInfo from "./getInfo"
 import { getPaymentToken } from "./getPaymentToken"
 import type { FeeTokenInfo } from "./getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.getInfo", () => {
   let network: NetworkConfig
@@ -44,7 +46,11 @@ describe("mee.getInfo", () => {
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

@@ -14,6 +14,8 @@ import {
   createBicoBundlerClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 
 describe("bico.bundler", async () => {
   let network: NetworkConfig
@@ -38,7 +40,8 @@ describe("bico.bundler", async () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     bicoBundler = createBicoBundlerClient({
@@ -63,7 +66,8 @@ describe("bico.bundler", async () => {
       const nexusAccount = await toNexusAccount({
         chain,
         signer: account,
-        transport: http(rpcUrl)
+        transport: http(rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
       })
 
       const nexusClient = createSmartAccountClient({

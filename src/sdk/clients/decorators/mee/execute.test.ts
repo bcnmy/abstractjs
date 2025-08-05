@@ -6,11 +6,12 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
 import { mcUSDC } from "../../../constants/tokens"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { execute } from "./execute"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 vi.mock("./execute")
 
@@ -43,7 +44,11 @@ describe("mee.execute", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

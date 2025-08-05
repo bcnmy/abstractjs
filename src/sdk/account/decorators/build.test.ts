@@ -9,6 +9,8 @@ import {
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
 import { build } from "./build"
+import { getMEEVersion } from "../../modules"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 
 describe("mee.build", () => {
   let network: NetworkConfig
@@ -34,7 +36,11 @@ describe("mee.build", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

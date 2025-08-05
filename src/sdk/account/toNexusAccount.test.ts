@@ -58,6 +58,8 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 
 describe("nexus.account", async () => {
   let network: NetworkConfig
@@ -92,7 +94,8 @@ describe("nexus.account", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusClient = createSmartAccountClient({
@@ -114,6 +117,7 @@ describe("nexus.account", async () => {
       chain,
       signer: eoaAccount,
       transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION),
       index: 102n // undeployed
     })
 

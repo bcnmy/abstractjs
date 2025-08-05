@@ -86,6 +86,7 @@ type StringOrStrings = string | string[]
  *   account: await toNexusAccount({
  *     chain: customChain,
  *     signer: walletClientWithCustomChain,
+ *     version: getMEEVersion(DEFAULT_MEE_VERSION),
  *     transport: http(),
  *     mock: true
  *   }),

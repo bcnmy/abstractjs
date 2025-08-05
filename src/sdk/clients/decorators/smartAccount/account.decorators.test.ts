@@ -20,6 +20,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("account.decorators", async () => {
   let network: NetworkConfig
@@ -48,7 +50,8 @@ describe("account.decorators", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusClient = createSmartAccountClient({

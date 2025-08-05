@@ -36,6 +36,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 
 describe("nexus.client", async () => {
   let network: NetworkConfig
@@ -68,7 +70,8 @@ describe("nexus.client", async () => {
     const nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusClient = createSmartAccountClient({
@@ -267,13 +270,15 @@ describe("nexus.client", async () => {
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
       chain,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
       chain,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -300,7 +305,8 @@ describe("nexus.client", async () => {
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
       chain,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const ethersNexusClient = createSmartAccountClient({

@@ -32,6 +32,8 @@ import type { AnyData } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../utils"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -74,7 +76,11 @@ describe("mee.multichainSmartSessions", () => {
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index: BigInt(Date.now())
+      index: BigInt(Date.now()),
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     feeToken = {
@@ -243,7 +249,11 @@ describe("mee.multichainSmartSessions", () => {
         accountAddress: mcNexus.addressOn(paymentChain.id),
         chains: [paymentChain, targetChain],
         transports: [paymentChainTransport, targetChainTransport],
-        signer: redeemerAccount
+        signer: redeemerAccount,
+        versions: [
+          getMEEVersion(DEFAULT_MEE_VERSION),
+          getMEEVersion(DEFAULT_MEE_VERSION)
+        ]
       })
 
       const dappMeeClient = await createMeeClient({
@@ -333,7 +343,11 @@ describe("mee.multichainSmartSessions", () => {
         accountAddress: mcNexus.addressOn(paymentChain.id),
         chains: [paymentChain, targetChain],
         transports: [paymentChainTransport, targetChainTransport],
-        signer: redeemerAccount
+        signer: redeemerAccount,
+        versions: [
+          getMEEVersion(DEFAULT_MEE_VERSION),
+          getMEEVersion(DEFAULT_MEE_VERSION)
+        ]
       })
 
       const dappMeeClient = await createMeeClient({

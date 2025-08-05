@@ -37,6 +37,8 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.getPermitQuote", () => {
   let network: NetworkConfig
@@ -71,7 +73,11 @@ describe("mee.getPermitQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({
@@ -250,7 +256,8 @@ describe("mee.getPermitQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     const meeClient = await createMeeClient({ account: mcNexus })
@@ -441,7 +448,8 @@ describe("mee.getPermitQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       transports: [http(testnetNetwork.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -505,7 +513,8 @@ describe("mee.getPermitQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [baseSepolia],
       transports: [http(testnetNetwork.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)

@@ -14,8 +14,9 @@ import {
 } from "../../account/toMultiChainNexusAccount"
 import { AavePoolAbi } from "../../constants/abi"
 import { testnetMcUSDC } from "../../constants/tokens"
-import { runtimeERC20BalanceOf } from "../../modules"
+import { getMEEVersion, runtimeERC20BalanceOf } from "../../modules"
 import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 const mocks = vi.hoisted(async () => {
   const { testnetMcUSDC } = await import("../../constants/tokens")
 
@@ -60,7 +61,11 @@ describe("createOneClickDepositTemplate", () => {
         http(network.rpcUrl),
         http(TESTNET_RPC_URLS[destinationChain.id])
       ],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
   })
 

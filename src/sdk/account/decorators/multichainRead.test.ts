@@ -3,11 +3,12 @@ import { beforeAll, describe, expect, it } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { getSmartSessionsValidator } from "../../constants"
+import { DEFAULT_MEE_VERSION, getSmartSessionsValidator } from "../../constants"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
+import { getMEEVersion } from "../../modules"
 
 describe("mee.multichainRead", () => {
   let network: NetworkConfig
@@ -33,7 +34,11 @@ describe("mee.multichainRead", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

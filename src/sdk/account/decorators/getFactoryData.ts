@@ -14,7 +14,7 @@ import type {
   GenericModuleConfig,
   PrevalidationHookModuleConfig
 } from "../toNexusAccount"
-import type { MEEVersion } from "../utils/getVersion"
+import { MEEVersion } from "../../constants"
 
 // =================================================
 // ============ Account Factory section ============

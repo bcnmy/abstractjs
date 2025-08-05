@@ -25,6 +25,8 @@ import {
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { ownableActions } from "./decorators"
 import { toOwnableModule } from "./toOwnableModule"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../.."
 
 describe("modules.toOwnableModule", () => {
   let ecosystem: Ecosystem
@@ -59,7 +61,8 @@ describe("modules.toOwnableModule", () => {
       signer: eoaAccount,
       chain,
       transport: http(infra.network.rpcUrl),
-      validators: [ownablesModule]
+      validators: [ownablesModule],
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusClient = createSmartAccountClient({

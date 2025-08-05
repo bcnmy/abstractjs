@@ -32,11 +32,16 @@ import {
   userOp
 } from "../../../clients/decorators/mee/getQuote"
 import {
+  DEFAULT_MEE_VERSION,
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
 } from "../../../constants"
 import { testnetMcUSDC } from "../../../constants/tokens"
-import { greaterThanOrEqualTo, runtimeERC20BalanceOf } from "../../../modules"
+import {
+  getMEEVersion,
+  greaterThanOrEqualTo,
+  runtimeERC20BalanceOf
+} from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -74,7 +79,8 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
       chains: [chain],
       transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      index: 1n // Added based on the suggestion by Joe to prevent the collision with nonce
+      index: 1n, // Added based on the suggestion by Joe to prevent the collision with nonce,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     meeClient = await createMeeClient({

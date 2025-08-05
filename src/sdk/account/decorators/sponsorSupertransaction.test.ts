@@ -5,8 +5,9 @@ import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { testnetMcUSDC } from "../../constants"
+import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
+import { getMEEVersion } from "../../modules"
 
 describe("mee.sponsorSupertransaction", () => {
   let network: NetworkConfig
@@ -26,7 +27,8 @@ describe("mee.sponsorSupertransaction", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http(network.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     meeClient = await createMeeClient({

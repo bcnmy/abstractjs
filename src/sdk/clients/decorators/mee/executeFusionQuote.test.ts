@@ -23,6 +23,8 @@ import executeFusionQuote from "./executeFusionQuote"
 import getFusionQuote from "./getFusionQuote"
 import type { FeeTokenInfo } from "./getQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -65,6 +67,10 @@ describe.runIf(runPaidTests).skip("mee.executeFusionQuote", () => {
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ],
       index
     })
 

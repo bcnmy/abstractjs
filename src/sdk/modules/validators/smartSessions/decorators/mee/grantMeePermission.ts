@@ -4,11 +4,13 @@ import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   type ActionData,
-  getSpendingLimitsPolicy
+  DEFAULT_MEE_VERSION,
+  getSpendingLimitsPolicy,
+  MEEVersion
 } from "../../../../../constants"
 
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
-import { getMeeConfig } from "../../../../utils/getMeeConfig"
+import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
   type GrantPermissionResponse,
   grantPermissionPersonalSign,
@@ -84,8 +86,8 @@ export const grantMeePermission = async <
   mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
-  const version = _account?.version
-  const meeValidatorAddress = getMeeConfig(version).validatorAddress
+  const version: MEEVersion = _account ? _account.version : DEFAULT_MEE_VERSION
+  const meeValidatorAddress = getMEEVersion(version).validatorAddress
 
   // make some reliable maxPaymentAmount
   if (feeToken && !maxPaymentAmount) {

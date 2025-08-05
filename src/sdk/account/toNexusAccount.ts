@@ -40,7 +40,11 @@ import {
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
-import { DEFAULT_MEE_VERSION, ENTRY_POINT_ADDRESS } from "../constants"
+import {
+  DEFAULT_MEE_VERSION,
+  ENTRY_POINT_ADDRESS,
+  MEEVersion
+} from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor, toComposableFallback } from "../modules"
@@ -49,7 +53,7 @@ import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
-import { getMeeConfig } from "../modules/utils/getMeeConfig"
+import { getMEEVersion } from "../modules/utils/getMeeConfig"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
@@ -83,8 +87,7 @@ import {
   typeToString
 } from "./utils/Utils"
 import {
-  type AddressConfig,
-  type MEEVersion,
+  type MEEVersionConfig,
   type NexusAccountId,
   isVersionOlder
 } from "./utils/getVersion"
@@ -122,8 +125,8 @@ export type PrevalidationHookModuleConfig = GenericModuleConfig & {
 }
 
 export type NexusOptions = {
-  /** Optional nexus config for the Nexus Smart Account. If undefined, the latest version will be used. */
-  meeConfig?: AddressConfig
+  /** nexus config for the Nexus Smart Account. If undefined, the latest version will be used. */
+  meeConfig: MEEVersionConfig
 }
 /**
  * Parameters for creating a Nexus Smart Account
@@ -140,6 +143,8 @@ export type ToNexusSmartAccountParameters = {
     | LocalAccount
     | EthersWallet
   >
+  /** MEE version */
+  version: MEEVersionConfig
   /** Optional index for the account */
   index?: bigint | undefined
   /** Optional account address override */
@@ -158,8 +163,6 @@ export type ToNexusSmartAccountParameters = {
   bootStrapAddress?: Address
   /** Optional implementation address */
   implementationAddress?: Address
-  /** Optional Nexus options */
-  options?: NexusOptions
   /** Optional factory address */
   factoryAddress?: Address
   /** Optional init data */
@@ -295,9 +298,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 // Resolves the latest default nexus version or resolves the user defined version for nexus smart account
 const resolveMeeConfig = async (
   hasCancun: boolean,
-  customMeeConfig?: AddressConfig
-): Promise<AddressConfig> => {
-  let meeConfig: AddressConfig
+  customMeeConfig?: MEEVersionConfig
+): Promise<MEEVersionConfig> => {
+  let meeConfig: MEEVersionConfig
 
   if (customMeeConfig) {
     // If the old version + no cancun ? new nexus is not supported
@@ -310,7 +313,7 @@ const resolveMeeConfig = async (
       )
     }
 
-    const defaultMeeConfig = getMeeConfig(customMeeConfig.version)
+    const defaultMeeConfig = getMEEVersion(customMeeConfig.version)
 
     meeConfig = {
       version: customMeeConfig.version || defaultMeeConfig.version,
@@ -332,8 +335,8 @@ const resolveMeeConfig = async (
     }
   } else {
     meeConfig = hasCancun
-      ? getMeeConfig(DEFAULT_MEE_VERSION)
-      : getMeeConfig("1.0.0")
+      ? getMEEVersion(DEFAULT_MEE_VERSION)
+      : getMEEVersion(MEEVersion.V1_0_0)
   }
 
   return meeConfig
@@ -341,7 +344,7 @@ const resolveMeeConfig = async (
 
 const prepareValidators = async (
   signer: Signer,
-  meeConfig: AddressConfig,
+  meeConfig: MEEVersionConfig,
   customValidators?: Validator[]
 ): Promise<Validator[]> => {
   let validators: Validator[] = []
@@ -367,7 +370,7 @@ const prepareValidators = async (
 }
 
 const prepareExecutors = (
-  meeConfig: AddressConfig,
+  meeConfig: MEEVersionConfig,
   customExecutors?: GenericModuleConfig[]
 ): GenericModuleConfig[] => {
   let executors: GenericModuleConfig[] = []
@@ -390,7 +393,7 @@ const prepareExecutors = (
 }
 
 const prepareFallbacks = (
-  meeConfig: AddressConfig,
+  meeConfig: MEEVersionConfig,
   customFallbacks?: GenericModuleConfig[]
 ): GenericModuleConfig[] => {
   let fallbacks: GenericModuleConfig[] = []
@@ -413,7 +416,7 @@ const prepareFallbacks = (
 }
 
 const prepareFactoryData = (
-  meeConfig: AddressConfig,
+  meeConfig: MEEVersionConfig,
   initDataParams: GetInitDataParams
 ): { initData: Hex; factoryData: Hex } => {
   let factoryData: Hex = "0x"
@@ -482,6 +485,7 @@ const prepareFactoryData = (
  * const account = await toNexusAccount({
  *   chain: mainnet,
  *   transport: http(),
+ *   version: getMEEVersion(DEFAULT_MEE_VERSION),
  *   signer: '0x...',
  * })
  */
@@ -500,7 +504,7 @@ export const toNexusAccount = async (
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
     initData: customInitData,
-    options = {}
+    version
   } = parameters
 
   // check if the chain supports > 1.2.0
@@ -509,7 +513,7 @@ export const toNexusAccount = async (
     transport: transportConfig
   })
 
-  const meeConfig = await resolveMeeConfig(hasCancun, options.meeConfig)
+  const meeConfig = await resolveMeeConfig(hasCancun, version)
 
   const signer = await toSigner({ signer: _signer })
 

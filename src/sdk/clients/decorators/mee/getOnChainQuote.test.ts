@@ -22,6 +22,8 @@ import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getOnChainQuote from "./getOnChainQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.getOnChainQuote", () => {
   let network: NetworkConfig
@@ -56,7 +58,11 @@ describe("mee.getOnChainQuote", () => {
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -112,7 +118,8 @@ describe("mee.getOnChainQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [base],
       signer: eoaAccount,
-      transports: [http(MAINNET_RPC_URLS[base.id])]
+      transports: [http(MAINNET_RPC_URLS[base.id])],
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     const meeClient = await createMeeClient({
@@ -160,7 +167,8 @@ describe("mee.getOnChainQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [base],
       signer: eoaAccount,
-      transports: [http(MAINNET_RPC_URLS[base.id])]
+      transports: [http(MAINNET_RPC_URLS[base.id])],
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     const { publicClient } = mcNexus.deploymentOn(base.id, true)
@@ -220,7 +228,8 @@ describe("mee.getOnChainQuote", () => {
     const mcNexus = await toMultichainNexusAccount({
       chains: [base],
       signer: eoaAccount,
-      transports: [http(MAINNET_RPC_URLS[base.id])]
+      transports: [http(MAINNET_RPC_URLS[base.id])],
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     const { publicClient } = mcNexus.deploymentOn(base.id, true)

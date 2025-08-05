@@ -11,6 +11,8 @@ import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeQuote from "./executeQuote"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 vi.mock("./executeQuote")
 
@@ -43,7 +45,11 @@ describe("mee.executeQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

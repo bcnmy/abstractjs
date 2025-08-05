@@ -10,6 +10,8 @@ import {
 } from "../toMultiChainNexusAccount"
 import type { MultichainAddressMapping } from "./buildBridgeInstructions"
 import { queryBridge } from "./queryBridge"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 
 describe("mee.queryBridge", () => {
   let network: NetworkConfig
@@ -35,7 +37,11 @@ describe("mee.queryBridge", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

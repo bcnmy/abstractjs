@@ -30,7 +30,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { FORWARDER_ADDRESS } from "../../../constants"
+import { DEFAULT_MEE_VERSION, FORWARDER_ADDRESS } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
@@ -45,6 +45,7 @@ import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { getMEEVersion } from "../../../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -85,7 +86,11 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -453,7 +458,8 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote - testnet", () => {
       chains: [chain],
       transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      index: 1n
+      index: 1n,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
     meeClient = await createMeeClient({
       account: mcNexus,

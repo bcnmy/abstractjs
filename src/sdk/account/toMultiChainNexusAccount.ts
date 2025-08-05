@@ -7,7 +7,6 @@ import type {
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
   type DelegationParams,
-  type NexusOptions,
   type ToNexusSmartAccountParameters,
   toNexusAccount
 } from "./toNexusAccount"
@@ -54,6 +53,8 @@ import {
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
 import type { MultichainToken } from "./utils/Types"
+import { type MEEVersionConfig } from "./utils"
+
 /**
  * Parameters required to create a multichain Nexus account
  */
@@ -66,8 +67,8 @@ export type MultichainNexusParams = Partial<
   transports: Transport[]
   /** The signer instance used for account creation */
   signer: ToNexusSmartAccountParameters["signer"]
-  /** Optional Nexus options */
-  options?: NexusOptions[]
+  /** MEE versions */
+  versions: MEEVersionConfig[]
 }
 
 /**
@@ -252,7 +253,7 @@ export async function toMultichainNexusAccount(
     chains,
     signer: unresolvedSigner,
     transports,
-    options,
+    versions,
     ...accountParameters
   } = multiChainNexusParams
 
@@ -266,13 +267,19 @@ export async function toMultichainNexusAccount(
     )
   }
 
+  if (versions && versions.length !== chains.length) {
+    throw new Error(
+      "The number of versions must match the number of chains provided"
+    )
+  }
+
   const deployments = await Promise.all(
     chains.map((chain, i) =>
       toNexusAccount({
         chain,
         signer: unresolvedSigner,
         transport: transports[i],
-        options: options?.[i],
+        version: versions[i],
         ...accountParameters
       })
     )

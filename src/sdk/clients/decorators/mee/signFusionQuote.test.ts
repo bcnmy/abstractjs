@@ -24,6 +24,8 @@ import getFusionQuote from "./getFusionQuote"
 import type { FeeTokenInfo } from "./getQuote"
 import { signFusionQuote } from "./signFusionQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.signFusionQuote", () => {
   let network: NetworkConfig
@@ -62,7 +64,11 @@ describe("mee.signFusionQuote", () => {
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

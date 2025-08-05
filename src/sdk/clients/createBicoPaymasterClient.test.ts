@@ -28,6 +28,8 @@ import {
   createBicoPaymasterClient,
   toBiconomyTokenPaymasterContext
 } from "./createBicoPaymasterClient"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 
 // NB These tests require ERC20 tokens to be available on testnet, so they are mostly skipped
 describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
@@ -80,7 +82,8 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
     nexusAccount = await toNexusAccount({
       signer: account,
       chain,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusAccountAddress = await nexusAccount.getAddress()

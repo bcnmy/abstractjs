@@ -28,6 +28,8 @@ import {
 } from "../sdk/clients/createBicoPaymasterClient"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
+import { DEFAULT_MEE_VERSION } from "../sdk/constants"
+import { getMEEVersion } from "../sdk/modules"
 
 const index = 0n
 
@@ -90,6 +92,7 @@ describe.skipIf(!playgroundTrue())("playground", () => {
         chain,
         signer: eoaAccount,
         transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
         index
       }),
       transport: http(bundlerUrl),

@@ -6,11 +6,11 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { toFeeToken } from "../../../account/utils/toFeeToken"
-import { mcUSDC } from "../../../constants"
+import { DEFAULT_MEE_VERSION, mcUSDC } from "../../../constants"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
 import { signQuote } from "./signQuote"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig
@@ -40,7 +40,11 @@ describe("mee.signQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

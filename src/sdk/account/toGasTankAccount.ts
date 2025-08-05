@@ -32,6 +32,8 @@ import withdrawFromGasTank, {
   type WithdrawFromGasTankParams,
   type WithdrawFromGasTankPayload
 } from "./decorators/withdrawFromGasTank"
+import { getMEEVersion } from "../modules"
+import { DEFAULT_MEE_VERSION } from "../constants"
 
 /**
  * Parameters required to create a gas tank account
@@ -143,7 +145,8 @@ export async function toGasTankAccount(
   const mcNexus = await toMultichainNexusAccount({
     signer: privateKeyToAccount(privateKey),
     chains: [chain],
-    transports: [transport]
+    transports: [transport],
+    versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
   })
 
   const publicClient = createPublicClient({

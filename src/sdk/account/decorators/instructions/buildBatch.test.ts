@@ -15,6 +15,8 @@ import {
 import buildApprove from "./buildApprove"
 import buildBatch from "./buildBatch"
 import buildWithdrawal from "./buildWithdrawal"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.buildBatch", () => {
   let network: NetworkConfig
@@ -41,7 +43,11 @@ describe("mee.buildBatch", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

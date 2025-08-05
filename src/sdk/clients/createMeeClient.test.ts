@@ -32,6 +32,8 @@ import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -68,7 +70,11 @@ describe("mee.createMeeClient", async () => {
       chains: [paymentChain, targetChain],
       signer: eoaAccount,
       transports: [paymentChainTransport, targetChainTransport],
-      index
+      index,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -88,7 +94,11 @@ describe("mee.createMeeClient", async () => {
         chains: [paymentChain, targetChain, gnosisChiado],
         transports,
         signer: eoaAccount,
-        index
+        index,
+        versions: [
+          getMEEVersion(DEFAULT_MEE_VERSION),
+          getMEEVersion(DEFAULT_MEE_VERSION)
+        ]
       })
 
       await expect(
@@ -198,6 +208,10 @@ describe("mee.createMeeClient", async () => {
         chains: [baseSepolia],
         signer: eoaAccount,
         transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
+        versions: [
+          getMEEVersion(DEFAULT_MEE_VERSION),
+          getMEEVersion(DEFAULT_MEE_VERSION)
+        ],
         index
       })
 
@@ -337,7 +351,8 @@ describe("mee.createMeeClient.delegated", async () => {
       chains: [baseSepolia],
       signer: eoaAccount,
       transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-      accountAddress: eoaAccount.address
+      accountAddress: eoaAccount.address,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     meeClient = await createMeeClient({

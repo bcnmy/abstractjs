@@ -22,12 +22,13 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import { testnetMcUSDC } from "../constants"
+import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../constants"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
+import { getMEEVersion } from "../modules"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -71,7 +72,8 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [chain],
       transports: [http(network.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -133,7 +135,8 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
       nexusAccount = await toNexusAccount({
         signer: account,
         chain,
-        transport: http(TESTNET_RPC_URLS[chain.id])
+        transport: http(TESTNET_RPC_URLS[chain.id]),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
       })
 
       nexusAccountAddress = await nexusAccount.getAddress()

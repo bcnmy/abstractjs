@@ -1,11 +1,10 @@
 import {
-  type AddressConfig,
-  type MEEVersion,
+  type MEEVersionConfig,
   semverCompare
 } from "../../account/utils/getVersion"
 import {
   DEFAULT_CONFIGURATIONS_BY_MEE_VERSION,
-  DEFAULT_MEE_VERSION
+  MEEVersion
 } from "../../constants"
 
 /**
@@ -14,9 +13,7 @@ import {
  * @returns The configuration containing attester and factory addresses
  * @throws Error if the version is not supported
  */
-export function getMeeConfig(
-  meeVersion: MEEVersion = DEFAULT_MEE_VERSION
-): AddressConfig {
+export function getMEEVersion(meeVersion: MEEVersion): MEEVersionConfig {
   // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
   if (meeVersion in DEFAULT_CONFIGURATIONS_BY_MEE_VERSION) {
     return DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[meeVersion]

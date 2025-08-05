@@ -14,6 +14,8 @@ import {
   fromBundlerClientToSigner
 } from "./fromBundlerClient"
 import { toSigner } from "./toSigner"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 
 describe("utils.fromBundlerClient", async () => {
   // Create real instances for testing
@@ -41,7 +43,8 @@ describe("utils.fromBundlerClient", async () => {
   const nexusAccount = await toNexusAccount({
     chain: mainnet,
     signer,
-    transport
+    transport,
+    version: getMEEVersion(DEFAULT_MEE_VERSION)
   })
 
   // Attach the Nexus account to the bundler client

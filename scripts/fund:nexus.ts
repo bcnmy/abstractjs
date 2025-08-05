@@ -12,11 +12,15 @@ import {
   publicActions
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { type NexusOptions, toNexusAccount } from "../src/sdk/account"
+import { MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
-import { TokenWithPermitAbi } from "../src/sdk/constants"
+import {
+  DEFAULT_MEE_VERSION,
+  MEEVersion,
+  TokenWithPermitAbi
+} from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
-import { getMeeConfig } from "../src/sdk/modules/utils/getMeeConfig"
+import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
 
 dotenv.config()
 
@@ -52,19 +56,21 @@ async function main() {
   for (const chainId of chainIds) {
     // Two account will be available from now. For collision issues in tests, use a fallback account with index one
     // Default: Index zero will be used for most of the tests
-    await processChain(chainId, account, { accountIndex: ACCOUNT_INDEX })
-    await processChain(chainId, account, { accountIndex: ACCOUNT_INDEX_ONE })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      options: {
-        meeConfig: getMeeConfig("2.1.0")
-      }
+      version: getMEEVersion(MEEVersion.V2_0_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX_ONE,
+      version: getMEEVersion(MEEVersion.V2_0_0)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      options: {
-        meeConfig: getMeeConfig("1.0.0")
-      }
+      version: getMEEVersion(MEEVersion.V2_1_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V1_0_0)
     })
   }
 }
@@ -74,7 +80,7 @@ async function processChain(
   account: ReturnType<typeof privateKeyToAccount>,
   nexusParams: {
     accountIndex?: bigint
-    options?: NexusOptions
+    version: MEEVersionConfig
   }
 ) {
   try {
@@ -116,7 +122,7 @@ async function processChain(
       signer: account,
       transport: http(),
       index: nexusParams.accountIndex ?? 0n,
-      options: nexusParams.options
+      version: nexusParams.version
     })
 
     const nexusAddress = await nexus.getAddress()

@@ -20,6 +20,8 @@ import {
 } from "../../../clients/createBicoBundlerClient"
 import type { Validator } from "../toValidator"
 import { toDefaultModule } from "./toDefaultModule"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../smartSessions"
 
 describe("modules.toDefaultModule", () => {
   let ecosystem: Ecosystem
@@ -49,7 +51,8 @@ describe("modules.toDefaultModule", () => {
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
       chain,
-      transport: http(infra.network.rpcUrl)
+      transport: http(infra.network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusClient = createSmartAccountClient({

@@ -19,8 +19,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
-import { toMeeK1Module } from "../modules/validators/meeK1"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 
 describe("nexus.account.addresses", async () => {
   let network: NetworkConfig
@@ -54,7 +55,8 @@ describe("nexus.account.addresses", async () => {
     nexusAccount = await toNexusAccount({
       chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     nexusClient = createSmartAccountClient({
@@ -77,7 +79,8 @@ describe("nexus.account.addresses", async () => {
       accountAddress: someoneElsesNexusAddress,
       chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      transport: http(network.rpcUrl),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
     })
 
     const newNexusClient = createSmartAccountClient({
@@ -100,7 +103,8 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: base,
         signer: eoaAccount,
-        transport: http(MAINNET_RPC_URLS[base.id])
+        transport: http(MAINNET_RPC_URLS[base.id]),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
       }),
       mock: true,
       transport: http(bundlerUrl)
@@ -110,7 +114,8 @@ describe("nexus.account.addresses", async () => {
       account: await toNexusAccount({
         chain: baseSepolia,
         signer: eoaAccount,
-        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
       }),
       mock: true,
       transport: http(bundlerUrl)

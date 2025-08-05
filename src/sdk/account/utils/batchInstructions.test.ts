@@ -24,6 +24,8 @@ import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import { mcUSDC } from "../../constants/tokens"
 import { batchInstructions } from "./batchInstructions"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 
 const createBaseApproval = (account: MultichainSmartAccount, amount: string) =>
   buildApprove(
@@ -104,7 +106,12 @@ describe("utils.batchInstructions", () => {
         targetChainTransport,
         http(MAINNET_RPC_URLS[mainnet.id])
       ],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

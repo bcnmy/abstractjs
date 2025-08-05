@@ -14,6 +14,8 @@ import {
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import buildIntent from "./buildIntent"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 
 describe("mee.buildIntent", () => {
   let network: NetworkConfig
@@ -39,7 +41,11 @@ describe("mee.buildIntent", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -64,7 +70,11 @@ describe("mee.buildIntent", () => {
     const newMcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: privateKeyToAccount(generatePrivateKey())
+      signer: privateKeyToAccount(generatePrivateKey()),
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     const instructions: Instruction[] = await buildIntent(

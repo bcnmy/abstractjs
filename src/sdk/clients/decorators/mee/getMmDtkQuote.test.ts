@@ -38,7 +38,7 @@ import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAcco
 import type { NexusAccount } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { mcUSDC } from "../../../constants/tokens"
-import { toMeeK1Module } from "../../../modules"
+import { getMEEVersion, toMeeK1Module } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
@@ -50,6 +50,7 @@ import {
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
 import { signMMDtkQuote } from "./signMmDtkQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -103,7 +104,11 @@ describe("mee.getMmDtkQuote", () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports,
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     meeClient = await createMeeClient({
@@ -422,7 +427,11 @@ describe("mee.getMmDtkQuote", () => {
       chains: [paymentChain, targetChain],
       transports,
       signer: eoaAccount,
-      validators: [meeK1ModuleWithMMDTKSupport]
+      validators: [meeK1ModuleWithMMDTKSupport],
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
 
     const mcNexusAddress = mcNexusWithMMDTKSupport.addressOn(

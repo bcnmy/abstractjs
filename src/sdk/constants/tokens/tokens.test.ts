@@ -9,6 +9,8 @@ import {
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
 import { addressEquals } from "../../account/utils/Utils"
+import { DEFAULT_MEE_VERSION } from ".."
+import { getMEEVersion } from "../../modules"
 
 describe("mee.tokens", async () => {
   let network: NetworkConfig
@@ -32,7 +34,11 @@ describe("mee.tokens", async () => {
     mcNexus = await toMultichainNexusAccount({
       chains: [paymentChain, targetChain],
       transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      versions: [
+        getMEEVersion(DEFAULT_MEE_VERSION),
+        getMEEVersion(DEFAULT_MEE_VERSION)
+      ]
     })
   })
 

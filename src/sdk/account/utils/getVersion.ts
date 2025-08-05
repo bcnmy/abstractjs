@@ -1,4 +1,5 @@
 import type { Address } from "viem"
+import { MEEVersion } from "../../constants"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -177,11 +178,9 @@ export const isVersionNewer = (
   return comparison > 0
 }
 
-export type MEEVersion = `${number}.${number}.${number}`
-
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 
-export type AddressConfig = {
+export type MEEVersionConfig = {
   /** The version of the Nexus account */
   version: MEEVersion
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
