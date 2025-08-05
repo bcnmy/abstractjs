@@ -16,7 +16,7 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
-import { type NetworkConfig } from "../../test/testUtils"
+import type { NetworkConfig } from "../../test/testUtils"
 import { createMeeClient } from "../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
 import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
