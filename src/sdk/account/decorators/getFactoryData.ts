@@ -8,7 +8,7 @@ import {
   toHex
 } from "viem"
 import { isVersionOlder } from ".."
-import type { MEEVersion } from "../../constants"
+import { MEEVersion } from "../../constants"
 import { NexusBootstrapAbi } from "../../constants/abi/NexusBootstrapAbi"
 import { NexusLegacyBootstrapAbi } from "../../constants/abi/NexusLegacyBootstrapAbi"
 import type {
@@ -53,7 +53,7 @@ export type GetInitDataWithRegistryParams = {
 export const getInitDataWithRegistry = (
   params: GetInitDataWithRegistryParams
 ): Hex => {
-  const bootstrapData = isVersionOlder(params.meeVersion, "2.0.0")
+  const bootstrapData = isVersionOlder(params.meeVersion, MEEVersion.V2_0_0)
     ? encodeFunctionData({
         abi: NexusLegacyBootstrapAbi,
         functionName: "initNexusWithSingleValidator",

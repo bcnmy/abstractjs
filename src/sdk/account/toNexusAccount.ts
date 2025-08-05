@@ -40,11 +40,7 @@ import {
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
-import {
-  DEFAULT_MEE_VERSION,
-  ENTRY_POINT_ADDRESS,
-  MEEVersion
-} from "../constants"
+import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
 import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
 import { toComposableExecutor, toComposableFallback } from "../modules"
@@ -53,7 +49,6 @@ import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
-import { getMEEVersion } from "../modules/utils/getMeeConfig"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
@@ -295,53 +290,6 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
   }
 >
 
-// Resolves the latest default nexus version or resolves the user defined version for nexus smart account
-const resolveMeeConfig = async (
-  hasCancun: boolean,
-  customMeeConfig?: MEEVersionConfig
-): Promise<MEEVersionConfig> => {
-  let meeConfig: MEEVersionConfig
-
-  if (customMeeConfig) {
-    // If the old version + no cancun ? new nexus is not supported
-    const unsupportedVersion =
-      !isVersionOlder(customMeeConfig.version, "2.0.0") && !hasCancun
-
-    if (unsupportedVersion) {
-      throw new Error(
-        "MEE version is not supported for this chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun."
-      )
-    }
-
-    const defaultMeeConfig = getMEEVersion(customMeeConfig.version)
-
-    meeConfig = {
-      version: customMeeConfig.version || defaultMeeConfig.version,
-      accountId: customMeeConfig.accountId || defaultMeeConfig.accountId,
-      implementationAddress:
-        customMeeConfig.implementationAddress ||
-        defaultMeeConfig.implementationAddress,
-      bootStrapAddress:
-        customMeeConfig.bootStrapAddress || defaultMeeConfig.bootStrapAddress,
-      factoryAddress:
-        customMeeConfig.factoryAddress || defaultMeeConfig.factoryAddress,
-      validatorAddress:
-        customMeeConfig.validatorAddress || defaultMeeConfig.validatorAddress,
-      defaultValidatorAddress:
-        customMeeConfig.defaultValidatorAddress ||
-        defaultMeeConfig.defaultValidatorAddress,
-      moduleRegistry:
-        customMeeConfig.moduleRegistry || defaultMeeConfig.moduleRegistry
-    }
-  } else {
-    meeConfig = hasCancun
-      ? getMEEVersion(DEFAULT_MEE_VERSION)
-      : getMEEVersion(MEEVersion.V1_0_0)
-  }
-
-  return meeConfig
-}
-
 const prepareValidators = async (
   signer: Signer,
   meeConfig: MEEVersionConfig,
@@ -375,7 +323,7 @@ const prepareExecutors = (
 ): GenericModuleConfig[] => {
   let executors: GenericModuleConfig[] = []
 
-  if (isVersionOlder(meeConfig.version, "2.0.0")) {
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     // if using <=1.0.0, add the composable executor
     const composableExecutor = toComposableExecutor()
     executors = [composableExecutor]
@@ -398,7 +346,7 @@ const prepareFallbacks = (
 ): GenericModuleConfig[] => {
   let fallbacks: GenericModuleConfig[] = []
 
-  if (isVersionOlder(meeConfig.version, "2.0.0")) {
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     // if nexus version <=1.0.0, add the composable fallback
     const composableFallback = toComposableFallback()
     fallbacks = [composableFallback]
@@ -504,16 +452,23 @@ export const toNexusAccount = async (
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
     initData: customInitData,
-    version
+    version: meeConfig
   } = parameters
 
-  // check if the chain supports > 1.2.0
-  const hasCancun = await supportsCancun({
-    chain,
-    transport: transportConfig
-  })
+  // If the old version + no cancun ? new nexus is not supported
+  if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    // check if the chain supports > 1.2.0
+    const hasCancun = await supportsCancun({
+      chain,
+      transport: transportConfig
+    })
 
-  const meeConfig = await resolveMeeConfig(hasCancun, version)
+    if (!hasCancun) {
+      throw new Error(
+        "MEE version is not supported for this chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun."
+      )
+    }
+  }
 
   const signer = await toSigner({ signer: _signer })
 
