@@ -19,9 +19,17 @@ import type { BaseInstructionsParams } from "../build"
 import { buildComposableUtil } from "./buildComposable"
 import buildTransfer from "./buildTransfer"
 
+/**
+ * Default Across Intent Wrapper address
+ */
+const defaultAcrossIntentWrapperAddress = "0x000000E2E47D694bDAa5a46056A894e747ED2854"
+
+/**
+ * Across Intent Wrapper address per chain
+ * Should be set for a chain, if it does not match the default one on this given chain
+ */
 const acrossIntentWrappers = createChainAddressMap([
-  [Number(base.id), "0x000000E2E47D694bDAa5a46056A894e747ED2854"],
-  [Number(optimism.id), "0x000000E2E47D694bDAa5a46056A894e747ED2854"]
+  // [Number(base.id), "0x000000E2E47D694bDAa5a46056A894e747ED2854"],
 ])
 
 // 🚀 Across SpokePool addresses
@@ -74,6 +82,8 @@ export const buildAcrossIntentComposable = async (
     throw new Error("Destination chain and origin should be different")
   }
 
+  const acrossIntentWrapperOnOrigin = _getAcrossIntentWrapper(originChainId)
+
   // 1. Transfer from Nexus to Wrapper
   // It is required because Across SpokePool deposit functions
   // do transferFrom(msg.sender, address(this), amount)
@@ -84,7 +94,7 @@ export const buildAcrossIntentComposable = async (
       chainId: originChainId,
       tokenAddress: inputToken,
       amount: runtimeERC20BalanceOf(inputAmountRuntimeParams), // use without changes
-      recipient: acrossIntentWrappers[originChainId]
+      recipient: acrossIntentWrapperOnOrigin
     }
   )
 
@@ -123,7 +133,7 @@ export const buildAcrossIntentComposable = async (
   ])
 
   const wrapperRuntimeBalance = runtimeERC20BalanceOf({
-    targetAddress: acrossIntentWrappers[originChainId],
+    targetAddress: acrossIntentWrapperOnOrigin,
     tokenAddress: inputAmountRuntimeParams.tokenAddress,
     constraints: inputAmountRuntimeParams.constraints
   })
@@ -132,7 +142,7 @@ export const buildAcrossIntentComposable = async (
     baseParams,
     {
       // BuildComposableParameters
-      to: acrossIntentWrappers[originChainId],
+      to: acrossIntentWrapperOnOrigin,
       abi: acrossSpokePoolWrapperAbi,
       functionName: "depositV3Composable",
       args: [
@@ -208,6 +218,26 @@ export type SuggestedFeesReturnType = {
 
 export type GetSuggestedFeesErrorType = Error
 
+export type AcrossFeesApiResponse = {
+  totalRelayFee: { pct: string; total: string }
+  relayerCapitalFee: { pct: string; total: string }
+  relayerGasFee: { pct: string; total: string }
+  lpFee: { pct: string; total: string }
+  timestamp: string
+  isAmountTooLow: boolean
+  quoteBlock: string
+  spokePoolAddress: string
+  expectedFillTimeSec: string
+  fillDeadline: string
+  limits: {
+    minDeposit: string
+    maxDeposit: string
+    maxDepositInstant: string
+    maxDepositShortDelay: string
+    recommendedDepositInstant: string
+  }
+}
+
 /**
  * Gets suggested fees for Across Protocol bridge transfer
  *
@@ -274,25 +304,7 @@ export async function getAcrossSuggestedFees(
     )
   }
 
-  const data = (await response.json()) as {
-    totalRelayFee: { pct: string; total: string }
-    relayerCapitalFee: { pct: string; total: string }
-    relayerGasFee: { pct: string; total: string }
-    lpFee: { pct: string; total: string }
-    timestamp: string
-    isAmountTooLow: boolean
-    quoteBlock: string
-    spokePoolAddress: string
-    expectedFillTimeSec: string
-    fillDeadline: string
-    limits: {
-      minDeposit: string
-      maxDeposit: string
-      maxDepositInstant: string
-      maxDepositShortDelay: string
-      recommendedDepositInstant: string
-    }
-  }
+  const data = (await response.json()) as AcrossFeesApiResponse
 
   // Parse response to bigint types
   return {
@@ -380,4 +392,11 @@ export function calculateAcrossFees(
  */
 export function formatAcrossFeePercentage(pct: bigint): string {
   return formatUnits(pct, 16) // Across uses 1e18 for 100%, so 1e16 for 1%
+}
+
+const _getAcrossIntentWrapper = (chainId: number) => {
+  if (acrossIntentWrappers[chainId]) {
+    return acrossIntentWrappers[chainId]
+  }
+  return defaultAcrossIntentWrapperAddress
 }
