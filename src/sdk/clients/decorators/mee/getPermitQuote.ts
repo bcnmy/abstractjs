@@ -84,12 +84,12 @@ export const getPermitQuote = async (
     throw new Error("Custom call trigger is not supported for permit quotes")
   }
 
-  const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
-  const scaAddress = account_.addressOn(trigger.chainId, true)
+  const owner = account_.signer.address // sender is an EOA which is the signer for the companion account_
+  const spender = account_.addressOn(trigger.chainId, true)
 
   // By default the trigger amount will be deposited to sca account.
   // if a custom recipient is defined ? It will deposit to the recipient address
-  const recipient = trigger.recipientAddress || scaAddress
+  const recipient = trigger.recipientAddress || spender
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -97,9 +97,9 @@ export const getPermitQuote = async (
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
-      sender,
-      scaAddress,
-      recipient,
+      owner, // EOA address
+      spender, // SCA address who gets the approval for spend initiation
+      recipient, // Either the SCA takes amount for itself or transferred for custom recipient
       account: account_
     })
 

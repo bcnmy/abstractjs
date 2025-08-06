@@ -4,7 +4,6 @@ import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import type { RuntimeValue } from "../../../modules"
-import { isPermitSupported } from "../../../modules/utils/Helpers"
 import {
   greaterThanOrEqualTo,
   runtimeERC20AllowanceOf
@@ -12,7 +11,7 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
-import { getPaymentToken } from "./getPaymentToken"
+import { type GetPaymentTokenPayload, getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
 import {
   type CleanUp,
@@ -20,6 +19,7 @@ import {
   type GetQuoteParams,
   type Instruction
 } from "./getQuote"
+import { getQuoteType } from "./getQuoteType"
 import type { Trigger } from "./signPermitQuote"
 
 /**
@@ -103,44 +103,43 @@ export const getFusionQuote = async (
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
+  // if it is not mm-dtk, then it is permit or on-chain
 
-  // if custom call is provided, we use on-chain tx fusion mode
-  if ("call" in parameters.trigger) {
-    return getOnChainQuote(client, parameters)
+  const trigger = parameters.trigger
+
+  let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+
+  if (trigger.tokenAddress) {
+    paymentTokenInfo = await getPaymentToken(client, {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId
+    })
   }
 
-  const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
-  let permitEnabled = false
+  const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
 
-  if (paymentTokenInfo.paymentToken) {
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
-  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-    const modularSmartAccount = client.account.deploymentOn(
-      parameters.trigger.chainId,
-      true
-    )
+  const signatureType = await getQuoteType(
+    walletClient,
+    parameters,
+    paymentTokenInfo
+  )
 
-    permitEnabled = await isPermitSupported(
-      modularSmartAccount.walletClient,
-      parameters.trigger.tokenAddress
-    )
-  } else {
-    throw new Error(
-      `Payment token (${parameters.trigger.tokenAddress}) not supported for chain ${parameters.trigger.chainId}`
-    )
+  switch (signatureType) {
+    case "permit":
+      return getPermitQuote(client, parameters)
+    case "onchain":
+      return getOnChainQuote(client, parameters)
+    default:
+      throw new Error("Invalid quote type for fusion quote")
   }
-
-  return permitEnabled
-    ? getPermitQuote(client, parameters)
-    : getOnChainQuote(client, parameters)
 }
 
 export type PrepareInstructionsParams = {
   resolvedInstructions: Instruction[]
   trigger: Trigger
-  sender: Address
+  owner: Address
+  spender: Address
   recipient: Address
-  scaAddress: Address
   account: MultichainSmartAccount
 }
 
@@ -148,14 +147,8 @@ export const prepareInstructions = async (
   client: BaseMeeClient,
   parameters: PrepareInstructionsParams
 ) => {
-  const {
-    resolvedInstructions,
-    trigger,
-    sender,
-    scaAddress,
-    recipient,
-    account
-  } = parameters
+  const { resolvedInstructions, trigger, owner, spender, recipient, account } =
+    parameters
 
   let triggerAmount = 0n
 
@@ -163,9 +156,9 @@ export const prepareInstructions = async (
     const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
     if (trigger.tokenAddress === zeroAddress) {
       const [balance, gasPrice, gasLimit] = await Promise.all([
-        publicClient.getBalance({ address: sender }),
+        publicClient.getBalance({ address: owner }),
         publicClient.getGasPrice(),
-        publicClient.estimateGas({ account: sender, to: sender, value: 1n }) // Dummy values
+        publicClient.estimateGas({ account: owner, to: recipient, value: 1n }) // Dummy values
       ])
 
       // 50% gas limit buffer to avoid failures
@@ -189,7 +182,7 @@ export const prepareInstructions = async (
         address: trigger.tokenAddress,
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [sender]
+        args: [owner]
       })
     }
   } else {
@@ -209,8 +202,8 @@ export const prepareInstructions = async (
   // the remaining funds after the fee deduction.
   if (trigger.useMaxAvailableFunds && trigger.tokenAddress !== zeroAddress) {
     transferFromAmount = runtimeERC20AllowanceOf({
-      owner: sender,
-      spender: scaAddress,
+      owner,
+      spender,
       tokenAddress: trigger.tokenAddress,
       constraints: [greaterThanOrEqualTo(1n)]
     })
@@ -241,7 +234,7 @@ export const prepareInstructions = async (
       chainId: trigger.chainId,
       amount: transferFromAmount,
       recipient,
-      sender,
+      sender: owner,
       gasLimit: triggerGasLimit
     }
   }
