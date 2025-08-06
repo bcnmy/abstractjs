@@ -14,10 +14,10 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { testnetMcUSDC } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { Instruction } from "./getQuote"
-import { testnetMcUSDC } from "../../../constants"
 import { getQuoteType } from "./getQuoteType"
 import signQuote, {
   formatSignedQuotePayload,

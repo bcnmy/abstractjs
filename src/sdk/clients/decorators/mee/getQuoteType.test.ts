@@ -8,10 +8,10 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../../constants"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { getQuoteType } from "./getQuoteType"
-import { getMEEVersion } from "../../../modules"
 
 describe("mee.getQuoteType", () => {
   let network: NetworkConfig
