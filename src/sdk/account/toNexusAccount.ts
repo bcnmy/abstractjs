@@ -474,10 +474,9 @@ export const toNexusAccount = async (
   const addressesToDeploymentSet = new Set([
     meeConfig.bootStrapAddress,
     meeConfig.defaultValidatorAddress,
-    meeConfig.factoryAddress,
-    meeConfig.implementationAddress,
     meeConfig.validatorAddress,
-    meeConfig.ethForwarderAddress
+    meeConfig.factoryAddress,
+    meeConfig.implementationAddress
   ])
 
   if (meeConfig.moduleRegistry) {
