@@ -470,16 +470,22 @@ export const toNexusAccount = async (
 
   const publicClient = createPublicClient({ chain, transport: transportConfig })
 
+  // All these version specific contract addresses were checked whether it was deployed or not.
   const addressesToDeploymentSet = new Set([
     meeConfig.bootStrapAddress,
     meeConfig.defaultValidatorAddress,
     meeConfig.factoryAddress,
     meeConfig.implementationAddress,
-    meeConfig.validatorAddress
+    meeConfig.validatorAddress,
+    meeConfig.ethForwarderAddress
   ])
 
   if (meeConfig.moduleRegistry) {
     addressesToDeploymentSet.add(meeConfig.moduleRegistry.registryAddress)
+  }
+
+  if (meeConfig.composableModuleAddress) {
+    addressesToDeploymentSet.add(meeConfig.composableModuleAddress)
   }
 
   // Filtering zero address because sometimes the default validator is zeroAddress which needs to be excluded

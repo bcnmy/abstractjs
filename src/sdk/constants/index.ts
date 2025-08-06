@@ -29,10 +29,11 @@ export enum MEEVersion {
 }
 
 // NOTE: Update this description, whenever changing the new default version
-/** Default version is 2.1.0.
- * New K1 Mee module introduced that allows ERC-7702-delegated EOAs owning Nexus accounts
+/** Default version is 2.0.0.
+ * Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
+ * MEE K1 Validator is pre-installed as a default validator module.
  */
-export const DEFAULT_MEE_VERSION: MEEVersion = MEEVersion.V2_1_0
+export const DEFAULT_MEE_VERSION: MEEVersion = MEEVersion.V2_0_0
 
 export const ENTRY_POINT_ADDRESS: Address =
   "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
