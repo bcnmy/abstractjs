@@ -14,11 +14,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts"
 import { type MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
-import {
-  DEFAULT_MEE_VERSION,
-  MEEVersion,
-  TokenWithPermitAbi
-} from "../src/sdk/constants"
+import { MEEVersion, TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
 
@@ -67,6 +63,10 @@ async function main() {
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
       version: getMEEVersion(MEEVersion.V2_1_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V1_1_0)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,

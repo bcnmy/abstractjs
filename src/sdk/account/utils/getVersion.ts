@@ -195,10 +195,14 @@ export type MEEVersionConfig = {
   validatorAddress: Address
   /** The default validator address for the account */
   defaultValidatorAddress: Address
+  /** The forwarder address for native token transfers for fusion mode */
+  ethForwarderAddress: Address
   /** The module registry for the account */
   moduleRegistry?: {
     registryAddress: Address
     attesters: Address[]
     attesterThreshold: number
   }
+  /** The composable module address for the account */
+  composableModuleAddress?: Address
 }

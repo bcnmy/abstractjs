@@ -301,7 +301,7 @@ const prepareValidators = async (
     return customValidators
   }
 
-  if (meeConfig.version === "1.0.0") {
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     validators = [
       toMeeK1Module({
         signer: await toSigner({ signer }),
@@ -324,8 +324,14 @@ const prepareExecutors = (
   let executors: GenericModuleConfig[] = []
 
   if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    if (!meeConfig.composableModuleAddress) {
+      throw new Error("Composable module address is missing")
+    }
+
     // if using <=1.0.0, add the composable executor
-    const composableExecutor = toComposableExecutor()
+    const composableExecutor = toComposableExecutor(
+      meeConfig.composableModuleAddress
+    )
     executors = [composableExecutor]
 
     for (const executor of customExecutors || []) {
@@ -347,8 +353,14 @@ const prepareFallbacks = (
   let fallbacks: GenericModuleConfig[] = []
 
   if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    if (!meeConfig.composableModuleAddress) {
+      throw new Error("Composable module address is missing")
+    }
+
     // if nexus version <=1.0.0, add the composable fallback
-    const composableFallback = toComposableFallback()
+    const composableFallback = toComposableFallback(
+      meeConfig.composableModuleAddress
+    )
     fallbacks = [composableFallback]
 
     for (const fallback of customFallbacks || []) {
@@ -371,7 +383,8 @@ const prepareFactoryData = (
   let initData: Hex = "0x"
 
   switch (meeConfig.version) {
-    case "1.0.0": {
+    case MEEVersion.V1_0_0:
+    case MEEVersion.V1_1_0: {
       if (!meeConfig.moduleRegistry) {
         throw new Error("Module registry not found in nexus config")
       }
