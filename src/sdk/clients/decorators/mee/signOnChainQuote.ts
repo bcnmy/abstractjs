@@ -10,12 +10,12 @@ import type { BuildApproveParameters } from "../../../account/decorators/instruc
 import type { BuildDefaultParameters } from "../../../account/decorators/instructions/buildDefaultInstructions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
+import { getMEEVersion } from "../../../modules"
 import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
-import { getMEEVersion } from "../../../modules"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 

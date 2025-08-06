@@ -1,4 +1,4 @@
-import { type Address } from "viem"
+import type { Address } from "viem"
 import type { MinimalModuleConfig } from "../account"
 
 export const toComposableExecutor = (
