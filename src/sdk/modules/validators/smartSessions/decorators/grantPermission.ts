@@ -27,12 +27,12 @@ import {
   type Prettify,
   type PublicClient,
   type RequiredBy,
-  type Transport,
-  zeroAddress
+  type Transport
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt } from "../Helpers"
+import { getMEEVersion } from "../../../utils"
 
 export type PrettifiedSession = {
   // The optional address of the validator that will be used to validate the session. Default is the ownable validator.
@@ -117,6 +117,12 @@ async function grantPermission<
   const { sessions, accountsAndChainIds, clients, signer } =
     await prepareForGrantingPermission(nexusClient, parameters)
 
+  const account = nexusClient?.account || parameters[0].account
+
+  if (!account) {
+    throw new Error("Account not set")
+  }
+
   const chainDigests: { chainId: bigint; sessionDigest: `0x${string}` }[] = []
   const chainSessions: ChainSession[] = []
   for (const session of sessions) {
@@ -189,6 +195,8 @@ async function grantPermission<
     threshold: 1
   })
 
+  const meeConfig = getMEEVersion(account.version)
+
   const sessionDetailsArray = sessions.map((session) => {
     const permissionId = getPermissionId({
       session: session
@@ -211,7 +219,7 @@ async function grantPermission<
           sessionToEnable: session,
           permissionEnableSig: permissionEnableSig
         },
-        validator: zeroAddress, // default validator
+        validator: meeConfig.defaultValidatorAddress,
         accountType
       }
     }

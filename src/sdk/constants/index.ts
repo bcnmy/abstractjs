@@ -51,7 +51,7 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837", // Nexus Factory Address
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
-    validatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95", // K1 MEE Validator Address
+    validatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE", // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1"
   },
