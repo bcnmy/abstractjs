@@ -81,9 +81,11 @@ describe.skipIf(!paymasterTruthy())("bico.paymaster", async () => {
 
     nexusAccount = await toNexusAccount({
       signer: account,
-      chain,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusAccountAddress = await nexusAccount.getAddress()

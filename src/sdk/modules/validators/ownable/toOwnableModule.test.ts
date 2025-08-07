@@ -59,10 +59,12 @@ describe("modules.toOwnableModule", () => {
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      validators: [ownablesModule],
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
+      validators: [ownablesModule]
     })
 
     nexusClient = createSmartAccountClient({

@@ -41,9 +41,11 @@ const publicClient = createPublicClient({
 const main = async () => {
   const nexusAccount = await toNexusAccount({
     signer: account,
-    chain,
-    transport: http(),
-    version: getMEEVersion(DEFAULT_MEE_VERSION)
+    chainConfiguration: {
+      chain,
+      transport: http(),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
+    }
   })
 
   const nexusBalance = await publicClient.getBalance({

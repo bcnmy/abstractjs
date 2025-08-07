@@ -48,10 +48,12 @@ describe("account.decorators", async () => {
     testClient = toTestClient(chain, getTestAccount(5))
 
     nexusAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({

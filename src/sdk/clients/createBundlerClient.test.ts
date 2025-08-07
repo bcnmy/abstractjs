@@ -70,10 +70,14 @@ describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
     chain = baseSepolia
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -134,9 +138,11 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
     beforeAll(async () => {
       nexusAccount = await toNexusAccount({
         signer: account,
-        chain,
-        transport: http(TESTNET_RPC_URLS[chain.id]),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        chainConfiguration: {
+          chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       })
 
       nexusAccountAddress = await nexusAccount.getAddress()

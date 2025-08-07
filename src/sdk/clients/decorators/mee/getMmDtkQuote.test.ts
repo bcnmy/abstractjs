@@ -103,12 +103,18 @@ describe("mee.getMmDtkQuote", () => {
     })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports,
       signer: eoaAccount,
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: transports[0],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: transports[1],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
 
@@ -425,14 +431,20 @@ describe("mee.getMmDtkQuote", () => {
     })
 
     const mcNexusWithMMDTKSupport = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports,
       signer: eoaAccount,
-      validators: [meeK1ModuleWithMMDTKSupport],
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
-      ]
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: transports[0],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: transports[1],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ],
+      validators: [meeK1ModuleWithMMDTKSupport]
     })
 
     const mcNexusAddress = mcNexusWithMMDTKSupport.addressOn(

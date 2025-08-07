@@ -25,7 +25,9 @@ import {
 } from "../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../clients/decorators/mee/getQuote"
 import type { Trigger } from "../../../clients/decorators/mee/signPermitQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import type { MultichainSmartAccount } from "../../toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../toMultiChainNexusAccount"
 
@@ -76,9 +78,19 @@ describe("mee.buildAcrossIntentComposable", () => {
     })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports,
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: transports[0],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: transports[1],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({

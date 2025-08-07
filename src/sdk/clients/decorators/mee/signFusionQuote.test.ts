@@ -61,13 +61,19 @@ describe("mee.signFusionQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
       index,
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
 

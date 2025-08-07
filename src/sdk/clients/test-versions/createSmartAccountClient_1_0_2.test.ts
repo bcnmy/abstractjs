@@ -72,9 +72,11 @@ describe("nexus.client.1.0.2", async () => {
 
     nexusAccount_1_0_2_custom_validator = await toNexusAccount({
       signer: account_1_0_2,
-      chain: chain_1_0_2,
-      transport: http(network_1_0_2.rpcUrl),
-      version: getMEEVersion(MEEVersion.V1_0_0)
+      chainConfiguration: {
+        chain: chain_1_0_2,
+        transport: http(network_1_0_2.rpcUrl),
+        version: getMEEVersion(MEEVersion.V1_0_0)
+      }
     })
 
     nexusClient_1_0_2_custom_validator = createSmartAccountClient({
@@ -286,9 +288,11 @@ describe("nexus.client.1.0.2", async () => {
 
     const ethersAccount2 = await toNexusAccount({
       signer: wallet as EthersWallet,
-      chain: chain_1_0_2,
-      transport: http(network_1_0_2.rpcUrl),
-      version: getMEEVersion(MEEVersion.V1_0_0)
+      chainConfiguration: {
+        chain: chain_1_0_2,
+        transport: http(network_1_0_2.rpcUrl),
+        version: getMEEVersion(MEEVersion.V1_0_0)
+      }
     })
 
     const ethersNexusClient2 = createSmartAccountClient({
@@ -310,9 +314,11 @@ describe("nexus.client.1.0.2", async () => {
 
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
-      chain: chain_1_0_2,
-      transport: http(network_1_0_2.rpcUrl),
-      version: getMEEVersion(MEEVersion.V1_0_0)
+      chainConfiguration: {
+        chain: chain_1_0_2,
+        transport: http(network_1_0_2.rpcUrl),
+        version: getMEEVersion(MEEVersion.V1_0_0)
+      }
     })
 
     const ethersNexusClient = createSmartAccountClient({
@@ -323,9 +329,11 @@ describe("nexus.client.1.0.2", async () => {
 
     const etherAccountCustomValidator = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
-      chain: chain_1_0_2,
-      transport: http(network_1_0_2.rpcUrl),
-      version: getMEEVersion(MEEVersion.V1_0_0)
+      chainConfiguration: {
+        chain: chain_1_0_2,
+        transport: http(network_1_0_2.rpcUrl),
+        version: getMEEVersion(MEEVersion.V1_0_0)
+      }
     })
 
     const ethersNexusClient2 = createSmartAccountClient({

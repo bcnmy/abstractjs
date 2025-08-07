@@ -120,13 +120,21 @@ export type PrevalidationHookModuleConfig = GenericModuleConfig & {
 }
 
 /**
- * Parameters for creating a Nexus Smart Account
+ * Parameters for chain configuration
  */
-export type ToNexusSmartAccountParameters = {
+export type ChainConfiguration = {
   /** The blockchain network */
   chain: Chain
   /** The transport configuration */
   transport: ClientConfig["transport"]
+  /** MEE version config */
+  version: MEEVersionConfig
+}
+
+/**
+ * Parameters for creating a Nexus Smart Account
+ */
+export type ToNexusSmartAccountParameters = {
   /** The signer account or address */
   signer: OneOf<
     | EthereumProvider
@@ -134,8 +142,8 @@ export type ToNexusSmartAccountParameters = {
     | LocalAccount
     | EthersWallet
   >
-  /** MEE version */
-  version: MEEVersionConfig
+  /** Chain configuration */
+  chainConfiguration: ChainConfiguration
   /** Optional index for the account */
   index?: bigint | undefined
   /** Optional account address override */
@@ -150,24 +158,12 @@ export type ToNexusSmartAccountParameters = {
   hook?: GenericModuleConfig
   /** Optional fallback modules configuration */
   fallbacks?: Array<GenericModuleConfig>
-  /** Optional bootstrap address */
-  bootStrapAddress?: Address
-  /** Optional implementation address */
-  implementationAddress?: Address
-  /** Optional factory address */
-  factoryAddress?: Address
   /** Optional init data */
   initData?: Hex
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
-    | "account"
-    | "cacheTime"
-    | "chain"
-    | "key"
-    | "name"
-    | "pollingInterval"
-    | "rpcSchema"
+    "account" | "cacheTime" | "key" | "name" | "pollingInterval" | "rpcSchema"
   >
 >
 /**
@@ -440,19 +436,24 @@ const prepareFactoryData = (
  * import { mainnet } from 'viem/chains'
  *
  * const account = await toNexusAccount({
- *   chain: mainnet,
- *   transport: http(),
- *   version: getMEEVersion(DEFAULT_MEE_VERSION),
  *   signer: '0x...',
+ *   chainConfiguration: {
+ *     chain: mainnet,
+ *     transport: http(),
+ *     version: getMEEVersion(DEFAULT_MEE_VERSION),
+ *   }
  * })
  */
 export const toNexusAccount = async (
   parameters: ToNexusSmartAccountParameters
 ): Promise<NexusAccount> => {
   const {
-    chain,
-    transport: transportConfig,
     signer: _signer,
+    chainConfiguration: {
+      chain,
+      version: meeConfig,
+      transport: transportConfig
+    },
     index = 0n,
     validators: customValidators,
     executors: customExecutors,
@@ -460,8 +461,7 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    initData: customInitData,
-    version: meeConfig
+    initData: customInitData
   } = parameters
 
   const publicClient = createPublicClient({ chain, transport: transportConfig })

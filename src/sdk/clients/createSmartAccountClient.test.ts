@@ -69,9 +69,11 @@ describe("nexus.client", async () => {
 
     const nexusAccount = await toNexusAccount({
       signer: account,
-      chain,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({
@@ -269,16 +271,20 @@ describe("nexus.client", async () => {
 
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
-      chain,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
-      chain,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -304,9 +310,11 @@ describe("nexus.client", async () => {
 
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
-      chain,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const ethersNexusClient = createSmartAccountClient({

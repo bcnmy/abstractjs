@@ -6,14 +6,19 @@ import { TESTNET_RPC_URLS } from "../../../test/testSetup"
 import { getBalance } from "../../../test/testUtils"
 import { testnetMcUSDC } from "../../constants"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
+import { getMEEVersion } from "../../modules"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 
 describe("mee.getGasTankBalance", () => {
   let gasTankAccount: GasTankAccount
 
   beforeAll(async () => {
     gasTankAccount = await toGasTankAccount({
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-      chain: baseSepolia,
+      chainConfiguration: {
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        chain: baseSepolia,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: generatePrivateKey()
     })
   })

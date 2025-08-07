@@ -24,10 +24,14 @@ describe("mee.multichainRead", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

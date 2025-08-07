@@ -76,11 +76,15 @@ describe.runIf(runPaidTests)("mee.buildComposable", () => {
     })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
       index: 1n, // Added based on the suggestion by Joe to prevent the collision with nonce,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({

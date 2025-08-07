@@ -92,10 +92,12 @@ describe("nexus.account", async () => {
     })
 
     nexusAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({
@@ -114,10 +116,12 @@ describe("nexus.account", async () => {
 
   test("should check isValidSignature using EIP-6492", async () => {
     const undeployedAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION),
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       index: 102n // undeployed
     })
 

@@ -47,12 +47,18 @@ describe("mee.toMultiChainNexusAccount", async () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
   })
@@ -60,11 +66,17 @@ describe("mee.toMultiChainNexusAccount", async () => {
   test("should create multichain account with correct parameters", async () => {
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
 
@@ -86,11 +98,9 @@ describe("mee.toMultiChainNexusAccount", async () => {
     await expect(
       toMultichainNexusAccount({
         signer: eoaAccount,
-        chains: [],
-        transports: [],
-        versions: []
+        chainConfigurations: []
       })
-    ).rejects.toThrow("No chains provided")
+    ).rejects.toThrow("No chain configuration provided")
   })
 
   test("should have configured accounts correctly", async () => {
@@ -99,10 +109,12 @@ describe("mee.toMultiChainNexusAccount", async () => {
 
   test("should sign message using MEE Compliant Nexus Account", async () => {
     const nexus = await toNexusAccount({
-      chain: baseSepolia,
       signer: eoaAccount,
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain: baseSepolia,
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     expect(isAddress(nexus.address)).toBeTruthy()
@@ -173,14 +185,17 @@ describe("mee.toMultiChainNexusAccount", async () => {
     test("should throw an error if the version is not supported or deployed for the chain", async () => {
       await expect(
         toNexusAccount({
-          chain: base,
           signer: eoaAccount,
-          transport: http(TESTNET_RPC_URLS[base.id]),
-          version: {
-            ...getMEEVersion(MEEVersion.V2_0_0),
-            // Forcefully override this address, so it doesn't have any byte code.
-            // This indirectly tests the MEE version contract unavailability for brand new chains
-            implementationAddress: "0x0000000000000000000000000000000000000001"
+          chainConfiguration: {
+            chain: base,
+            transport: http(MAINNET_RPC_URLS[base.id]),
+            version: {
+              ...getMEEVersion(MEEVersion.V2_0_0),
+              // Forcefully override this address, so it doesn't have any byte code.
+              // This indirectly tests the MEE version contract unavailability for brand new chains
+              implementationAddress:
+                "0x0000000000000000000000000000000000000001"
+            }
           }
         })
       ).rejects.toThrow()
@@ -189,26 +204,34 @@ describe("mee.toMultiChainNexusAccount", async () => {
       const notCancunChain = polygon
       await expect(
         toNexusAccount({
-          chain: notCancunChain,
           signer: eoaAccount,
-          transport: http(TESTNET_RPC_URLS[notCancunChain.id]),
-          version: getMEEVersion(MEEVersion.V2_0_0)
+          chainConfiguration: {
+            chain: notCancunChain,
+            transport: http(MAINNET_RPC_URLS[notCancunChain.id]),
+            version: getMEEVersion(MEEVersion.V2_0_0)
+          }
         })
       ).rejects.toThrow()
     })
     test("should create an account with the correct nexus version", async () => {
       const nexusAccount = await toMultichainNexusAccount({
         signer: eoaAccount,
-        chains: [baseSepolia, base, optimism],
-        transports: [
-          http(TESTNET_RPC_URLS[baseSepolia.id]),
-          http(MAINNET_RPC_URLS[base.id]),
-          http(TESTNET_RPC_URLS[optimism.id])
-        ],
-        versions: [
-          getMEEVersion(MEEVersion.V1_0_0),
-          getMEEVersion(DEFAULT_MEE_VERSION),
-          getMEEVersion(DEFAULT_MEE_VERSION)
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(MEEVersion.V1_0_0)
+          },
+          {
+            chain: base,
+            transport: http(MAINNET_RPC_URLS[base.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: optimism,
+            transport: http(MAINNET_RPC_URLS[optimism.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
         ]
       })
       expect(nexusAccount.deployments.length).toEqual(3)
@@ -261,36 +284,52 @@ describe("mee.toMultiChainNexusAccount", async () => {
       test("works with mee version 1.0.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
-          chains: [baseSepolia],
-          transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          versions: [getMEEVersion(MEEVersion.V1_0_0)]
+          chainConfigurations: [
+            {
+              chain: baseSepolia,
+              transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+              version: getMEEVersion(MEEVersion.V1_0_0)
+            }
+          ]
         })
         await executeTx(nexusAccount)
       })
       test("works with mee version 1.1.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
-          chains: [baseSepolia],
-          transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          versions: [getMEEVersion(MEEVersion.V1_1_0)]
+          chainConfigurations: [
+            {
+              chain: baseSepolia,
+              transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+              version: getMEEVersion(MEEVersion.V1_1_0)
+            }
+          ]
         })
         await executeTx(nexusAccount)
       })
       test("works with mee version 2.0.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
-          chains: [baseSepolia],
-          transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          versions: [getMEEVersion(MEEVersion.V2_0_0)]
+          chainConfigurations: [
+            {
+              chain: baseSepolia,
+              transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+              version: getMEEVersion(MEEVersion.V2_0_0)
+            }
+          ]
         })
         await executeTx(nexusAccount)
       })
       test("works with mee version 2.1.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
-          chains: [baseSepolia],
-          transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-          versions: [getMEEVersion(MEEVersion.V2_1_0)]
+          chainConfigurations: [
+            {
+              chain: baseSepolia,
+              transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+              version: getMEEVersion(MEEVersion.V2_1_0)
+            }
+          ]
         })
         await executeTx(nexusAccount)
       })
@@ -300,12 +339,14 @@ describe("mee.toMultiChainNexusAccount", async () => {
   test("should work with overrides", async () => {
     const nexusAccount = await toMultichainNexusAccount({
       signer: eoaAccount,
-      chains: [baseSepolia],
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-      versions: [
+      chainConfigurations: [
         {
-          ...getMEEVersion(MEEVersion.V2_0_0),
-          factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837"
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: {
+            ...getMEEVersion(MEEVersion.V2_0_0),
+            factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837"
+          }
         }
       ]
     })

@@ -88,12 +88,18 @@ describe("mee.signPermitQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport, targetChainTransport],
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ],
       index
     })
@@ -241,11 +247,15 @@ describe.runIf(runPaidTests)("mee.signPermitQuote - testnet", () => {
     })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)],
-      index: 1n
+      index: 1n,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
     meeClient = await createMeeClient({
       account: mcNexus,

@@ -84,10 +84,12 @@ type StringOrStrings = string | string[]
  *
  * const smartAccountCustomChain = createSmartAccountClient({
  *   account: await toNexusAccount({
- *     chain: customChain,
  *     signer: walletClientWithCustomChain,
- *     version: getMEEVersion(DEFAULT_MEE_VERSION),
- *     transport: http(),
+ *     chainConfiguration: {
+ *        chain: customChain,
+ *        version: getMEEVersion(DEFAULT_MEE_VERSION),
+ *        transport: http(),
+ *     },
  *     mock: true
  *   }),
  *   transport: http(bundlerUrl),

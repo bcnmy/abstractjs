@@ -118,11 +118,13 @@ async function processChain(
 
     // Create the Nexus account for this chain
     const nexus = await toNexusAccount({
-      chain,
+      chainConfiguration: {
+        chain,
+        transport: http(),
+        version: nexusParams.version
+      },
       signer: account,
-      transport: http(),
-      index: nexusParams.accountIndex ?? 0n,
-      version: nexusParams.version
+      index: nexusParams.accountIndex ?? 0n
     })
 
     const nexusAddress = await nexus.getAddress()

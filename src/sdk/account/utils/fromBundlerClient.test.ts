@@ -41,10 +41,12 @@ describe("utils.fromBundlerClient", async () => {
 
   // Create a real Nexus account
   const nexusAccount = await toNexusAccount({
-    chain: mainnet,
     signer,
-    transport,
-    version: getMEEVersion(DEFAULT_MEE_VERSION)
+    chainConfiguration: {
+      chain: mainnet,
+      transport,
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
+    }
   })
 
   // Attach the Nexus account to the bundler client

@@ -25,10 +25,14 @@ describe("mee.sponsorSupertransaction", () => {
     chain = network.chain
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({
@@ -37,8 +41,11 @@ describe("mee.sponsorSupertransaction", () => {
     })
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(network.rpcUrl),
-      chain,
+      chainConfiguration: {
+        transport: http(network.rpcUrl),
+        chain,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: generatePrivateKey()
     })
   })

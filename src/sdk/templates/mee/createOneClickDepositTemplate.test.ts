@@ -56,15 +56,18 @@ describe("createOneClickDepositTemplate", () => {
     destinationChain = sepolia
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [sourceChain, destinationChain],
-      transports: [
-        http(network.rpcUrl),
-        http(TESTNET_RPC_URLS[destinationChain.id])
-      ],
       signer: eoaAccount,
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: sourceChain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: destinationChain,
+          transport: http(TESTNET_RPC_URLS[destinationChain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
   })

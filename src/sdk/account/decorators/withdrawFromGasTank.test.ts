@@ -19,6 +19,8 @@ import {
 import { testnetMcUSDC } from "../../constants"
 import { runtimeERC20BalanceOf } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
+import { getMEEVersion } from "../../modules"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -41,8 +43,11 @@ describe("mee.withdrawFromGasTank", () => {
     gasTankEoaAccount = privateKeyToAccount(gasTankPk)
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(network.rpcUrl),
-      chain: chain,
+      chainConfiguration: {
+        transport: http(network.rpcUrl),
+        chain: chain,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: gasTankPk,
       options: {
         mee: {

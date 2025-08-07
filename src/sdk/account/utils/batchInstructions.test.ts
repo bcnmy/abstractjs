@@ -100,17 +100,23 @@ describe("utils.batchInstructions", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain, mainnet],
-      transports: [
-        paymentChainTransport,
-        targetChainTransport,
-        http(MAINNET_RPC_URLS[mainnet.id])
-      ],
       signer: eoaAccount,
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: mainnet,
+          transport: http(MAINNET_RPC_URLS[mainnet.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
 

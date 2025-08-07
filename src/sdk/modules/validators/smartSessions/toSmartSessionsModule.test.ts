@@ -79,9 +79,11 @@ describe("modules.toSmartSessionsModule", () => {
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const { testClient } = await toClients(infra.network)
@@ -98,9 +100,11 @@ describe("modules.toSmartSessionsModule", () => {
     // prepare Nexus account for a second chain
     secondChainNexusAccount = await toNexusAccount({
       ...nexusAccount,
-      chain: secondChain,
-      transport: http(secondInfra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain: secondChain,
+        transport: http(secondInfra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     secondChainNexusClient = createSmartAccountClient({
@@ -195,9 +199,11 @@ describe("modules.toSmartSessionsModule", () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -246,9 +252,11 @@ describe("modules.toSmartSessionsModule", () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: secondChainNexusAccount.address,
       signer: redeemerAccount,
-      chain: secondChain,
-      transport: http(secondInfra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain: secondChain,
+        transport: http(secondInfra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -291,9 +299,11 @@ describe("modules.toSmartSessionsModule", () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -359,9 +369,11 @@ describe("modules.toSmartSessionsModule", () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -396,9 +408,11 @@ describe("modules.toSmartSessionsModule", () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -434,9 +448,11 @@ describe("modules.toSmartSessionsModule", () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const emulatedClient = createSmartAccountClient({

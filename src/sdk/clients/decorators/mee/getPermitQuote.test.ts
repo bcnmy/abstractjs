@@ -71,12 +71,18 @@ describe("mee.getPermitQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
 
@@ -254,10 +260,14 @@ describe("mee.getPermitQuote", () => {
 
   test("should reserve gas fees when using max available amount", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({ account: mcNexus })
@@ -446,10 +456,14 @@ describe("mee.getPermitQuote", () => {
 
   test("Trigger amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(testnetNetwork.rpcUrl)],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(testnetNetwork.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -511,10 +525,14 @@ describe("mee.getPermitQuote", () => {
 
   test("Trigger max available amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(testnetNetwork.rpcUrl)],
       signer: eoaAccount,
-      versions: [getMEEVersion(DEFAULT_MEE_VERSION)]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(testnetNetwork.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)

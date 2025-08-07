@@ -73,13 +73,19 @@ describe("mee.multichainSmartSessions", () => {
     redeemerAddress = redeemerAccount.address
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
       index: BigInt(Date.now()),
-      versions: [
-        getMEEVersion(DEFAULT_MEE_VERSION),
-        getMEEVersion(DEFAULT_MEE_VERSION)
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       ]
     })
 
@@ -246,12 +252,18 @@ describe("mee.multichainSmartSessions", () => {
       // this would be a common pattern for signing userOps with a session key
       const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
-        chains: [paymentChain, targetChain],
-        transports: [paymentChainTransport, targetChainTransport],
         signer: redeemerAccount,
-        versions: [
-          getMEEVersion(DEFAULT_MEE_VERSION),
-          getMEEVersion(DEFAULT_MEE_VERSION)
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: targetChain,
+            transport: targetChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
         ]
       })
 
@@ -340,13 +352,19 @@ describe("mee.multichainSmartSessions", () => {
 
       const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
-        chains: [paymentChain, targetChain],
-        transports: [paymentChainTransport, targetChainTransport],
-        signer: redeemerAccount,
-        versions: [
-          getMEEVersion(DEFAULT_MEE_VERSION),
-          getMEEVersion(DEFAULT_MEE_VERSION)
-        ]
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: targetChain,
+            transport: targetChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ],
+        signer: redeemerAccount
       })
 
       const dappMeeClient = await createMeeClient({
