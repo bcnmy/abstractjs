@@ -1,19 +1,15 @@
 import { http, type LocalAccount } from "viem"
+import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import {
-  DEFAULT_MEE_VERSION,
-  getSmartSessionsValidator,
-  MEEVersion
-} from "../../constants"
+import { DEFAULT_MEE_VERSION, getSmartSessionsValidator } from "../../constants"
 import { getMEEVersion } from "../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { baseSepolia } from "viem/chains"
 
 describe("mee.multichainRead", () => {
   let network: NetworkConfig

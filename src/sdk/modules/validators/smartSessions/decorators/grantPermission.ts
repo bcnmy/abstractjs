@@ -18,21 +18,21 @@ import {
   getSudoPolicy,
   hashChainSessions
 } from "@rhinestone/module-sdk"
-import {
-  type Address,
-  type Chain,
-  type Client,
-  type Hex,
-  type LocalAccount,
-  type Prettify,
-  type PublicClient,
-  type RequiredBy,
-  type Transport
+import type {
+  Address,
+  Chain,
+  Client,
+  Hex,
+  LocalAccount,
+  Prettify,
+  PublicClient,
+  RequiredBy,
+  Transport
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
+import { getMEEVersion } from "../../../utils"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt } from "../Helpers"
-import { getMEEVersion } from "../../../utils"
 
 export type PrettifiedSession = {
   // The optional address of the validator that will be used to validate the session. Default is the ownable validator.
