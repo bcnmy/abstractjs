@@ -783,6 +783,7 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         signer: eoaAccount,
         index: BigInt(getRandomAccountIndex(1000, 1000000000)),
+        accountAddress: eoaAccount.address,
         chainConfigurations: [
           {
             chain: baseSepolia,
