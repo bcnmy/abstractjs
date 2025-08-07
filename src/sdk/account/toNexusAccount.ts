@@ -119,10 +119,6 @@ export type PrevalidationHookModuleConfig = GenericModuleConfig & {
   hookType: bigint
 }
 
-export type NexusOptions = {
-  /** nexus config for the Nexus Smart Account. If undefined, the latest version will be used. */
-  meeConfig: MEEVersionConfig
-}
 /**
  * Parameters for creating a Nexus Smart Account
  */
@@ -285,8 +281,8 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     /** Account ID */
     accountId: NexusAccountId
 
-    /** Nexus version */
-    version: MEEVersion
+    /** Nexus version config */
+    version: MEEVersionConfig
   }
 >
 
@@ -981,7 +977,7 @@ export const toNexusAccount = async (
       chain,
       setModule,
       getModule: () => module,
-      version: meeConfig.version
+      version: meeConfig
     }
   })
 }

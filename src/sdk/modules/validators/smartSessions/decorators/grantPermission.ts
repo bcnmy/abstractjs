@@ -30,7 +30,6 @@ import type {
   Transport
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
-import { getMEEVersion } from "../../../utils"
 import type { ModularSmartAccount } from "../../../utils/Types"
 import { generateSalt } from "../Helpers"
 
@@ -195,8 +194,6 @@ async function grantPermission<
     threshold: 1
   })
 
-  const meeConfig = getMEEVersion(account.version)
-
   const sessionDetailsArray = sessions.map((session) => {
     const permissionId = getPermissionId({
       session: session
@@ -219,7 +216,7 @@ async function grantPermission<
           sessionToEnable: session,
           permissionEnableSig: permissionEnableSig
         },
-        validator: meeConfig.defaultValidatorAddress,
+        validator: account.version.defaultValidatorAddress,
         accountType
       }
     }

@@ -20,7 +20,6 @@ import type {
   ModularSmartAccount,
   ModuleMeta
 } from "../../../modules/utils/Types"
-import { getMEEVersion } from "../../../modules/utils/getMeeConfig"
 import { parseModuleTypeId } from "./supportsModule"
 
 export type InstallModuleParameters<
@@ -102,9 +101,8 @@ export const toSafeSenderCalls = async (
   smartAccount: ModularSmartAccount,
   { address }: ModuleMeta
 ): Promise<Call[]> => {
-  const meeValidatorAddress = getMEEVersion(
-    smartAccount.version
-  ).validatorAddress
+  const meeValidatorAddress = smartAccount.version.validatorAddress
+
   return addressEquals(address, SMART_SESSIONS_ADDRESS)
     ? [
         {

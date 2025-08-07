@@ -15,7 +15,7 @@ import {
 import { getAction, parseAccount } from "viem/utils"
 import type { Call } from "../../../account"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import { type ModularSmartAccount, getMEEVersion } from "../../../modules"
+import { type ModularSmartAccount } from "../../../modules"
 
 export type UpgradeSmartAccountParameters<
   TSmartAccount extends SmartAccount | undefined
@@ -74,8 +74,7 @@ export async function upgradeSmartAccount<
 
   const calls = await toUpgradeSmartAccountCalls(account, {
     implementationAddress:
-      implementationAddress ??
-      getMEEVersion(account.version).implementationAddress,
+      implementationAddress ?? account.version.implementationAddress,
     initData
   })
   const sendUserOperationParams = {

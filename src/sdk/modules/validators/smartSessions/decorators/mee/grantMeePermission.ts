@@ -5,7 +5,6 @@ import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   type ActionData,
   DEFAULT_MEE_VERSION,
-  type MEEVersion,
   getSpendingLimitsPolicy
 } from "../../../../../constants"
 
@@ -16,6 +15,7 @@ import {
   grantPermissionPersonalSign,
   grantPermissionTypedDataSign
 } from "../grantPermission"
+import { type MEEVersionConfig } from "../../../../../account"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]
@@ -86,8 +86,6 @@ export const grantMeePermission = async <
   mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
 ): Promise<GrantMeePermissionPayload> => {
   const account = baseMeeClient.account
-  const version: MEEVersion = _account ? _account.version : DEFAULT_MEE_VERSION
-  const meeValidatorAddress = getMEEVersion(version).validatorAddress
 
   // make some reliable maxPaymentAmount
   if (feeToken && !maxPaymentAmount) {
@@ -113,6 +111,12 @@ export const grantMeePermission = async <
     const deployment = account.deployments.find(
       (deployment) => deployment?.client?.chain?.id === chainId
     )
+
+    const defaultVersionConfig: MEEVersionConfig =
+      getMEEVersion(DEFAULT_MEE_VERSION)
+    const meeValidatorAddress =
+      deployment?.version.validatorAddress ||
+      defaultVersionConfig.validatorAddress
 
     const paymentActionPolicy =
       feeToken && feeToken.chainId === chainId

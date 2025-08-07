@@ -8,15 +8,14 @@ import {
 } from "viem"
 import { encodeFunctionData } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
-import type { MEEVersion } from "../../../constants"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
-import { getMEEVersion } from "../../../modules"
 import type { AnyData } from "../../../modules"
 import type { ComposableCall } from "../../../modules/utils/composabilityCalls"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
+import { type MEEVersionConfig } from "../../../account"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 
@@ -49,15 +48,13 @@ const generateTriggerCallFromTrigger = async ({
   trigger: Trigger
   spender: Address
   recipient: Address
-  version: MEEVersion
+  version: MEEVersionConfig
 }) => {
   let triggerCall: AbstractCall | ComposableCall
   // build custom call
   if (trigger.call) {
     triggerCall = trigger.call
   } else if (trigger.tokenAddress === zeroAddress) {
-    const meeConfig = getMEEVersion(version)
-
     // If the token address is zero address, we need to send eth via the ETH forwarder
     const forwardCalldata = encodeFunctionData({
       abi: ForwarderAbi,
@@ -66,7 +63,7 @@ const generateTriggerCallFromTrigger = async ({
     })
 
     const ethForwardCall: AbstractCall = {
-      to: meeConfig.ethForwarderAddress,
+      to: version.ethForwarderAddress,
       data: forwardCalldata,
       value: trigger.amount
     }
@@ -131,7 +128,7 @@ export const prepareExecutableOnChainQuotePayload = async (
   quoteParams: GetOnChainQuotePayload,
   spender: Address,
   recipient: Address,
-  version: MEEVersion
+  version: MEEVersionConfig
 ) => {
   const { quote, trigger } = quoteParams
 
