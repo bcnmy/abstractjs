@@ -8,6 +8,7 @@ import {
   getSpendingLimitsPolicy
 } from "../../../../../constants"
 
+import type { MEEVersionConfig } from "../../../../../account"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
@@ -15,7 +16,6 @@ import {
   grantPermissionPersonalSign,
   grantPermissionTypedDataSign
 } from "../grantPermission"
-import { type MEEVersionConfig } from "../../../../../account"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]

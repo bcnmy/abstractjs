@@ -7,6 +7,7 @@ import {
   zeroAddress
 } from "viem"
 import { encodeFunctionData } from "viem"
+import type { MEEVersionConfig } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { AnyData } from "../../../modules"
@@ -15,7 +16,6 @@ import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
 import type { Trigger } from "./signPermitQuote"
-import { type MEEVersionConfig } from "../../../account"
 
 export const FUSION_NATIVE_TRANSFER_PREFIX = "0x150b7a02"
 

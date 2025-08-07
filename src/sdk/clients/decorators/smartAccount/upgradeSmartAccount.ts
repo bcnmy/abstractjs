@@ -15,7 +15,7 @@ import {
 import { getAction, parseAccount } from "viem/utils"
 import type { Call } from "../../../account"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
-import { type ModularSmartAccount } from "../../../modules"
+import type { ModularSmartAccount } from "../../../modules"
 
 export type UpgradeSmartAccountParameters<
   TSmartAccount extends SmartAccount | undefined
