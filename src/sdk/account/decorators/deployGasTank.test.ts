@@ -17,9 +17,9 @@ import {
   DEFAULT_PATHFINDER_URL
 } from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
-import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
-import { getMEEVersion } from "../../modules"
 import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
+import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

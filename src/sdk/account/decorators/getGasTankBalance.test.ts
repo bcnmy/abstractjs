@@ -5,9 +5,9 @@ import { beforeAll, describe, expect, it } from "vitest"
 import { TESTNET_RPC_URLS } from "../../../test/testSetup"
 import { getBalance } from "../../../test/testUtils"
 import { testnetMcUSDC } from "../../constants"
-import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
-import { getMEEVersion } from "../../modules"
 import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
+import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.getGasTankBalance", () => {
   let gasTankAccount: GasTankAccount

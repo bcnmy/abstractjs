@@ -3,9 +3,9 @@ import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
 import { TESTNET_RPC_URLS } from "../../../test/testSetup"
-import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
-import { getMEEVersion } from "../../modules"
 import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
+import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.getGasTankNonce", () => {
   let gasTankAccount: GasTankAccount
