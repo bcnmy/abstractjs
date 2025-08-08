@@ -8,13 +8,13 @@ import {
 import { sepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, it, vi } from "vitest"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../constants"
 import { AavePoolAbi } from "../../constants/abi"
-import { testnetMcUSDC } from "../../constants/tokens"
 import { getMEEVersion, runtimeERC20BalanceOf } from "../../modules"
 import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
 
@@ -22,11 +22,9 @@ import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
 const { runLifecycleTests } = inject("settings")
 
 const mocks = vi.hoisted(async () => {
-  const { testnetMcUSDC } = await import("../../constants/tokens")
-
   return {
     getUnifiedERC20BalanceMock: vi.fn().mockResolvedValue({
-      mcToken: testnetMcUSDC,
+      mcToken: testnetMcTestUSDCP,
       balance: parseUnits("1", 6),
       decimals: 6,
       breakdown: [
@@ -87,7 +85,11 @@ describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
           data: {
             to: zeroAddress,
             abi: AavePoolAbi,
-            args: [testnetMcUSDC.addressOn(sourceChain.id), 100, zeroAddress],
+            args: [
+              testnetMcTestUSDCP.addressOn(sourceChain.id),
+              100,
+              zeroAddress
+            ],
             chainId: sourceChain.id,
             functionName: "withdraw"
           }
@@ -102,7 +104,7 @@ describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
           type: "approve",
           data: {
             chainId: destChain.id,
-            tokenAddress: testnetMcUSDC.addressOn(destChain.id),
+            tokenAddress: testnetMcTestUSDCP.addressOn(destChain.id),
             spender: zeroAddress,
             amount: runtimeERC20BalanceOf({
               tokenAddress: zeroAddress,
@@ -118,9 +120,9 @@ describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
             chainId: destChain.id,
             functionName: "supply",
             args: [
-              testnetMcUSDC.addressOn(destChain.id),
+              testnetMcTestUSDCP.addressOn(destChain.id),
               runtimeERC20BalanceOf({
-                tokenAddress: testnetMcUSDC.addressOn(destChain.id),
+                tokenAddress: testnetMcTestUSDCP.addressOn(destChain.id),
                 targetAddress: mcNexus.addressOn(destChain.id, true)
               }),
               mcNexus.addressOn(destChain.id, true),

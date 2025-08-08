@@ -17,7 +17,6 @@ import {
   DEFAULT_PATHFINDER_API_KEY,
   DEFAULT_PATHFINDER_URL
 } from "../../clients/createMeeClient"
-import { testnetMcUSDC } from "../../constants"
 import { DEFAULT_MEE_VERSION } from "../../constants"
 import { runtimeERC20BalanceOf } from "../../modules"
 import { getMEEVersion } from "../../modules"

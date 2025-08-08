@@ -139,7 +139,7 @@ export const buildComposableCall = async (
  *          fee: 3000,
  *          recipient: recipient,
  *          deadline: BigInt(Math.floor(Date.now() / 1000) + 900),
- *          amountIn: runtimeERC20BalanceOf({ targetAddress: recipient, tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id), constraints: [] }),
+ *          amountIn: runtimeERC20BalanceOf({ targetAddress: recipient, tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id), constraints: [] }),
  *          amountOutMinimum: BigInt(1),
  *          sqrtPriceLimitX96: BigInt(0),
  *        },

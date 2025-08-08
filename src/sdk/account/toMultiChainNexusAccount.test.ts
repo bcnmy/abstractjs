@@ -16,10 +16,11 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../test/testTokens"
 import type { NetworkConfig } from "../../test/testUtils"
 import { createMeeClient } from "../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
-import { mcUSDC, testnetMcUSDC } from "../constants/tokens"
+import { mcUSDC } from "../constants/tokens"
 import { getMEEVersion } from "../modules/utils/getMeeConfig"
 import {
   type MultichainSmartAccount,
@@ -271,7 +272,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             })
           ],
           feeToken: {
-            address: testnetMcUSDC.addressOn(baseSepolia.id),
+            address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
             chainId: baseSepolia.id
           }
         })

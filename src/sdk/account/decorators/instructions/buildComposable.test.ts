@@ -37,7 +37,6 @@ import {
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
 } from "../../../constants"
-import { testnetMcUSDC } from "../../../constants/tokens"
 import {
   getMEEVersion,
   greaterThanOrEqualTo,
@@ -850,7 +849,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       ]
     })
 
-    const inToken = testnetMcUSDC
+    const inToken = testnetMcTestUSDCP
     const outToken = fusionToken
 
     const amount = parseUnits("0.1", 6)

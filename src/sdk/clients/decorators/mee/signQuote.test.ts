@@ -8,13 +8,13 @@ import {
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { testnetMcUSDC } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { Instruction } from "./getQuote"
@@ -80,7 +80,7 @@ describe("mee.signQuote", () => {
       instructions: instructions,
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     })
 
@@ -111,7 +111,7 @@ describe("mee.signQuote", () => {
       instructions: instructions,
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     })
 

@@ -15,6 +15,7 @@ import {
   TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../test/testTokens"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -22,7 +23,7 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../constants"
+import { DEFAULT_MEE_VERSION } from "../constants"
 import { getMEEVersion } from "../modules"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
@@ -111,7 +112,7 @@ describe.runIf(runLifecycleTests)(
           }
         ],
         feeToken: {
-          address: testnetMcUSDC.addressOn(baseSepolia.id),
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
           chainId: baseSepolia.id
         }
       })

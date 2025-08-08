@@ -21,7 +21,6 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import {
-  DEFAULT_STAGING_PATHFINDER_API_KEY,
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"

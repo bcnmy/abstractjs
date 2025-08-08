@@ -37,7 +37,7 @@ import {
   PERMIT_TYPEHASH,
   TokenWithPermitAbi
 } from "../../../constants"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
@@ -269,7 +269,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     test("should fail if approvalAmount is smaller than the trigger amount", async () => {
       const amount = parseUnits("0.01", 6)
       const approvalAmount = parseUnits("0.005", 6)
-      const token = testnetMcUSDC.addressOn(network.chain.id)
+      const token = testnetMcTestUSDCP.addressOn(network.chain.id)
       const trigger: Trigger = {
         chainId: network.chain.id,
         tokenAddress: token,
@@ -390,7 +390,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     const fusionQuote = await getFusionQuote(meeClient, {
       trigger: {
         chainId: chain.id,
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         amount: 1n
       },
       instructions: [
@@ -409,7 +409,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       ],
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     })
 

@@ -2,12 +2,13 @@ import { http, type Chain, type LocalAccount, createWalletClient } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import type { GetFusionQuoteParams, GetQuoteParams } from "."
 import { toNetwork } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../../constants"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
@@ -47,7 +48,7 @@ describe("mee.getQuoteType", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         amount: 1n,
         chainId: chain.id
       }
@@ -57,7 +58,7 @@ describe("mee.getQuoteType", () => {
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     }
 
@@ -75,7 +76,7 @@ describe("mee.getQuoteType", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         amount: 1n,
         chainId: chain.id
       }
@@ -85,7 +86,7 @@ describe("mee.getQuoteType", () => {
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     })
 
@@ -103,7 +104,7 @@ describe("mee.getQuoteType", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         amount: 1n,
         chainId: chain.id
       }
@@ -111,14 +112,14 @@ describe("mee.getQuoteType", () => {
 
     const quoteParams: GetFusionQuoteParams = {
       trigger: {
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
         amount: 1n
       },
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     }
 
@@ -147,7 +148,7 @@ describe("mee.getQuoteType", () => {
       type: "transfer",
       data: {
         recipient: eoaAccount.address,
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         amount: 1n,
         chainId: chain.id
       }
@@ -155,14 +156,14 @@ describe("mee.getQuoteType", () => {
 
     const quote = await meeClient.getFusionQuote({
       trigger: {
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
         amount: 1n
       },
       instructions: [...transferInstruction],
       feeToken: {
         chainId: chain.id,
-        address: testnetMcUSDC.addressOn(chain.id)
+        address: testnetMcTestUSDCP.addressOn(chain.id)
       }
     })
 

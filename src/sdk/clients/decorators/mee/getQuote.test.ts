@@ -16,6 +16,7 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type NetworkConfig,
   getBalance,
@@ -26,7 +27,7 @@ import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
@@ -36,7 +37,6 @@ import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
   DEFAULT_PATHFINDER_URL,
-  DEFAULT_STAGING_PATHFINDER_API_KEY,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -888,7 +888,7 @@ describe("mee.getQuote", () => {
       const balanceBefore = await getBalance(
         publicClient,
         mcNexus.addressOn(baseSepolia.id, true),
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       const meeClient = await createMeeClient({
@@ -909,7 +909,7 @@ describe("mee.getQuote", () => {
         trigger: {
           amount: amountToTransfer,
           chainId: baseSepolia.id,
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
         },
         instructions: [
           {
@@ -942,7 +942,7 @@ describe("mee.getQuote", () => {
       const balanceAfter = await getBalance(
         publicClient,
         mcNexus.addressOn(baseSepolia.id, true),
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       expect(balanceAfter).to.eq(balanceBefore + amountToTransfer)
@@ -971,7 +971,7 @@ describe("mee.getQuote", () => {
       const balanceBefore = await getBalance(
         publicClient,
         eoaAccount.address,
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       const meeClient = await createMeeClient({
@@ -982,7 +982,7 @@ describe("mee.getQuote", () => {
       const transferInx = await mcNexus.build({
         type: "transfer",
         data: {
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
           amount: amountToTransfer,
           chainId: baseSepolia.id,
           recipient: eoaAccount.address
@@ -1002,7 +1002,7 @@ describe("mee.getQuote", () => {
         trigger: {
           amount: amountToTransfer,
           chainId: baseSepolia.id,
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
         },
         instructions: [transferInx]
       })
@@ -1025,7 +1025,7 @@ describe("mee.getQuote", () => {
       const balanceAfter = await getBalance(
         publicClient,
         eoaAccount.address,
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       expect(balanceAfter).to.eq(balanceBefore)
@@ -1107,7 +1107,7 @@ describe("mee.getQuote", () => {
 
     const quote = await meeClient.getFusionQuote({
       trigger: {
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
         chainId: baseSepolia.id,
         amount: 1n
       },
@@ -1163,7 +1163,7 @@ describe("mee.getQuote", () => {
       account: mcNexus
     })
 
-    const tokenAddress = testnetMcUSDC.addressOn(chain.id)
+    const tokenAddress = testnetMcTestUSDCP.addressOn(chain.id)
     const feeAccount = privateKeyToAccount(generatePrivateKey())
     const walletClient = createWalletClient({
       account: feeAccount,

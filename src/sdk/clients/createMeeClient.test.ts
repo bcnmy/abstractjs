@@ -23,6 +23,7 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -30,7 +31,7 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../constants"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
-import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
+import { mcAUSDC, mcUSDC } from "../constants/tokens"
 import { getMEEVersion } from "../modules"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
@@ -237,7 +238,7 @@ describe("mee.createMeeClient", async () => {
 
       const trigger = {
         chainId: baseSepolia.id,
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
         amount: 1n
       }
 
@@ -253,7 +254,7 @@ describe("mee.createMeeClient", async () => {
           })
         ],
         feeToken: {
-          address: testnetMcUSDC.addressOn(baseSepolia.id),
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
           chainId: baseSepolia.id
         }
       })
@@ -273,7 +274,7 @@ describe("mee.createMeeClient", async () => {
       const balanceOfRecipient = await getBalance(
         mcNexus.deploymentOn(baseSepolia.id, true).publicClient,
         recipientAccount.address,
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       expect(balanceOfRecipient).toBe(trigger.amount)
@@ -408,7 +409,7 @@ describe("mee.createMeeClient.delegated", async () => {
         }
       ],
       feeToken: {
-        address: testnetMcUSDC.addressOn(baseSepolia.id), // usdc
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id), // usdc
         chainId: baseSepolia.id
       }
     })
@@ -470,7 +471,7 @@ describe("mee.createMeeClient.delegated", async () => {
         }
       ],
       feeToken: {
-        address: testnetMcUSDC.addressOn(baseSepolia.id), // usdc
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id), // usdc
         chainId: baseSepolia.id
       }
     })
