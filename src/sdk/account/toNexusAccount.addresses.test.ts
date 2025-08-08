@@ -19,6 +19,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
+import { getMEEVersion } from "../modules"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 
 describe("nexus.account.addresses", async () => {
@@ -51,9 +53,12 @@ describe("nexus.account.addresses", async () => {
     })
 
     nexusAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(MEEVersion.V1_0_0)
+      }
     })
 
     nexusClient = createSmartAccountClient({
@@ -74,9 +79,12 @@ describe("nexus.account.addresses", async () => {
 
     const newNexusAccount = await toNexusAccount({
       accountAddress: someoneElsesNexusAddress,
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(MEEVersion.V1_0_0)
+      }
     })
 
     const newNexusClient = createSmartAccountClient({
@@ -97,9 +105,12 @@ describe("nexus.account.addresses", async () => {
   test("should check that mainnet and testnet addresses are different", async () => {
     const mainnetClient = createSmartAccountClient({
       account: await toNexusAccount({
-        chain: base,
         signer: eoaAccount,
-        transport: http(MAINNET_RPC_URLS[base.id])
+        chainConfiguration: {
+          chain: base,
+          transport: http(MAINNET_RPC_URLS[base.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       }),
       mock: true,
       transport: http(bundlerUrl)
@@ -107,9 +118,12 @@ describe("nexus.account.addresses", async () => {
 
     const testnetClient = createSmartAccountClient({
       account: await toNexusAccount({
-        chain: baseSepolia,
         signer: eoaAccount,
-        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+        chainConfiguration: {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       }),
       mock: true,
       transport: http(bundlerUrl)

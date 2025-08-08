@@ -43,7 +43,9 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
+import { getMEEVersion } from "../modules"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
   addressEquals,
@@ -90,9 +92,12 @@ describe("nexus.account", async () => {
     })
 
     nexusAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({
@@ -111,9 +116,12 @@ describe("nexus.account", async () => {
 
   test("should check isValidSignature using EIP-6492", async () => {
     const undeployedAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl),
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       index: 102n // undeployed
     })
 

@@ -8,6 +8,7 @@ import {
   type TypedDataDomain,
   type TypedDataParameter,
   concat,
+  createPublicClient,
   decodeFunctionResult,
   encodeAbiParameters,
   encodeFunctionData,
@@ -21,6 +22,8 @@ import {
   toBytes,
   toHex
 } from "viem"
+import type { Transport } from "viem"
+import type { Chain } from "viem/chains"
 import {
   BICONOMY_TOKEN_PAYMASTER,
   MOCK_MULTI_MODULE_ADDRESS,
@@ -221,7 +224,9 @@ export function _hashTypedData(
 
 export function getTypesForEIP712Domain({
   domain
-}: { domain?: TypedDataDomain | undefined }): TypedDataParameter[] {
+}: {
+  domain?: TypedDataDomain | undefined
+}): TypedDataParameter[] {
   return [
     typeof domain?.name === "string" && { name: "name", type: "string" },
     domain?.version && { name: "version", type: "string" },
@@ -475,4 +480,61 @@ export function parseRequestArguments(input: string[]) {
   )
 
   return result
+}
+
+/**
+ * Checks if a chain supports Cancun.
+ *
+ * @param transport - The transport to use
+ * @param chain - The chain to check
+ * @returns True if the chain supports Cancun, false otherwise
+ */
+export async function supportsCancun({
+  transport,
+  chain
+}: {
+  transport: Transport
+  chain: Chain
+}): Promise<boolean> {
+  const cancunSupportedChains: Record<string, boolean> = {
+    "1": true,
+    "10": true,
+    "56": true,
+    "97": true,
+    "100": true,
+    "137": false,
+    "8453": true,
+    "10200": true,
+    "42161": false,
+    "43113": true,
+    "43114": true,
+    "80002": false,
+    "84532": true,
+    "421614": false,
+    "534351": false,
+    "534352": false,
+    "11155111": true,
+    "11155420": true
+  }
+
+  if (cancunSupportedChains[chain.id.toString()]) {
+    return cancunSupportedChains[chain.id.toString()]
+  }
+
+  const client = createPublicClient({
+    chain,
+    transport
+  })
+
+  // Fetch the latest block with full transactions
+  const block = await client.getBlock({
+    blockTag: "latest"
+  })
+
+  // Check for Cancun-specific block fields
+  if (block.blobGasUsed !== undefined || block.excessBlobGas !== undefined) {
+    return true
+  }
+
+  return false
 }

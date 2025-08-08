@@ -25,7 +25,9 @@ import {
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -81,9 +83,19 @@ describe("mee.getQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -270,14 +282,19 @@ describe("mee.getQuote", () => {
   })
   test("Should get quote for sponsored super transaction (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -328,14 +345,19 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored super transaction (Mainnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport]
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -378,15 +400,20 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored super transaction with init code on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport],
-      index: BigInt(getRandomAccountIndex(1000, 10000000000000))
+      index: BigInt(getRandomAccountIndex(1000, 10000000000000)),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -436,15 +463,20 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored super transaction with authorization list on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport],
-      index: BigInt(getRandomAccountIndex(1000, 10000000000000))
+      index: BigInt(getRandomAccountIndex(1000, 10000000000000)),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -506,15 +538,20 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored fusion super transaction with init code on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport],
-      index: BigInt(getRandomAccountIndex(1000, 10000000000000))
+      index: BigInt(getRandomAccountIndex(1000, 10000000000000)),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const amountToTrigger = 1n
@@ -576,14 +613,19 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored super transaction (Testnet)",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -627,14 +669,19 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored super transaction (Mainnet)",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [paymentChain],
         signer: eoaAccount,
-        transports: [paymentChainTransport]
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -671,10 +718,15 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored super transaction for undeployed SCA case",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        index: BigInt(getRandomAccountIndex(1000, 1000000000))
+        index: BigInt(getRandomAccountIndex(1000, 1000000000)),
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const nexusAccount = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -683,7 +735,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -729,11 +781,16 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored super transaction with 7702 delegation",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
+        index: BigInt(getRandomAccountIndex(1000, 1000000000)),
         accountAddress: eoaAccount.address,
-        index: BigInt(getRandomAccountIndex(1000, 1000000000))
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const nexusAccount = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -754,7 +811,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -814,9 +871,14 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored fusion super transaction",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -831,7 +893,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getFusionQuote({
@@ -891,10 +953,15 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored fusion super transaction for undeployed SCA case",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        index: BigInt(getRandomAccountIndex(1000, 1000000000))
+        index: BigInt(getRandomAccountIndex(1000, 1000000000)),
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -909,7 +976,7 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const transferInx = await mcNexus.build({
@@ -968,14 +1035,19 @@ describe("mee.getQuote", () => {
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
   test.skip("Should execute sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -1018,15 +1090,19 @@ describe("mee.getQuote", () => {
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
   test.skip("Should execute fusion sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getFusionQuote({
@@ -1074,9 +1150,14 @@ describe("mee.getQuote", () => {
   test("should use feePayer if provided", async () => {
     const chain = baseSepolia
     const mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[chain.id])]
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
     const meeClient = await createMeeClient({
       account: mcNexus
@@ -1128,6 +1209,7 @@ describe("mee.getQuote", () => {
       ]
     })
     // Estimate gas for approve
+    // @ts-ignore
     const approveGas = await publicClient.estimateGas(request)
 
     // Estimate current gas fees

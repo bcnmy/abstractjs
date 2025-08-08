@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.0.22
+
+### Patch Changes
+
+- Fixed the verification gas limit issue for metamask delegation toolkit fusion mode
+
 ## 1.0.21
 
 ### Patch Changes

@@ -22,7 +22,8 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import { testnetMcUSDC } from "../constants"
+import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../constants"
+import { getMEEVersion } from "../modules"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
@@ -71,9 +72,14 @@ describe.runIf(runLifecycleTests)(
       chain = baseSepolia
 
       mcNexus = await toMultichainNexusAccount({
-        chains: [chain],
-        transports: [http(network.rpcUrl)],
-        signer: eoaAccount
+        signer: eoaAccount,
+        chainConfigurations: [
+          {
+            chain: chain,
+            transport: http(network.rpcUrl),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       meeClient = await createMeeClient({ account: mcNexus })
@@ -135,8 +141,11 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
     beforeAll(async () => {
       nexusAccount = await toNexusAccount({
         signer: account,
-        chain,
-        transport: http(TESTNET_RPC_URLS[chain.id])
+        chainConfiguration: {
+          chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       })
 
       nexusAccountAddress = await nexusAccount.getAddress()

@@ -1,10 +1,12 @@
-import type { Chain, Hex, Transport } from "viem"
+import type { Hex } from "viem"
+
 import type {
   Instruction,
   MeeAuthorization
 } from "../clients/decorators/mee/getQuote"
 import type { ModularSmartAccount } from "../modules/utils/Types"
 import {
+  type ChainConfiguration,
   type DelegationParams,
   type ToNexusSmartAccountParameters,
   toNexusAccount
@@ -31,6 +33,7 @@ import {
   type IsDelegatedPayload,
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
+
 import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
@@ -56,14 +59,12 @@ import type { MultichainToken } from "./utils/Types"
  * Parameters required to create a multichain Nexus account
  */
 export type MultichainNexusParams = Partial<
-  Omit<ToNexusSmartAccountParameters, "signer">
+  Omit<ToNexusSmartAccountParameters, "signer" | "nexusContracts">
 > & {
-  /** Array of chains where the account will be deployed */
-  chains: Chain[]
-  /** Transport to use for the Nexus Account */
-  transports: Transport[]
   /** The signer instance used for account creation */
   signer: ToNexusSmartAccountParameters["signer"]
+  /** Array of chain configuration */
+  chainConfigurations: ChainConfiguration[]
 }
 
 /**
@@ -215,7 +216,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  *
  * @param parameters - {@link MultichainNexusParams} Configuration for multichain account creation
  * @param parameters.signer - The signer instance used for account creation
- * @param parameters.chains - Array of chains where the account will be deployed
+ * @param parameters.chainConfigurations - Array of chain configuration objects where the account will be deployed
  *
  * @returns Promise resolving to {@link MultichainSmartAccount} instance
  *
@@ -224,8 +225,18 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  * @example
  * const account = await toMultichainNexusAccount({
  *   signer: mySigner,
- *   chains: [optimism, base],
- *   transports: [http(), http()]
+ *   chainConfigurations: [
+ *     {
+ *       chain: optimism,
+ *       transport: http(),
+ *       version: getMEEVersion(MEEversion.V2_1_0)
+ *     },
+ *     {
+ *       chain: base,
+ *       transport: http(),
+ *       version: getMEEVersion(MEEversion.V2_1_0)
+ *     }
+ *   ]
  * });
  *
  * // Get deployment on specific chain
@@ -245,28 +256,20 @@ export async function toMultichainNexusAccount(
   multiChainNexusParams: MultichainNexusParams
 ): Promise<MultichainSmartAccount> {
   const {
-    chains,
     signer: unresolvedSigner,
-    transports,
+    chainConfigurations,
     ...accountParameters
   } = multiChainNexusParams
 
-  if (chains.length === 0) {
-    throw new Error("No chains provided")
-  }
-
-  if (transports && transports.length !== chains.length) {
-    throw new Error(
-      "The number of transports must match the number of chains provided"
-    )
+  if (chainConfigurations.length === 0) {
+    throw new Error("No chain configuration provided")
   }
 
   const deployments = await Promise.all(
-    chains.map((chain, i) =>
+    chainConfigurations.map((chainConfiguration) =>
       toNexusAccount({
-        chain,
         signer: unresolvedSigner,
-        transport: transports[i],
+        chainConfiguration,
         ...accountParameters
       })
     )

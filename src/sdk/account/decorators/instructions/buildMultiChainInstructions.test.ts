@@ -20,7 +20,9 @@ import type {
   Instruction,
   InstructionLike
 } from "../../../clients/decorators/mee"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { toDefaultModule } from "../../../modules/validators/default/toDefaultModule"
 import { toOwnableModule } from "../../../modules/validators/ownable/toOwnableModule"
 import { toSmartSessionsModule } from "../../../modules/validators/smartSessions/toSmartSessionsModule"
@@ -56,10 +58,20 @@ describe("mee.buildMultichainInstructions", () => {
     redeemerAccount = privateKeyToAccount(generatePrivateKey())
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index: 2n
+      index: 2n,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

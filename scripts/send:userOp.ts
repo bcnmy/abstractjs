@@ -6,6 +6,8 @@ import { toNexusAccount } from "../src/sdk/account/toNexusAccount"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { createBicoBundlerClient } from "../src/sdk/clients/createBicoBundlerClient"
 import { biconomySponsoredPaymasterContext } from "../src/sdk/clients/createBicoPaymasterClient"
+import { DEFAULT_MEE_VERSION } from "../src/sdk/constants"
+import { getMEEVersion } from "../src/sdk/modules"
 
 config()
 
@@ -39,8 +41,11 @@ const publicClient = createPublicClient({
 const main = async () => {
   const nexusAccount = await toNexusAccount({
     signer: account,
-    chain,
-    transport: http()
+    chainConfiguration: {
+      chain,
+      transport: http(),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
+    }
   })
 
   const nexusBalance = await publicClient.getBalance({

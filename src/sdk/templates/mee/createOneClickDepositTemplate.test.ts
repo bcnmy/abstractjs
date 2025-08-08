@@ -12,9 +12,10 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { AavePoolAbi } from "../../constants/abi"
 import { testnetMcUSDC } from "../../constants/tokens"
-import { runtimeERC20BalanceOf } from "../../modules"
+import { getMEEVersion, runtimeERC20BalanceOf } from "../../modules"
 import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
 
 // @ts-ignore
@@ -59,12 +60,19 @@ describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
     destinationChain = sepolia
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [sourceChain, destinationChain],
-      transports: [
-        http(network.rpcUrl),
-        http(TESTNET_RPC_URLS[destinationChain.id])
-      ],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: sourceChain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: destinationChain,
+          transport: http(TESTNET_RPC_URLS[destinationChain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
   })
 

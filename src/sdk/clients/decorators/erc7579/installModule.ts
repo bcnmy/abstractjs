@@ -15,10 +15,7 @@ import { getAction, parseAccount } from "viem/utils"
 import { AccountNotFoundError } from "../../../account/utils/AccountNotFound"
 import type { Call } from "../../../account/utils/Types"
 import { addressEquals } from "../../../account/utils/Utils"
-import {
-  MEE_VALIDATOR_ADDRESS,
-  SMART_SESSIONS_ADDRESS
-} from "../../../constants"
+import { SMART_SESSIONS_ADDRESS } from "../../../constants"
 import type {
   ModularSmartAccount,
   ModuleMeta
@@ -101,13 +98,15 @@ export async function installModule<
 }
 
 export const toSafeSenderCalls = async (
-  __: ModularSmartAccount,
+  smartAccount: ModularSmartAccount,
   { address }: ModuleMeta
-): Promise<Call[]> =>
-  addressEquals(address, SMART_SESSIONS_ADDRESS)
+): Promise<Call[]> => {
+  const meeValidatorAddress = smartAccount.version.validatorAddress
+
+  return addressEquals(address, SMART_SESSIONS_ADDRESS)
     ? [
         {
-          to: MEE_VALIDATOR_ADDRESS,
+          to: meeValidatorAddress,
           value: BigInt(0),
           data: encodeFunctionData({
             abi: [
@@ -125,6 +124,7 @@ export const toSafeSenderCalls = async (
         }
       ]
     : []
+}
 
 export const toInstallModuleCalls = async (
   account: ModularSmartAccount,

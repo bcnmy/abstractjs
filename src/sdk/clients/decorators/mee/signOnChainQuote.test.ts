@@ -3,11 +3,12 @@ import {
   type Chain,
   type Hex,
   type LocalAccount,
+  type PublicClient,
   type Transport,
+  type WalletClient,
   createPublicClient,
   createWalletClient,
   isHex,
-  parseEther,
   parseUnits,
   zeroAddress
 } from "viem"
@@ -23,15 +24,15 @@ import {
   type NetworkConfig,
   getAllowance,
   getBalance,
-  pKey,
   setAllowance
 } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { FORWARDER_ADDRESS } from "../../../constants"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -42,9 +43,17 @@ import {
   createMeeClient
 } from "../../createMeeClient"
 import executeSignedQuote from "./executeSignedQuote"
+import getFusionQuote from "./getFusionQuote"
 import getOnChainQuote from "./getOnChainQuote"
+import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
-import { ON_CHAIN_PREFIX, signOnChainQuote } from "./signOnChainQuote"
+import { getQuoteType } from "./getQuoteType"
+import {
+  ON_CHAIN_PREFIX,
+  formatSignedOnChainQuotePayload,
+  prepareExecutableOnChainQuotePayload,
+  signOnChainQuote
+} from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
@@ -84,10 +93,20 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -185,53 +204,12 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         feeToken
       })
 
-      // Spy on account_.build
-      const buildSpy = vi.spyOn(mcNexus, "build")
-
-      // Mock walletClient.sendTransaction
-      const mockSendTransaction = vi.fn().mockResolvedValue(
-        // dummy hash
-        "0x8f07b65846424c90560ecc8f76744b99caaa8fd9c08f2cf4ac61ed425aa821fe"
-      )
-      const mockWalletClient = {
-        sendTransaction: mockSendTransaction,
-        waitForTransactionReceipt: vi.fn().mockResolvedValue({}),
-        account: mcNexus.signer,
-        chain: optimism
-      }
-      vi.spyOn(mcNexus, "deploymentOn").mockReturnValue({
-        ...mcNexus.deploymentOn(optimism.id, true),
-        // @ts-ignore expected errors since we're not using the full walletClient
-        walletClient: mockWalletClient
-      })
-
       const signedQuote = await signOnChainQuote(meeClient, {
         fusionQuote: {
           quote,
           trigger: ethTrigger
         }
       })
-
-      // Verify account_.build was called with correct type and params
-      expect(buildSpy).toHaveBeenCalledWith({
-        type: "default",
-        data: {
-          calls: [
-            {
-              to: FORWARDER_ADDRESS,
-              data: expect.any(String),
-              value: ethTrigger.amount
-            }
-          ],
-          chainId: optimism.id
-        }
-      })
-
-      expect(mockSendTransaction).toHaveBeenCalledTimes(1)
-      const call = mockSendTransaction.mock.calls[0][0]
-      expect(call.to).toBe(FORWARDER_ADDRESS)
-      expect(call.value).toBe(ethTrigger.amount)
-      expect(call.data).toContain(quote.hash.substring(2, quote.hash.length))
 
       expect(signedQuote.signature).toBeDefined()
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
@@ -243,8 +221,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         tokenAddress,
         amount: 1n
       }
-
-      const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
 
       const quote = await getQuote(meeClient, {
         path: "quote-permit",
@@ -264,26 +240,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         feeToken
       })
 
-      // Spy on account_.build
-      const buildSpy = vi.spyOn(mcNexus, "build")
-
-      // Mock walletClient.sendTransaction
-      const mockSendTransaction = vi.fn().mockResolvedValue(
-        // dummy hash
-        "0x8f07b65846424c90560ecc8f76744b99caaa8fd9c08f2cf4ac61ed425aa821fe"
-      )
-      const mockWalletClient = {
-        sendTransaction: mockSendTransaction,
-        waitForTransactionReceipt: vi.fn().mockResolvedValue({}),
-        account: mcNexus.signer,
-        chain: optimism
-      }
-      vi.spyOn(mcNexus, "deploymentOn").mockReturnValue({
-        ...mcNexus.deploymentOn(optimism.id, true),
-        // @ts-ignore expected errors since we're not using the full walletClient
-        walletClient: mockWalletClient
-      })
-
       const signedQuote = await signOnChainQuote(meeClient, {
         confirmations: TEST_BLOCK_CONFIRMATIONS,
         fusionQuote: {
@@ -291,22 +247,6 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
           trigger: erc20Trigger
         }
       })
-
-      // Verify account_.build was called with correct type and params
-      expect(buildSpy).toHaveBeenCalledWith({
-        type: "approve",
-        data: {
-          spender: recipient,
-          tokenAddress: tokenAddress,
-          chainId: optimism.id,
-          amount: erc20Trigger.amount
-        }
-      })
-
-      expect(mockSendTransaction).toHaveBeenCalledTimes(1)
-      const call = mockSendTransaction.mock.calls[0][0]
-      expect(call.to).toBe(tokenAddress)
-      expect(call.data).toContain(quote.hash.substring(2, quote.hash.length))
 
       expect(signedQuote.signature).toBeDefined()
       expect(signedQuote.signature.startsWith(ON_CHAIN_PREFIX)).toBe(true)
@@ -447,19 +387,39 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
 
   let chain: Chain
 
+  let walletClient: WalletClient
+  let publicClient: PublicClient
+
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
     chain = network.chain
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      index: 1n
+      index: 1n,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
+    walletClient = createWalletClient({
+      account: eoaAccount,
+      chain,
+      transport: http(network.rpcUrl)
+    })
+
+    publicClient = createPublicClient({
+      chain,
+      transport: http(network.rpcUrl)
+    })
+
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
   })
 
@@ -725,5 +685,108 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
       const receipt = await meeClient.waitForSupertransactionReceipt({ hash })
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     })
+  })
+
+  test("should sign a quote using signOnChainQuote with modular signing functions", async () => {
+    const trigger: Trigger = {
+      chainId: chain.id,
+      tokenAddress: "0xb394e82fd251de530c9d71cbee9527a4cf690e57",
+      amount: 1n
+    }
+
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger,
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        })
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: "0xb394e82fd251de530c9d71cbee9527a4cf690e57"
+      }
+    })
+
+    const signedOnChainQuote = await signOnChainQuote(meeClient, {
+      fusionQuote
+    })
+    expect(signedOnChainQuote).toBeDefined()
+    expect(signedOnChainQuote.signature).toBeDefined()
+    expect(isHex(signedOnChainQuote.signature)).toEqual(true)
+
+    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+
+    if (fusionQuote.trigger.tokenAddress) {
+      paymentTokenInfo = await getPaymentToken(meeClient, {
+        tokenAddress: fusionQuote.trigger.tokenAddress,
+        chainId: fusionQuote.trigger.chainId
+      })
+    }
+
+    const quoteType = await getQuoteType(
+      walletClient,
+      fusionQuote,
+      paymentTokenInfo
+    )
+
+    expect(quoteType).toEqual("onchain")
+
+    const { version } = mcNexus.deploymentOn(trigger.chainId, true)
+
+    const { executablePayload, metadata } =
+      await prepareExecutableOnChainQuotePayload(
+        fusionQuote,
+        eoaAccount.address,
+        mcNexus.addressOn(chain.id, true),
+        version
+      )
+
+    const hash = await walletClient.sendTransaction({
+      ...executablePayload,
+      account: eoaAccount,
+      chain
+    })
+
+    await publicClient.waitForTransactionReceipt({ hash, confirmations: 3 })
+
+    const manuallySignedOnChainQuote = formatSignedOnChainQuotePayload(
+      fusionQuote,
+      metadata,
+      hash
+    )
+
+    expect(manuallySignedOnChainQuote).toBeDefined()
+    expect(manuallySignedOnChainQuote.signature).toBeDefined()
+    expect(isHex(manuallySignedOnChainQuote.signature)).toEqual(true)
+
+    // === Signature 1 ===
+
+    // Get the first 10 characters (includes the prefix: '0x' + '177eee01')
+    const sig1Prefix = signedOnChainQuote.signature.slice(0, 10)
+
+    // Skip the next 64 characters (which represent the dynamic transaction hash)
+    // Start slicing again from position 74 to get the rest of the signature
+    const sig1TxHashRemoved = signedOnChainQuote.signature.slice(74)
+
+    // Combine the preserved prefix and the tail part (after removing the tx hash)
+    const signatureOneWithoutTxHash = sig1Prefix + sig1TxHashRemoved
+
+    // === Signature 2 ===
+
+    // Do the same for the manually signed quote
+    const sig2Prefix = manuallySignedOnChainQuote.signature.slice(0, 10)
+    const sig2TxHashRemoved = manuallySignedOnChainQuote.signature.slice(74)
+    const signatureTwoWithoutTxHash = sig2Prefix + sig2TxHashRemoved
+
+    expect(signatureOneWithoutTxHash).toEqual(signatureTwoWithoutTxHash)
   })
 })

@@ -14,11 +14,13 @@ import { toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../../test/testUtils"
 import {
-  DEFAULT_PATHFINDER_URL,
-  DEFAULT_STAGING_PATHFINDER_API_KEY
+  DEFAULT_PATHFINDER_API_KEY,
+  DEFAULT_PATHFINDER_URL
 } from "../../clients/createMeeClient"
 import { testnetMcUSDC } from "../../constants"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { runtimeERC20BalanceOf } from "../../modules"
+import { getMEEVersion } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
@@ -42,13 +44,16 @@ describe.runIf(runLifecycleTests)("mee.withdrawFromGasTank", () => {
     gasTankEoaAccount = privateKeyToAccount(gasTankPk)
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(network.rpcUrl),
-      chain: chain,
+      chainConfiguration: {
+        transport: http(network.rpcUrl),
+        chain: chain,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: gasTankPk,
       options: {
         mee: {
           url: DEFAULT_PATHFINDER_URL,
-          apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+          apiKey: DEFAULT_PATHFINDER_API_KEY
         }
       }
     })

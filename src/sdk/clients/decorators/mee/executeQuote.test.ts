@@ -1,5 +1,4 @@
 import type { Chain, Hex, LocalAccount, Transport } from "viem"
-import { base, baseSepolia, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test, vi } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
@@ -7,7 +6,9 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import executeQuote from "./executeQuote"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
@@ -42,9 +43,19 @@ describe("mee.executeQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

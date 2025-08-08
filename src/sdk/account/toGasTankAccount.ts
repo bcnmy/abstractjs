@@ -1,12 +1,10 @@
-import {
-  type Chain,
-  type Hex,
-  type PublicClient,
-  type Transport,
-  createPublicClient
-} from "viem"
+import { type Hex, type PublicClient, createPublicClient } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { type NonceInfo, toMultichainNexusAccount } from "."
+import {
+  type ChainConfiguration,
+  type NonceInfo,
+  toMultichainNexusAccount
+} from "."
 import type { Url } from "../clients/createHttpClient"
 import { createMeeClient } from "../clients/createMeeClient"
 import type { GetQuotePayload } from "../clients/decorators/mee"
@@ -39,10 +37,8 @@ import withdrawFromGasTank, {
 export type GasTankAccountParams = {
   /** EOA account privateKey to create nexus instance */
   privateKey: Hex
-  /** chain where the account to be used */
-  chain: Chain
-  /** Transport to use for the gas tank Account */
-  transport: Transport
+  /** Chain configuration for account */
+  chainConfiguration: ChainConfiguration
   /** Parameters for mee client */
   options?: {
     mee: {
@@ -138,12 +134,12 @@ export type GasTankAccount = {
 export async function toGasTankAccount(
   params: GasTankAccountParams
 ): Promise<GasTankAccount> {
-  const { transport, chain, privateKey, options } = params
+  const { chainConfiguration, privateKey, options } = params
+  const { chain, transport } = chainConfiguration
 
   const mcNexus = await toMultichainNexusAccount({
     signer: privateKeyToAccount(privateKey),
-    chains: [chain],
-    transports: [transport]
+    chainConfigurations: [chainConfiguration]
   })
 
   const publicClient = createPublicClient({

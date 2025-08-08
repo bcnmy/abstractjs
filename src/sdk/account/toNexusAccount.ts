@@ -40,36 +40,29 @@ import {
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
-import {
-  ENTRY_POINT_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY_ADDRESS,
-  NEXUS_BOOTSTRAP_ADDRESS,
-  NEXUS_IMPLEMENTATION_ADDRESS
-} from "../constants"
+import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
-import { EntrypointAbi } from "../constants/abi"
-import { COMPOSABILITY_MODULE_ABI } from "../constants/abi"
+import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
+import { toComposableExecutor, toComposableFallback } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import type {
   BaseComposableCall,
   ComposableCall
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
-import { toLegacyK1Module } from "../modules/validators/legacyK1/toLegacyK1Module"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
   getFactoryData,
-  getInitData,
-  getK1FactoryData
+  getInitDataNoRegistry,
+  getInitDataWithRegistry
 } from "./decorators/getFactoryData"
-import {
-  getK1NexusAddress,
-  getNexusAddress
-} from "./decorators/getNexusAddress"
+import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   getDefaultNonceKey,
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
+import { toInitData } from "./utils"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
@@ -85,18 +78,27 @@ import {
   getAccountDomainStructFields,
   getTypesForEIP712Domain,
   isNullOrUndefined,
+  supportsCancun,
   typeToString
 } from "./utils/Utils"
 import {
-  type AddressConfigsAdditions,
+  type MEEVersionConfig,
   type NexusAccountId,
-  type NexusVersion,
-  getConfigFromNexusVersion,
   isVersionOlder
 } from "./utils/getVersion"
-import { toInitData } from "./utils/toInitData"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+
+export type GetInitDataParams = {
+  accountIndex: bigint
+  defaultValidator: GenericModuleConfig
+  prevalidationHooks: PrevalidationHookModuleConfig[]
+  validators: GenericModuleConfig[]
+  executors: GenericModuleConfig[]
+  hook: GenericModuleConfig
+  fallbacks: GenericModuleConfig[]
+  customInitData?: Hex
+}
 
 /**
  * Base module configuration type
@@ -116,14 +118,23 @@ export type GenericModuleConfig<
 export type PrevalidationHookModuleConfig = GenericModuleConfig & {
   hookType: bigint
 }
+
 /**
- * Parameters for creating a Nexus Smart Account
+ * Parameters for chain configuration
  */
-export type ToNexusSmartAccountParameters = {
+export type ChainConfiguration = {
   /** The blockchain network */
   chain: Chain
   /** The transport configuration */
   transport: ClientConfig["transport"]
+  /** MEE version config */
+  version: MEEVersionConfig
+}
+
+/**
+ * Parameters for creating a Nexus Smart Account
+ */
+export type ToNexusSmartAccountParameters = {
   /** The signer account or address */
   signer: OneOf<
     | EthereumProvider
@@ -131,6 +142,8 @@ export type ToNexusSmartAccountParameters = {
     | LocalAccount
     | EthersWallet
   >
+  /** Chain configuration */
+  chainConfiguration: ChainConfiguration
   /** Optional index for the account */
   index?: bigint | undefined
   /** Optional account address override */
@@ -145,29 +158,14 @@ export type ToNexusSmartAccountParameters = {
   hook?: GenericModuleConfig
   /** Optional fallback modules configuration */
   fallbacks?: Array<GenericModuleConfig>
-  /** Optional bootstrap address */
-  bootStrapAddress?: Address
-  /** Optional implementation address */
-  implementationAddress?: Address
-  /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
-  nexusVersion?: NexusVersion
-  /** Optional factory address */
-  factoryAddress?: Address
   /** Optional init data */
   initData?: Hex
-} & AddressConfigsAdditions[keyof AddressConfigsAdditions] &
-  Prettify<
-    Pick<
-      ClientConfig<Transport, Chain, Account, RpcSchema>,
-      | "account"
-      | "cacheTime"
-      | "chain"
-      | "key"
-      | "name"
-      | "pollingInterval"
-      | "rpcSchema"
-    >
+} & Prettify<
+  Pick<
+    ClientConfig<Transport, Chain, Account, RpcSchema>,
+    "account" | "cacheTime" | "key" | "name" | "pollingInterval" | "rpcSchema"
   >
+>
 /**
  * Nexus Smart Account type
  */
@@ -275,8 +273,156 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Check if the account is delegated to the implementation address */
     isDelegated: () => Promise<boolean>
+
+    /** Account ID */
+    accountId: NexusAccountId
+
+    /** Nexus version config */
+    version: MEEVersionConfig
   }
 >
+
+const prepareValidators = async (
+  signer: Signer,
+  meeConfig: MEEVersionConfig,
+  customValidators?: Validator[]
+): Promise<Validator[]> => {
+  let validators: Validator[] = []
+
+  if (customValidators && customValidators.length > 0) {
+    return customValidators
+  }
+
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    validators = [
+      toMeeK1Module({
+        signer: await toSigner({ signer }),
+        module: meeConfig.defaultValidatorAddress
+      })
+    ]
+  } else {
+    // No need to explicitly add validator for 1.2.X versions. default validator will be used which is
+    // mee k1 validator
+    validators = []
+  }
+
+  return validators
+}
+
+const prepareExecutors = (
+  meeConfig: MEEVersionConfig,
+  customExecutors?: GenericModuleConfig[]
+): GenericModuleConfig[] => {
+  let executors: GenericModuleConfig[] = []
+
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    if (!meeConfig.composableModuleAddress) {
+      throw new Error("Composable module address is missing")
+    }
+
+    // if using <=1.0.0, add the composable executor
+    const composableExecutor = toComposableExecutor(
+      meeConfig.composableModuleAddress
+    )
+    executors = [composableExecutor]
+
+    for (const executor of customExecutors || []) {
+      if (!addressEquals(executor.module, composableExecutor.module)) {
+        executors.push(executor)
+      }
+    }
+  } else {
+    executors = customExecutors || []
+  }
+
+  return executors
+}
+
+const prepareFallbacks = (
+  meeConfig: MEEVersionConfig,
+  customFallbacks?: GenericModuleConfig[]
+): GenericModuleConfig[] => {
+  let fallbacks: GenericModuleConfig[] = []
+
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    if (!meeConfig.composableModuleAddress) {
+      throw new Error("Composable module address is missing")
+    }
+
+    // if nexus version <=1.0.0, add the composable fallback
+    const composableFallback = toComposableFallback(
+      meeConfig.composableModuleAddress
+    )
+    fallbacks = [composableFallback]
+
+    for (const fallback of customFallbacks || []) {
+      if (!addressEquals(fallback.module, composableFallback.module)) {
+        fallbacks.push(fallback)
+      }
+    }
+  } else {
+    fallbacks = customFallbacks || []
+  }
+
+  return fallbacks
+}
+
+const prepareFactoryData = (
+  meeConfig: MEEVersionConfig,
+  initDataParams: GetInitDataParams
+): { initData: Hex; factoryData: Hex } => {
+  let factoryData: Hex = "0x"
+  let initData: Hex = "0x"
+
+  switch (meeConfig.version) {
+    case MEEVersion.V1_0_0:
+    case MEEVersion.V1_1_0: {
+      if (!meeConfig.moduleRegistry) {
+        throw new Error("Module registry not found in nexus config")
+      }
+
+      initData =
+        initDataParams.customInitData ||
+        getInitDataWithRegistry({
+          bootStrapAddress: meeConfig.bootStrapAddress,
+          validators: initDataParams.validators,
+          registryAddress: meeConfig.moduleRegistry.registryAddress,
+          attesters: meeConfig.moduleRegistry.attesters,
+          attesterThreshold: meeConfig.moduleRegistry.attesterThreshold,
+          meeVersion: meeConfig.version
+        })
+
+      factoryData = getFactoryData({
+        initData,
+        index: initDataParams.accountIndex
+      })
+      break
+    }
+
+    default: {
+      // All the nexus version 1.2.x will be deployed with no registry
+      initData =
+        initDataParams.customInitData ||
+        getInitDataNoRegistry({
+          defaultValidator: initDataParams.defaultValidator,
+          prevalidationHooks: initDataParams.prevalidationHooks,
+          validators: initDataParams.validators,
+          executors: initDataParams.executors,
+          hook: initDataParams.hook,
+          fallbacks: initDataParams.fallbacks,
+          bootStrapAddress: meeConfig.bootStrapAddress
+        })
+
+      factoryData = getFactoryData({
+        initData,
+        index: initDataParams.accountIndex
+      })
+      break
+    }
+  }
+
+  return { initData, factoryData }
+}
 
 /**
  * @description Create a Nexus Smart Account.
@@ -290,18 +436,24 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
  * import { mainnet } from 'viem/chains'
  *
  * const account = await toNexusAccount({
- *   chain: mainnet,
- *   transport: http(),
  *   signer: '0x...',
+ *   chainConfiguration: {
+ *     chain: mainnet,
+ *     transport: http(),
+ *     version: getMEEVersion(DEFAULT_MEE_VERSION),
+ *   }
  * })
  */
 export const toNexusAccount = async (
   parameters: ToNexusSmartAccountParameters
 ): Promise<NexusAccount> => {
   const {
-    chain,
-    transport: transportConfig,
     signer: _signer,
+    chainConfiguration: {
+      chain,
+      version: meeConfig,
+      transport: transportConfig
+    },
     index = 0n,
     validators: customValidators,
     executors: customExecutors,
@@ -309,119 +461,118 @@ export const toNexusAccount = async (
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
     accountAddress: accountAddress_,
-    nexusVersion,
-    attesterThreshold = 1,
-    useK1Config = false
+    initData: customInitData
   } = parameters
 
-  let {
-    initData,
-    // those params are 1.2.0 by default
-    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
-    // those params are undefined by default and are defined only if explicitly provided
-    // or if nexus version is provided
-    registryAddress,
-    attesters,
-    k1ValidatorAddress,
-    k1FactoryAddress
-  } = parameters
+  const publicClient = createPublicClient({ chain, transport: transportConfig })
 
-  // if nexus version earlier than 1.2.0 is provided, use the config from the constants
-  if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
-    ;({
-      factoryAddress,
-      bootStrapAddress,
-      implementationAddress,
-      registryAddress,
-      attesters,
-      k1ValidatorAddress,
-      k1FactoryAddress
-    } = getConfigFromNexusVersion(nexusVersion))
-    if (useK1Config) {
-      factoryAddress = k1FactoryAddress!
+  // All these version specific contract addresses were checked whether it was deployed or not.
+  const addressesToDeploymentSet = new Set([
+    meeConfig.bootStrapAddress,
+    meeConfig.defaultValidatorAddress,
+    meeConfig.validatorAddress,
+    meeConfig.factoryAddress,
+    meeConfig.implementationAddress
+  ])
+
+  if (meeConfig.moduleRegistry) {
+    addressesToDeploymentSet.add(meeConfig.moduleRegistry.registryAddress)
+  }
+
+  if (meeConfig.composableModuleAddress) {
+    addressesToDeploymentSet.add(meeConfig.composableModuleAddress)
+  }
+
+  // Filtering zero address because sometimes the default validator is zeroAddress which needs to be excluded
+  const addressesToDeploymentCheck = [...addressesToDeploymentSet].filter(
+    (address) => address !== zeroAddress
+  )
+
+  await Promise.all(
+    addressesToDeploymentCheck.map(async (address) => {
+      // Checks if the MEE contracts are deployed or not
+      // This ensures the MEE version suite is supported or not for the chain
+      const bytecode = await publicClient.getCode({
+        address
+      })
+
+      if (!bytecode || bytecode === "0x") {
+        throw new Error(
+          `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
+        )
+      }
+    })
+  )
+
+  // If the old version + no cancun ? new nexus is not supported
+  if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    // check if the chain supports > 1.2.0
+    const hasCancun = await supportsCancun({
+      chain,
+      transport: transportConfig
+    })
+
+    if (!hasCancun) {
+      throw new Error(
+        `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun.`
+      )
     }
   }
 
   const signer = await toSigner({ signer: _signer })
+
   const walletClient = toWalletClient({
     unresolvedSigner: _signer,
     resolvedSigner: signer,
     chain,
     transport: transportConfig
   })
-  const publicClient = createPublicClient({ chain, transport: transportConfig })
-
-  // Prepare default validator module
-  const defaultValidator = toDefaultModule({ signer })
 
   // Prepare validator modules
-  const validators = customValidators || []
+  const validators: Validator[] = await prepareValidators(
+    signer,
+    meeConfig,
+    customValidators
+  )
 
-  let k1Validator: Validator | undefined = undefined
+  const defaultValidator = toDefaultModule({ signer })
 
-  if (useK1Config && k1ValidatorAddress) {
-    k1Validator = toLegacyK1Module({
-      signer,
-      module: k1ValidatorAddress
-    })
-  }
-
-  // The default validator should be the defaultValidator unless custom validators have been set or k1Validator is set
-  let module = k1Validator || customValidators?.[0] || defaultValidator
+  // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
+  let module = validators[0] || defaultValidator
 
   // Prepare executor modules
-  const executors = customExecutors || []
+  const executors = prepareExecutors(meeConfig, customExecutors)
 
   // Prepare hook module
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  const fallbacks = customFallbacks || []
+  const fallbacks = prepareFallbacks(meeConfig, customFallbacks)
 
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []
 
-  let factoryData: Hex = "0x"
-
-  if (useK1Config) {
-    factoryData = getK1FactoryData({
-      signerAddress: signer.address,
-      index,
-      attesters: attesters!,
-      attesterThreshold
-    })
-  } else {
-    if (!initData) {
-      initData = getInitData({
-        defaultValidator: toInitData(defaultValidator),
-        prevalidationHooks,
-        validators: validators.map(toInitData),
-        executors: executors.map(toInitData),
-        hook: toInitData(hook),
-        fallbacks: fallbacks.map(toInitData),
-        bootStrapAddress,
-        registryAddress,
-        attesters,
-        attesterThreshold,
-        nexusVersion
-      })
-      factoryData = getFactoryData({ initData, index })
-    }
-  }
+  // prepare factory data
+  const { initData, factoryData } = prepareFactoryData(meeConfig, {
+    accountIndex: index,
+    defaultValidator: toInitData(defaultValidator),
+    prevalidationHooks,
+    validators: validators.map(toInitData),
+    executors: executors.map(toInitData),
+    hook: toInitData(hook),
+    fallbacks: fallbacks.map(toInitData),
+    customInitData
+  })
 
   /**
    * @description Gets the init code for the account
    * @returns The init code as a hexadecimal string
    */
-  const getInitCode = () =>
-    concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
+  const getInitCode = () => concatHex([meeConfig.factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
-
   const accountId: NexusAccountId = (await publicClient.readContract({
-    address: implementationAddress,
+    address: meeConfig.implementationAddress,
     abi: parseAbi(["function accountId() public view returns (string)"]),
     functionName: "accountId",
     args: []
@@ -435,21 +586,12 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = useK1Config
-      ? await getK1NexusAddress({
-          k1FactoryAddress: k1FactoryAddress!,
-          index,
-          ownerAddress: signer.address,
-          attesters: attesters!,
-          attesterThreshold,
-          publicClient
-        })
-      : await getNexusAddress({
-          factoryAddress,
-          index,
-          initData: initData!,
-          publicClient
-        })
+    const addressFromFactory = await getNexusAddress({
+      factoryAddress: meeConfig.factoryAddress,
+      index,
+      initData,
+      publicClient
+    })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
       _accountAddress = addressFromFactory
@@ -701,7 +843,7 @@ export const toNexusAccount = async (
       delegatedContract
     } = params || {}
 
-    const contractAddress = delegatedContract || implementationAddress
+    const contractAddress = delegatedContract || meeConfig.implementationAddress
 
     const authorization: SignAuthorizationReturnType =
       authorization_ ||
@@ -728,7 +870,7 @@ export const toNexusAccount = async (
       !!code &&
       code
         ?.toLowerCase()
-        .includes(NEXUS_IMPLEMENTATION_ADDRESS.substring(2).toLowerCase())
+        .includes(meeConfig.implementationAddress.substring(2).toLowerCase())
     )
   }
 
@@ -774,7 +916,7 @@ export const toNexusAccount = async (
         : encodeExecuteBatch(calls)
     },
     getFactoryArgs: async () => ({
-      factory: factoryAddress,
+      factory: meeConfig.factoryAddress,
       factoryData
     }),
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
@@ -827,14 +969,15 @@ export const toNexusAccount = async (
       encodeExecuteComposable,
       getUserOpHash,
       factoryData,
-      factoryAddress,
-      registryAddress,
+      factoryAddress: meeConfig.factoryAddress,
+      registryAddress: meeConfig.moduleRegistry?.registryAddress || zeroAddress,
       signer,
       walletClient,
       publicClient,
       chain,
       setModule,
-      getModule: () => module
+      getModule: () => module,
+      version: meeConfig
     }
   })
 }

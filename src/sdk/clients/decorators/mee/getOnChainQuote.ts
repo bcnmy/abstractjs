@@ -106,20 +106,20 @@ export const getOnChainQuote = async (
     }
   }
 
-  const sender = account_.signer.address
-  const scaAddress = account_.addressOn(trigger.chainId, true)
+  const owner = account_.signer.address
+  const spender = account_.addressOn(trigger.chainId, true)
 
   // By default the trigger amount will be deposited to sca account.
   // if a custom recipient is defined ? It will deposit to the recipient address
-  const recipient = trigger.recipientAddress || scaAddress
+  const recipient = trigger.recipientAddress || spender
 
   const { triggerGasLimit, triggerAmount, batchedInstructions } =
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
-      sender,
-      scaAddress,
-      recipient,
+      owner, // EOA address
+      spender, // For on chain quotes, the funds are directly deposited. So this param is not mostly used
+      recipient, // Either the SCA takes amount for itself or transferred for custom recipient
       account: account_
     })
 

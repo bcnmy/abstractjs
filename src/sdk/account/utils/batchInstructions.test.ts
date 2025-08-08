@@ -22,7 +22,9 @@ import {
 } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { mcUSDC } from "../../constants/tokens"
+import { getMEEVersion } from "../../modules"
 import { batchInstructions } from "./batchInstructions"
 
 const createBaseApproval = (account: MultichainSmartAccount, amount: string) =>
@@ -98,13 +100,24 @@ describe("utils.batchInstructions", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain, mainnet],
-      transports: [
-        paymentChainTransport,
-        targetChainTransport,
-        http(MAINNET_RPC_URLS[mainnet.id])
-      ],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: mainnet,
+          transport: http(MAINNET_RPC_URLS[mainnet.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

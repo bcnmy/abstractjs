@@ -13,11 +13,12 @@ import {
   zeroAddress
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { toNexusAccount } from "../src/sdk/account"
+import { type MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
-import { TokenWithPermitAbi } from "../src/sdk/constants"
+import { MEEVersion, TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testTokens"
+import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
 
 dotenv.config()
 
@@ -53,15 +54,36 @@ async function main() {
   for (const chainId of chainIds) {
     // Two account will be available from now. For collision issues in tests, use a fallback account with index one
     // Default: Index zero will be used for most of the tests
-    await processChain(chainId, account, ACCOUNT_INDEX)
-    await processChain(chainId, account, ACCOUNT_INDEX_ONE)
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V2_0_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX_ONE,
+      version: getMEEVersion(MEEVersion.V2_0_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V2_1_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V1_1_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V1_0_0)
+    })
   }
 }
 
 async function processChain(
   chainId: number,
   account: ReturnType<typeof privateKeyToAccount>,
-  accountIndex: bigint
+  nexusParams: {
+    accountIndex?: bigint
+    version: MEEVersionConfig
+  }
 ) {
   try {
     const chain = getChain(chainId)
@@ -120,10 +142,13 @@ async function processChain(
 
     // Create the Nexus account for this chain
     const nexus = await toNexusAccount({
-      chain,
+      chainConfiguration: {
+        chain,
+        transport: http(),
+        version: nexusParams.version
+      },
       signer: account,
-      transport: http(),
-      index: accountIndex
+      index: nexusParams.accountIndex ?? 0n
     })
 
     const nexusAddress = await nexus.getAddress()

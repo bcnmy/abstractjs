@@ -2,6 +2,9 @@ import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { RuntimeValue } from "../../modules"
 import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
+import buildAcrossIntentComposable, {
+  type BuildAcrossIntentComposableParams
+} from "./instructions/buildAcrossIntentComposable"
 import {
   type BuildApproveParameters,
   buildApprove
@@ -170,6 +173,17 @@ export type BuildComposableRawInstruction = {
 }
 
 /**
+ * Build action which is used to build instructions for a across intent composable call
+ * @property type - Literal "acrossIntent" to identify the action type
+ * @property data - {@link BuildAcrossIntentComposableParameters} The parameters for the across intent composable action
+ */
+export type BuildAcrossIntentComposableInstruction = {
+  type: "acrossIntent"
+  data: BuildAcrossIntentComposableParams
+  efficientMode?: false // as raw calldata doesn't have to be compressed
+}
+
+/**
  * Build action which is used to build instructions for uninstalling modules
  * @property type - Literal "buildMultichainInstructions" to identify the action type
  * @property data - {@link BuildMultichainInstructionParameters} The parameters for the uninstall modules action
@@ -203,6 +217,7 @@ export type BuildComposableInstructionTypes =
   | BaseInstructionTypes
   | BuildComposableInstruction
   | BuildComposableRawInstruction
+  | BuildAcrossIntentComposableInstruction
 
 /**
  * Builds transaction instructions based on the provided action type and parameters
@@ -307,6 +322,9 @@ export const buildComposable = async (
     }
     case "batch": {
       return buildBatch(baseParams, data)
+    }
+    case "acrossIntent": {
+      return buildAcrossIntentComposable(baseParams, data)
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

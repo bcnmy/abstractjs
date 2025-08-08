@@ -9,6 +9,8 @@ import {
 } from "../../test/testUtils"
 import type { MasterClient, NetworkConfig } from "../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import {
   type BicoBundlerClient,
   createBicoBundlerClient,
@@ -37,8 +39,11 @@ describe("bico.bundler", async () => {
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     bicoBundler = createBicoBundlerClient({
@@ -61,9 +66,12 @@ describe("bico.bundler", async () => {
         throw new Error("Account is required")
       }
       const nexusAccount = await toNexusAccount({
-        chain,
         signer: account,
-        transport: http(rpcUrl)
+        chainConfiguration: {
+          chain,
+          transport: http(rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       })
 
       const nexusClient = createSmartAccountClient({

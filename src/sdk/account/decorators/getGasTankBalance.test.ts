@@ -5,6 +5,8 @@ import { beforeAll, describe, expect, it } from "vitest"
 import { TESTNET_RPC_URLS } from "../../../test/testSetup"
 import { getBalance } from "../../../test/testUtils"
 import { testnetMcUSDC } from "../../constants"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.getGasTankBalance", () => {
@@ -12,8 +14,11 @@ describe("mee.getGasTankBalance", () => {
 
   beforeAll(async () => {
     gasTankAccount = await toGasTankAccount({
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-      chain: baseSepolia,
+      chainConfiguration: {
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        chain: baseSepolia,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: generatePrivateKey()
     })
   })

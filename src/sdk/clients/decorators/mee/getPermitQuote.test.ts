@@ -30,7 +30,9 @@ import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
@@ -72,9 +74,19 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({
@@ -251,9 +263,14 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
 
   test("should reserve gas fees when using max available amount", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({ account: mcNexus })
@@ -442,9 +459,14 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
 
   test("Trigger amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(testnetNetwork.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(testnetNetwork.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -506,9 +528,14 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
 
   test("Trigger max available amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(testnetNetwork.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(testnetNetwork.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)

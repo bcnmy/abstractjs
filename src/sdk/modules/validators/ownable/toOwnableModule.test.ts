@@ -16,12 +16,14 @@ import {
   toFunctionSelector
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { getMEEVersion } from "../.."
 import { getTestAccount, killNetwork } from "../../../../test/testUtils"
 import { type NexusAccount, toNexusAccount } from "../../../account"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { ownableActions } from "./decorators"
 import { toOwnableModule } from "./toOwnableModule"
@@ -57,8 +59,11 @@ describe("modules.toOwnableModule", () => {
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
-      chain,
-      transport: http(infra.network.rpcUrl),
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       validators: [ownablesModule]
     })
 

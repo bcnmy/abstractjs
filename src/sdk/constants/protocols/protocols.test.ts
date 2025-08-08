@@ -2,12 +2,14 @@ import type { Chain, LocalAccount, Transport } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 
 import { aave } from "."
+import { DEFAULT_MEE_VERSION } from ".."
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
+import { getMEEVersion } from "../../modules"
 
 describe("mee.protocols", async () => {
   let network: NetworkConfig
@@ -29,9 +31,19 @@ describe("mee.protocols", async () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
   })
 

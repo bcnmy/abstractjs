@@ -27,8 +27,10 @@ import {
 } from "../../../clients/createMeeClient"
 import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleInstalled"
 import type { FeeTokenInfo } from "../../../clients/decorators/mee"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../utils"
 import type { AnyData } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
@@ -72,10 +74,20 @@ describe("mee.multichainSmartSessions", () => {
     redeemerAddress = redeemerAccount.address
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index: BigInt(Date.now())
+      index: BigInt(Date.now()),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     feeToken = {
@@ -85,8 +97,7 @@ describe("mee.multichainSmartSessions", () => {
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
-      //url: "https://mee-node.biconomy.io/v1"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
   })
@@ -98,7 +109,7 @@ describe("mee.multichainSmartSessions", () => {
 
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.1", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -242,9 +253,19 @@ describe("mee.multichainSmartSessions", () => {
       // this would be a common pattern for signing userOps with a session key
       const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
-        chains: [paymentChain, targetChain],
-        transports: [paymentChainTransport, targetChainTransport],
-        signer: redeemerAccount
+        signer: redeemerAccount,
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: targetChain,
+            transport: targetChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const dappMeeClient = await createMeeClient({
@@ -332,14 +353,24 @@ describe("mee.multichainSmartSessions", () => {
 
       const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
-        chains: [paymentChain, targetChain],
-        transports: [paymentChainTransport, targetChainTransport],
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: targetChain,
+            transport: targetChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ],
         signer: redeemerAccount
       })
 
       const dappMeeClient = await createMeeClient({
         account: dappNexusAccount,
-        apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
       const dappSessionClient = dappMeeClient.extend(meeSessionActions)
 

@@ -5,11 +5,9 @@ import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import type { NetworkConfig } from "../../../test/testUtils"
-import {
-  DEFAULT_STAGING_PATHFINDER_API_KEY,
-  type MeeClient,
-  createMeeClient
-} from "../../clients/createMeeClient"
+import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 // @ts-ignore
@@ -31,19 +29,27 @@ describe.runIf(runLifecycleTests)("mee.sponsorSupertransaction", () => {
     chain = network.chain
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: DEFAULT_STAGING_PATHFINDER_API_KEY
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(network.rpcUrl),
-      chain,
+      chainConfiguration: {
+        transport: http(network.rpcUrl),
+        chain,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: generatePrivateKey()
     })
   })

@@ -37,14 +37,16 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NexusAccount } from "../../../account/toNexusAccount"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { toMeeK1Module } from "../../../modules"
+import { getMEEVersion, toMeeK1Module } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
 import {
-  DEFAULT_MEE_NODE_URL,
+  DEFAULT_PATHFINDER_API_KEY,
+  DEFAULT_PATHFINDER_URL,
   type MeeClient,
   createMeeClient
 } from "../../createMeeClient"
@@ -101,9 +103,19 @@ describe("mee.getMmDtkQuote", () => {
     })
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports,
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: transports[0],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: transports[1],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({
@@ -419,9 +431,19 @@ describe("mee.getMmDtkQuote", () => {
     })
 
     const mcNexusWithMMDTKSupport = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports,
       signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: transports[0],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: transports[1],
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ],
       validators: [meeK1ModuleWithMMDTKSupport]
     })
 
@@ -515,8 +537,8 @@ describe("mee.getMmDtkQuote", () => {
     // TODO: remove this once all the nodes are upgraded to have MM DTK support on the node level
     const meeClientWithMMDTKSupport = await createMeeClient({
       account: mcNexusWithMMDTKSupport,
-      apiKey: process.env.PERSONAL_MEE_API_KEY,
-      url: DEFAULT_MEE_NODE_URL
+      apiKey: DEFAULT_PATHFINDER_API_KEY,
+      url: DEFAULT_PATHFINDER_URL
     })
 
     const fusionQuote = await getMmDtkQuote(meeClientWithMMDTKSupport, {

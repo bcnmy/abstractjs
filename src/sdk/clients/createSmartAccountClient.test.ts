@@ -1,4 +1,4 @@
-import { COUNTER_ADDRESS, MEE_VALIDATOR_ADDRESS } from "@biconomy/ecosystem"
+import { COUNTER_ADDRESS } from "@biconomy/ecosystem"
 import { Wallet, ethers } from "ethers"
 import {
   http,
@@ -31,6 +31,8 @@ import {
   makeInstallDataAndHash
 } from "../account/utils/Utils"
 import { getChain } from "../account/utils/getChain"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import {
   type NexusClient,
@@ -67,8 +69,11 @@ describe("nexus.client", async () => {
 
     const nexusAccount = await toNexusAccount({
       signer: account,
-      chain,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({
@@ -266,14 +271,20 @@ describe("nexus.client", async () => {
 
     const viemAccount = await toNexusAccount({
       signer: viemSigner,
-      chain,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const ethersAccount = await toNexusAccount({
       signer: wallet as EthersWallet,
-      chain,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const viemNexusClient = createSmartAccountClient({
@@ -299,8 +310,11 @@ describe("nexus.client", async () => {
 
     const ethersAccount = await toNexusAccount({
       signer: ethersWallet as EthersWallet,
-      chain,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     const ethersNexusClient = createSmartAccountClient({

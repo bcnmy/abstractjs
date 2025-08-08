@@ -4,11 +4,13 @@ import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   type ActionData,
-  MEE_VALIDATOR_ADDRESS,
+  DEFAULT_MEE_VERSION,
   getSpendingLimitsPolicy
 } from "../../../../../constants"
 
+import type { MEEVersionConfig } from "../../../../../account"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
+import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
   type GrantPermissionResponse,
   grantPermissionPersonalSign,
@@ -78,7 +80,8 @@ export const grantMeePermission = async <
     redeemer,
     actions,
     feeToken,
-    maxPaymentAmount
+    maxPaymentAmount,
+    account: _account
   }: GrantMeePermissionParams<TModularSmartAccount>,
   mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
 ): Promise<GrantMeePermissionPayload> => {
@@ -109,6 +112,12 @@ export const grantMeePermission = async <
       (deployment) => deployment?.client?.chain?.id === chainId
     )
 
+    const defaultVersionConfig: MEEVersionConfig =
+      getMEEVersion(DEFAULT_MEE_VERSION)
+    const meeValidatorAddress =
+      deployment?.version.validatorAddress ||
+      defaultVersionConfig.validatorAddress
+
     const paymentActionPolicy =
       feeToken && feeToken.chainId === chainId
         ? {
@@ -127,7 +136,7 @@ export const grantMeePermission = async <
         ...actions.map((action) => ({ ...action, actionTarget })),
         ...(paymentActionPolicy ? [paymentActionPolicy] : [])
       ],
-      sessionValidator: MEE_VALIDATOR_ADDRESS,
+      sessionValidator: meeValidatorAddress,
       sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
       permitERC4337Paymaster: true
     }

@@ -1,4 +1,4 @@
-import { type Address, type Hex, type OneOf, zeroAddress } from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -21,8 +21,7 @@ import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL,
-  DEFAULT_STAGING_PATHFINDER_URL
+  DEFAULT_PATHFINDER_URL
 } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -31,6 +30,7 @@ export const CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION =
   USEROP_MIN_EXEC_WINDOW_DURATION / 2
 
 export const DEFAULT_GAS_LIMIT = 75_000n
+export const DEFAULT_VERIFICATION_GAS_LIMIT = 150_000n
 
 /**
  * Represents an abstract call to be executed in the transaction.
@@ -234,6 +234,10 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   gasLimit?: bigint
   /**
+   * verificationGasLimit option to override the default payment verification gas limit
+   */
+  verificationGasLimit?: bigint
+  /**
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
@@ -363,6 +367,8 @@ export type PaymentInfo = {
   nonce: string
   /** Chain ID where the payment will be processed */
   chainId: string
+  /** Payment userop verificationGasLimit */
+  verificationGasLimit?: bigint
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
   /** Short encoding flag @see QuoteRequest.shortEncoding */
@@ -661,7 +667,7 @@ export const getQuote = async (
   if (sponsorship && sponsorshipOptions) {
     const isSelfHostedSponsorship = ![
       DEFAULT_PATHFINDER_URL,
-      DEFAULT_STAGING_PATHFINDER_URL
+      DEFAULT_PATHFINDER_URL
     ].includes(sponsorshipOptions.url)
 
     if (isSelfHostedSponsorship) {
@@ -684,7 +690,7 @@ export const getQuote = async (
 const preparePaymentInfo = async (
   client: BaseMeeClient,
   parameters: GetQuoteParams & {
-    paymentVerificationGasLimit?: { verificationGasLimit: string }
+    paymentVerificationGasLimit?: { verificationGasLimit: bigint }
   }
 ) => {
   const {
@@ -694,11 +700,12 @@ const preparePaymentInfo = async (
     feePayer,
     delegate = false,
     gasLimit,
+    verificationGasLimit,
     authorization,
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
-    moduleAddress = zeroAddress as Address,
+    moduleAddress: validatorAddress,
     paymentVerificationGasLimit
   } = parameters
 
@@ -740,6 +747,8 @@ const preparePaymentInfo = async (
       token,
       nonce,
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
+      verificationGasLimit:
+        verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT,
       chainId: chainId.toString(),
       sponsorshipUrl,
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
@@ -778,7 +787,7 @@ const preparePaymentInfo = async (
 
     const [nonce, isAccountDeployed, initCode] = await Promise.all([
       validPaymentAccount.getNonceWithKey(validPaymentAccount.address, {
-        moduleAddress
+        moduleAddress: validatorAddress
       }),
       validPaymentAccount.isDeployed(),
       validPaymentAccount.getInitCode()
@@ -801,6 +810,8 @@ const preparePaymentInfo = async (
       token: feeToken.address,
       nonce: nonce.nonce.toString(),
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
+      verificationGasLimit:
+        verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT,
       chainId: feeToken.chainId.toString(),
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       ...initData,
@@ -822,7 +833,7 @@ const prepareUserOps = async (
   account: MultichainSmartAccount,
   instructions: Instruction[],
   isCleanUpUserOps = false,
-  moduleAddress?: Address
+  validatorAddress?: Address
 ) => {
   return await Promise.all(
     instructions.map((userOp) => {
@@ -856,7 +867,9 @@ const prepareUserOps = async (
 
       return Promise.all([
         callsPromise,
-        deployment.getNonceWithKey(accountAddress, { moduleAddress }),
+        deployment.getNonceWithKey(accountAddress, {
+          moduleAddress: validatorAddress
+        }),
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
@@ -990,7 +1003,7 @@ export type resolveVerificationGasLimitParams = {
  * Returns the verification gas limit for the userOp, to be spread
  */
 export type verificationGasLimitPayload = {
-  verificationGasLimit: string
+  verificationGasLimit: bigint
 }
 
 /**
@@ -1041,12 +1054,12 @@ const resolveVerificationGasLimitForPaymentChain = (
       if (index === 0) {
         // return increased verification gas limit for the first userOp
         // as it this userOp will be enabling the permission => requires more gas
-        return { verificationGasLimit: "1000000" }
+        return { verificationGasLimit: 1_000_000n }
       }
     }
     // return slighly increased verification gas limit
     // for USE session userOps
-    return { verificationGasLimit: "250000" }
+    return { verificationGasLimit: 250_000n }
   }
   return undefined
 }
@@ -1070,10 +1083,10 @@ const resolveVerificationGasLimitForNonPaymentChain = (
     if (index === 0) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
-      return { verificationGasLimit: "1000000" }
+      return { verificationGasLimit: 1_000_000n }
     }
     // for all other userOps, return USE session verification gas limit
-    return { verificationGasLimit: "250000" }
+    return { verificationGasLimit: 250_000n }
   }
   return undefined
 }
@@ -1097,7 +1110,7 @@ const resolvePaymentUserOpVerificationGasLimit = (
     if (!sponsorship) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
-      return { verificationGasLimit: "1000000" }
+      return { verificationGasLimit: 1_000_000n }
     }
     // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
     // so doesn't need any custom verification gas limit

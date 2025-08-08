@@ -2,6 +2,7 @@ import { type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { BaseMeeClient } from "../../createMeeClient"
 
+import type { AnyData } from "../../../modules"
 import type { GetQuotePayload } from "./getQuote"
 
 /**
@@ -34,6 +35,57 @@ export type SignQuotePayload = GetQuotePayload & {
 const DEFAULT_PREFIX = "0x177eee00"
 
 /**
+ * Prepares the payload required for signing a quote.
+ * This function extracts the hash from the quote and formats it as a signable message.
+ * The returned object contains the signable payload and optional metadata (currently empty, but can be extended).
+ *
+ * @param quote - The quote payload to be signed
+ * @returns An object containing the signable payload and metadata
+ *
+ * @example
+ * ```typescript
+ * const { signablePayload, metadata } = prepareSignableQuotePayload(quotePayload);
+ * // signablePayload: { message: { raw: quotePayload.hash } }
+ * // metadata: {}
+ * ```
+ */
+export const prepareSignableQuotePayload = (quote: GetQuotePayload) => {
+  return {
+    signablePayload: {
+      message: { raw: quote.hash }
+    },
+    metadata: {}
+  }
+}
+
+/**
+ * Formats the signed quote payload by attaching the signature to the original quote.
+ * The signature is prefixed and concatenated as required by the MEE service.
+ * Metadata is currently unused but reserved for future extensibility.
+ *
+ * @param quote - The original quote payload
+ * @param _metadata - Optional metadata (currently unused)
+ * @param signature - The signature to attach to the quote
+ * @returns The signed quote payload with the signature field
+ *
+ * @example
+ * ```typescript
+ * const signedQuote = formatSignedQuotePayload(quotePayload, {}, signature);
+ * // signedQuote: { ...quotePayload, signature: '0x177eee00<signature>' }
+ * ```
+ */
+export const formatSignedQuotePayload = (
+  quote: GetQuotePayload,
+  _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
+  signature: Hex
+): SignQuotePayload => {
+  return {
+    ...quote,
+    signature: concatHex([DEFAULT_PREFIX, signature])
+  }
+}
+
+/**
  * Signs a quote using the provided account's signer or the client's default account.
  * The signature is required for executing the quote through the MEE service.
  *
@@ -60,14 +112,11 @@ export const signQuote = async (
 
   const signer = account_.signer
 
-  const signedMessage = await signer.signMessage({
-    message: { raw: quote.hash }
-  })
+  const { signablePayload, metadata } = prepareSignableQuotePayload(quote)
 
-  return {
-    ...quote,
-    signature: concatHex([DEFAULT_PREFIX, signedMessage])
-  }
+  const signedMessage = await signer.signMessage(signablePayload)
+
+  return formatSignedQuotePayload(quote, metadata, signedMessage)
 }
 
 export default signQuote

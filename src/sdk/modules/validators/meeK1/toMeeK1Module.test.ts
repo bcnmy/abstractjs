@@ -1,7 +1,6 @@
 import {
   type Ecosystem,
   type Infra,
-  MEE_VALIDATOR_ADDRESS,
   toClients,
   toEcosystem
 } from "@biconomy/ecosystem"
@@ -19,6 +18,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { getMEEVersion } from "../smartSessions"
 import type { Validator } from "../toValidator"
 import { toMeeK1Module } from "./toMeeK1Module"
 
@@ -47,13 +48,16 @@ describe("modules.toMeeK1Module", () => {
 
     meeModule = toMeeK1Module({
       signer: eoaAccount,
-      module: MEE_VALIDATOR_ADDRESS
+      module: "0x00000000d12897DDAdC2044614A9677B191A2d95" // MEE validator address
     })
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({

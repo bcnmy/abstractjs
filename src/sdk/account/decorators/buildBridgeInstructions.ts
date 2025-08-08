@@ -192,7 +192,6 @@ export const buildBridgeInstructions = async (
 
   // Calculate how much we need to bridge
   const amountToBridge = targetAmount - destinationBalance
-
   // Get available balances from source chains
   const sourceBalances = unifiedBalance.breakdown
     .filter((balance) => balance.chainId !== toChain.id)

@@ -4,9 +4,11 @@ import {
   type Chain,
   type LocalAccount,
   type Transport,
+  type WalletClient,
   createPublicClient,
   createWalletClient,
   getContract,
+  isHex,
   keccak256,
   parseUnits,
   toBytes,
@@ -30,13 +32,25 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { PERMIT_TYPEHASH, TokenWithPermitAbi } from "../../../constants"
+import {
+  DEFAULT_MEE_VERSION,
+  PERMIT_TYPEHASH,
+  TokenWithPermitAbi
+} from "../../../constants"
 import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
+import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
-import { type Trigger, signPermitQuote } from "./signPermitQuote"
+import { getQuoteType } from "./getQuoteType"
+import {
+  type Trigger,
+  formatSignedPermitQuotePayload,
+  prepareSignablePermitQuotePayload,
+  signPermitQuote
+} from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
@@ -76,9 +90,19 @@ describe("mee.signPermitQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport, targetChainTransport],
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ],
       index
     })
 
@@ -211,19 +235,33 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
 
   let chain: Chain
 
+  let walletClient: WalletClient
+
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
     chain = network.chain
 
+    walletClient = createWalletClient({
+      account: eoaAccount,
+      chain,
+      transport: http(network.rpcUrl)
+    })
+
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
       signer: eoaAccount,
-      index: 1n
+      index: 1n,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
     meeClient = await createMeeClient({
-      account: mcNexus
+      account: mcNexus,
+      apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
     })
   })
 
@@ -268,7 +306,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     test("changes the allowance based on approvalAmount", async () => {
       // Define the amount to transfer and the custom approval amount (allowance)
       const amount = parseUnits("0.01", 6)
-      const approvalAmount = parseUnits("0.03", 6)
+      const approvalAmount = parseUnits("0.06", 6)
       const token = testnetMcTestUSDCP.addressOn(chain.id)
       // Create a wallet client for sending transactions and a public client for reading blockchain state
       const walletClient = createWalletClient({
@@ -346,5 +384,82 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       const fees = BigInt(executeReceipt.paymentInfo?.tokenWeiAmount ?? 0n)
       expect(allowanceEnd).toBe(approvalAmount - amount - fees)
     })
+  })
+
+  test("should sign a quote using signPermitQuote with modular signing functions", async () => {
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger: {
+        chainId: chain.id,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: 1n
+      },
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        })
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcUSDC.addressOn(chain.id)
+      }
+    })
+
+    const signedPermitQuote = await signPermitQuote(meeClient, { fusionQuote })
+    expect(signedPermitQuote).toBeDefined()
+    expect(signedPermitQuote.signature).toBeDefined()
+    expect(isHex(signedPermitQuote.signature)).toEqual(true)
+
+    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+
+    if (fusionQuote.trigger.tokenAddress) {
+      paymentTokenInfo = await getPaymentToken(meeClient, {
+        tokenAddress: fusionQuote.trigger.tokenAddress,
+        chainId: fusionQuote.trigger.chainId
+      })
+    }
+
+    const quoteType = await getQuoteType(
+      walletClient,
+      fusionQuote,
+      paymentTokenInfo
+    )
+
+    expect(quoteType).toEqual("permit")
+
+    const { signablePayload, metadata } =
+      await prepareSignablePermitQuotePayload(
+        fusionQuote,
+        eoaAccount.address,
+        mcNexus.addressOn(chain.id, true),
+        walletClient
+      )
+
+    const signature = await walletClient.signTypedData({
+      ...signablePayload,
+      account: walletClient.account!
+    })
+
+    const manuallySignedPermitQuote = formatSignedPermitQuotePayload(
+      fusionQuote,
+      metadata,
+      signature
+    )
+
+    expect(manuallySignedPermitQuote).toBeDefined()
+    expect(manuallySignedPermitQuote.signature).toBeDefined()
+    expect(isHex(manuallySignedPermitQuote.signature)).toEqual(true)
+
+    expect(signedPermitQuote.signature).toEqual(
+      manuallySignedPermitQuote.signature
+    )
   })
 })

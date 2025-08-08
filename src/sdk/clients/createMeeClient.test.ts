@@ -28,8 +28,10 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../constants"
 import { aave, mcAaveV3Pool } from "../constants/protocols"
 import { mcAUSDC, mcUSDC, testnetMcUSDC } from "../constants/tokens"
+import { getMEEVersion } from "../modules"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
@@ -65,10 +67,20 @@ describe("mee.createMeeClient", async () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport, targetChainTransport],
-      index
+      index,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -85,10 +97,25 @@ describe("mee.createMeeClient", async () => {
         http(MAINNET_RPC_URLS[gnosisChiado.id])
       ]
       const invalidMcNexus = await toMultichainNexusAccount({
-        chains: [paymentChain, targetChain, gnosisChiado],
-        transports,
         signer: eoaAccount,
-        index
+        index,
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: http(MAINNET_RPC_URLS[paymentChain.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: targetChain,
+            transport: http(MAINNET_RPC_URLS[targetChain.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: gnosisChiado,
+            transport: http(MAINNET_RPC_URLS[gnosisChiado.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       await expect(
@@ -195,10 +222,15 @@ describe("mee.createMeeClient", async () => {
     "should execute a quote using signOnChainQuote",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        index
+        index,
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const meeClient = await createMeeClient({ account: mcNexus })
@@ -334,10 +366,15 @@ describe("mee.createMeeClient.delegated", async () => {
 
   beforeAll(async () => {
     mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-      accountAddress: eoaAccount.address
+      accountAddress: eoaAccount.address,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({

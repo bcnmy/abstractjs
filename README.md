@@ -41,9 +41,19 @@ import { http } from "viem";
 
 const eoaAccount = privateKeyToAccount(`0x${process.env.PRIVATE_KEY}`)
 const mcNexus = await toMultichainNexusAccount({
-  chains: [base, optimism],
-  transports: [http(), http()],
-  signer: eoaAccount
+  signer: eoaAccount,
+  chainConfigurations: [
+    {
+      chain: base,
+      transport: http(),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
+    },
+    {
+      chain: optimism,
+      transport: http(),
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
+    }
+  ]
 })
 const meeClient = await createMeeClient({ account: mcNexus })
 

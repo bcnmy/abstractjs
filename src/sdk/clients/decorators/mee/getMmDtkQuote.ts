@@ -6,6 +6,8 @@ import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
+export const DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK = 200_000n
+
 /**
  * Response payload for a MM DTK quote request.
  * Combines the standard quote payload with MM DTK-specific trigger information.
@@ -81,6 +83,7 @@ export const getMmDtkQuote = async (
     cleanUps,
     instructions,
     gasLimit,
+    verificationGasLimit,
     delegatorSmartAccount,
     ...rest
   } = parameters
@@ -88,18 +91,18 @@ export const getMmDtkQuote = async (
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const sender = delegatorSmartAccount.address
-  const scaAddress = account_.addressOn(trigger.chainId, true)
+  const spender = account_.addressOn(trigger.chainId, true)
 
   // By default the trigger amount will be deposited to sca account.
   // if a custom recipient is defined ? It will deposit to the recipient address
-  const recipient = trigger.recipientAddress || scaAddress
+  const recipient = trigger.recipientAddress || spender
 
   const { triggerGasLimit, triggerAmount, batchedInstructions } =
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
-      sender,
-      scaAddress,
+      owner: sender,
+      spender,
       recipient,
       account: account_
     })
@@ -112,6 +115,8 @@ export const getMmDtkQuote = async (
     eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
+    verificationGasLimit:
+      verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })

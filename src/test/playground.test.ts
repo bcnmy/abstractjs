@@ -22,6 +22,8 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
+import { DEFAULT_MEE_VERSION } from "../sdk/constants"
+import { getMEEVersion } from "../sdk/modules"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
 
@@ -86,9 +88,12 @@ describe.skipIf(!playgroundTrue() || !runLifecycleTests)("playground", () => {
   test("should init the smart account", async () => {
     nexusClient = createSmartAccountClient({
       account: await toNexusAccount({
-        chain,
         signer: eoaAccount,
-        transport: http(network.rpcUrl),
+        chainConfiguration: {
+          chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
         index
       }),
       transport: http(bundlerUrl),

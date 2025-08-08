@@ -17,7 +17,9 @@ import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getOnChainQuote from "./getOnChainQuote"
 import type { FeeTokenInfo, Instruction } from "./getQuote"
@@ -53,10 +55,20 @@ describe("mee.getOnChainQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -110,9 +122,14 @@ describe("mee.getOnChainQuote", () => {
   // Will be skipped for now
   test.skip("On chain fusion flow token transfer", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [base],
       signer: eoaAccount,
-      transports: [http(MAINNET_RPC_URLS[base.id])]
+      chainConfigurations: [
+        {
+          chain: base,
+          transport: http(MAINNET_RPC_URLS[base.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
@@ -158,9 +175,14 @@ describe("mee.getOnChainQuote", () => {
   // Will be skipped for now
   test.skip("Trigger amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [base],
       signer: eoaAccount,
-      transports: [http(MAINNET_RPC_URLS[base.id])]
+      chainConfigurations: [
+        {
+          chain: base,
+          transport: http(MAINNET_RPC_URLS[base.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(base.id, true)
@@ -218,9 +240,14 @@ describe("mee.getOnChainQuote", () => {
   // Will be skipped for now
   test.skip("Trigger max available amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [base],
       signer: eoaAccount,
-      transports: [http(MAINNET_RPC_URLS[base.id])]
+      chainConfigurations: [
+        {
+          chain: base,
+          transport: http(MAINNET_RPC_URLS[base.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(base.id, true)

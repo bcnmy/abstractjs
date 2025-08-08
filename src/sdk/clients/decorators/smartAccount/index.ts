@@ -407,7 +407,7 @@ export type SmartAccountActions<
    * ```
    */
   upgradeSmartAccount: (
-    args?: UpgradeSmartAccountParameters<TSmartAccount>
+    args: UpgradeSmartAccountParameters<TSmartAccount>
   ) => Promise<Hash>
 }
 

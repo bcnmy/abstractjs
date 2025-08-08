@@ -1,6 +1,6 @@
-import { isPermitSupported } from "../../../modules/utils/Helpers"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { getPaymentToken } from "./getPaymentToken"
+import { type GetPaymentTokenPayload, getPaymentToken } from "./getPaymentToken"
+import { getQuoteType } from "./getQuoteType"
 import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"
 import signOnChainQuote, {
   type SignOnChainQuotePayload,
@@ -68,39 +68,33 @@ export const signFusionQuote = async (
   }
   // if it is not mm-dtk, then it is permit or on-chain
 
-  // if custom call is provided, we use on-chain tx fusion mode
-  if ("call" in parameters.fusionQuote.trigger) {
-    return signOnChainQuote(client, parameters)
+  const trigger = parameters.fusionQuote.trigger
+
+  let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+
+  if (trigger.tokenAddress) {
+    paymentTokenInfo = await getPaymentToken(client, {
+      tokenAddress: trigger.tokenAddress,
+      chainId: trigger.chainId
+    })
   }
 
-  // if no call, decide based on whether the payment token supports permit
-  const paymentTokenInfo = await getPaymentToken(
-    client,
-    parameters.fusionQuote.trigger
+  const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
+
+  const signatureType = await getQuoteType(
+    walletClient,
+    parameters.fusionQuote,
+    paymentTokenInfo
   )
-  let permitEnabled = false
 
-  if (paymentTokenInfo.paymentToken) {
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
-  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-    const modularSmartAccount = client.account.deploymentOn(
-      parameters.fusionQuote.trigger.chainId,
-      true
-    )
-
-    permitEnabled = await isPermitSupported(
-      modularSmartAccount.walletClient,
-      parameters.fusionQuote.trigger.tokenAddress
-    )
-  } else {
-    throw new Error(
-      `Payment token (${parameters.fusionQuote.trigger.tokenAddress}) not supported for chain ${parameters.fusionQuote.trigger.chainId}`
-    )
+  switch (signatureType) {
+    case "permit":
+      return signPermitQuote(client, parameters)
+    case "onchain":
+      return signOnChainQuote(client, parameters)
+    default:
+      throw new Error("Invalid quote type for fusion quote")
   }
-
-  return permitEnabled
-    ? signPermitQuote(client, parameters)
-    : signOnChainQuote(client, parameters)
 }
 
 export default signFusionQuote
