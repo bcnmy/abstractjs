@@ -13,19 +13,19 @@ import {
   zeroAddress
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
+import {
+  base,
+  baseSepolia,
+  mainnet,
+  optimism,
+  optimismSepolia
+} from "viem/chains"
 import { type MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { MEEVersion, TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC } from "../src/sdk/constants/tokens"
 import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testTokens"
-import {
-  mainnet,
-  optimism,
-  base,
-  optimismSepolia,
-  baseSepolia
-} from "viem/chains"
 
 dotenv.config()
 
