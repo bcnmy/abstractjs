@@ -17,8 +17,8 @@ import { type MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { MEEVersion, TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC, testnetMcUSDC } from "../src/sdk/constants/tokens"
-import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testTokens"
 import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
+import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testTokens"
 
 dotenv.config()
 
