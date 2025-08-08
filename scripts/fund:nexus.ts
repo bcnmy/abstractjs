@@ -19,8 +19,26 @@ import { MEEVersion, TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC } from "../src/sdk/constants/tokens"
 import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testTokens"
+import {
+  mainnet,
+  optimism,
+  base,
+  optimismSepolia,
+  baseSepolia
+} from "viem/chains"
 
 dotenv.config()
+
+export const MAINNET_RPC_URLS: Record<number, string> = {
+  [mainnet.id]: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [optimism.id]: `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [base.id]: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+}
+
+export const TESTNET_RPC_URLS: Record<number, string> = {
+  [optimismSepolia.id]: `https://opt-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [baseSepolia.id]: `https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+}
 
 // Configuration
 const NATIVE_TOKEN_AMOUNT = parseEther("0.0005")
@@ -126,9 +144,12 @@ async function processChain(
         return {
           ...tokenInfo,
           chainId,
-          balance: await getBalances(
-            [{ chainId, tokenAddress: tokenInfo.address }],
-            account.address
+          balance: (
+            await getBalances(
+              [{ chainId, tokenAddress: tokenInfo.address }],
+              account.address,
+              isTestnet
+            )
           )[0]
         }
       })
@@ -150,7 +171,9 @@ async function processChain(
     const nexus = await toNexusAccount({
       chainConfiguration: {
         chain,
-        transport: http(),
+        transport: isTestnet
+          ? http(TESTNET_RPC_URLS[chain.id])
+          : http(MAINNET_RPC_URLS[chain.id]),
         version: nexusParams.version
       },
       signer: account,
@@ -166,9 +189,12 @@ async function processChain(
         return {
           ...tokenInfo,
           chainId,
-          balance: await getBalances(
-            [{ chainId, tokenAddress: tokenInfo.address }],
-            nexusAddress
+          balance: (
+            await getBalances(
+              [{ chainId, tokenAddress: tokenInfo.address }],
+              nexusAddress,
+              isTestnet
+            )
           )[0]
         }
       })
@@ -189,7 +215,9 @@ async function processChain(
     // Create wallet client for this chain
     const walletClient = createWalletClient({
       account,
-      transport: http(),
+      transport: isTestnet
+        ? http(TESTNET_RPC_URLS[chain.id])
+        : http(MAINNET_RPC_URLS[chain.id]),
       chain
     }).extend(publicActions)
 
@@ -290,13 +318,19 @@ const getBalances = async (
     chainId: number
     tokenAddress?: Address
   }[],
-  address: Address
+  address: Address,
+  isTestnet: boolean
 ): Promise<bigint[]> => {
   const results: bigint[] = []
 
   for (const param of params) {
     const chain = getChain(param.chainId)
-    const publicClient = createPublicClient({ transport: http(), chain })
+    const publicClient = createPublicClient({
+      transport: isTestnet
+        ? http(TESTNET_RPC_URLS[chain.id])
+        : http(MAINNET_RPC_URLS[chain.id]),
+      chain
+    })
     let balance = 0n
     // Get native token balance
     if (param.tokenAddress === zeroAddress) {
