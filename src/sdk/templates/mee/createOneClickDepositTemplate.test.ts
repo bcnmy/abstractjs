@@ -5,7 +5,7 @@ import {
   parseUnits,
   zeroAddress
 } from "viem"
-import { sepolia } from "viem/chains"
+import { optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, it, vi } from "vitest"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
@@ -21,30 +21,6 @@ import { createOneClickDepositTemplate } from "./createOneClickDepositTemplate"
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
 
-const mocks = vi.hoisted(async () => {
-  return {
-    getUnifiedERC20BalanceMock: vi.fn().mockResolvedValue({
-      mcToken: testnetMcTestUSDCP,
-      balance: parseUnits("1", 6),
-      decimals: 6,
-      breakdown: [
-        {
-          balance: parseUnits("1", 6),
-          decimals: 6,
-          chainId: 84532
-        }
-      ]
-    })
-  }
-})
-
-vi.mock("../../account/decorators/getUnifiedERC20Balance", async () => {
-  const resolvedMocks = await mocks
-  return {
-    getUnifiedERC20Balance: resolvedMocks.getUnifiedERC20BalanceMock
-  }
-})
-
 describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
   let eoaAccount: LocalAccount
   let sourceChain: Chain
@@ -55,7 +31,7 @@ describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
     const network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
     sourceChain = network.chain
-    destinationChain = sepolia
+    destinationChain = optimismSepolia
 
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
