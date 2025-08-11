@@ -504,7 +504,7 @@ export const toNexusAccount = async (
     })
   )
 
-  // If the old version + no cancun ? new nexus is not supported
+  // if the MEE version is not older than 2.0.0 ? SDK checks for cancun support and throw error if not
   if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     // check if the chain supports > 1.2.0
     const hasCancun = await supportsCancun({
