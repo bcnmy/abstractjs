@@ -249,7 +249,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       )
     })
 
-    describe("should work with a different versions", async () => {
+    describe("should work with different versions", async () => {
       const newSigner = privateKeyToAccount(`0x${process.env.PRIVATE_KEY!}`)
       const executeTx = async (nexusAccount: MultichainSmartAccount) => {
         const meeClient = await createMeeClient({
