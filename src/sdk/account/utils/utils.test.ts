@@ -1,7 +1,7 @@
 import { ParamType, ethers } from "ethers"
 import { http, type AbiParameter, encodeAbiParameters } from "viem"
 import { generatePrivateKey } from "viem/accounts"
-import { mainnet, polygon } from "viem/chains"
+import { mainnet, chiliz } from "viem/chains"
 import { describe, expect, test } from "vitest"
 import { MAINNET_RPC_URLS } from "../../../test/testSetup"
 import { type EthersWallet, supportsCancun } from "./Utils"
@@ -103,12 +103,12 @@ describe("utils", async () => {
   })
   describe("supportsCancun", async () => {
     test("should return the correct value if the chain supports Cancun", async () => {
-      // polygon should return false
-      const doesSupportCancunPolygon = await supportsCancun({
-        transport: http(),
-        chain: polygon
+      // chiliz should return false
+      const doesSupportCancun = await supportsCancun({
+        transport: http(MAINNET_RPC_URLS[chiliz.id]),
+        chain: chiliz
       })
-      expect(doesSupportCancunPolygon).toBe(false)
+      expect(doesSupportCancun).toBe(false)
       // mainnet ethereum should return true
       const doesSupportCancunMainnet = await supportsCancun({
         transport: http(MAINNET_RPC_URLS[mainnet.id]),

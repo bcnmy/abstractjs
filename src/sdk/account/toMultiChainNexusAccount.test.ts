@@ -8,7 +8,7 @@ import {
   zeroAddress
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { base, baseSepolia, optimism, polygon } from "viem/chains"
+import { base, baseSepolia, chiliz, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   MAINNET_RPC_URLS,
@@ -201,7 +201,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
       ).rejects.toThrow()
     })
     test("should throw an error if the version is supported but not by the chain", async () => {
-      const notCancunChain = polygon
+      const notCancunChain = chiliz
       await expect(
         toNexusAccount({
           signer: eoaAccount,
@@ -211,7 +211,9 @@ describe("mee.toMultiChainNexusAccount", async () => {
             version: getMEEVersion(MEEVersion.V2_0_0)
           }
         })
-      ).rejects.toThrow()
+      ).rejects.toThrow(
+        "MEE version (2.0.0) is not supported for the Chiliz Chain chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun."
+      )
     })
     test("should create an account with the correct nexus version", async () => {
       const nexusAccount = await toMultichainNexusAccount({

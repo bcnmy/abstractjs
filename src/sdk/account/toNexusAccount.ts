@@ -464,6 +464,21 @@ export const toNexusAccount = async (
     initData: customInitData
   } = parameters
 
+  // if the MEE version is not older than 2.0.0 ? SDK checks for cancun support and throw error if not
+  if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    // check if the chain supports > 1.2.0
+    const hasCancun = await supportsCancun({
+      chain,
+      transport: transportConfig
+    })
+
+    if (!hasCancun) {
+      throw new Error(
+        `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun.`
+      )
+    }
+  }
+
   const publicClient = createPublicClient({ chain, transport: transportConfig })
 
   // All these version specific contract addresses were checked whether it was deployed or not.
@@ -503,21 +518,6 @@ export const toNexusAccount = async (
       }
     })
   )
-
-  // if the MEE version is not older than 2.0.0 ? SDK checks for cancun support and throw error if not
-  if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
-    // check if the chain supports > 1.2.0
-    const hasCancun = await supportsCancun({
-      chain,
-      transport: transportConfig
-    })
-
-    if (!hasCancun) {
-      throw new Error(
-        `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun.`
-      )
-    }
-  }
 
   const signer = await toSigner({ signer: _signer })
 
