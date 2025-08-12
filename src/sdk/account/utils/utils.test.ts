@@ -1,7 +1,7 @@
 import { ParamType, ethers } from "ethers"
 import { http, type AbiParameter, encodeAbiParameters } from "viem"
 import { generatePrivateKey } from "viem/accounts"
-import { mainnet, chiliz } from "viem/chains"
+import { chiliz, mainnet } from "viem/chains"
 import { describe, expect, test } from "vitest"
 import { MAINNET_RPC_URLS } from "../../../test/testSetup"
 import { type EthersWallet, supportsCancun } from "./Utils"
