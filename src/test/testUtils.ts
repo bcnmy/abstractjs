@@ -396,3 +396,9 @@ export const transferErc20 = async ({
     confirmations: TEST_BLOCK_CONFIRMATIONS
   })
 }
+
+export const getRandomAccountIndex = (min: number, max: number) => {
+  const minValue = Math.ceil(min) // Round up to ensure inclusive min
+  const maxValue = Math.floor(max) // Round down to ensure inclusive max
+  return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue
+}

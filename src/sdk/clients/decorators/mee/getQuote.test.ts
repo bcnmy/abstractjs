@@ -19,6 +19,7 @@ import {
 import {
   type NetworkConfig,
   getBalance,
+  getRandomAccountIndex,
   setAllowance,
   transferErc20
 } from "../../../../test/testUtils"
@@ -46,12 +47,6 @@ import {
   type Instruction,
   getQuote
 } from "./getQuote"
-
-const getRandomAccountIndex = (min: number, max: number) => {
-  const minValue = Math.ceil(min) // Round up to ensure inclusive min
-  const maxValue = Math.floor(max) // Round down to ensure inclusive max
-  return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue
-}
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")

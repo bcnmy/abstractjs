@@ -21,7 +21,7 @@ export type UpgradeSmartAccountParameters<
   TSmartAccount extends SmartAccount | undefined
 > = { account?: TSmartAccount } & {
   /** Optional custom implementation address. If not provided, the latest default implementation will be used */
-  implementationAddress: Hex
+  implementationAddress?: Hex
   /** Optional initialization data to pass to the new implementation */
   initData?: Hex
   maxFeePerGas?: bigint
@@ -52,7 +52,7 @@ export async function upgradeSmartAccount<
   TSmartAccount extends SmartAccount | undefined
 >(
   client: Client<Transport, Chain | undefined, TSmartAccount>,
-  parameters: UpgradeSmartAccountParameters<TSmartAccount>
+  parameters?: UpgradeSmartAccountParameters<TSmartAccount>
 ): Promise<Hash> {
   const {
     account: account_ = client.account,
