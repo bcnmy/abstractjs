@@ -4,23 +4,23 @@ import {
   type LocalAccount,
   type WalletClient,
   createWalletClient,
-  zeroAddress,
+  encodeAbiParameters,
   encodeFunctionData,
   parseAbi,
-  encodeAbiParameters
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  TEST_BLOCK_CONFIRMATIONS,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../../../test/testSetup"
 import {
-  getRandomAccountIndex,
-  type NetworkConfig
+  type NetworkConfig,
+  getRandomAccountIndex
 } from "../../../../test/testUtils"
 import {
-  MultichainSmartAccount,
+  type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account"
 import {
@@ -29,8 +29,8 @@ import {
   testnetMcUSDC
 } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
-import { createMeeClient } from "../../createMeeClient"
 import { createBicoBundlerClient } from "../../createBicoBundlerClient"
+import { createMeeClient } from "../../createMeeClient"
 
 describe("mee.upgradeSmartAccount", () => {
   let network: NetworkConfig
