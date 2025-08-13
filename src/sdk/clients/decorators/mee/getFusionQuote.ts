@@ -3,6 +3,7 @@ import { type Address, encodeFunctionData, erc20Abi, zeroAddress } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { RuntimeValue } from "../../../modules"
 import {
   greaterThanOrEqualTo,
@@ -21,7 +22,6 @@ import {
 } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
 import type { Trigger } from "./signPermitQuote"
-import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote
