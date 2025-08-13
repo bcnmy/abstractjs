@@ -1,5 +1,5 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import { type Address, erc20Abi, zeroAddress } from "viem"
+import { type Address, encodeFunctionData, erc20Abi, zeroAddress } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
@@ -21,6 +21,7 @@ import {
 } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
 import type { Trigger } from "./signPermitQuote"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote
@@ -155,17 +156,30 @@ export const prepareInstructions = async (
   if (trigger.useMaxAvailableFunds) {
     const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
     if (trigger.tokenAddress === zeroAddress) {
+      const { version } = account.deploymentOn(trigger.chainId, true)
+
+      const forwardCalldata = encodeFunctionData({
+        abi: ForwarderAbi,
+        functionName: "forward",
+        args: [recipient]
+      })
+
       const [balance, gasPrice, gasLimit] = await Promise.all([
         publicClient.getBalance({ address: owner }),
         publicClient.getGasPrice(),
-        publicClient.estimateGas({ account: owner, to: recipient, value: 1n }) // Dummy values
+        publicClient.estimateGas({
+          account: owner,
+          to: version.ethForwarderAddress,
+          data: forwardCalldata,
+          value: 100n // Dummy amount
+        })
       ])
 
-      // 50% gas limit buffer to avoid failures
-      const gasLimitWithBuffer = (gasLimit * 150n) / 100n
+      // 100% gas limit buffer to avoid failures
+      const gasLimitWithBuffer = (gasLimit * 200n) / 100n
 
-      // 50% buffer for gas price fluctuations
-      const gasBuffer = 1.5
+      // 100% buffer for gas price fluctuations
+      const gasBuffer = 2
 
       const baseCost = gasLimitWithBuffer * gasPrice
       const gasReserve = BigInt(Math.ceil(Number(baseCost) * gasBuffer))
