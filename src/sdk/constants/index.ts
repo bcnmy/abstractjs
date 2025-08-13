@@ -47,7 +47,7 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   [MEEVersion.V2_1_0]: {
     // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
     version: MEEVersion.V2_1_0,
-    accountId: "biconomy.nexus.1.2.1",
+    accountId: "biconomy.nexus.1.2.0",
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837", // Nexus Factory Address
     bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",

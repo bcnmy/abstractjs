@@ -227,7 +227,7 @@ describe("mee.upgradeSmartAccount", () => {
     // Wait for the upgrade transaction to be processed
     const receipt = await bundlerClient.waitForUserOperationReceipt({ hash })
 
-    expect(receipt.success).to.eq(true)
+    expect(receipt.success).to.eq("true")
     const accountId = await bundlerClient.accountId()
 
     expect(accountId).to.eq(mcNexus2_0_0Version.accountId)
@@ -299,7 +299,7 @@ describe("mee.upgradeSmartAccount", () => {
     // Wait for the upgrade transaction to be processed
     const receipt = await bundlerClient.waitForUserOperationReceipt({ hash })
 
-    expect(receipt.success).to.eq(true)
+    expect(receipt.success).to.eq("true")
     const accountId = await bundlerClient.accountId()
 
     expect(accountId).to.eq(mcNexus2_1_0Version.accountId)
