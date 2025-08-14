@@ -8,7 +8,6 @@ import {
   parseAbi,
   zeroAddress
 } from "viem"
-import { base, optimism } from "viem/chains"
 import type { Instruction } from "../../../clients/decorators/mee"
 import {
   type RuntimeERC20BalanceOfParams,
@@ -35,8 +34,35 @@ const acrossIntentWrappers = createChainAddressMap([
 
 // 🚀 Across SpokePool addresses
 const acrossSpokePool = createChainAddressMap([
-  [Number(base.id), "0x09aea4b2242abc8bb4bb78d537a67a245a7bec64"],
-  [Number(optimism.id), "0x6f26Bf09B1C792e3228e5467807a900A503c0281"]
+  [41455, "0x13fDac9F9b4777705db45291bbFF3c972c6d1d97"], // Aleph Zero
+  [42161, "0xe35e9842fceaca96570b734083f4a58e8f7c5f2a"], // Arbitrum
+  [421614, "0x7E63A5f1a8F0B4d0934B2f2327DAED3F6bb2ee75"], // Arbitrum Sepolia
+  [8453, "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64"], // Base
+  [84532, "0x82B564983aE7274c86695917BBf8C99ECb6F0F8F"], // Base Sepolia
+  [81457, "0x2D509190Ed0172ba588407D4c2df918F955Cc6E1"], // Blast
+  [168587773, "0x5545092553Cf5Bf786e87a87192E902D50D8f022"], // Blast Sepolia
+  [56, "0x4e8E101924eDE233C13e2D8622DC8aED2872d505"], // BNB Smart chain
+  [1, "0x0000000000000000000000000000000000000000"], // Ethereum
+  [11155111, "0x5ef6C01E11889d86803e0B23e3cB3F9E9d97B662"], // Sepolia
+  [57073, "0xeF684C38F94F48775959ECf2012D7E864ffb9dd4"], // Ink
+  [232, "0xe7cb3e167e7475dE1331Cf6E0CEb187654619E12"], // Lens
+  [59144, "0x7E63A5f1a8F0B4d0934B2f2327DAED3F6bb2ee75"], // Linea
+  [1135, "0x9552a0a6624A23B848060AE5901659CDDa1f83f8"], // Lisk
+  [4202, "0xeF684C38F94F48775959ECf2012D7E864ffb9dd4"], // Lisk Sepolia
+  [34443, "0x3baD7AD0728f9917d1Bf08af5782dCbD516cDd96"], // Mode
+  [919, "0xbd886FC0725Cc459b55BbFEb3E4278610331f83b"], // Mode Sepolia
+  [10, "0x6f26Bf09B1C792e3228e5467807a900A503c0281"], // Optimism
+  [11155420, "0x4e8E101924eDE233C13e2D8622DC8aED2872d505"], // OP Sepolia
+  [137, "0x9295ee1d8C5b022Be115A2AD3c30C72E34e7F096"], // Polygon
+  [80002, "0xd08baaE74D6d2eAb1F3320B2E1a53eeb391ce8e5"], // Polygon Mumbai
+  [690, "0x13fDac9F9b4777705db45291bbFF3c972c6d1d97"], // Redstone
+  [534352, "0x3bad7ad0728f9917d1bf08af5782dcbd516cdd96"], //Scroll
+  [1868, "0x3baD7AD0728f9917d1Bf08af5782dCbD516cDd96"], // Soneium
+  [130, "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64"], // Unichain
+  [1301, "0x6999526e507Cc3b03b180BbE05E1Ff938259A874"], // Unichain Sepolia
+  [480, "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64"], // Worldchain
+  [324, "0xE0B015E54d54fc84a6cB9B666099c46adE9335FF"], // Zksync
+  [7777777, "0x13fDac9F9b4777705db45291bbFF3c972c6d1d97"] // Zora
 ])
 
 /**
@@ -55,6 +81,7 @@ export type BuildAcrossIntentComposableParams = {
   relayerAddress?: Address
   pool?: Address
   gasLimit?: bigint
+  fees?: SuggestedFeesReturnType
 }
 
 /**
@@ -76,12 +103,21 @@ export const buildAcrossIntentComposable = async (
     message,
     relayerAddress,
     gasLimit,
-    pool = acrossSpokePool[originChainId]
+    pool = acrossSpokePool[originChainId],
+    fees: fees_
   } = parameters
 
+  // sanity checks
   if (destinationChainId === originChainId) {
     throw new Error("Destination chain and origin should be different")
   }
+
+  if (!pool) {
+    throw new Error(
+      "Across SpokePool seems not to be present on the origin chain"
+    )
+  }
+  // sanity check for the pool on the dest chain should be held by Across
 
   const acrossIntentWrapperOnOrigin = _getAcrossIntentWrapper(originChainId)
 
@@ -100,13 +136,15 @@ export const buildAcrossIntentComposable = async (
   )
 
   // 2. Deposit to Pool
-  const fees = await getAcrossSuggestedFees({
-    amount: approximateExpectedInputAmount,
-    originChainId,
-    inputToken,
-    destinationChainId,
-    outputToken
-  })
+  const fees =
+    fees_ ??
+    (await getAcrossSuggestedFees({
+      amount: approximateExpectedInputAmount,
+      originChainId,
+      inputToken,
+      destinationChainId,
+      outputToken
+    }))
 
   // Calculate output amount after fees
   const { outputAmount: approximateExpectedOutputAmount } = calculateAcrossFees(

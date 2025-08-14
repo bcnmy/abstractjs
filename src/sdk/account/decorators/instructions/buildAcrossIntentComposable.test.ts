@@ -94,8 +94,7 @@ describe("mee.buildAcrossIntentComposable", () => {
     })
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      apiKey: process.env.PERSONAL_MEE_API_KEY
+      account: mcNexus
     })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
