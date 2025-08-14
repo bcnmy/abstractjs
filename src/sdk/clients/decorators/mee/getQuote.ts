@@ -7,7 +7,7 @@ import { addressEquals } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import type { RuntimeValue } from "../../../modules"
+import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -293,6 +293,10 @@ export type GetQuoteParams = SupertransactionLike & {
          * Whether to delegate the transaction to the account
          */
         delegate?: false
+        /**
+         * Whether to delegate the transaction to the account with chain id zero
+         */
+        multichain7702Auth?: false
       }
     | {
         /**
@@ -300,10 +304,14 @@ export type GetQuoteParams = SupertransactionLike & {
          */
         delegate: true
         /**
-         * The authorization data for the transaction. Should be a valid Viem compatible Authorization param on chainId 0
+         * Whether to delegate the transaction to the account with chain id zero
+         */
+        multichain7702Auth?: boolean
+        /**
+         * The array of authorization data for the transaction. Should be a valid Viem compatible Authorization param
          * If not provided, the account will be delegated to the implementation address, using chainId 0.
          */
-        authorization?: SignAuthorizationReturnType
+        authorizations?: SignAuthorizationReturnType[]
       }
   >
 
@@ -524,7 +532,8 @@ export const getQuote = async (
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
-    authorization,
+    authorizations = [],
+    multichain7702Auth = false,
     moduleAddress,
     shortEncodingSuperTxn = false,
     sponsorship = false,
@@ -556,6 +565,7 @@ export const getQuote = async (
   }
 
   const hasProcessedInitData: string[] = []
+  const hasProcessedMultichainEIP7702AuthData: string[] = []
   const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
     moduleAddress,
     sponsorship
@@ -568,6 +578,67 @@ export const getQuote = async (
       paymentVerificationGasLimit
     }
   )
+
+  let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
+
+  // If it is multichain auth and eip7702Auth prepared by either custom auth or SDK signed one
+  // It will be used for other userOp for delegation.
+  if (multichain7702Auth) {
+    const chainIdsToCheckSet = new Set([Number(paymentInfo.chainId)])
+
+    for (const inx of resolvedInstructions) {
+      chainIdsToCheckSet.add(inx.chainId)
+    }
+
+    const chainIdsToCheck = [...chainIdsToCheckSet]
+
+    // Check for all the nonces are same only if there is more than one chain is involved in the sprtx
+    if (chainIdsToCheck.length > 1) {
+      const nonces = await Promise.all(
+        chainIdsToCheck.map(async (chainId) => {
+          const {
+            publicClient,
+            walletClient: {
+              account: { address }
+            }
+          } = account_.deploymentOn(chainId, true)
+          return await publicClient.getTransactionCount({ address })
+        })
+      )
+
+      if ([...new Set(nonces)].length > 1) {
+        throw new Error(
+          "Invalid multichain authorizations, nonce on all the chains is not same"
+        )
+      }
+    }
+
+    // For non sponsorship flow, eip7702 auth will be prepared in payment info util
+    if (paymentInfo.eip7702Auth) {
+      multichainEIP7702Auth = paymentInfo.eip7702Auth
+    } else {
+      // For sponsorship flow, eip7702 auth will not be prepared in payment info util
+      // So we have to prepare once and attach to one userOp for all possible chains
+      if (resolvedInstructions.length === 0) {
+        throw new Error(
+          "Atleast one instruction is required for super transaction"
+        )
+      }
+
+      const { chainId } = resolvedInstructions[0]
+      const smartAccount = account_.deploymentOn(chainId, true)
+
+      multichainEIP7702Auth = await prepare7702Auth(
+        smartAccount,
+        chainId,
+        authorizations,
+        multichain7702Auth
+      )
+    }
+
+    // This prevents the auth to be added for more than one userOp in same chain
+    hasProcessedMultichainEIP7702AuthData.push(paymentInfo.chainId)
+  }
 
   if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
 
@@ -612,20 +683,45 @@ export const getQuote = async (
         shortEncoding
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
+
         if (!indexPerChainId.has(chainId)) {
           indexPerChainId.set(chainId, 0)
         }
 
-        const shouldContainInitData =
-          !hasProcessedInitData.includes(chainId) && !isAccountDeployed
+        // If account is not deployed, either initCode or eip7702Auth needs to be attached.
+        if (!isAccountDeployed) {
+          // If multichain EIP7702 auth is available ? It means, 7702 mode and no initCode is there. So we have to use this multichain auth
+          // for all the chains once in any of the userOp.
+          if (multichainEIP7702Auth) {
+            // This prevents the multichain auth to be added for more than one userOp in same chain
+            if (!hasProcessedMultichainEIP7702AuthData.includes(chainId)) {
+              hasProcessedMultichainEIP7702AuthData.push(chainId)
 
-        if (shouldContainInitData) {
-          hasProcessedInitData.push(chainId)
-          initDataOrUndefined = delegate
-            ? {
-                eip7702Auth: await nexusAccount.toDelegation({ authorization })
+              initDataOrUndefined = {
+                eip7702Auth: multichainEIP7702Auth
               }
-            : { initCode }
+            }
+          } else {
+            // If the initData is not already added
+            if (!hasProcessedInitData.includes(chainId)) {
+              // Mark as initData processed
+              hasProcessedInitData.push(chainId)
+
+              if (delegate) {
+                // If delegation ? Add the 7702 auth
+                initDataOrUndefined = {
+                  eip7702Auth: await prepare7702Auth(
+                    nexusAccount,
+                    Number(chainId),
+                    authorizations,
+                    false // This will be never multichain, so always false
+                  )
+                }
+              } else {
+                initDataOrUndefined = { initCode }
+              }
+            }
+          }
         }
 
         const verificationGasLimit = resolveVerificationGasLimit({
@@ -701,7 +797,8 @@ const preparePaymentInfo = async (
     delegate = false,
     gasLimit,
     verificationGasLimit,
-    authorization,
+    authorizations = [],
+    multichain7702Auth = false,
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
@@ -794,15 +891,23 @@ const preparePaymentInfo = async (
     ])
 
     // Do authorization only if required as it requires signing
-    const initData: InitDataOrUndefined = isAccountDeployed
-      ? undefined
-      : delegate
-        ? {
-            eip7702Auth: await validPaymentAccount.toDelegation({
-              authorization
-            })
-          }
-        : { initCode }
+    let initData: InitDataOrUndefined = undefined
+
+    if (!isAccountDeployed) {
+      // If delegate is true, 7702 delegation is injected
+      if (delegate) {
+        initData = {
+          eip7702Auth: await prepare7702Auth(
+            validPaymentAccount,
+            feeToken.chainId,
+            authorizations,
+            multichain7702Auth
+          )
+        }
+      } else {
+        initData = { initCode }
+      }
+    }
 
     paymentInfo = {
       sponsored: false,
@@ -827,6 +932,48 @@ const preparePaymentInfo = async (
   if (!paymentInfo) throw new Error("Failed to generate payment info")
 
   return { paymentInfo, isInitDataProcessed }
+}
+
+const prepare7702Auth = async (
+  smartAccount: ModularSmartAccount,
+  chainId: number,
+  customAuthorizations: SignAuthorizationReturnType[] = [],
+  multichain7702Auth = false
+): Promise<MeeAuthorization> => {
+  let eip7702Auth: MeeAuthorization
+
+  if (multichain7702Auth) {
+    // If multichain auth ? Only one custom auth is expected with chain id zero
+    if (customAuthorizations.length > 1) {
+      throw new Error(
+        "For multichain 7702 authorization, custom authorizations should not be more than one"
+      )
+    }
+
+    const authorization = customAuthorizations[0]
+
+    // If custom auth is there ? It needs to be signed with zero chain id
+    if (authorization && authorization.chainId !== 0) {
+      throw new Error(
+        "For multichain 7702 authorization, custom auth should be signed with zero chain id"
+      )
+    }
+
+    eip7702Auth = await smartAccount.toDelegation(
+      authorization ? { authorization } : { multiChain: true }
+    )
+  } else {
+    // if it is not multichain auth ? custom auth will be filtered for specific chain
+    const [authorization] = customAuthorizations.filter((auth) => {
+      return auth.chainId === Number(chainId)
+    })
+
+    eip7702Auth = await smartAccount.toDelegation(
+      authorization ? { authorization } : { chainId }
+    )
+  }
+
+  return eip7702Auth
 }
 
 const prepareUserOps = async (
