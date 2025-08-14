@@ -10,7 +10,7 @@ import {
 /**
  * Returns the appropriate configuration based on the SDK version
  * @param version - The SDK version string (e.g., "0.2.0")
- * @returns The configuration containing attester and factory addresses
+ * @returns The configuration containing important smart contract addresses: Nexus implementation, validator, factory, and others
  * @throws Error if the version is not supported
  */
 export function getMEEVersion(meeVersion: MEEVersion): MEEVersionConfig {

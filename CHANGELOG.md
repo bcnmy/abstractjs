@@ -1,5 +1,19 @@
 # @biconomy/abstractjs
 
+## 1.1.0
+
+### Minor Changes
+
+- Features included:
+
+  1. MEE versioning - Version aware SDK which enables developers to use four different MEE versions based on their needs. Currently the SDK support MEE versions 1.0.0, 1.1.0, 2.0.0 and 2.1.0. Check documentation for more info on this
+  2. Modular Signing utils for preparing the signable payload and prepare executable signed quote. This enables the abstractjs to be used in backend
+  3. Across intent wrapper - A composable across wrapper which enables composable bridge swaps with the help of MEE composability stack
+
+  Breaking changes:
+
+  1. MEE version needs to be added explicitly for all the nexus or multichain nexus instances. Field such as chains, transports are removed and grouped with a object called chainConfigurations. This object defines the chain, transport and version for nexus account and MEE stack. Check the docs for more info
+
 ## 1.0.22
 
 ### Patch Changes

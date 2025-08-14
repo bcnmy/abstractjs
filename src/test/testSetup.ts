@@ -3,6 +3,7 @@ import {
   type Chain,
   base,
   baseSepolia,
+  chiliz,
   mainnet,
   optimism,
   optimismSepolia,
@@ -21,7 +22,8 @@ export const TEST_BLOCK_CONFIRMATIONS = 5
 export const MAINNET_RPC_URLS: Record<number, string> = {
   [mainnet.id]: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
   [optimism.id]: `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-  [base.id]: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+  [base.id]: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [chiliz.id]: "https://rpc.ankr.com/chiliz" // Public RPC
 }
 
 export const TESTNET_RPC_URLS: Record<number, string> = {
