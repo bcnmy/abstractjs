@@ -15,6 +15,7 @@ import {
   TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type NetworkConfig,
   getRandomAccountIndex
@@ -27,7 +28,6 @@ import { MEEVersion, NexusBootstrapAbi } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { createBicoBundlerClient } from "../../createBicoBundlerClient"
 import { createMeeClient } from "../../createMeeClient"
-import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 
 describe("mee.upgradeSmartAccount", () => {
   let network: NetworkConfig
