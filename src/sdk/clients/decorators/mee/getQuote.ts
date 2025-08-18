@@ -33,6 +33,8 @@ export const CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION =
 export const DEFAULT_GAS_LIMIT = 75_000n
 export const DEFAULT_VERIFICATION_GAS_LIMIT = 150_000n
 
+type INIT_DATA_TYPE = "SINGLE_CHAIN_AUTH" | "MULTI_CHAIN_AUTH" | "INIT_CODE"
+
 /**
  * Represents an abstract call to be executed in the transaction.
  * Each call specifies a target contract and optional parameters.
@@ -538,7 +540,8 @@ export const getQuote = async (
     moduleAddress,
     shortEncodingSuperTxn = false,
     sponsorship = false,
-    sponsorshipOptions
+    sponsorshipOptions,
+    feeToken
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -565,83 +568,193 @@ export const getQuote = async (
     )
   }
 
-  const hasProcessedInitData: string[] = []
-  const hasProcessedMultichainEIP7702AuthData: string[] = []
+  const hasProcessedInitData: number[] = []
+
   const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
     moduleAddress,
     sponsorship
   })
 
+  const initDataTypeByChainId = new Map<number, INIT_DATA_TYPE>()
+
+  const sprtxChainIdsSet = new Set<number>([])
+
+  // For non sponsored flow, fee token chainId needs to be included
+  if (feeToken) sprtxChainIdsSet.add(feeToken.chainId)
+
+  // Chains IDS from instructions are considered
+  for (const inx of resolvedInstructions) {
+    sprtxChainIdsSet.add(inx.chainId)
+  }
+
+  const sprtxChainIds = [...sprtxChainIdsSet]
+
+  if (delegate) {
+    if (multichain7702Auth) {
+      // Check for all the nonces are same only if there is more than one chain is involved in the sprtx
+      if (sprtxChainIds.length > 1) {
+        const noncesAndChainIds = await Promise.all(
+          sprtxChainIds.map(async (chainId) => {
+            const {
+              publicClient,
+              walletClient: {
+                account: { address }
+              }
+            } = account_.deploymentOn(chainId, true)
+            return {
+              chainId,
+              nonce: await publicClient.getTransactionCount({ address })
+            }
+          })
+        )
+
+        const nonceCountMap = noncesAndChainIds.reduce((map, { nonce }) => {
+          map.set(nonce, (map.get(nonce) || 0) + 1)
+          return map
+        }, new Map<number, number>())
+
+        // Chains with different nonces needs different authorizations
+        const noncesAndChainIdsWithUniqueNonces = noncesAndChainIds.filter(
+          (info) => nonceCountMap.get(info.nonce) === 1
+        )
+
+        // Chains with same nonces can reuse the same authorization which is signed only once
+        const noncesAndChainIdsWithSameNonces = noncesAndChainIds.filter(
+          (info) => nonceCountMap.get(info.nonce)! > 1
+        )
+
+        // If custom authorizations are passed, a series of validation is conducted here
+        if (authorizations.length > 0) {
+          // If noncesAndChainIdsWithUniqueNonces length is zero ? It means all the nonces are same and can be used for multichain
+          // It is expected to pass only one auth from outside the SDK.
+          if (
+            noncesAndChainIdsWithUniqueNonces.length === 0 &&
+            authorizations.length > 1
+          ) {
+            throw new Error(
+              "Invalid authorizations, more than one auth passed for multichain authorization."
+            )
+          }
+
+          // If multichain nonce are not same and custom auth are passed ? The auth should be sufficient orelse error will be thrown
+          if (noncesAndChainIdsWithUniqueNonces.length > 0) {
+            const missingAuthsByChainId: number[] = []
+
+            for (const { chainId } of noncesAndChainIdsWithUniqueNonces) {
+              const isAuthExist = authorizations.some((auth) => {
+                return auth.chainId === chainId
+              })
+
+              if (!isAuthExist) missingAuthsByChainId.push(chainId)
+            }
+
+            if (missingAuthsByChainId.length > 0) {
+              throw new Error(
+                `Invalid multichain authorizations, nonce on all the chains are not same. You need to pass authorizations for the following chains: ${missingAuthsByChainId.join(", ")}`
+              )
+            }
+          }
+
+          // For same multichain nonces ? Check for auth with zero id and throw error if it is not there
+          if (noncesAndChainIdsWithSameNonces.length > 0) {
+            const isAuthExist = authorizations.some((auth) => {
+              return auth.chainId === 0
+            })
+
+            if (!isAuthExist) {
+              const chainIds = noncesAndChainIdsWithSameNonces.map(
+                (auth) => auth.chainId
+              )
+              throw new Error(
+                `Invalid multichain authorizations. Missing chainId zero authorization for the following chains: ${chainIds.join(", ")}`
+              )
+            }
+          }
+        }
+
+        for (const chainId of sprtxChainIds) {
+          const isMultichainAuth = noncesAndChainIdsWithSameNonces.filter(
+            (info) => info.chainId === chainId
+          )
+          initDataTypeByChainId.set(
+            chainId,
+            isMultichainAuth ? "MULTI_CHAIN_AUTH" : "SINGLE_CHAIN_AUTH"
+          )
+        }
+      } else {
+        if (authorizations.length > 1) {
+          throw new Error(
+            "Invalid multichain authorization. Only one authorization is required for multichain 7702 flow"
+          )
+        }
+
+        if (authorizations.length === 1 && authorizations[0].chainId !== 0) {
+          throw new Error(
+            "Invalid multichain authorization. Chain ID zero is expected in the authorization"
+          )
+        }
+
+        // If only one chain is invloved. It can be directly treated as multichain
+        for (const chainId of sprtxChainIds) {
+          initDataTypeByChainId.set(chainId, "MULTI_CHAIN_AUTH")
+        }
+      }
+    } else {
+      // If custom authorizations are passed, a series of validation is conducted here
+      if (authorizations.length > 0) {
+        const missingAuthsByChainId: number[] = []
+
+        for (const chainId of sprtxChainIds) {
+          const isAuthExist = authorizations.some((auth) => {
+            return auth.chainId === chainId
+          })
+
+          if (!isAuthExist) missingAuthsByChainId.push(chainId)
+        }
+
+        if (missingAuthsByChainId.length > 0) {
+          throw new Error(
+            `Authorizations are missing for the following chains: ${missingAuthsByChainId.join(", ")}`
+          )
+        }
+      }
+
+      // All the auths will be treated as single chain auth without chain id zero
+      for (const chainId of sprtxChainIds) {
+        initDataTypeByChainId.set(chainId, "SINGLE_CHAIN_AUTH")
+      }
+    }
+  } else {
+    // No auth at all. Init code will be added if account is not deployed
+    for (const chainId of sprtxChainIds) {
+      initDataTypeByChainId.set(chainId, "INIT_CODE")
+    }
+  }
+
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
     client,
     {
       ...parameters,
-      paymentVerificationGasLimit
+      paymentVerificationGasLimit,
+      initDataTypeByChainId
     }
   )
 
   let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
 
+  const paymentAuthType = initDataTypeByChainId.get(
+    Number(paymentInfo.chainId)
+  )!
+
+  // If payment info has eip7702 auth ? It is an non sponsored flow and auth is prepared
   // If it is multichain auth and eip7702Auth prepared by either custom auth or SDK signed one
   // It will be used for other userOp for delegation.
-  if (multichain7702Auth) {
-    const chainIdsToCheckSet = new Set([Number(paymentInfo.chainId)])
-
-    for (const inx of resolvedInstructions) {
-      chainIdsToCheckSet.add(inx.chainId)
-    }
-
-    const chainIdsToCheck = [...chainIdsToCheckSet]
-
-    // Check for all the nonces are same only if there is more than one chain is involved in the sprtx
-    if (chainIdsToCheck.length > 1) {
-      const nonces = await Promise.all(
-        chainIdsToCheck.map(async (chainId) => {
-          const {
-            publicClient,
-            walletClient: {
-              account: { address }
-            }
-          } = account_.deploymentOn(chainId, true)
-          return await publicClient.getTransactionCount({ address })
-        })
-      )
-
-      if ([...new Set(nonces)].length > 1) {
-        throw new Error(
-          "Invalid multichain authorizations, nonce on all the chains is not same"
-        )
-      }
-    }
-
-    // For non sponsorship flow, eip7702 auth will be prepared in payment info util
-    if (paymentInfo.eip7702Auth) {
-      multichainEIP7702Auth = paymentInfo.eip7702Auth
-    } else {
-      // For sponsorship flow, eip7702 auth will not be prepared in payment info util
-      // So we have to prepare once and attach to one userOp for all possible chains
-      if (resolvedInstructions.length === 0) {
-        throw new Error(
-          "Atleast one instruction is required for super transaction"
-        )
-      }
-
-      const { chainId } = resolvedInstructions[0]
-      const smartAccount = account_.deploymentOn(chainId, true)
-
-      multichainEIP7702Auth = await prepare7702Auth(
-        smartAccount,
-        chainId,
-        authorizations,
-        multichain7702Auth
-      )
-    }
-
-    // This prevents the auth to be added for more than one userOp in same chain
-    hasProcessedMultichainEIP7702AuthData.push(paymentInfo.chainId)
+  if (paymentInfo.eip7702Auth && paymentAuthType === "MULTI_CHAIN_AUTH") {
+    multichainEIP7702Auth = paymentInfo.eip7702Auth
   }
 
-  if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
+  if (isInitDataProcessed)
+    hasProcessedInitData.push(Number(paymentInfo.chainId))
 
   const preparedUserOps = await prepareUserOps(
     account_,
@@ -690,38 +803,47 @@ export const getQuote = async (
         }
 
         // If account is not deployed, either initCode or eip7702Auth needs to be attached.
-        if (!isAccountDeployed) {
-          // If multichain EIP7702 auth is available ? It means, 7702 mode and no initCode is there. So we have to use this multichain auth
-          // for all the chains once in any of the userOp.
-          if (multichainEIP7702Auth) {
-            // This prevents the multichain auth to be added for more than one userOp in same chain
-            if (!hasProcessedMultichainEIP7702AuthData.includes(chainId)) {
-              hasProcessedMultichainEIP7702AuthData.push(chainId)
+        // If init code or 7702 auth is already added for the chain ? Skip this
+        if (
+          !isAccountDeployed &&
+          !hasProcessedInitData.includes(Number(chainId))
+        ) {
+          // Mark as initData processed
+          hasProcessedInitData.push(Number(chainId))
+
+          const authType = initDataTypeByChainId.get(Number(chainId))!
+
+          // If multichain EIP7702 auth is available ? It means, 7702 mode and no initCode is there.
+          if (authType === "MULTI_CHAIN_AUTH") {
+            // Apply existing multichain auth where the chain Ids were same. So no need multiple auths to be signed
+            if (multichainEIP7702Auth) {
+              initDataOrUndefined = {
+                eip7702Auth: multichainEIP7702Auth
+              }
+            } else {
+              // This multichain auth will be used for the current chains and other chains which has the same nonce
+              multichainEIP7702Auth = await prepare7702Auth(
+                nexusAccount,
+                Number(chainId),
+                initDataTypeByChainId,
+                authorizations
+              )
 
               initDataOrUndefined = {
                 eip7702Auth: multichainEIP7702Auth
               }
             }
-          } else {
-            // If the initData is not already added
-            if (!hasProcessedInitData.includes(chainId)) {
-              // Mark as initData processed
-              hasProcessedInitData.push(chainId)
-
-              if (delegate) {
-                // If delegation ? Add the 7702 auth
-                initDataOrUndefined = {
-                  eip7702Auth: await prepare7702Auth(
-                    nexusAccount,
-                    Number(chainId),
-                    authorizations,
-                    false // This will be never multichain, so always false
-                  )
-                }
-              } else {
-                initDataOrUndefined = { initCode }
-              }
+          } else if (authType === "SINGLE_CHAIN_AUTH") {
+            initDataOrUndefined = {
+              eip7702Auth: await prepare7702Auth(
+                nexusAccount,
+                Number(chainId),
+                initDataTypeByChainId,
+                authorizations
+              )
             }
+          } else {
+            initDataOrUndefined = { initCode }
           }
         }
 
@@ -789,6 +911,7 @@ const preparePaymentInfo = async (
   client: BaseMeeClient,
   parameters: GetQuoteParams & {
     paymentVerificationGasLimit?: { verificationGasLimit: bigint }
+    initDataTypeByChainId: Map<number, INIT_DATA_TYPE>
   }
 ) => {
   const {
@@ -796,11 +919,9 @@ const preparePaymentInfo = async (
     eoa,
     feeToken,
     feePayer,
-    delegate = false,
     gasLimit,
     verificationGasLimit,
     authorizations = [],
-    multichain7702Auth = false,
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
@@ -896,18 +1017,21 @@ const preparePaymentInfo = async (
     let initData: InitDataOrUndefined = undefined
 
     if (!isAccountDeployed) {
-      // If delegate is true, 7702 delegation is injected
-      if (delegate) {
+      const initDataType = parameters.initDataTypeByChainId.get(
+        feeToken.chainId
+      )!
+
+      if (initDataType === "INIT_CODE") {
+        initData = { initCode }
+      } else {
         initData = {
           eip7702Auth: await prepare7702Auth(
             validPaymentAccount,
             feeToken.chainId,
-            authorizations,
-            multichain7702Auth
+            parameters.initDataTypeByChainId,
+            authorizations
           )
         }
-      } else {
-        initData = { initCode }
       }
     }
 
@@ -939,32 +1063,23 @@ const preparePaymentInfo = async (
 const prepare7702Auth = async (
   smartAccount: ModularSmartAccount,
   chainId: number,
-  customAuthorizations: SignAuthorizationReturnType[] = [],
-  multichain7702Auth = false
+  initDataTypeByChainId: Map<number, INIT_DATA_TYPE>,
+  customAuthorizations: SignAuthorizationReturnType[] = []
 ): Promise<MeeAuthorization> => {
   let eip7702Auth: MeeAuthorization
 
-  if (multichain7702Auth) {
-    // If multichain auth ? Only one custom auth is expected with chain id zero
-    if (customAuthorizations.length > 1) {
-      throw new Error(
-        "For multichain 7702 authorization, custom authorizations should not be more than one"
-      )
-    }
+  const authType = initDataTypeByChainId.get(chainId)!
 
-    const authorization = customAuthorizations[0]
-
-    // If custom auth is there ? It needs to be signed with zero chain id
-    if (authorization && authorization.chainId !== 0) {
-      throw new Error(
-        "For multichain 7702 authorization, custom auth should be signed with zero chain id"
-      )
-    }
+  if (authType === "MULTI_CHAIN_AUTH") {
+    // if it is multichain auth ? custom auth will be filtered with zero chain id
+    const [authorization] = customAuthorizations.filter(
+      (auth) => auth.chainId === 0
+    )
 
     eip7702Auth = await smartAccount.toDelegation(
       authorization ? { authorization } : { multiChain: true }
     )
-  } else {
+  } else if (authType === "SINGLE_CHAIN_AUTH") {
     // if it is not multichain auth ? custom auth will be filtered for specific chain
     const [authorization] = customAuthorizations.filter((auth) => {
       return auth.chainId === Number(chainId)
@@ -973,6 +1088,9 @@ const prepare7702Auth = async (
     eip7702Auth = await smartAccount.toDelegation(
       authorization ? { authorization } : { chainId }
     )
+  } else {
+    // This should never happen in theory
+    throw new Error("Invalid authorization type")
   }
 
   return eip7702Auth
