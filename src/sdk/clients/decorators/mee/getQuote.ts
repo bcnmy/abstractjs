@@ -21,7 +21,8 @@ import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL
+  DEFAULT_PATHFINDER_URL,
+  getDefaultMEENetworkUrl
 } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -761,9 +762,10 @@ export const getQuote = async (
   })
 
   if (sponsorship && sponsorshipOptions) {
+    // Both prod and staging network url is considered as biconomy hosted sponsorship service
     const isSelfHostedSponsorship = ![
-      DEFAULT_PATHFINDER_URL,
-      DEFAULT_PATHFINDER_URL
+      getDefaultMEENetworkUrl(false), // Prod
+      getDefaultMEENetworkUrl(true) // Staging
     ].includes(sponsorshipOptions.url)
 
     if (isSelfHostedSponsorship) {
