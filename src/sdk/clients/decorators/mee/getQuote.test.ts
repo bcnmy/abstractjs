@@ -2135,6 +2135,67 @@ describe("mee.getQuote", () => {
     )
   })
 
+  test("Should SDK throw an error for single chain authorization if the multichain auth is passed", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ],
+      accountAddress: eoaAccount.address
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const multichainAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: 0
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        authorizations: [multichainAuth],
+        instructions: [...baseSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          chainId: optimismSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Authorizations are missing for the following chains: 11155420, 84532"
+    )
+  })
+
   // test("Test here", async () => {
   //   const baseWalletClient = createWalletClient({
   //     account: eoaAccount,
