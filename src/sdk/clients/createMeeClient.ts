@@ -6,7 +6,7 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
 const isStagingOrTesting = isStaging() || isTesting()
 
-export const getDefaultMEENetworkUrl = (isStaging: boolean = false) => {
+export const getDefaultMEENetworkUrl = (isStaging = false) => {
   if (isStaging) {
     return "https://staging-network.biconomy.io/v1"
   }
@@ -14,7 +14,7 @@ export const getDefaultMEENetworkUrl = (isStaging: boolean = false) => {
   return "https://network.biconomy.io/v1"
 }
 
-export const getDefaultMEENetworkApiKey = (isStaging: boolean = false) => {
+export const getDefaultMEENetworkApiKey = (isStaging = false) => {
   if (isStaging) {
     return "mee_3ZhZhHx3hmKrBQxacr283dHt"
   }
