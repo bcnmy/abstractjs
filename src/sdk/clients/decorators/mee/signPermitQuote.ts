@@ -10,13 +10,13 @@ import {
   getContract,
   parseSignature
 } from "viem"
+import type { EIP712DomainReturn } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
-import { type EIP712DomainReturn } from "../../../account"
 
 /**
  * Represents the payload for a signable permit quote, omitting the "account" field from SignTypedDataParameters.
