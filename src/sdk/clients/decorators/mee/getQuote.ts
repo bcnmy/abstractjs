@@ -632,7 +632,7 @@ export const getQuote = async (
             authorizations.length > 1
           ) {
             throw new Error(
-              "Invalid authorizations, more than one auth passed for multichain authorization."
+              "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
             )
           }
 
@@ -650,7 +650,7 @@ export const getQuote = async (
 
             if (missingAuthsByChainId.length > 0) {
               throw new Error(
-                `Invalid multichain authorizations, nonce on all the chains are not same. You need to pass authorizations for the following chains: ${missingAuthsByChainId.join(", ")}`
+                `Invalid authorizations: The nonce for all the chains are not same. You need to pass specific authorizations for the following chains: ${missingAuthsByChainId.join(", ")}`
               )
             }
           }
@@ -666,14 +666,14 @@ export const getQuote = async (
                 (auth) => auth.chainId
               )
               throw new Error(
-                `Invalid multichain authorizations. Missing chainId zero authorization for the following chains: ${chainIds.join(", ")}`
+                `Invalid authorizations: The nonce for some of the chains are same. Missing multichain authorization for the following chains: ${chainIds.join(", ")}`
               )
             }
           }
         }
 
         for (const chainId of sprtxChainIds) {
-          const isMultichainAuth = noncesAndChainIdsWithSameNonces.filter(
+          const [isMultichainAuth] = noncesAndChainIdsWithSameNonces.filter(
             (info) => info.chainId === chainId
           )
           initDataTypeByChainId.set(
@@ -684,13 +684,13 @@ export const getQuote = async (
       } else {
         if (authorizations.length > 1) {
           throw new Error(
-            "Invalid multichain authorization. Only one authorization is required for multichain 7702 flow"
+            "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
           )
         }
 
         if (authorizations.length === 1 && authorizations[0].chainId !== 0) {
           throw new Error(
-            "Invalid multichain authorization. Chain ID zero is expected in the authorization"
+            "Invalid authorizations: Multichain authorization should be signed with chain ID zero"
           )
         }
 
