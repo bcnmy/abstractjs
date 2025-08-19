@@ -247,6 +247,9 @@ export const prepareSignablePermitQuotePayload = async (
           return []
         }
       }
+
+      // Fallback return value instead of throwing error
+      return undefined
     }
   ) as [bigint, string, string, Hex, EIP712DomainReturn]
 
