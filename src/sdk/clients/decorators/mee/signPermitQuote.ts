@@ -205,25 +205,35 @@ export const prepareSignablePermitQuotePayload = async (
     token.read.nonces([owner]),
     token.read.name(),
     token.read.version(),
-    token.read.DOMAIN_SEPARATOR()
+    token.read.DOMAIN_SEPARATOR(),
+    token.read.eip712Domain()
   ])
 
-  const [nonce, name, version, domainSeparator] = values.map((value, i) => {
-    const key = ["nonce", "name", "version", "domainSeparator"][i]
+  const [nonce, name, version, domainSeparator, eip712Domain] = values.map((value, i) => {
+    const key = ["nonce", "name", "version", "domainSeparator", "eip712Domain"][i]
     if (value.status === "fulfilled") {
       return value.value
     }
-    if (value.status === "rejected" && key === "version") {
-      // Some tokens do not implement version; default to "1"
-      return "1"
+    if (value.status === "rejected") {
+      if (key === "version") {
+        // Some tokens do not implement version; default to "1"
+        return "1"
+      }
+
+      if (key === "eip712Domain") {
+        // Some tokens do not implement eip712Domain; default to []
+        return []
+      }
     }
     throw new Error(`Failed to get value: ${value.reason}`)
-  }) as [bigint, string, string, `0x${string}`]
+  }) as [bigint, string, string, Hex, [Hex, string, string, bigint, Address, Hex, bigint[]]]
+
+  const [, name_, version_] = eip712Domain;
 
   const signablePermitQuotePayload = {
     domain: {
-      name,
-      version,
+      name: name_ || name,
+      version: version_ || version,
       chainId: trigger.chainId,
       verifyingContract: trigger.tokenAddress
     },
@@ -250,8 +260,8 @@ export const prepareSignablePermitQuotePayload = async (
     signablePayload: signablePermitQuotePayload,
     metadata: {
       nonce,
-      name,
-      version,
+      name: name_ || name,
+      version: version_ || version,
       domainSeparator,
       owner,
       spender,
