@@ -16,6 +16,7 @@ import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
+import { type EIP712DomainReturn } from "../../../account"
 
 /**
  * Represents the payload for a signable permit quote, omitting the "account" field from SignTypedDataParameters.
@@ -222,9 +223,23 @@ export const prepareSignablePermitQuotePayload = async (
         return value.value
       }
       if (value.status === "rejected") {
-        if (key === "version") {
-          // Some tokens do not implement version; default to "1"
-          return "1"
+        if (key === "nonce") {
+          // Tokens must implement the nonces function, otherwise we throw a error here
+          throw new Error(
+            "Permit signing failed: Token does not implement nonces(). This function is required for EIP-2612 compliance."
+          )
+        }
+
+        if (key === "domainSeparator") {
+          // Tokens must implement the domainSeparator function, otherwise we throw a error here
+          throw new Error(
+            "Permit signing failed: Token does not implement DOMAIN_SEPARATOR(). This function is required for EIP-712 domain separation."
+          )
+        }
+
+        if (key === "name" || key === "version") {
+          // Some tokens do not implement name and version; defaults to undefined
+          return undefined
         }
 
         if (key === "eip712Domain") {
@@ -232,22 +247,41 @@ export const prepareSignablePermitQuotePayload = async (
           return []
         }
       }
-      throw new Error(`Failed to get value: ${value.reason}`)
     }
-  ) as [
-    bigint,
-    string,
-    string,
-    Hex,
-    [Hex, string, string, bigint, Address, Hex, bigint[]]
-  ]
+  ) as [bigint, string, string, Hex, EIP712DomainReturn]
 
   const [, name_, version_] = eip712Domain
 
+  if (version && version_) {
+    if (version !== version_)
+      console.warn(
+        "Warning: Mismatch between token version() and eip712Domain().version. This may cause permit signature verification to fail."
+      )
+  }
+
+  if (name && name_) {
+    if (name !== name_)
+      console.warn(
+        "Warning: Mismatch between token name() and eip712Domain().name. This may cause permit signature verification to fail."
+      )
+  }
+
+  if (!name && !name_) {
+    throw new Error(
+      "Permit signing failed: Token name is missing. Neither name() nor eip712Domain().name is available."
+    )
+  }
+
+  if (!version && !version_) {
+    throw new Error(
+      "Permit signing failed: Token version is missing. Neither version() nor eip712Domain().version is available."
+    )
+  }
+
   const signablePermitQuotePayload = {
     domain: {
-      name: name_ || name,
-      version: version_ || version,
+      name: name_ || name, // name from eip712Domain is mostly safe and more priority is given
+      version: version_ || version, // version from eip712Domain is mostly safe and more priority is given
       chainId: trigger.chainId,
       verifyingContract: trigger.tokenAddress
     },
