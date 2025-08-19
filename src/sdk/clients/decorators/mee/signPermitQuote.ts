@@ -10,6 +10,7 @@ import {
   getContract,
   parseSignature
 } from "viem"
+import type { EIP712DomainReturn } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
@@ -205,25 +206,85 @@ export const prepareSignablePermitQuotePayload = async (
     token.read.nonces([owner]),
     token.read.name(),
     token.read.version(),
-    token.read.DOMAIN_SEPARATOR()
+    token.read.DOMAIN_SEPARATOR(),
+    token.read.eip712Domain()
   ])
 
-  const [nonce, name, version, domainSeparator] = values.map((value, i) => {
-    const key = ["nonce", "name", "version", "domainSeparator"][i]
-    if (value.status === "fulfilled") {
-      return value.value
+  const [nonce, name, version, domainSeparator, eip712Domain] = values.map(
+    (value, i) => {
+      const key = [
+        "nonce",
+        "name",
+        "version",
+        "domainSeparator",
+        "eip712Domain"
+      ][i]
+      if (value.status === "fulfilled") {
+        return value.value
+      }
+      if (value.status === "rejected") {
+        if (key === "nonce") {
+          // Tokens must implement the nonces function, otherwise we throw a error here
+          throw new Error(
+            "Permit signing failed: Token does not implement nonces(). This function is required for EIP-2612 compliance."
+          )
+        }
+
+        if (key === "domainSeparator") {
+          // Tokens must implement the domainSeparator function, otherwise we throw a error here
+          throw new Error(
+            "Permit signing failed: Token does not implement DOMAIN_SEPARATOR(). This function is required for EIP-712 domain separation."
+          )
+        }
+
+        if (key === "name" || key === "version") {
+          // Some tokens do not implement name and version; defaults to undefined
+          return undefined
+        }
+
+        if (key === "eip712Domain") {
+          // Some tokens do not implement eip712Domain; default to []
+          return []
+        }
+      }
+
+      // Fallback return value instead of throwing error
+      return undefined
     }
-    if (value.status === "rejected" && key === "version") {
-      // Some tokens do not implement version; default to "1"
-      return "1"
-    }
-    throw new Error(`Failed to get value: ${value.reason}`)
-  }) as [bigint, string, string, `0x${string}`]
+  ) as [bigint, string, string, Hex, EIP712DomainReturn]
+
+  const [, name_, version_] = eip712Domain
+
+  if (version && version_) {
+    if (version !== version_)
+      console.warn(
+        "Warning: Mismatch between token version() and eip712Domain().version. This may cause permit signature verification to fail."
+      )
+  }
+
+  if (name && name_) {
+    if (name !== name_)
+      console.warn(
+        "Warning: Mismatch between token name() and eip712Domain().name. This may cause permit signature verification to fail."
+      )
+  }
+
+  if (!name && !name_) {
+    throw new Error(
+      "Permit signing failed: Token name is missing. Neither name() nor eip712Domain().name is available."
+    )
+  }
+
+  if (!version && !version_) {
+    throw new Error(
+      "Permit signing failed: Token version is missing. Neither version() nor eip712Domain().version is available."
+    )
+  }
 
   const signablePermitQuotePayload = {
     domain: {
-      name,
-      version,
+      name: name_ || name, // name from eip712Domain is mostly safe and more priority is given
+      version: version_ || version, // version from eip712Domain is mostly safe and more priority is given
       chainId: trigger.chainId,
       verifyingContract: trigger.tokenAddress
     },
@@ -250,8 +311,8 @@ export const prepareSignablePermitQuotePayload = async (
     signablePayload: signablePermitQuotePayload,
     metadata: {
       nonce,
-      name,
-      version,
+      name: name_ || name,
+      version: version_ || version,
       domainSeparator,
       owner,
       spender,
