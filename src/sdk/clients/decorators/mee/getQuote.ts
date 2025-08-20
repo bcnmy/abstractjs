@@ -641,11 +641,11 @@ export const getQuote = async (
             const missingAuthsByChainId: number[] = []
 
             for (const { chainId } of noncesAndChainIdsWithUniqueNonces) {
-              const isAuthExist = authorizations.some((auth) => {
+              const isAuthProvided = authorizations.some((auth) => {
                 return auth.chainId === chainId
               })
 
-              if (!isAuthExist) missingAuthsByChainId.push(chainId)
+              if (!isAuthProvided) missingAuthsByChainId.push(chainId)
             }
 
             if (missingAuthsByChainId.length > 0) {
@@ -657,11 +657,11 @@ export const getQuote = async (
 
           // For same multichain nonces ? Check for auth with zero id and throw error if it is not there
           if (noncesAndChainIdsWithSameNonces.length > 0) {
-            const isAuthExist = authorizations.some((auth) => {
+            const isAuthProvided = authorizations.some((auth) => {
               return auth.chainId === 0
             })
 
-            if (!isAuthExist) {
+            if (!isAuthProvided) {
               const chainIds = noncesAndChainIdsWithSameNonces.map(
                 (auth) => auth.chainId
               )
@@ -705,11 +705,11 @@ export const getQuote = async (
         const missingAuthsByChainId: number[] = []
 
         for (const chainId of sprtxChainIds) {
-          const isAuthExist = authorizations.some((auth) => {
+          const isAuthProvided = authorizations.some((auth) => {
             return auth.chainId === chainId
           })
 
-          if (!isAuthExist) missingAuthsByChainId.push(chainId)
+          if (!isAuthProvided) missingAuthsByChainId.push(chainId)
         }
 
         if (missingAuthsByChainId.length > 0) {
