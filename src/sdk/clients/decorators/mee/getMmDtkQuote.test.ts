@@ -53,7 +53,6 @@ import {
 import getMmDtkQuote from "./getMmDtkQuote"
 import { signMMDtkQuote } from "./signMmDtkQuote"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe("mee.getMmDtkQuote", () => {

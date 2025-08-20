@@ -35,7 +35,6 @@ import { getMEEVersion } from "../modules"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 import type { FeeTokenInfo } from "./decorators/mee/getQuote"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe("mee.createMeeClient", async () => {

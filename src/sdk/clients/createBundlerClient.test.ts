@@ -30,7 +30,6 @@ import { type MeeClient, createMeeClient } from "./createMeeClient"
 import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 const COMPETITORS = [

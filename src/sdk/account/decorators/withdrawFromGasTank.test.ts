@@ -22,7 +22,6 @@ import { runtimeERC20BalanceOf } from "../../modules"
 import { getMEEVersion } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 
 describe("mee.withdrawFromGasTank", () => {

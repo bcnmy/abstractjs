@@ -52,7 +52,6 @@ import {
 } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
-// @ts-ignore
 const { runPaidTests } = inject("settings")
 describe("mee.signPermitQuote", () => {
   let network: NetworkConfig
