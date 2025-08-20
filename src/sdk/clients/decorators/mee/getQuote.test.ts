@@ -2409,7 +2409,7 @@ describe("mee.getQuote", () => {
     expect(isDelegated).toBe(false)
   })
 
-  test("Should execute multichain 7702 delegation supertx with manual auth", async () => {
+  test("Should execute multichain 7702 delegation supertx with manual multichain auth", async () => {
     // New account, so the nonce on all the chains are zero
     const eoaAccount = privateKeyToAccount(generatePrivateKey())
 
