@@ -7,7 +7,7 @@ import { addressEquals } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import type { RuntimeValue } from "../../../modules"
+import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -21,7 +21,8 @@ import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL
+  DEFAULT_PATHFINDER_URL,
+  getDefaultMEENetworkUrl
 } from "../../createMeeClient"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
@@ -31,6 +32,8 @@ export const CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION =
 
 export const DEFAULT_GAS_LIMIT = 75_000n
 export const DEFAULT_VERIFICATION_GAS_LIMIT = 150_000n
+
+type INIT_DATA_TYPE = "SINGLE_CHAIN_AUTH" | "MULTI_CHAIN_AUTH" | "INIT_CODE"
 
 /**
  * Represents an abstract call to be executed in the transaction.
@@ -293,6 +296,10 @@ export type GetQuoteParams = SupertransactionLike & {
          * Whether to delegate the transaction to the account
          */
         delegate?: false
+        /**
+         * Whether to delegate the transaction to the account with chain id zero
+         */
+        multichain7702Auth?: false
       }
     | {
         /**
@@ -300,10 +307,14 @@ export type GetQuoteParams = SupertransactionLike & {
          */
         delegate: true
         /**
-         * The authorization data for the transaction. Should be a valid Viem compatible Authorization param on chainId 0
+         * Whether to delegate the transaction to the account with chain id zero
+         */
+        multichain7702Auth?: boolean
+        /**
+         * The array of authorization data for the transaction. Should be a valid Viem compatible Authorization param
          * If not provided, the account will be delegated to the implementation address, using chainId 0.
          */
-        authorization?: SignAuthorizationReturnType
+        authorizations?: SignAuthorizationReturnType[]
       }
   >
 
@@ -524,11 +535,13 @@ export const getQuote = async (
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
     delegate = false,
-    authorization,
+    authorizations = [],
+    multichain7702Auth = false,
     moduleAddress,
     shortEncodingSuperTxn = false,
     sponsorship = false,
-    sponsorshipOptions
+    sponsorshipOptions,
+    feeToken
   } = parameters
 
   const resolvedInstructions = await resolveInstructions(instructions)
@@ -555,21 +568,193 @@ export const getQuote = async (
     )
   }
 
-  const hasProcessedInitData: string[] = []
+  const hasProcessedInitData: number[] = []
+
   const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
     moduleAddress,
     sponsorship
   })
 
+  const initDataTypeByChainId = new Map<number, INIT_DATA_TYPE>()
+
+  const sprtxChainIdsSet = new Set<number>([])
+
+  // For non sponsored flow, fee token chainId needs to be included
+  if (feeToken) sprtxChainIdsSet.add(feeToken.chainId)
+
+  // Chains IDS from instructions are considered
+  for (const inx of resolvedInstructions) {
+    sprtxChainIdsSet.add(inx.chainId)
+  }
+
+  const sprtxChainIds = [...sprtxChainIdsSet]
+
+  if (delegate) {
+    if (multichain7702Auth) {
+      // Check for all the nonces are same only if there is more than one chain is involved in the sprtx
+      if (sprtxChainIds.length > 1) {
+        const noncesAndChainIds = await Promise.all(
+          sprtxChainIds.map(async (chainId) => {
+            const {
+              publicClient,
+              walletClient: {
+                account: { address }
+              }
+            } = account_.deploymentOn(chainId, true)
+            return {
+              chainId,
+              nonce: await publicClient.getTransactionCount({ address })
+            }
+          })
+        )
+
+        const nonceCountMap = noncesAndChainIds.reduce((map, { nonce }) => {
+          map.set(nonce, (map.get(nonce) || 0) + 1)
+          return map
+        }, new Map<number, number>())
+
+        // Chains with different nonces needs different authorizations
+        const noncesAndChainIdsWithUniqueNonces = noncesAndChainIds.filter(
+          (info) => nonceCountMap.get(info.nonce) === 1
+        )
+
+        // Chains with same nonces can reuse the same authorization which is signed only once
+        const noncesAndChainIdsWithSameNonces = noncesAndChainIds.filter(
+          (info) => nonceCountMap.get(info.nonce)! > 1
+        )
+
+        // If custom authorizations are passed, a series of validation is conducted here
+        if (authorizations.length > 0) {
+          // If noncesAndChainIdsWithUniqueNonces length is zero ? It means all the nonces are same and can be used for multichain
+          // It is expected to pass only one auth from outside the SDK.
+          if (
+            noncesAndChainIdsWithUniqueNonces.length === 0 &&
+            authorizations.length > 1
+          ) {
+            throw new Error(
+              "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
+            )
+          }
+
+          // If multichain nonce are not same and custom auth are passed ? The auth should be sufficient orelse error will be thrown
+          if (noncesAndChainIdsWithUniqueNonces.length > 0) {
+            const missingAuthsByChainId: number[] = []
+
+            for (const { chainId } of noncesAndChainIdsWithUniqueNonces) {
+              const isAuthProvided = authorizations.some((auth) => {
+                return auth.chainId === chainId
+              })
+
+              if (!isAuthProvided) missingAuthsByChainId.push(chainId)
+            }
+
+            if (missingAuthsByChainId.length > 0) {
+              throw new Error(
+                `Invalid authorizations: The nonce for all the chains are not same. You need to pass specific authorizations for the following chains: ${missingAuthsByChainId.join(", ")}`
+              )
+            }
+          }
+
+          // For same multichain nonces ? Check for auth with zero id and throw error if it is not there
+          if (noncesAndChainIdsWithSameNonces.length > 0) {
+            const isAuthProvided = authorizations.some((auth) => {
+              return auth.chainId === 0
+            })
+
+            if (!isAuthProvided) {
+              const chainIds = noncesAndChainIdsWithSameNonces.map(
+                (auth) => auth.chainId
+              )
+              throw new Error(
+                `Invalid authorizations: The nonce for some of the chains are same. Missing multichain authorization for the following chains: ${chainIds.join(", ")}`
+              )
+            }
+          }
+        }
+
+        for (const chainId of sprtxChainIds) {
+          const [isMultichainAuth] = noncesAndChainIdsWithSameNonces.filter(
+            (info) => info.chainId === chainId
+          )
+          initDataTypeByChainId.set(
+            chainId,
+            isMultichainAuth ? "MULTI_CHAIN_AUTH" : "SINGLE_CHAIN_AUTH"
+          )
+        }
+      } else {
+        if (authorizations.length > 1) {
+          throw new Error(
+            "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
+          )
+        }
+
+        if (authorizations.length === 1 && authorizations[0].chainId !== 0) {
+          throw new Error(
+            "Invalid authorizations: Multichain authorization should be signed with chain ID zero"
+          )
+        }
+
+        // If only one chain is invloved. It can be directly treated as multichain
+        for (const chainId of sprtxChainIds) {
+          initDataTypeByChainId.set(chainId, "MULTI_CHAIN_AUTH")
+        }
+      }
+    } else {
+      // If custom authorizations are passed, a series of validation is conducted here
+      if (authorizations.length > 0) {
+        const missingAuthsByChainId: number[] = []
+
+        for (const chainId of sprtxChainIds) {
+          const isAuthProvided = authorizations.some((auth) => {
+            return auth.chainId === chainId
+          })
+
+          if (!isAuthProvided) missingAuthsByChainId.push(chainId)
+        }
+
+        if (missingAuthsByChainId.length > 0) {
+          throw new Error(
+            `Authorizations are missing for the following chains: ${missingAuthsByChainId.join(", ")}`
+          )
+        }
+      }
+
+      // All the auths will be treated as single chain auth without chain id zero
+      for (const chainId of sprtxChainIds) {
+        initDataTypeByChainId.set(chainId, "SINGLE_CHAIN_AUTH")
+      }
+    }
+  } else {
+    // No auth at all. Init code will be added if account is not deployed
+    for (const chainId of sprtxChainIds) {
+      initDataTypeByChainId.set(chainId, "INIT_CODE")
+    }
+  }
+
   const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
     client,
     {
       ...parameters,
-      paymentVerificationGasLimit
+      paymentVerificationGasLimit,
+      initDataTypeByChainId
     }
   )
 
-  if (isInitDataProcessed) hasProcessedInitData.push(paymentInfo.chainId)
+  let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
+
+  const paymentAuthType = initDataTypeByChainId.get(
+    Number(paymentInfo.chainId)
+  )!
+
+  // If payment info has eip7702 auth ? It is an non sponsored flow and auth is prepared
+  // If it is multichain auth and eip7702Auth prepared by either custom auth or SDK signed one
+  // It will be used for other userOp for delegation.
+  if (paymentInfo.eip7702Auth && paymentAuthType === "MULTI_CHAIN_AUTH") {
+    multichainEIP7702Auth = paymentInfo.eip7702Auth
+  }
+
+  if (isInitDataProcessed)
+    hasProcessedInitData.push(Number(paymentInfo.chainId))
 
   const preparedUserOps = await prepareUserOps(
     account_,
@@ -612,20 +797,54 @@ export const getQuote = async (
         shortEncoding
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
+
         if (!indexPerChainId.has(chainId)) {
           indexPerChainId.set(chainId, 0)
         }
 
-        const shouldContainInitData =
-          !hasProcessedInitData.includes(chainId) && !isAccountDeployed
+        // If account is not deployed, either initCode or eip7702Auth needs to be attached.
+        // If init code or 7702 auth is already added for the chain ? Skip this
+        if (
+          !isAccountDeployed &&
+          !hasProcessedInitData.includes(Number(chainId))
+        ) {
+          // Mark as initData processed
+          hasProcessedInitData.push(Number(chainId))
 
-        if (shouldContainInitData) {
-          hasProcessedInitData.push(chainId)
-          initDataOrUndefined = delegate
-            ? {
-                eip7702Auth: await nexusAccount.toDelegation({ authorization })
+          const authType = initDataTypeByChainId.get(Number(chainId))!
+
+          // If multichain EIP7702 auth is available ? It means, 7702 mode and no initCode is there.
+          if (authType === "MULTI_CHAIN_AUTH") {
+            // Apply existing multichain auth where the chain Ids were same. So no need multiple auths to be signed
+            if (multichainEIP7702Auth) {
+              initDataOrUndefined = {
+                eip7702Auth: multichainEIP7702Auth
               }
-            : { initCode }
+            } else {
+              // This multichain auth will be used for the current chains and other chains which has the same nonce
+              multichainEIP7702Auth = await prepare7702Auth(
+                nexusAccount,
+                Number(chainId),
+                initDataTypeByChainId,
+                authorizations
+              )
+
+              initDataOrUndefined = {
+                eip7702Auth: multichainEIP7702Auth
+              }
+            }
+          } else if (authType === "SINGLE_CHAIN_AUTH") {
+            initDataOrUndefined = {
+              eip7702Auth: await prepare7702Auth(
+                nexusAccount,
+                Number(chainId),
+                initDataTypeByChainId,
+                authorizations
+              )
+            }
+          } else {
+            initDataOrUndefined = { initCode }
+          }
         }
 
         const verificationGasLimit = resolveVerificationGasLimit({
@@ -665,9 +884,10 @@ export const getQuote = async (
   })
 
   if (sponsorship && sponsorshipOptions) {
+    // Both prod and staging network url is considered as biconomy hosted sponsorship service
     const isSelfHostedSponsorship = ![
-      DEFAULT_PATHFINDER_URL,
-      DEFAULT_PATHFINDER_URL
+      getDefaultMEENetworkUrl(false), // Prod
+      getDefaultMEENetworkUrl(true) // Staging
     ].includes(sponsorshipOptions.url)
 
     if (isSelfHostedSponsorship) {
@@ -691,6 +911,7 @@ const preparePaymentInfo = async (
   client: BaseMeeClient,
   parameters: GetQuoteParams & {
     paymentVerificationGasLimit?: { verificationGasLimit: bigint }
+    initDataTypeByChainId: Map<number, INIT_DATA_TYPE>
   }
 ) => {
   const {
@@ -698,10 +919,9 @@ const preparePaymentInfo = async (
     eoa,
     feeToken,
     feePayer,
-    delegate = false,
     gasLimit,
     verificationGasLimit,
-    authorization,
+    authorizations = [],
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
@@ -794,15 +1014,26 @@ const preparePaymentInfo = async (
     ])
 
     // Do authorization only if required as it requires signing
-    const initData: InitDataOrUndefined = isAccountDeployed
-      ? undefined
-      : delegate
-        ? {
-            eip7702Auth: await validPaymentAccount.toDelegation({
-              authorization
-            })
-          }
-        : { initCode }
+    let initData: InitDataOrUndefined = undefined
+
+    if (!isAccountDeployed) {
+      const initDataType = parameters.initDataTypeByChainId.get(
+        feeToken.chainId
+      )!
+
+      if (initDataType === "INIT_CODE") {
+        initData = { initCode }
+      } else {
+        initData = {
+          eip7702Auth: await prepare7702Auth(
+            validPaymentAccount,
+            feeToken.chainId,
+            parameters.initDataTypeByChainId,
+            authorizations
+          )
+        }
+      }
+    }
 
     paymentInfo = {
       sponsored: false,
@@ -827,6 +1058,42 @@ const preparePaymentInfo = async (
   if (!paymentInfo) throw new Error("Failed to generate payment info")
 
   return { paymentInfo, isInitDataProcessed }
+}
+
+const prepare7702Auth = async (
+  smartAccount: ModularSmartAccount,
+  chainId: number,
+  initDataTypeByChainId: Map<number, INIT_DATA_TYPE>,
+  customAuthorizations: SignAuthorizationReturnType[] = []
+): Promise<MeeAuthorization> => {
+  let eip7702Auth: MeeAuthorization
+
+  const authType = initDataTypeByChainId.get(chainId)!
+
+  if (authType === "MULTI_CHAIN_AUTH") {
+    // if it is multichain auth ? custom auth will be filtered with zero chain id
+    const [authorization] = customAuthorizations.filter(
+      (auth) => auth.chainId === 0
+    )
+
+    eip7702Auth = await smartAccount.toDelegation(
+      authorization ? { authorization } : { multiChain: true }
+    )
+  } else if (authType === "SINGLE_CHAIN_AUTH") {
+    // if it is not multichain auth ? custom auth will be filtered for specific chain
+    const [authorization] = customAuthorizations.filter((auth) => {
+      return auth.chainId === Number(chainId)
+    })
+
+    eip7702Auth = await smartAccount.toDelegation(
+      authorization ? { authorization } : { chainId }
+    )
+  } else {
+    // This should never happen in theory
+    throw new Error("Invalid authorization type")
+  }
+
+  return eip7702Auth
 }
 
 const prepareUserOps = async (

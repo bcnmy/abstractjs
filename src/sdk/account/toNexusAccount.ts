@@ -188,10 +188,16 @@ export type NonceInfo = {
  * @param multiChain - Whether to use the multi-chain authorization. Defaults to false.
  */
 export type DelegationParams = {
-  authorization?: SignAuthorizationReturnType
-  multiChain?: boolean
   delegatedContract?: Address
-}
+} & OneOf<
+  | {
+      authorization: SignAuthorizationReturnType
+    }
+  | {
+      multiChain: boolean
+    }
+  | { chainId: number }
+>
 
 /**
  * UnDelegation type
@@ -840,7 +846,8 @@ export const toNexusAccount = async (
     const {
       authorization: authorization_,
       multiChain,
-      delegatedContract
+      delegatedContract,
+      chainId
     } = params || {}
 
     const contractAddress = delegatedContract || meeConfig.implementationAddress
@@ -848,11 +855,12 @@ export const toNexusAccount = async (
     const authorization: SignAuthorizationReturnType =
       authorization_ ||
       (await walletClient.signAuthorization({
-        contractAddress
+        contractAddress,
+        chainId: multiChain ? 0 : chainId
       }))
 
     const eip7702Auth: MeeAuthorization = {
-      chainId: `0x${(multiChain ? 0 : chain.id).toString(16)}` as Hex,
+      chainId: `0x${(authorization.chainId).toString(16)}` as Hex,
       address: authorization.address as Hex,
       nonce: `0x${authorization.nonce.toString(16)}` as Hex,
       r: authorization.r as Hex,

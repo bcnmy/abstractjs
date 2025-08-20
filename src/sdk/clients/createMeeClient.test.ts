@@ -458,7 +458,7 @@ describe("mee.createMeeClient.delegated", async () => {
 
     const quote = await meeClient.getQuote({
       delegate: true,
-      authorization: dummyAuth,
+      authorizations: [dummyAuth],
       instructions: [
         {
           calls: [

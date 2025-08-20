@@ -6,16 +6,33 @@ import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
 const isStagingOrTesting = isStaging() || isTesting()
 
+export const getDefaultMEENetworkUrl = (isStaging = false) => {
+  if (isStaging) {
+    return "https://staging-network.biconomy.io/v1"
+  }
+
+  return "https://network.biconomy.io/v1"
+}
+
+export const getDefaultMEENetworkApiKey = (isStaging = false) => {
+  if (isStaging) {
+    return "mee_3ZhZhHx3hmKrBQxacr283dHt"
+  }
+
+  return "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
+}
+
 /**
  * Default URL for the MEE node service
  */
-export const DEFAULT_PATHFINDER_URL = isStagingOrTesting
-  ? "https://staging-network.biconomy.io/v1"
-  : "https://network.biconomy.io/v1"
+export const DEFAULT_PATHFINDER_URL =
+  getDefaultMEENetworkUrl(isStagingOrTesting)
 
-export const DEFAULT_PATHFINDER_API_KEY = isStagingOrTesting
-  ? "mee_3ZhZhHx3hmKrBQxacr283dHt"
-  : "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
+/**
+ * Default API key for the MEE node service
+ */
+export const DEFAULT_PATHFINDER_API_KEY =
+  getDefaultMEENetworkApiKey(isStagingOrTesting)
 
 /**
  * Constants for sponshorship
