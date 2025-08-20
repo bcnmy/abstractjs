@@ -2195,7 +2195,7 @@ describe("mee.getQuote", () => {
     )
   })
 
-  test("Should execute multiple 7702 delegation supertx with manual auth and single chain auth with sponsorship", async () => {
+  test("Should execute multiple 7702 delegation supertx with manual single chain authorisations with sponsorship", async () => {
     const baseSepoliaWalletClient = createWalletClient({
       account: eoaAccount,
       chain: baseSepolia,
