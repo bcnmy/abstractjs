@@ -9,14 +9,14 @@ export * from "./constants"
 export * from "./templates"
 
 // Explicit exports for critical functions to ensure proper export chaining
-export { 
+export {
   // Account creation and management functions
   toNexusAccount,
   toMultichainNexusAccount,
   toGasTankAccount
 } from "./account"
 
-export { 
+export {
   // Core module functionality and validators
   toSmartSessionsModule,
   meeSessionActions,
@@ -29,7 +29,7 @@ export {
   getMEEVersion
 } from "./modules"
 
-export { 
+export {
   // Client creation and management functions
   createMeeClient,
   createBicoBundlerClient,
@@ -38,7 +38,7 @@ export {
 } from "./clients"
 
 // Core constants and configuration values
-export { 
+export {
   MEEVersion,
   DEFAULT_MEE_VERSION,
   ENTRY_POINT_ADDRESS,

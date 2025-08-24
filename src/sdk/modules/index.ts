@@ -19,4 +19,7 @@ export { toEmptyHook } from "./toEmptyHook"
 export { getMEEVersion } from "./validators/smartSessions"
 
 // Session management and action functions
-export { meeSessionActions, smartSessionActions } from "./validators/smartSessions/decorators"
+export {
+  meeSessionActions,
+  smartSessionActions
+} from "./validators/smartSessions/decorators"
