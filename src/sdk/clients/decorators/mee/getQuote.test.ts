@@ -2195,7 +2195,8 @@ describe("mee.getQuote", () => {
     )
   })
 
-  test("Should execute multiple 7702 delegation supertx with manual single chain authorisations with sponsorship", async () => {
+  // Skipping the test because of RPC issue which fails to undelegate the EOA and it fails for AA13
+  test.skip("Should execute multiple 7702 delegation supertx with manual single chain authorisations with sponsorship", async () => {
     const baseSepoliaWalletClient = createWalletClient({
       account: eoaAccount,
       chain: baseSepolia,
@@ -2320,7 +2321,8 @@ describe("mee.getQuote", () => {
     expect(isDelegated).toBe(false)
   })
 
-  test("Should execute multiple 7702 delegation supertx with authomatic auth and single chain auth", async () => {
+  // Skipping the test because of RPC issue which fails to undelegate the EOA and it fails for AA13
+  test.skip("Should execute multiple 7702 delegation supertx with authomatic auth and single chain auth", async () => {
     const mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
       chainConfigurations: [
