@@ -201,28 +201,28 @@ export const prepareSignablePermitQuotePayload = async (
       {
         address: trigger.tokenAddress,
         abi: TokenWithPermitAbi,
-        functionName: 'nonces',
+        functionName: "nonces",
         args: [owner]
       },
       {
         address: trigger.tokenAddress,
         abi: TokenWithPermitAbi,
-        functionName: 'name'
+        functionName: "name"
       },
       {
         address: trigger.tokenAddress,
         abi: TokenWithPermitAbi,
-        functionName: 'version'
+        functionName: "version"
       },
       {
         address: trigger.tokenAddress,
         abi: TokenWithPermitAbi,
-        functionName: 'DOMAIN_SEPARATOR'
+        functionName: "DOMAIN_SEPARATOR"
       },
       {
         address: trigger.tokenAddress,
         abi: TokenWithPermitAbi,
-        functionName: 'eip712Domain'
+        functionName: "eip712Domain"
       }
     ]
   })
