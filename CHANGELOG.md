@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.1.2
+
+### Patch Changes
+
+- Added fallback version for permit flow
+
 ## 1.1.1
 
 ### Patch Changes

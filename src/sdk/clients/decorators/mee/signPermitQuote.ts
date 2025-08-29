@@ -255,6 +255,9 @@ export const prepareSignablePermitQuotePayload = async (
 
   const [, name_, version_] = eip712Domain
 
+  // Default version will be used as fallback
+  const defaultVersion = "1"
+
   if (version && version_) {
     if (version !== version_)
       console.warn(
@@ -275,16 +278,10 @@ export const prepareSignablePermitQuotePayload = async (
     )
   }
 
-  if (!version && !version_) {
-    throw new Error(
-      "Permit signing failed: Token version is missing. Neither version() nor eip712Domain().version is available."
-    )
-  }
-
   const signablePermitQuotePayload = {
     domain: {
       name: name_ || name, // name from eip712Domain is mostly safe and more priority is given
-      version: version_ || version, // version from eip712Domain is mostly safe and more priority is given
+      version: version_ || version || defaultVersion, // version from eip712Domain is mostly safe and more priority is given
       chainId: trigger.chainId,
       verifyingContract: trigger.tokenAddress
     },
@@ -312,7 +309,7 @@ export const prepareSignablePermitQuotePayload = async (
     metadata: {
       nonce,
       name: name_ || name,
-      version: version_ || version,
+      version: version_ || version || defaultVersion,
       domainSeparator,
       owner,
       spender,
