@@ -181,3 +181,5 @@ sessionStorageData
 
 # Data from scraping scripts
 .data
+
+package-lock.json
