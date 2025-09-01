@@ -5,28 +5,34 @@ import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { GetPaymentTokenPayload } from "./getPaymentToken"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import type { Trigger, TokenTrigger } from "./signPermitQuote"
 
 export type QuoteType = "simple" | "onchain" | "permit"
 
 export const isPermitTokenInfo = async (
   walletClient: WalletClient,
   paymentTokenInfo: GetPaymentTokenPayload,
-  tokenAddress: Address,
-  chainId: number
+  trigger: TokenTrigger
 ): Promise<boolean> => {
   let permitEnabled = false
 
-  if (paymentTokenInfo.paymentToken) {
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
-  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-    permitEnabled = await isPermitSupported(walletClient, tokenAddress)
+  if (!paymentTokenInfo.paymentToken) {
+    // if payment token is not specified, it means the trigger token can be used as payment token
+    // but only if we support arbitrary payment tokens for this quote
+    if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
+      permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
+    } 
+  } else if (paymentTokenInfo.paymentToken.address !== trigger.tokenAddress) {
+    // if payment token is defined and different from the trigger token, it means
+    // 'to permit' or 'not to permit' is decided by the trigger token, not the payment token
+    // coz in this case, fee is paid directly from the orchestrator account, w/o
+    // transferring the fee token to the orchestrator account via fusion
+    // so only trigger token is transferred via fusion
+    permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
   } else {
-    throw new Error(
-      `(${tokenAddress}) not supported for chain ${chainId} as a payment token for permit mode`
-    )
+  // at this point, payment token is defined and is the same as the trigger token
+    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false 
   }
-
   return permitEnabled
 }
 
@@ -53,20 +59,20 @@ const isPermitQuote = async (
   if ("call" in trigger) {
     return false
   }
+  // after this point, trigger can only be of type TokenTrigger
 
   // For non normal quote, if the payment info is not available ?
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
     throw new Error(
-      `isPermitQuote: Payment token not specified, or trigger token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId} as a payment token`
+      `isPermitQuote: Payment token not specified`
     )
   }
 
   const permitEnabled = await isPermitTokenInfo(
     walletClient,
     paymentTokenInfo,
-    trigger.tokenAddress,
-    trigger.chainId
+    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
   )
 
   return !!permitEnabled
@@ -93,15 +99,14 @@ const isOnChainQuote = async (
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
     throw new Error(
-      `isOnChainQuote: Payment token not specified, or trigger token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId} as a payment token`
+      `isOnChainQuote: Payment token not specified`
     )
   }
 
   const permitEnabled = await isPermitTokenInfo(
     walletClient,
     paymentTokenInfo,
-    trigger.tokenAddress,
-    trigger.chainId
+    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
   )
 
   // If permit is enabled ? It is not an on chain quote
