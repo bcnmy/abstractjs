@@ -23,7 +23,7 @@ export const isPermitTokenInfo = async (
     permitEnabled = await isPermitSupported(walletClient, tokenAddress)
   } else {
     throw new Error(
-      `Payment token (${tokenAddress}) not supported for chain ${chainId}`
+      `(${tokenAddress}) not supported for chain ${chainId} as a payment token for permit mode`
     )
   }
 
@@ -58,7 +58,7 @@ const isPermitQuote = async (
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
     throw new Error(
-      `Payment token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId}`
+      `isPermitQuote: Payment token not specified, or trigger token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId} as a payment token`
     )
   }
 
@@ -93,7 +93,7 @@ const isOnChainQuote = async (
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
     throw new Error(
-      `Payment token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId}`
+      `isOnChainQuote: Payment token not specified, or trigger token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId} as a payment token`
     )
   }
 
