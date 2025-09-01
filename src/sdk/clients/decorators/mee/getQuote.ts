@@ -1182,7 +1182,7 @@ const prepareCleanUpUserOps = async (
       }
 
       const [cleanUpTransferInstruction] = await buildComposable(
-        { account: account, currentInstructions: [] },
+        { accountAddress: account.signer.address, currentInstructions: [] },
         {
           type: "transfer",
           data: {

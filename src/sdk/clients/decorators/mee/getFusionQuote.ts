@@ -235,7 +235,7 @@ export const prepareInstructions = async (
   // If token address is zero address, we don't need to add transferFrom instruction
   if (trigger.tokenAddress === zeroAddress) {
     const batchedInstructions = await batchInstructions({
-      account,
+      accountAddress: account.signer.address,
       instructions: resolvedInstructions
     })
     return { triggerGasLimit, triggerAmount, batchedInstructions }
@@ -257,7 +257,7 @@ export const prepareInstructions = async (
     : account.build(params))
 
   const batchedInstructions = await batchInstructions({
-    account,
+    accountAddress: account.signer.address,
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 

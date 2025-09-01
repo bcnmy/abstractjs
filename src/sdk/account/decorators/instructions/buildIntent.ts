@@ -1,22 +1,31 @@
-import type { Chain } from "viem"
+import type { Address } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import type { BaseMultichainSmartAccount } from "../../toMultiChainNexusAccount"
 import type { MultichainToken } from "../../utils/Types"
-import type { MultichainContract } from "../../utils/getMultichainContract"
 import type { BaseInstructionsParams } from "../build"
 import buildBridgeInstructions from "../buildBridgeInstructions"
-import { getUnifiedERC20Balance } from "../getUnifiedERC20Balance"
+import type { UnifiedERC20Balance } from "../getUnifiedERC20Balance"
 
 /**
  * Parameters for building bridge intent instructions
+ * @property depositor - {@link Address} The account address initiating the bridge on the source chain
+ * @property recipient - {@link Address} The account address receiving the bridged tokens on the destination chain
  * @property amount - Amount of tokens to bridge as BigInt
- * @property mcToken - {@link MultichainContract} The multichain token contract to bridge
- * @property toChain - {@link Chain} The destination chain for the bridge operation
+ * @property token - Object containing:
+ *   @property mcToken - {@link MultichainToken} The multichain token contract to bridge
+ *   @property unifiedBalance - {@link UnifiedERC20Balance} The unified token balance across chains
+ * @property toChainId - The destination chain id for the bridge operation
+ * @property mode - (Optional) "DEBIT" or "OPTIMISTIC" bridging mode
  */
 export type BuildIntentParameters = {
+  depositor: Address
+  recipient: Address
   amount: bigint
-  mcToken: MultichainToken
-  toChain: Chain
+  token: {
+    mcToken: MultichainToken
+    unifiedBalance: UnifiedERC20Balance
+  }
+  toChainId: number
   mode?: "DEBIT" | "OPTIMISTIC"
 }
 
@@ -37,9 +46,14 @@ export type BuildIntentParams = BaseInstructionsParams & {
  * @param baseParams.account - {@link BaseMultichainSmartAccount} The smart account to execute the bridging
  * @param baseParams.currentInstructions - Array of existing instructions to append to
  * @param parameters - {@link BuildIntentParameters} Bridge configuration
+ * @param parameters.depositor - The account address initiating the bridge on the source chain
+ * @param parameters.recipient - The account address receiving the bridged tokens on the destination chain
  * @param parameters.amount - The amount to bridge
- * @param parameters.mcToken - The multichain token contract
- * @param parameters.chain - The destination chain
+ * @param parameters.token - Object containing:
+ *   @param parameters.token.mcToken - The multichain token contract
+ *   @param parameters.token.unifiedBalance - The unified token balance across chains
+ * @param parameters.toChainId - The destination chain id
+ * @param parameters.mode - (Optional) "DEBIT" or "OPTIMISTIC" bridging mode
  *
  * @returns Promise resolving to an array of {@link Instruction}
  *
@@ -50,9 +64,14 @@ export type BuildIntentParams = BaseInstructionsParams & {
  *     currentInstructions: []
  *   },
  *   {
+ *     depositor: "0x...",
+ *     recipient: "0x...",
  *     amount: BigInt("1000000"), // 1 USDC
- *     mcToken: mcUSDC,
- *     toChain: optimism
+ *     token: {
+ *       mcToken: mcUSDC,
+ *       unifiedBalance: myUnifiedBalance
+ *     },
+ *     toChainId: 10
  *   }
  * );
  */
@@ -60,16 +79,25 @@ export const buildIntent = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildIntentParameters
 ): Promise<Instruction[]> => {
-  const { account, currentInstructions = [] } = baseParams
-  const { amount, mcToken, toChain, mode } = parameters
-  const unifiedBalance = await getUnifiedERC20Balance({ mcToken, account })
+  const { currentInstructions = [] } = baseParams
+  const {
+    amount,
+    token: { unifiedBalance },
+    toChainId,
+    depositor,
+    recipient,
+    mode
+  } = parameters
+
   const { instructions } = await buildBridgeInstructions({
-    account,
+    depositor,
+    recipient,
     amount: amount,
-    toChain,
+    toChainId,
     unifiedBalance,
     mode
   })
+
   return [...currentInstructions, ...instructions]
 }
 

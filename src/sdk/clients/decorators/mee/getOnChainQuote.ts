@@ -88,7 +88,7 @@ export const getOnChainQuote = async (
 
   if (trigger.call) {
     const batchedInstructions = await batchInstructions({
-      account: account_,
+      accountAddress: account_.signer.address,
       instructions: resolvedInstructions
     })
     const quote = await getQuote(client, {
