@@ -1,15 +1,15 @@
-import { erc7579Calls } from "../../../clients/decorators/erc7579"
+import type { OneOf } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type { Call } from "../../utils/Types"
+import type { BaseInstructionsParams } from "../build"
+
+import { erc7579Calls } from "../../../clients/decorators/erc7579"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
 import { ownableCalls } from "../../../modules/validators/ownable/decorators"
 import { smartSessionCalls } from "../../../modules/validators/smartSessions"
-import type { Call } from "../../utils/Types"
-import type { BaseInstructionsParams } from "../build"
+import { BaseMultichainSmartAccount } from "../.."
 
-/**
- * A collection of all globally composable calls from various modules and decorators.
- */
 export const GLOBAL_COMPOSABLE_CALLS = {
   ...erc7579Calls,
   ...smartAccountCalls,
@@ -18,49 +18,46 @@ export const GLOBAL_COMPOSABLE_CALLS = {
 } as const
 
 export type SupportedCall = keyof typeof GLOBAL_COMPOSABLE_CALLS
-
 // biome-ignore lint/complexity/noBannedTypes: Later inference will be used
-export type MultichainInstructionArgumentTypes<F extends Function> = F extends (
+type ArgumentTypes<F extends Function> = F extends (
   account: ModularSmartAccount,
   args: infer A
 ) => AnyData
   ? A
   : never
 
-/**
- * Parameters for building multichain instructions.
- * @property calls - Array of Call objects to be included in each instruction.
- * @property chainIds - Array of chain IDs for which instructions will be built.
- */
-export type BuildMultichainInstructionsParameters = {
-  calls: Call[]
-  chainIds: number[]
-}
+export type BuildMultichainInstructionsParameters = { account: BaseMultichainSmartAccount } & OneOf<
+  | {
+      calls: Call[]
+    }
+  | {
+      type: SupportedCall
+      parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[SupportedCall]>
+    }
+>
 
-/**
- * Builds instructions for multiple chains, appending them to any existing instructions.
- *
- * @param baseParams - Base parameters for instruction building.
- * @param parameters - Object containing:
- *   - calls: Array of Call objects to include in each instruction.
- *   - chainIds: Array of chain IDs for which to build instructions.
- * @returns Promise resolving to an array of Instruction objects, including any existing instructions.
- */
 export const buildMultichainInstructions = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildMultichainInstructionsParameters
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { calls, chainIds } = parameters
+  const { calls: calls_, type, parameters: parametersForType, account } = parameters
 
   const instructions = await Promise.all(
-    chainIds.map(async (chainId) => {
+    account.deployments.map(async (account) => {
       let callsPerChain: AbstractCall[] = []
-
-      if (calls) {
-        callsPerChain = calls as AbstractCall[]
+      const chainId = account.client.chain?.id
+      if (!chainId) {
+        throw new Error("Chain ID is not set")
       }
-
+      if (calls_) {
+        callsPerChain = calls_ as AbstractCall[]
+      } else if (type) {
+        callsPerChain = (await GLOBAL_COMPOSABLE_CALLS[type](
+          account,
+          parametersForType as AnyData
+        )) as AbstractCall[]
+      }
       return { calls: callsPerChain, chainId }
     })
   )
