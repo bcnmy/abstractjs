@@ -67,7 +67,7 @@ const isPermitQuote = async (
   // For non normal quote, if the payment info is not available ?
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
-    throw new Error(`isPermitQuote: Payment token not specified`)
+    throw new Error("isPermitQuote: Payment token not specified")
   }
 
   const permitEnabled = await isPermitTokenInfo(
@@ -99,7 +99,7 @@ const isOnChainQuote = async (
   // For non normal quote, if the payment info is not available ?
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
-    throw new Error(`isOnChainQuote: Payment token not specified`)
+    throw new Error("isOnChainQuote: Payment token not specified")
   }
 
   const permitEnabled = await isPermitTokenInfo(

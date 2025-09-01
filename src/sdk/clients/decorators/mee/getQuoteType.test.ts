@@ -8,7 +8,10 @@ import {
 import { beforeAll, describe, expect, test } from "vitest"
 import type { GetFusionQuoteParams, GetQuoteParams } from "."
 import { toNetwork } from "../../../../test/testSetup"
-import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../../../../test/testTokens"
+import {
+  testnetMcTestUSDC,
+  testnetMcTestUSDCP
+} from "../../../../test/testTokens"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -274,7 +277,7 @@ describe("mee.getQuoteType", () => {
         tokenAddress: "0x00000000000000000000000000000000000a11ce",
         chainId: chain.id
       })
-    
+
       paymentTokenInfo.isArbitraryPaymentTokensSupported = false
       expect(paymentTokenInfo.paymentToken).to.be.undefined
 
@@ -296,14 +299,18 @@ describe("mee.getQuoteType", () => {
 
       const trigger = {
         // not permittable token
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id), 
+        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
         chainId: chain.id,
         amount: 1n
       }
-      
-      const isPermit = await isPermitTokenInfo(walletClient, paymentTokenInfo, trigger)
+
+      const isPermit = await isPermitTokenInfo(
+        walletClient,
+        paymentTokenInfo,
+        trigger
+      )
       // should be based on trigger token in this case and trigger token does not support permit
-      expect(isPermit).to.be.false 
+      expect(isPermit).to.be.false
     })
 
     test("Payment token specified + payment token same as the trigger token + permit enabled", async () => {
@@ -316,7 +323,11 @@ describe("mee.getQuoteType", () => {
         chainId: chain.id,
         amount: 1n
       }
-      const isPermit = await isPermitTokenInfo(walletClient, paymentTokenInfo, trigger)
+      const isPermit = await isPermitTokenInfo(
+        walletClient,
+        paymentTokenInfo,
+        trigger
+      )
       expect(isPermit).to.be.true
     })
 
@@ -325,13 +336,17 @@ describe("mee.getQuoteType", () => {
         tokenAddress: testnetMcTestUSDC.addressOn(chain.id), // not permittable token
         chainId: chain.id
       })
-      
+
       const trigger = {
         tokenAddress: testnetMcTestUSDC.addressOn(chain.id), // not permittable token
         chainId: chain.id,
         amount: 1n
       }
-      const isPermit = await isPermitTokenInfo(walletClient, paymentTokenInfo, trigger)
+      const isPermit = await isPermitTokenInfo(
+        walletClient,
+        paymentTokenInfo,
+        trigger
+      )
       expect(isPermit).to.be.false
     })
   })
