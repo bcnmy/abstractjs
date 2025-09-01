@@ -66,10 +66,11 @@ describe("mee.queryBridge", () => {
     }
 
     const payload = await queryBridge({
-      account: mcNexus,
+      depositor: mcNexus.addressOn(paymentChain.id, true),
+      recipient: mcNexus.addressOn(targetChain.id, true),
       amount: 1000000n,
-      toChain: targetChain,
-      fromChain: paymentChain,
+      toChainId: targetChain.id,
+      fromChainId: paymentChain.id,
       tokenMapping
     })
 

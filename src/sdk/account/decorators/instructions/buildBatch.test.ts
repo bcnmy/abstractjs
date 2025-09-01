@@ -62,11 +62,11 @@ describe("mee.buildBatch", () => {
 
   it("should build a batch instruction", async () => {
     const instructions: Instruction[] = await buildBatch(
-      { account: mcNexus, currentInstructions: [] },
+      { accountAddress: mcNexus.signer.address, currentInstructions: [] },
       {
         instructions: [
           buildApprove(
-            { account: mcNexus, currentInstructions: [] },
+            { accountAddress: mcNexus.signer.address, currentInstructions: [] },
             {
               chainId: targetChain.id,
               tokenAddress,
@@ -75,7 +75,7 @@ describe("mee.buildBatch", () => {
             }
           ),
           buildWithdrawal(
-            { account: mcNexus, currentInstructions: [] },
+            { accountAddress: mcNexus.signer.address, currentInstructions: [] },
             {
               chainId: targetChain.id,
               tokenAddress,

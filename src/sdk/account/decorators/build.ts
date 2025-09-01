@@ -242,7 +242,7 @@ export type BuildComposableInstructionTypes =
  *       amount: 1n,
  *       token: {
  *         mcToken: mcUSDC,
- *         unifiedBalance: await getUnifiedERC20Balance({ mcToken: mcUSDC, account: mcNexus })
+ *         unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
  *       },
  *       toChainId: targetChain.id
  *     }

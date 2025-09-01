@@ -34,12 +34,10 @@ import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
 import {
-  DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
-  DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-  DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL,
   type MeeClient,
-  createMeeClient
+  createMeeClient,
+  getDefaultMEENetworkUrl,
+  getDefaultMeeGasTank
 } from "../../createMeeClient"
 import executeSignedQuote from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
@@ -477,12 +475,8 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
         },
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         instructions: [
           mcNexus.build({

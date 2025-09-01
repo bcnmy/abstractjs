@@ -37,10 +37,10 @@ import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL,
   type MeeClient,
   createMeeClient,
-  getDefaultMEENetworkUrl
+  getDefaultMEENetworkUrl,
+  getDefaultMeeGasTank
 } from "../../createMeeClient"
 import {
   CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION,
@@ -135,9 +135,14 @@ describe("mee.getQuote", () => {
         mcNexus.build({
           type: "intent",
           data: {
+            depositor: mcNexus.addressOn(paymentChain.id, true),
+            recipient: mcNexus.addressOn(targetChain.id, true),
             amount: 1n,
-            mcToken: mcUSDC,
-            toChain: targetChain
+            token: {
+              mcToken: mcUSDC,
+              unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+            },
+            toChainId: targetChain.id
           }
         }),
         mcNexus.build({
@@ -296,12 +301,8 @@ describe("mee.getQuote", () => {
     const quote = await meeClient.getQuote({
       sponsorship: true,
       sponsorshipOptions: {
-        url: DEFAULT_PATHFINDER_URL,
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
       },
       instructions: [
         {
@@ -627,12 +628,8 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         instructions: [
           {
@@ -737,12 +734,8 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         instructions: [
           {
@@ -813,12 +806,8 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         delegate: true,
         instructions: [
@@ -895,12 +884,8 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         trigger: {
           amount: amountToTransfer,
@@ -988,12 +973,8 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         trigger: {
           amount: amountToTransfer,
@@ -1335,11 +1316,7 @@ describe("mee.getQuote", () => {
       sponsorship: true,
       sponsorshipOptions: {
         url: getDefaultMEENetworkUrl(true),
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       authorizations: [], // No auth is added. So the SDK should add auth message in all userOps with multichain context
@@ -1453,11 +1430,7 @@ describe("mee.getQuote", () => {
       sponsorship: true,
       sponsorshipOptions: {
         url: getDefaultMEENetworkUrl(true),
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       // Both baseSepolia and optimismSepolia auth added manually.
@@ -1563,11 +1536,7 @@ describe("mee.getQuote", () => {
       sponsorship: true,
       sponsorshipOptions: {
         url: getDefaultMEENetworkUrl(true),
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       // Both baseSepolia and optimismSepolia auth added manually.
@@ -1656,11 +1625,7 @@ describe("mee.getQuote", () => {
       sponsorship: true,
       sponsorshipOptions: {
         url: getDefaultMEENetworkUrl(true),
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       multichain7702Auth: true,
@@ -2282,12 +2247,8 @@ describe("mee.getQuote", () => {
     const quote = await meeClient.getQuote({
       sponsorship: true,
       sponsorshipOptions: {
-        url: DEFAULT_PATHFINDER_URL,
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       authorizations: [baseSepoliaAuth, optimismSepoliaAuth],
@@ -2479,12 +2440,8 @@ describe("mee.getQuote", () => {
     const quote = await meeClient.getQuote({
       sponsorship: true,
       sponsorshipOptions: {
-        url: DEFAULT_PATHFINDER_URL,
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       multichain7702Auth: true,
@@ -2563,12 +2520,8 @@ describe("mee.getQuote", () => {
     const quote = await meeClient.getQuote({
       sponsorship: true,
       sponsorshipOptions: {
-        url: DEFAULT_PATHFINDER_URL,
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
       },
       delegate: true,
       multichain7702Auth: true,

@@ -1,4 +1,4 @@
-import type { Address, Hex, OneOf } from "viem"
+import { type Address, type Hex, type OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -7,7 +7,7 @@ import { addressEquals } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
+import { type ModularSmartAccount, type RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -140,10 +140,10 @@ export type CleanUp = {
    */
   chainId: number
   /**
-   * Amount of the token to use, in the token's smallest unit
-   * @example 1000000n // 1 USDC (6 decimals)
+   * Amount of the token to use, in the token's smallest unit or a runtime value
+   * @example 1000000n // 1 USDC (6 decimals) or runtimeERC20BalanceOf
    */
-  amount?: bigint
+  amount?: bigint | RuntimeValue
   /**
    * Custom gas limit for cleanup userOp
    * @example 1n
@@ -1176,8 +1176,7 @@ const prepareCleanUpUserOps = async (
       if (amount === 0n) {
         amount = runtimeERC20BalanceOf({
           targetAddress: account.addressOn(cleanUp.chainId, true),
-          tokenAddress: cleanUp.tokenAddress,
-          constraints: [greaterThanOrEqualTo(1n)] // Cleanup will only happen if there is atleast 1 wei
+          tokenAddress: cleanUp.tokenAddress
         })
       }
 
