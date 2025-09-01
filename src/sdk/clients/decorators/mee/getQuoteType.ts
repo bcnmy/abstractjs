@@ -5,7 +5,7 @@ import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { GetPaymentTokenPayload } from "./getPaymentToken"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
-import type { Trigger, TokenTrigger } from "./signPermitQuote"
+import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
 export type QuoteType = "simple" | "onchain" | "permit"
 
@@ -20,8 +20,11 @@ export const isPermitTokenInfo = async (
     // if payment token is not specified, it means the trigger token can be used as payment token
     // but only if we support arbitrary payment tokens for this quote
     if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-      permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
-    } 
+      permitEnabled = await isPermitSupported(
+        walletClient,
+        trigger.tokenAddress
+      )
+    }
   } else if (paymentTokenInfo.paymentToken.address !== trigger.tokenAddress) {
     // if payment token is defined and different from the trigger token, it means
     // 'to permit' or 'not to permit' is decided by the trigger token, not the payment token
@@ -30,8 +33,8 @@ export const isPermitTokenInfo = async (
     // so only trigger token is transferred via fusion
     permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
   } else {
-  // at this point, payment token is defined and is the same as the trigger token
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false 
+    // at this point, payment token is defined and is the same as the trigger token
+    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
   }
   return permitEnabled
 }
@@ -64,9 +67,7 @@ const isPermitQuote = async (
   // For non normal quote, if the payment info is not available ?
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
-    throw new Error(
-      `isPermitQuote: Payment token not specified`
-    )
+    throw new Error(`isPermitQuote: Payment token not specified`)
   }
 
   const permitEnabled = await isPermitTokenInfo(
@@ -98,9 +99,7 @@ const isOnChainQuote = async (
   // For non normal quote, if the payment info is not available ?
   // It means the token is not supported by the network and also swap routers
   if (!paymentTokenInfo) {
-    throw new Error(
-      `isOnChainQuote: Payment token not specified`
-    )
+    throw new Error(`isOnChainQuote: Payment token not specified`)
   }
 
   const permitEnabled = await isPermitTokenInfo(
