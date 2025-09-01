@@ -1,4 +1,4 @@
-import { type Address, type Hex, type OneOf } from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -7,7 +7,7 @@ import { addressEquals } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import { type ModularSmartAccount, type RuntimeValue } from "../../../modules"
+import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,

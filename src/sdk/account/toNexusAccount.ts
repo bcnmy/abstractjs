@@ -134,7 +134,7 @@ export type ChainConfiguration = {
    * Only set this as false if you're very sure about MEE version support on specific chains otherwise SDK will
    * fail to detect the unavailability of version on certains which may result in weird error because of undeployed contracts
    */
-  versionCheck?: Boolean
+  versionCheck?: boolean
 }
 
 /**
