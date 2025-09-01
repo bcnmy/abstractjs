@@ -1,11 +1,11 @@
 import { readContract } from "viem/actions"
+import type { BaseMultichainSmartAccount } from ".."
 import type { ReadDictionary } from "../../clients/decorators/erc7579"
 import type { AnyData, ModularSmartAccount } from "../../modules/utils/Types"
 import {
   GLOBAL_COMPOSABLE_READS,
   type SupportedRead
 } from "../utils/composableReads"
-import type { BaseMultichainSmartAccount } from ".."
 
 // biome-ignore lint/complexity/noBannedTypes: Later inference will be used
 type ArgumentTypes<F extends Function> = F extends (

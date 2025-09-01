@@ -1,11 +1,11 @@
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
-import type { Call } from "../../utils/Types"
-import type { BaseInstructionsParams } from "../build"
 import { erc7579Calls } from "../../../clients/decorators/erc7579"
+import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
 import { ownableCalls } from "../../../modules/validators/ownable/decorators"
 import { smartSessionCalls } from "../../../modules/validators/smartSessions"
+import type { Call } from "../../utils/Types"
+import type { BaseInstructionsParams } from "../build"
 
 /**
  * A collection of all globally composable calls from various modules and decorators.

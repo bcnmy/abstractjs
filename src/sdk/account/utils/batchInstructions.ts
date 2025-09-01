@@ -1,4 +1,4 @@
-import { type Address } from "viem"
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
 
