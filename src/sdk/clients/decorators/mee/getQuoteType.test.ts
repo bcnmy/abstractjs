@@ -262,11 +262,17 @@ describe("mee.getQuoteType", () => {
       paymentTokenInfo.isArbitraryPaymentTokensSupported = true
       expect(paymentTokenInfo.paymentToken).to.be.undefined
 
-      const isPermit = await isPermitTokenInfo(walletClient, paymentTokenInfo, {
+      const trigger = {
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
         amount: 1n
-      })
+      }
+
+      const isPermit = await isPermitTokenInfo(
+        walletClient,
+        trigger,
+        paymentTokenInfo
+      )
       // if arbitrary payment tokens supported,
       // should return true for the trigger token that supports permit
       expect(isPermit).to.be.true
@@ -281,11 +287,17 @@ describe("mee.getQuoteType", () => {
       paymentTokenInfo.isArbitraryPaymentTokensSupported = false
       expect(paymentTokenInfo.paymentToken).to.be.undefined
 
-      const isPermit = await isPermitTokenInfo(walletClient, paymentTokenInfo, {
+      const trigger = {
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
         amount: 1n
-      })
+      }
+
+      const isPermit = await isPermitTokenInfo(
+        walletClient,
+        trigger,
+        paymentTokenInfo
+      )
       // if arbitrary payment tokens not supported,
       // should return false for the trigger token that supports permit
       expect(isPermit).to.be.false
@@ -306,8 +318,8 @@ describe("mee.getQuoteType", () => {
 
       const isPermit = await isPermitTokenInfo(
         walletClient,
-        paymentTokenInfo,
-        trigger
+        trigger,
+        paymentTokenInfo
       )
       // should be based on trigger token in this case and trigger token does not support permit
       expect(isPermit).to.be.false
@@ -325,8 +337,8 @@ describe("mee.getQuoteType", () => {
       }
       const isPermit = await isPermitTokenInfo(
         walletClient,
-        paymentTokenInfo,
-        trigger
+        trigger,
+        paymentTokenInfo
       )
       expect(isPermit).to.be.true
     })
@@ -344,8 +356,8 @@ describe("mee.getQuoteType", () => {
       }
       const isPermit = await isPermitTokenInfo(
         walletClient,
-        paymentTokenInfo,
-        trigger
+        trigger,
+        paymentTokenInfo
       )
       expect(isPermit).to.be.false
     })

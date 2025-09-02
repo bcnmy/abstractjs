@@ -10,18 +10,26 @@ import type { TokenTrigger, Trigger } from "./signPermitQuote"
 export type QuoteType = "simple" | "onchain" | "permit"
 
 export const isPermitTokenInfo = async (
-  walletClient: WalletClient,
-  paymentTokenInfo: GetPaymentTokenPayload,
-  trigger: TokenTrigger
+  triggerWalletClient: WalletClient,
+  trigger: TokenTrigger,
+  paymentTokenInfo?: GetPaymentTokenPayload
 ): Promise<boolean> => {
   let permitEnabled = false
 
-  if (!paymentTokenInfo.paymentToken) {
+  if (!paymentTokenInfo) {
+    // if payment token is not specified at this point,
+    // it means the trigger token is used to choose b/w:
+    // `to permit` or `not to permit`
+    permitEnabled = await isPermitSupported(
+      triggerWalletClient,
+      trigger.tokenAddress
+    )
+  } else if (!paymentTokenInfo.paymentToken) {
     // if payment token is not specified, it means the trigger token can be used as payment token
     // but only if we support arbitrary payment tokens for this quote
     if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
       permitEnabled = await isPermitSupported(
-        walletClient,
+        triggerWalletClient,
         trigger.tokenAddress
       )
     }
@@ -31,7 +39,10 @@ export const isPermitTokenInfo = async (
     // coz in this case, fee is paid directly from the orchestrator account, w/o
     // transferring the fee token to the orchestrator account via fusion
     // so only trigger token is transferred via fusion
-    permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
+    permitEnabled = await isPermitSupported(
+      triggerWalletClient,
+      trigger.tokenAddress
+    )
   } else {
     // at this point, payment token is defined and is the same as the trigger token
     permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
@@ -47,7 +58,7 @@ const isNormalQuote = (
 }
 
 const isPermitQuote = async (
-  walletClient: WalletClient,
+  triggerWalletClient: WalletClient,
   payload: AnyData,
   paymentTokenInfo?: GetPaymentTokenPayload
 ): Promise<boolean> => {
@@ -64,23 +75,17 @@ const isPermitQuote = async (
   }
   // after this point, trigger can only be of type TokenTrigger
 
-  // For non normal quote, if the payment info is not available ?
-  // It means the token is not supported by the network and also swap routers
-  if (!paymentTokenInfo) {
-    throw new Error("isPermitQuote: Payment token not specified")
-  }
-
   const permitEnabled = await isPermitTokenInfo(
-    walletClient,
-    paymentTokenInfo,
-    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
+    triggerWalletClient,
+    trigger as TokenTrigger, // trigger can only be of type TokenTrigger at this point
+    paymentTokenInfo
   )
 
   return !!permitEnabled
 }
 
 const isOnChainQuote = async (
-  walletClient: WalletClient,
+  triggerWalletClient: WalletClient,
   payload: AnyData,
   paymentTokenInfo?: GetPaymentTokenPayload
 ): Promise<boolean> => {
@@ -96,16 +101,10 @@ const isOnChainQuote = async (
     return true
   }
 
-  // For non normal quote, if the payment info is not available ?
-  // It means the token is not supported by the network and also swap routers
-  if (!paymentTokenInfo) {
-    throw new Error("isOnChainQuote: Payment token not specified")
-  }
-
   const permitEnabled = await isPermitTokenInfo(
-    walletClient,
-    paymentTokenInfo,
-    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
+    triggerWalletClient,
+    trigger as TokenTrigger, // trigger can only be of type TokenTrigger at this point
+    paymentTokenInfo
   )
 
   // If permit is enabled ? It is not an on chain quote
@@ -114,7 +113,7 @@ const isOnChainQuote = async (
 
 // NOTE: MM DTK is not supported for now - It is experimental and need to support once it is mainstream
 export const getQuoteType = async (
-  walletClient: WalletClient,
+  triggerWalletClient: WalletClient,
   quoteParams:
     | GetQuotePayload
     | GetQuoteParams
@@ -128,11 +127,19 @@ export const getQuoteType = async (
     return "simple"
   }
 
-  if (await isPermitQuote(walletClient, quoteParams, paymentTokenInfo)) {
+  if (!paymentTokenInfo && !("sponsorship" in quoteParams)) {
+    throw new Error(
+      "Detecting quote type: Payment token info not specified in a non-sponsored flow"
+    )
+  }
+
+  if (await isPermitQuote(triggerWalletClient, quoteParams, paymentTokenInfo)) {
     return "permit"
   }
 
-  if (await isOnChainQuote(walletClient, quoteParams, paymentTokenInfo)) {
+  if (
+    await isOnChainQuote(triggerWalletClient, quoteParams, paymentTokenInfo)
+  ) {
     return "onchain"
   }
 

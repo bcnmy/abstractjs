@@ -68,21 +68,22 @@ export const signFusionQuote = async (
   }
   // if it is not mm-dtk, then it is permit or on-chain
 
-  const trigger = parameters.fusionQuote.trigger
+  const paymentInfo = parameters.fusionQuote.quote.paymentInfo
 
   let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+  paymentTokenInfo = await getPaymentToken(client, {
+    tokenAddress: paymentInfo.token,
+    chainId: Number(paymentInfo.chainId)
+  })
 
-  if (trigger.tokenAddress) {
-    paymentTokenInfo = await getPaymentToken(client, {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId
-    })
-  }
-
-  const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
+  const trigger = parameters.fusionQuote.trigger
+  const { walletClient: triggerWalletClient } = client.account.deploymentOn(
+    trigger.chainId,
+    true
+  )
 
   const signatureType = await getQuoteType(
-    walletClient,
+    triggerWalletClient,
     parameters.fusionQuote,
     paymentTokenInfo
   )

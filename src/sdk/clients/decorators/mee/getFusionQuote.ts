@@ -12,7 +12,7 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
-import { type GetPaymentTokenPayload, getPaymentToken } from "./getPaymentToken"
+import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
 import {
   type CleanUp,
@@ -106,21 +106,25 @@ export const getFusionQuote = async (
   }
   // if it is not mm-dtk, then it is permit or on-chain
 
+  const feeToken = parameters.feeToken
   const trigger = parameters.trigger
+  //let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
 
-  let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+  // can be no feeToken => no payment token specified if it is sponsorship
+  const paymentTokenInfo = feeToken
+    ? await getPaymentToken(client, {
+        tokenAddress: feeToken.address,
+        chainId: feeToken.chainId
+      })
+    : undefined
 
-  if (trigger.tokenAddress) {
-    paymentTokenInfo = await getPaymentToken(client, {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId
-    })
-  }
-
-  const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
+  const { walletClient: triggerWalletClient } = client.account.deploymentOn(
+    trigger.chainId,
+    true
+  )
 
   const signatureType = await getQuoteType(
-    walletClient,
+    triggerWalletClient,
     parameters,
     paymentTokenInfo
   )
