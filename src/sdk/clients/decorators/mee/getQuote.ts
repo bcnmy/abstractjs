@@ -1,9 +1,15 @@
-import type { Address, Hex, OneOf } from "viem"
+import {
+  encodeFunctionData,
+  zeroAddress,
+  type Address,
+  type Hex,
+  type OneOf
+} from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
-import { addressEquals } from "../../../account/utils/Utils"
+import { addressEquals, isBigInt } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
@@ -24,6 +30,7 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -1170,29 +1177,72 @@ const prepareCleanUpUserOps = async (
 ) => {
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
-      let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
+      let cleanUpInstrsution: Instruction
 
-      // If there is no amount specified ? Runtime amount will be cleaned up by default
-      if (amount === 0n) {
-        amount = runtimeERC20BalanceOf({
-          targetAddress: account.addressOn(cleanUp.chainId, true),
-          tokenAddress: cleanUp.tokenAddress
-        })
-      }
-
-      const [cleanUpTransferInstruction] = await buildComposable(
-        { accountAddress: account.signer.address, currentInstructions: [] },
-        {
-          type: "transfer",
-          data: {
-            recipient: cleanUp.recipientAddress,
-            tokenAddress: cleanUp.tokenAddress,
-            amount,
-            chainId: cleanUp.chainId,
-            ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
-          }
+      if (cleanUp.tokenAddress === zeroAddress) {
+        if (cleanUp.amount === undefined) {
+          throw new Error(
+            "Please configure the amount for the native token cleanup."
+          )
         }
-      )
+
+        if (!isBigInt(cleanUp.amount)) {
+          throw new Error(
+            "Runtime amount for the native token cleanup is not supported yet."
+          )
+        }
+
+        let amount = cleanUp.amount as bigint
+
+        const { version } = account.deploymentOn(cleanUp.chainId, true)
+
+        const forwardCalldata = encodeFunctionData({
+          abi: ForwarderAbi,
+          functionName: "forward",
+          args: [cleanUp.recipientAddress]
+        })
+
+        const [cleanUpNativeTransferInstruction] = await buildComposable(
+          { accountAddress: account.signer.address, currentInstructions: [] },
+          {
+            type: "rawCalldata",
+            data: {
+              to: version.ethForwarderAddress,
+              calldata: forwardCalldata,
+              chainId: cleanUp.chainId,
+              value: amount
+            }
+          }
+        )
+
+        cleanUpInstrsution = cleanUpNativeTransferInstruction
+      } else {
+        let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
+
+        // If there is no amount specified ? Runtime amount will be used for cleanup by default
+        if (amount === 0n) {
+          amount = runtimeERC20BalanceOf({
+            targetAddress: account.addressOn(cleanUp.chainId, true),
+            tokenAddress: cleanUp.tokenAddress
+          })
+        }
+
+        const [cleanUpERC20TransferInstruction] = await buildComposable(
+          { accountAddress: account.signer.address, currentInstructions: [] },
+          {
+            type: "transfer",
+            data: {
+              recipient: cleanUp.recipientAddress,
+              tokenAddress: cleanUp.tokenAddress,
+              amount,
+              chainId: cleanUp.chainId,
+              ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
+            }
+          }
+        )
+
+        cleanUpInstrsution = cleanUpERC20TransferInstruction
+      }
 
       const nonceDependencies: RuntimeValue[] = []
 
@@ -1215,6 +1265,12 @@ const prepareCleanUpUserOps = async (
           nonceDependencies.push(nonceOf)
         }
       } else {
+        if (userOpsNonceInfo.length === 0) {
+          throw new Error(
+            "Atleast one instruction should be configured to use cleanups."
+          )
+        }
+
         const lastUserOp = userOpsNonceInfo[userOpsNonceInfo.length - 1]
         const { nonce, nonceKey } = lastUserOp
 
@@ -1231,14 +1287,14 @@ const prepareCleanUpUserOps = async (
         (dep) => dep.inputParams
       )
 
-      cleanUpTransferInstruction.calls = (
-        cleanUpTransferInstruction.calls as ComposableCall[]
+      cleanUpInstrsution.calls = (
+        cleanUpInstrsution.calls as ComposableCall[]
       ).map((call) => {
         call.inputParams.push(...nonceDependencyInputParams)
         return call
       })
 
-      return cleanUpTransferInstruction
+      return cleanUpInstrsution
     })
   )
 

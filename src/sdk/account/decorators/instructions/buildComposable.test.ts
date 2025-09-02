@@ -40,7 +40,8 @@ import {
 import {
   getMEEVersion,
   greaterThanOrEqualTo,
-  runtimeERC20BalanceOf
+  runtimeERC20BalanceOf,
+  RuntimeValue
 } from "../../../modules"
 import {
   type MultichainSmartAccount,
@@ -1220,6 +1221,184 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       feeToken: {
         chainId: chain.id,
         address: tokenAddress
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      if (userOp.isCleanUpUserOp) {
+        expect(userOp.executionStatus).to.be.oneOf([
+          "MINED_FAIL",
+          "PENDING",
+          "MINING",
+          "MINED_SUCCESS"
+        ])
+      } else {
+        expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+      }
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should native token composable cleanup throw an error when amount field is not configured", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger,
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address
+          }
+        ],
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 500n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: zeroAddress // native token payment
+        }
+      })
+    ).rejects.toThrowError(
+      "Please configure the amount for the native token cleanup."
+    )
+  })
+
+  it("should native token composable cleanup throw an error when amount field is runtime value", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    const mockRuntimeValue = {} as RuntimeValue
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger,
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: mockRuntimeValue
+          }
+        ],
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 500n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: zeroAddress // native token payment
+        }
+      })
+    ).rejects.toThrowError(
+      "Runtime amount for the native token cleanup is not supported yet."
+    )
+  })
+
+  it("should composable cleanup throw an error when there is no instruction", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger,
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: 1n
+          }
+        ],
+        instructions: [],
+        feeToken: {
+          chainId: chain.id,
+          address: zeroAddress // native token payment
+        }
+      })
+    ).rejects.toThrowError(
+      "Atleast one instruction should be configured to use cleanups."
+    )
+  })
+
+  it("should execute native token composable cleanup for composable call", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: zeroAddress,
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          amount: 1000n
+        }
+      ],
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 500n
+            }
+          ],
+          chainId: chain.id
+        }
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: zeroAddress // native token payment
       }
     })
 
