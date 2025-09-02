@@ -12,7 +12,6 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
-import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
 import {
   type CleanUp,
@@ -104,29 +103,10 @@ export const getFusionQuote = async (
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
-  // if it is not mm-dtk, then it is permit or on-chain
-
-  const feeToken = parameters.feeToken
-  const trigger = parameters.trigger
-  //let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-  // can be no feeToken => no payment token specified if it is sponsorship
-  const paymentTokenInfo = feeToken
-    ? await getPaymentToken(client, {
-        tokenAddress: feeToken.address,
-        chainId: feeToken.chainId
-      })
-    : undefined
-
-  const { walletClient: triggerWalletClient } = client.account.deploymentOn(
-    trigger.chainId,
-    true
-  )
 
   const signatureType = await getQuoteType(
-    triggerWalletClient,
-    parameters,
-    paymentTokenInfo
+    client,
+    parameters
   )
 
   switch (signatureType) {

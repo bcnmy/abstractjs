@@ -59,7 +59,7 @@ describe("mee.getQuoteType", () => {
     })
   })
 
-  test("Should get quote type for normal quote params", async () => {
+  test("Should get quote type for simple quote params", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -78,10 +78,10 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    expect(await getQuoteType(walletClient, quoteParam)).to.eq("simple")
+    expect(await getQuoteType(meeClient, quoteParam)).to.eq("simple")
   })
 
-  test("Should get quote type for normal quote payload", async () => {
+  test("Should get quote type for simple quote payload", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -100,7 +100,7 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    expect(await getQuoteType(walletClient, quote)).to.eq("simple")
+    expect(await getQuoteType(meeClient, quote)).to.eq("simple")
   })
 
   test("Should get quote type for permit quote param", async () => {
@@ -127,17 +127,8 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quoteParams.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quoteParams.trigger.tokenAddress,
-        chainId: quoteParams.trigger.chainId
-      })
-    }
-
     expect(
-      await getQuoteType(walletClient, quoteParams, paymentTokenInfo)
+      await getQuoteType(meeClient, quoteParams)
     ).to.eq("permit")
   })
 
@@ -165,16 +156,7 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quote.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quote.trigger.tokenAddress,
-        chainId: quote.trigger.chainId
-      })
-    }
-
-    expect(await getQuoteType(walletClient, quote, paymentTokenInfo)).to.eq(
+    expect(await getQuoteType(meeClient, quote)).to.eq(
       "permit"
     )
   })
@@ -203,16 +185,8 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quoteParam.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quoteParam.trigger.tokenAddress,
-        chainId: quoteParam.trigger.chainId
-      })
-    }
     expect(
-      await getQuoteType(walletClient, quoteParam, paymentTokenInfo)
+      await getQuoteType(meeClient, quoteParam)
     ).to.eq("onchain")
   })
 
@@ -240,124 +214,34 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quote.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quote.trigger.tokenAddress,
-        chainId: quote.trigger.chainId
-      })
-    }
-    expect(await getQuoteType(walletClient, quote, paymentTokenInfo)).to.eq(
+    expect(await getQuoteType(meeClient, quote)).to.eq(
       "onchain"
     )
   })
 
   describe("isPermitTokenInfo", () => {
-    test("Payment token not specified + arbitrary payment tokens supported", async () => {
-      const paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: "0x00000000000000000000000000000000000a11ce",
-        chainId: chain.id
-      })
-      paymentTokenInfo.isArbitraryPaymentTokensSupported = true
-      expect(paymentTokenInfo.paymentToken).to.be.undefined
-
-      const trigger = {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id,
-        amount: 1n
-      }
-
-      const isPermit = await isPermitTokenInfo(
-        walletClient,
-        trigger,
-        paymentTokenInfo
-      )
-      // if arbitrary payment tokens supported,
-      // should return true for the trigger token that supports permit
-      expect(isPermit).to.be.true
-    })
-
-    test("Payment token not specified + arbitrary payment tokens not supported", async () => {
-      const paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: "0x00000000000000000000000000000000000a11ce",
-        chainId: chain.id
-      })
-
-      paymentTokenInfo.isArbitraryPaymentTokensSupported = false
-      expect(paymentTokenInfo.paymentToken).to.be.undefined
-
-      const trigger = {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id,
-        amount: 1n
-      }
-
-      const isPermit = await isPermitTokenInfo(
-        walletClient,
-        trigger,
-        paymentTokenInfo
-      )
-      // if arbitrary payment tokens not supported,
-      // should return false for the trigger token that supports permit
-      expect(isPermit).to.be.false
-    })
-
-    test("Payment token specified + payment token different from the trigger token", async () => {
-      const paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      })
-
-      const trigger = {
-        // not permittable token
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
-        chainId: chain.id,
-        amount: 1n
-      }
-
-      const isPermit = await isPermitTokenInfo(
-        walletClient,
-        trigger,
-        paymentTokenInfo
-      )
-      // should be based on trigger token in this case and trigger token does not support permit
-      expect(isPermit).to.be.false
-    })
-
-    test("Payment token specified + payment token same as the trigger token + permit enabled", async () => {
-      const paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      })
+    test("Trigger token is permit enabled", async () => {
       const trigger = {
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
         amount: 1n
       }
       const isPermit = await isPermitTokenInfo(
-        walletClient,
+        meeClient,
         trigger,
-        paymentTokenInfo
       )
       expect(isPermit).to.be.true
     })
 
     test("Payment token specified + payment token same as the trigger token + permit not enabled", async () => {
-      const paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id), // not permittable token
-        chainId: chain.id
-      })
-
       const trigger = {
         tokenAddress: testnetMcTestUSDC.addressOn(chain.id), // not permittable token
         chainId: chain.id,
         amount: 1n
       }
       const isPermit = await isPermitTokenInfo(
-        walletClient,
+        meeClient,
         trigger,
-        paymentTokenInfo
       )
       expect(isPermit).to.be.false
     })

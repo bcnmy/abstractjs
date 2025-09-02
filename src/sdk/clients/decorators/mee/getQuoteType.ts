@@ -2,53 +2,43 @@ import type { WalletClient } from "viem"
 import { type AnyData, isPermitSupported } from "../../../modules"
 import type { GetFusionQuoteParams } from "./getFusionQuote"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
-import type { GetPaymentTokenPayload } from "./getPaymentToken"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
+import { getPaymentToken } from "./getPaymentToken"
+import type { BaseMeeClient } from "../../createMeeClient"
 
 export type QuoteType = "simple" | "onchain" | "permit"
 
 export const isPermitTokenInfo = async (
-  triggerWalletClient: WalletClient,
-  trigger: TokenTrigger,
-  paymentTokenInfo?: GetPaymentTokenPayload
+  client: BaseMeeClient,
+  trigger: TokenTrigger
 ): Promise<boolean> => {
   let permitEnabled = false
 
-  if (!paymentTokenInfo) {
-    // if payment token is not specified at this point,
-    // it means the trigger token is used to choose b/w:
-    // `to permit` or `not to permit`
-    permitEnabled = await isPermitSupported(
-      triggerWalletClient,
-      trigger.tokenAddress
-    )
-  } else if (!paymentTokenInfo.paymentToken) {
-    // if payment token is not specified, it means the trigger token can be used as payment token
-    // but only if we support arbitrary payment tokens for this quote
-    if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-      permitEnabled = await isPermitSupported(
-        triggerWalletClient,
-        trigger.tokenAddress
-      )
-    }
-  } else if (paymentTokenInfo.paymentToken.address !== trigger.tokenAddress) {
-    // if payment token is defined and different from the trigger token, it means
-    // 'to permit' or 'not to permit' is decided by the trigger token, not the payment token
-    // because in this case, fee is paid directly from the orchestrator account,
-    // without transferring the fee token to the orchestrator account via fusion.
-    // So only trigger token is transferred via fusion to the orchestrator account
-    permitEnabled = await isPermitSupported(
-      triggerWalletClient,
-      trigger.tokenAddress
-    )
-  } else {
-    // at this point, payment token is defined and is the same as the trigger token
+  const paymentTokenInfo = await getPaymentToken(client, {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId
+  })
+
+  if (paymentTokenInfo.paymentToken) {
+    // detect w/o extra RPCcall
     permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
+  } else {
+    const { walletClient } = client.account.deploymentOn(
+      trigger.chainId,
+      true
+    )
+    // detect via RPCcall
+    permitEnabled = await isPermitSupported(
+      walletClient,
+      trigger.tokenAddress
+    )
   }
+
   return permitEnabled
 }
+  
 
 const isNormalQuote = (
   payload: AnyData
@@ -58,90 +48,76 @@ const isNormalQuote = (
 }
 
 const isPermitQuote = async (
-  triggerWalletClient: WalletClient,
-  payload: AnyData,
-  paymentTokenInfo?: GetPaymentTokenPayload
+  client: BaseMeeClient,
+  payload: AnyData
 ): Promise<boolean> => {
   const isTriggerAvailable = "trigger" in payload
 
-  // If trigger is not available ? It is not considered as permit quote
+  // If trigger is not available, it is not considered as permit quote
   if (!isTriggerAvailable) return false
 
   const trigger = payload.trigger as Trigger
 
-  // If trigger call is available ? It is not permit quote
+  // If trigger call is available, it is not permit quote
   if ("call" in trigger) {
     return false
   }
   // after this point, trigger can only be of type TokenTrigger
-
   const permitEnabled = await isPermitTokenInfo(
-    triggerWalletClient,
+    client,
     trigger as TokenTrigger, // trigger can only be of type TokenTrigger at this point
-    paymentTokenInfo
   )
 
-  return !!permitEnabled
+  // If permit is enabled, it is a permit quote
+  return permitEnabled
 }
 
 const isOnChainQuote = async (
-  triggerWalletClient: WalletClient,
+  client: BaseMeeClient,
   payload: AnyData,
-  paymentTokenInfo?: GetPaymentTokenPayload
 ): Promise<boolean> => {
   const isTriggerAvailable = "trigger" in payload
 
-  // If trigger is not available ? It is not considered as on chain quote
+  // If trigger is not available, it is not considered as on chain quote
   if (!isTriggerAvailable) return false
 
   const trigger = payload.trigger as Trigger
 
-  // If triggger has a call ? It is considered as on chain quote
+  // If triggger has a call, it is considered as on chain quote
   if ("call" in trigger) {
     return true
   }
 
   const permitEnabled = await isPermitTokenInfo(
-    triggerWalletClient,
+    client,
     trigger as TokenTrigger, // trigger can only be of type TokenTrigger at this point
-    paymentTokenInfo
   )
 
-  // If permit is enabled ? It is not an on chain quote
+  // If permit is enabled, it is not an on chain quote
   return !permitEnabled
 }
 
 // NOTE: MM DTK is not supported for now - It is experimental and need to support once it is mainstream
 export const getQuoteType = async (
-  triggerWalletClient: WalletClient,
+  client: BaseMeeClient,
   quoteParams:
     | GetQuotePayload
     | GetQuoteParams
     | GetPermitQuotePayload
     | GetOnChainQuotePayload
     | GetFusionQuoteParams,
-  paymentTokenInfo?: GetPaymentTokenPayload
 ): Promise<QuoteType> => {
   // If the quote payload doesn't have trigger ? It is considered as normal quote
   if (isNormalQuote(quoteParams)) {
     return "simple"
   }
-
-  if (!paymentTokenInfo && !("sponsorship" in quoteParams)) {
-    throw new Error(
-      "Detecting quote type: Payment token info not specified in a non-sponsored flow"
-    )
-  }
-
-  if (await isPermitQuote(triggerWalletClient, quoteParams, paymentTokenInfo)) {
+  if (await isPermitQuote(client, quoteParams)) {
     return "permit"
   }
-
   if (
-    await isOnChainQuote(triggerWalletClient, quoteParams, paymentTokenInfo)
+    await isOnChainQuote(client, quoteParams)
   ) {
     return "onchain"
   }
-
   throw new Error("Invalid quote, can't determine signature type")
 }

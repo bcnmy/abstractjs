@@ -1,5 +1,4 @@
 import type { BaseMeeClient } from "../../createMeeClient"
-import { type GetPaymentTokenPayload, getPaymentToken } from "./getPaymentToken"
 import { getQuoteType } from "./getQuoteType"
 import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"
 import signOnChainQuote, {
@@ -68,24 +67,9 @@ export const signFusionQuote = async (
   }
   // if it is not mm-dtk, then it is permit or on-chain
 
-  const paymentInfo = parameters.fusionQuote.quote.paymentInfo
-
-  let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-  paymentTokenInfo = await getPaymentToken(client, {
-    tokenAddress: paymentInfo.token,
-    chainId: Number(paymentInfo.chainId)
-  })
-
-  const trigger = parameters.fusionQuote.trigger
-  const { walletClient: triggerWalletClient } = client.account.deploymentOn(
-    trigger.chainId,
-    true
-  )
-
   const signatureType = await getQuoteType(
-    triggerWalletClient,
+    client,
     parameters.fusionQuote,
-    paymentTokenInfo
   )
 
   switch (signatureType) {
