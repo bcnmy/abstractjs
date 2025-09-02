@@ -1129,7 +1129,7 @@ describe("mee.getQuote", () => {
   // due to gas fluctuations
   test.skip("should use feePayer if provided", async () => {
     const chain = baseSepolia
-    
+
     const mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
       chainConfigurations: [
@@ -1147,7 +1147,6 @@ describe("mee.getQuote", () => {
 
     const tokenAddress = testnetMcTestUSDCP.addressOn(chain.id)
     const feeAccount = privateKeyToAccount(generatePrivateKey())
-
 
     const walletClient = createWalletClient({
       account: feeAccount,
