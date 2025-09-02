@@ -1,9 +1,9 @@
 import {
-  encodeFunctionData,
-  zeroAddress,
   type Address,
   type Hex,
-  type OneOf
+  type OneOf,
+  encodeFunctionData,
+  zeroAddress
 } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
@@ -13,6 +13,7 @@ import { addressEquals, isBigInt } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
@@ -30,7 +31,6 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
-import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -1192,7 +1192,7 @@ const prepareCleanUpUserOps = async (
           )
         }
 
-        let amount = cleanUp.amount as bigint
+        const amount = cleanUp.amount as bigint
 
         const { version } = account.deploymentOn(cleanUp.chainId, true)
 

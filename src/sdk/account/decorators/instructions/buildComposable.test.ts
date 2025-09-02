@@ -38,10 +38,10 @@ import {
   testnetMcUniswapSwapRouter
 } from "../../../constants"
 import {
+  type RuntimeValue,
   getMEEVersion,
   greaterThanOrEqualTo,
-  runtimeERC20BalanceOf,
-  RuntimeValue
+  runtimeERC20BalanceOf
 } from "../../../modules"
 import {
   type MultichainSmartAccount,
