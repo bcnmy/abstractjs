@@ -65,7 +65,8 @@ describe("mee.getSupportedFeeToken", () => {
     )
 
     const tokenSymbols = info.supportedGasTokens.flatMap(
-      ({ supportedFeeTokens }) => supportedFeeTokens.map(({ symbol }) => symbol)
+      ({ paymentTokens: supportedFeeTokens }) =>
+        supportedFeeTokens.map(({ symbol }) => symbol)
     )
 
     expect(supportedChains.length).toBeGreaterThan(0)
