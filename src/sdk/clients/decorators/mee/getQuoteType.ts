@@ -1,4 +1,4 @@
-import type { Address, WalletClient } from "viem"
+import type { WalletClient } from "viem"
 import { type AnyData, isPermitSupported } from "../../../modules"
 import type { GetFusionQuoteParams } from "./getFusionQuote"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
