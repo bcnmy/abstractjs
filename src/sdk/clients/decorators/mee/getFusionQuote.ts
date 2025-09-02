@@ -104,10 +104,7 @@ export const getFusionQuote = async (
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
 
-  const signatureType = await getQuoteType(
-    client,
-    parameters
-  )
+  const signatureType = await getQuoteType(client, parameters)
 
   switch (signatureType) {
     case "permit":

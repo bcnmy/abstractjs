@@ -1,12 +1,11 @@
-import type { WalletClient } from "viem"
 import { type AnyData, isPermitSupported } from "../../../modules"
+import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetFusionQuoteParams } from "./getFusionQuote"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
+import { getPaymentToken } from "./getPaymentToken"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
-import { getPaymentToken } from "./getPaymentToken"
-import type { BaseMeeClient } from "../../createMeeClient"
 
 export type QuoteType = "simple" | "onchain" | "permit"
 
@@ -25,20 +24,13 @@ export const isPermitTokenInfo = async (
     // detect w/o extra RPCcall
     permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
   } else {
-    const { walletClient } = client.account.deploymentOn(
-      trigger.chainId,
-      true
-    )
+    const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
     // detect via RPCcall
-    permitEnabled = await isPermitSupported(
-      walletClient,
-      trigger.tokenAddress
-    )
+    permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
   }
 
   return permitEnabled
 }
-  
 
 const isNormalQuote = (
   payload: AnyData
@@ -65,7 +57,7 @@ const isPermitQuote = async (
   // after this point, trigger can only be of type TokenTrigger
   const permitEnabled = await isPermitTokenInfo(
     client,
-    trigger as TokenTrigger, // trigger can only be of type TokenTrigger at this point
+    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
   )
 
   // If permit is enabled, it is a permit quote
@@ -74,7 +66,7 @@ const isPermitQuote = async (
 
 const isOnChainQuote = async (
   client: BaseMeeClient,
-  payload: AnyData,
+  payload: AnyData
 ): Promise<boolean> => {
   const isTriggerAvailable = "trigger" in payload
 
@@ -90,7 +82,7 @@ const isOnChainQuote = async (
 
   const permitEnabled = await isPermitTokenInfo(
     client,
-    trigger as TokenTrigger, // trigger can only be of type TokenTrigger at this point
+    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
   )
 
   // If permit is enabled, it is not an on chain quote
@@ -105,7 +97,7 @@ export const getQuoteType = async (
     | GetQuoteParams
     | GetPermitQuotePayload
     | GetOnChainQuotePayload
-    | GetFusionQuoteParams,
+    | GetFusionQuoteParams
 ): Promise<QuoteType> => {
   // If the quote payload doesn't have trigger ? It is considered as normal quote
   if (isNormalQuote(quoteParams)) {
@@ -114,9 +106,7 @@ export const getQuoteType = async (
   if (await isPermitQuote(client, quoteParams)) {
     return "permit"
   }
-  if (
-    await isOnChainQuote(client, quoteParams)
-  ) {
+  if (await isOnChainQuote(client, quoteParams)) {
     return "onchain"
   }
   throw new Error("Invalid quote, can't determine signature type")

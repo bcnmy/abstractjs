@@ -67,10 +67,7 @@ export const signFusionQuote = async (
   }
   // if it is not mm-dtk, then it is permit or on-chain
 
-  const signatureType = await getQuoteType(
-    client,
-    parameters.fusionQuote,
-  )
+  const signatureType = await getQuoteType(client, parameters.fusionQuote)
 
   switch (signatureType) {
     case "permit":

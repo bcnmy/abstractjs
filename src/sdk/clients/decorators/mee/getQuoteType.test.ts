@@ -127,9 +127,7 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    expect(
-      await getQuoteType(meeClient, quoteParams)
-    ).to.eq("permit")
+    expect(await getQuoteType(meeClient, quoteParams)).to.eq("permit")
   })
 
   test("Should get quote type for permit quote payload", async () => {
@@ -156,9 +154,7 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    expect(await getQuoteType(meeClient, quote)).to.eq(
-      "permit"
-    )
+    expect(await getQuoteType(meeClient, quote)).to.eq("permit")
   })
 
   test("Should get quote type for onchain quote param", async () => {
@@ -185,9 +181,7 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    expect(
-      await getQuoteType(meeClient, quoteParam)
-    ).to.eq("onchain")
+    expect(await getQuoteType(meeClient, quoteParam)).to.eq("onchain")
   })
 
   test("Should get quote type for onchain quote payload", async () => {
@@ -214,9 +208,7 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    expect(await getQuoteType(meeClient, quote)).to.eq(
-      "onchain"
-    )
+    expect(await getQuoteType(meeClient, quote)).to.eq("onchain")
   })
 
   describe("isPermitTokenInfo", () => {
@@ -226,10 +218,7 @@ describe("mee.getQuoteType", () => {
         chainId: chain.id,
         amount: 1n
       }
-      const isPermit = await isPermitTokenInfo(
-        meeClient,
-        trigger,
-      )
+      const isPermit = await isPermitTokenInfo(meeClient, trigger)
       expect(isPermit).to.be.true
     })
 
@@ -239,10 +228,7 @@ describe("mee.getQuoteType", () => {
         chainId: chain.id,
         amount: 1n
       }
-      const isPermit = await isPermitTokenInfo(
-        meeClient,
-        trigger,
-      )
+      const isPermit = await isPermitTokenInfo(meeClient, trigger)
       expect(isPermit).to.be.false
     })
   })
