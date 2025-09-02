@@ -32,7 +32,7 @@ export type GetGasTokenPayload = {
    * List of payment tokens that can be used for gas fees on this chain
    * @see {@link SupportedFeeToken} for detailed token structure
    */
-  supportedFeeTokens: SupportedFeeToken[]
+  paymentTokens: SupportedFeeToken[]
   /**
    * This indicates that the network supports Arbitrary token payments as a fallback mechanism
    */
@@ -86,6 +86,7 @@ export const getGasToken = async (
   if (!gasToken) {
     throw new Error(`Gas token not found for chain ${parameters.chainId}`)
   }
+  console.log("gasToken", gasToken)
   return gasToken
 }
 

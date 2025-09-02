@@ -103,9 +103,8 @@ export const getSupportedFeeToken = async (
     chainId: parameters.chainId,
     address: parameters.tokenAddress
   })
-  const supportedFeeToken = gasToken.supportedFeeTokens.find(
-    (supportedFeeToken) =>
-      addressEquals(supportedFeeToken.address, parameters.tokenAddress)
+  const supportedFeeToken = gasToken.paymentTokens.find((supportedFeeToken) =>
+    addressEquals(supportedFeeToken.address, parameters.tokenAddress)
   )
   return {
     isArbitraryFeeTokensSupported: gasToken.isArbitraryFeeTokensSupported,
