@@ -36,9 +36,9 @@ export const isPermitTokenInfo = async (
   } else if (paymentTokenInfo.paymentToken.address !== trigger.tokenAddress) {
     // if payment token is defined and different from the trigger token, it means
     // 'to permit' or 'not to permit' is decided by the trigger token, not the payment token
-    // coz in this case, fee is paid directly from the orchestrator account, w/o
-    // transferring the fee token to the orchestrator account via fusion
-    // so only trigger token is transferred via fusion
+    // because in this case, fee is paid directly from the orchestrator account,
+    // without transferring the fee token to the orchestrator account via fusion.
+    // So only trigger token is transferred via fusion to the orchestrator account
     permitEnabled = await isPermitSupported(
       triggerWalletClient,
       trigger.tokenAddress
