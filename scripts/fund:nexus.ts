@@ -226,7 +226,9 @@ async function processChain(
     }).extend(publicActions)
 
     // Fund with native token if needed
-    if (nexusTokenInfoWithBalances[0].balance < NATIVE_TOKEN_FUNDING_THRESHOLD) {
+    if (
+      nexusTokenInfoWithBalances[0].balance < NATIVE_TOKEN_FUNDING_THRESHOLD
+    ) {
       if (masterTokenInfoWithBalances[0].balance < NATIVE_TOKEN_AMOUNT) {
         console.warn(
           `Master: Insufficient ${masterTokenInfoWithBalances[0].name} balance to fund on ${chain.name}`
@@ -255,7 +257,9 @@ async function processChain(
 
     // Fund all the ERC20 tokens required for the tests
     for (let i = 1; i < tokensForFunding.length; i++) {
-      if (nexusTokenInfoWithBalances[i].balance < USDC_TOKEN_FUNDING_THRESHOLD) {
+      if (
+        nexusTokenInfoWithBalances[i].balance < USDC_TOKEN_FUNDING_THRESHOLD
+      ) {
         if (masterTokenInfoWithBalances[i].balance < USDC_TOKEN_AMOUNT) {
           console.warn(
             `Master: Insufficient ${masterTokenInfoWithBalances[i].name} balance on ${chain.name}`
