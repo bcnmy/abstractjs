@@ -1,6 +1,6 @@
 import type { Address } from "viem/accounts"
 import type { BaseMeeClient } from "../../createMeeClient"
-import type { PaymentToken } from "./getPaymentToken"
+import type { SupportedFeeToken } from "./getSupportedFeeToken"
 
 /**
  * Parameters for retrieving gas token information
@@ -30,13 +30,13 @@ export type GetGasTokenPayload = {
   chainId: string
   /**
    * List of payment tokens that can be used for gas fees on this chain
-   * @see {@link PaymentToken} for detailed token structure
+   * @see {@link SupportedFeeToken} for detailed token structure
    */
-  paymentTokens: PaymentToken[]
+  supportedFeeTokens: SupportedFeeToken[]
   /**
    * This indicates that the network supports Arbitrary token payments as a fallback mechanism
    */
-  isArbitraryPaymentTokensSupported: boolean
+  isArbitraryFeeTokensSupported: boolean
 }
 
 /**
@@ -51,7 +51,7 @@ export type GetGasTokenPayload = {
  *
  * @returns Promise resolving to {@link GetGasTokenPayload} containing:
  * - chainId: The chain identifier
- * - paymentTokens: Array of supported payment tokens for gas fees
+ * - supportedFeeTokens: Array of supported payment tokens for gas fees
  *
  * @example
  * ```typescript
@@ -62,7 +62,7 @@ export type GetGasTokenPayload = {
  * // Returns:
  * // {
  * //   chainId: "1",
- * //   paymentTokens: [{
+ * //   supportedFeeTokens: [{
  * //     name: "USD Coin",
  * //     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
  * //     symbol: "USDC",

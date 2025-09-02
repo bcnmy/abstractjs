@@ -2,9 +2,9 @@ import { type AnyData, isPermitSupported } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetFusionQuoteParams } from "./getFusionQuote"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
-import { getPaymentToken } from "./getPaymentToken"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
+import { getSupportedFeeToken } from "./getSupportedFeeToken"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
 export type QuoteType = "simple" | "onchain" | "permit"
@@ -15,14 +15,15 @@ export const isPermitTokenInfo = async (
 ): Promise<boolean> => {
   let permitEnabled = false
 
-  const paymentTokenInfo = await getPaymentToken(client, {
+  const supportedFeeTokenInfo = await getSupportedFeeToken(client, {
     tokenAddress: trigger.tokenAddress,
     chainId: trigger.chainId
   })
 
-  if (paymentTokenInfo.paymentToken) {
+  if (supportedFeeTokenInfo.supportedFeeToken) {
     // detect w/o extra RPCcall
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
+    permitEnabled =
+      supportedFeeTokenInfo.supportedFeeToken.permitEnabled || false
   } else {
     const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
     // detect via RPCcall

@@ -23,11 +23,6 @@ import getOnChainQuote, {
   type GetOnChainQuoteParams,
   type GetOnChainQuotePayload
 } from "./getOnChainQuote.js"
-import {
-  type GetPaymentTokenParams,
-  type GetPaymentTokenPayload,
-  getPaymentToken
-} from "./getPaymentToken"
 import getPermitQuote, {
   type GetPermitQuoteParams,
   type GetPermitQuotePayload
@@ -37,6 +32,11 @@ import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
   type GetSupertransactionReceiptPayload
 } from "./getSupertransactionReceipt"
+import {
+  type GetSupportedFeeTokenParams,
+  type GetSupportedFeeTokenPayload,
+  getSupportedFeeToken
+} from "./getSupportedFeeToken"
 import signFusionQuote, {
   type SignFusionQuotePayload,
   type SignFusionQuoteParameters
@@ -211,9 +211,9 @@ export type MeeActions = {
    * @param params - Parameters for retrieving payment token info
    * @returns Promise resolving to payment token data
    */
-  getPaymentToken: <EParams extends GetPaymentTokenParams>(
+  getSupportedFeeToken: <EParams extends GetSupportedFeeTokenParams>(
     params: EParams
-  ) => Promise<GetPaymentTokenPayload>
+  ) => Promise<GetSupportedFeeTokenPayload>
 
   /**
    * Get an on-chain quote for standard transactions
@@ -269,8 +269,8 @@ export type MeeActions = {
 export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
   return {
     getGasToken: (params: GetGasTokenParams) => getGasToken(meeClient, params),
-    getPaymentToken: (params: GetPaymentTokenParams) =>
-      getPaymentToken(meeClient, params),
+    getSupportedFeeToken: (params: GetSupportedFeeTokenParams) =>
+      getSupportedFeeToken(meeClient, params),
     getOnChainQuote: (params: GetOnChainQuoteParams) =>
       getOnChainQuote(meeClient, params),
     getQuote: (params: GetQuoteParams) => getQuote(meeClient, params),
@@ -316,4 +316,4 @@ export * from "./getPermitQuote"
 export * from "./executeFusionQuote"
 export * from "./getSupertransactionReceipt"
 export * from "./getQuoteType"
-export * from "./getPaymentToken"
+export * from "./getSupportedFeeToken"

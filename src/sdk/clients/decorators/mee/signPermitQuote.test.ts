@@ -42,9 +42,11 @@ import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
-import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
+import getSupportedFeeToken, {
+  type GetSupportedFeeTokenPayload
+} from "./getSupportedFeeToken"
 import {
   type Trigger,
   formatSignedPermitQuotePayload,
@@ -418,10 +420,11 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     expect(signedPermitQuote.signature).toBeDefined()
     expect(isHex(signedPermitQuote.signature)).toEqual(true)
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
+    let supportedFeeTokenInfo: GetSupportedFeeTokenPayload | undefined =
+      undefined
 
     if (fusionQuote.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
+      supportedFeeTokenInfo = await getSupportedFeeToken(meeClient, {
         tokenAddress: fusionQuote.trigger.tokenAddress,
         chainId: fusionQuote.trigger.chainId
       })
@@ -430,7 +433,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     const quoteType = await getQuoteType(
       walletClient,
       fusionQuote,
-      paymentTokenInfo
+      supportedFeeTokenInfo
     )
 
     expect(quoteType).toEqual("permit")

@@ -20,8 +20,10 @@ import {
 import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { getQuoteType, isPermitTokenInfo } from "./getQuoteType"
+import getSupportedFeeToken, {
+  type GetSupportedFeeTokenPayload
+} from "./getSupportedFeeToken"
 
 describe("mee.getQuoteType", () => {
   let network: NetworkConfig
