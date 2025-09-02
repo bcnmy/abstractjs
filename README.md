@@ -34,7 +34,13 @@ bun add @biconomy/abstractjs viem @rhinestone/module-sdk
 
 2. **Basic Usage:**
 ```typescript
-import { toMultichainNexusAccount, mcUSDC, createMeeClient } from "@biconomy/abstractjs";
+import { 
+  toMultichainNexusAccount, 
+  mcUSDC, 
+  createMeeClient, 
+  getMEEVersion, 
+  MEEVersion 
+} from "@biconomy/abstractjs";
 import { base, optimism } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { http } from "viem";
@@ -46,15 +52,16 @@ const mcNexus = await toMultichainNexusAccount({
     {
       chain: base,
       transport: http(),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      version: getMEEVersion(MEEVersion.V2_1_0)
     },
     {
       chain: optimism,
       transport: http(),
-      version: getMEEVersion(DEFAULT_MEE_VERSION)
+      version: getMEEVersion(MEEVersion.V2_1_0)
     }
   ]
 })
+
 const meeClient = await createMeeClient({ account: mcNexus })
 
 const quote = await meeClient.getQuote({
