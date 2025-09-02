@@ -51,7 +51,7 @@ export type GetGasTokenPayload = {
  *
  * @returns Promise resolving to {@link GetGasTokenPayload} containing:
  * - chainId: The chain identifier
- * - supportedFeeTokens: Array of supported payment tokens for gas fees
+ * - paymentTokens: Array of supported payment tokens for gas fees
  *
  * @example
  * ```typescript
@@ -62,7 +62,7 @@ export type GetGasTokenPayload = {
  * // Returns:
  * // {
  * //   chainId: "1",
- * //   supportedFeeTokens: [{
+ * //   paymentTokens: [{
  * //     name: "USD Coin",
  * //     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
  * //     symbol: "USDC",
@@ -86,7 +86,6 @@ export const getGasToken = async (
   if (!gasToken) {
     throw new Error(`Gas token not found for chain ${parameters.chainId}`)
   }
-  console.log("gasToken", gasToken)
   return gasToken
 }
 

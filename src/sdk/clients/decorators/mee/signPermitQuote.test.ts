@@ -430,11 +430,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       })
     }
 
-    const quoteType = await getQuoteType(
-      walletClient,
-      fusionQuote,
-      supportedFeeTokenInfo
-    )
+    const quoteType = await getQuoteType(meeClient, fusionQuote)
 
     expect(quoteType).toEqual("permit")
 
