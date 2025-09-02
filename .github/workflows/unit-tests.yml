@@ -44,4 +44,4 @@ jobs:
           RUN_PAID_TESTS: false
           RUN_LIFECYCLE_TESTS: true
           CI: true
-          STAGING: false
+          STAGING: true

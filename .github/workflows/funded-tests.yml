@@ -43,8 +43,9 @@ jobs:
           TESTNET_CHAIN_ID: 84532
           MAINNET_CHAIN_ID: 10
           RUN_PAID_TESTS: true
+          RUN_LIFECYCLE_TESTS: false
           CI: true 
-          STAGING: false
+          STAGING: true
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5

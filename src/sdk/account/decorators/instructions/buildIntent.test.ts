@@ -97,14 +97,14 @@ describe("mee.buildIntent", () => {
     const instructions: Instruction[] = await buildIntent(
       { accountAddress: newMcNexus.signer.address },
       {
-        depositor: mcNexus.addressOn(paymentChain.id, true),
-        recipient: mcNexus.addressOn(targetChain.id, true),
+        depositor: mcNexus.addressOn(targetChain.id, true),
+        recipient: mcNexus.addressOn(paymentChain.id, true),
         amount: 1000000n,
         token: {
           mcToken: mcUSDC,
           unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
         },
-        toChainId: targetChain.id,
+        toChainId: paymentChain.id,
         mode: "OPTIMISTIC"
       }
     )
