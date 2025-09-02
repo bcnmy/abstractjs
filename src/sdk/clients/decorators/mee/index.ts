@@ -298,6 +298,7 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
       getSupertransactionReceipt(meeClient, params)
   }
 }
+
 export * from "./getQuote"
 export * from "./executeSignedQuote"
 export * from "./signQuote"
@@ -317,3 +318,5 @@ export * from "./executeFusionQuote"
 export * from "./getSupertransactionReceipt"
 export * from "./getQuoteType"
 export * from "./getPaymentToken"
+export * from "./getGasToken"
+export * from "./getMmDtkQuote"
