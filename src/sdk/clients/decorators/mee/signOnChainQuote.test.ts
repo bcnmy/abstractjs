@@ -724,9 +724,6 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
     expect(signedOnChainQuote.signature).toBeDefined()
     expect(isHex(signedOnChainQuote.signature)).toEqual(true)
 
-    const supportedFeeTokenInfo: GetSupportedFeeTokenPayload | undefined =
-      undefined
-
     const quoteType = await getQuoteType(meeClient, fusionQuote)
 
     expect(quoteType).toEqual("onchain")

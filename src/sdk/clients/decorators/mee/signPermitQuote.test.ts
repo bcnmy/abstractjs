@@ -423,13 +423,6 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     let supportedFeeTokenInfo: GetSupportedFeeTokenPayload | undefined =
       undefined
 
-    if (fusionQuote.trigger.tokenAddress) {
-      supportedFeeTokenInfo = await getSupportedFeeToken(meeClient, {
-        tokenAddress: fusionQuote.trigger.tokenAddress,
-        chainId: fusionQuote.trigger.chainId
-      })
-    }
-
     const quoteType = await getQuoteType(meeClient, fusionQuote)
 
     expect(quoteType).toEqual("permit")
