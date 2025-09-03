@@ -420,7 +420,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     expect(signedPermitQuote.signature).toBeDefined()
     expect(isHex(signedPermitQuote.signature)).toEqual(true)
 
-    let supportedFeeTokenInfo: GetSupportedFeeTokenPayload | undefined =
+    const supportedFeeTokenInfo: GetSupportedFeeTokenPayload | undefined =
       undefined
 
     const quoteType = await getQuoteType(meeClient, fusionQuote)
