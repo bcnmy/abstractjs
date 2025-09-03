@@ -1382,7 +1382,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           tokenAddress: zeroAddress,
           chainId: chain.id,
           recipientAddress: eoaAccount.address,
-          amount: 1000n
+          amount: 500n
         }
       ],
       instructions: [
