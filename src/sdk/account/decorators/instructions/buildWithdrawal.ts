@@ -65,7 +65,7 @@ export type BuildWithdrawalParams = BaseInstructionsParams & {
  * @example
  * ```typescript
  * const instructions = await buildWithdrawal(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   {
  *     chainId: 1,
  *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
@@ -82,13 +82,13 @@ export const buildWithdrawal = async (
   forceComposableEncoding = false,
   efficientMode = true
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [], account } = baseParams
+  const { currentInstructions = [], accountAddress } = baseParams
   const {
     chainId,
     tokenAddress,
     amount,
     gasLimit,
-    recipient = account.signer.address
+    recipient = accountAddress // EOA or owner account address
   } = parameters
 
   const isNativeToken = addressEquals(

@@ -59,7 +59,7 @@ describe("mee.buildWithdrawal", () => {
 
   it("should highlight building withdrawal instructions", async () => {
     const instructions: Instruction[] = await buildWithdrawal(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address },
       {
         chainId: targetChain.id,
         tokenAddress,

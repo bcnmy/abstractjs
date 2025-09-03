@@ -49,7 +49,12 @@ export interface AcrossRelayFeeResponse {
 
 /**
  * Parameters for fetching suggested fees from Across bridge
- * @interface AcrossSuggestedFeesParams
+ * @typedef AcrossSuggestedFeesParams
+ * @property {Address} inputToken - Source token address
+ * @property {Address} outputToken - Destination token address
+ * @property {number} originChainId - Source chain ID
+ * @property {number} destinationChainId - Destination chain ID
+ * @property {bigint} amount - Amount to bridge
  */
 type AcrossSuggestedFeesParams = {
   inputToken: Address
@@ -108,9 +113,10 @@ const acrossGetSuggestedFees = async ({
  * Encodes a bridging operation for the Across protocol into a user operation
  * @param {BridgingUserOpParams} params - Parameters for the bridge operation
  * @param {bigint} params.bridgingAmount - Amount to bridge
- * @param {Chain} params.fromChain - Source chain information
- * @param {Account} params.account - User's account information
- * @param {Chain} params.toChain - Destination chain information
+ * @param {number} params.fromChainId - Source chain ID
+ * @param {Address} params.depositor - Depositor address
+ * @param {Address} params.recipient - Recipient address
+ * @param {number} params.toChainId - Destination chain ID
  * @param {TokenMapping} params.tokenMapping - Token address mapping across chains
  * @returns {Promise<BridgingPluginResult>} Encoded user operation and bridging details
  * @throws {Error} When depositor or recipient address cannot be found
@@ -118,19 +124,24 @@ const acrossGetSuggestedFees = async ({
 export const acrossEncodeBridgingUserOp = async (
   params: BridgingUserOpParams
 ): Promise<BridgingPluginResult> => {
-  const { bridgingAmount, fromChain, account, toChain, tokenMapping } = params
+  const {
+    bridgingAmount,
+    fromChainId,
+    depositor,
+    recipient,
+    toChainId,
+    tokenMapping
+  } = params
 
-  const inputToken = tokenMapping.on(fromChain.id)
-  const outputToken = tokenMapping.on(toChain.id)
-  const depositor = account.addressOn(fromChain.id, true)
-  const recipient = account.addressOn(toChain.id, true)
+  const inputToken = tokenMapping.on(fromChainId)
+  const outputToken = tokenMapping.on(toChainId)
 
   const suggestedFees = await acrossGetSuggestedFees({
     amount: bridgingAmount,
-    destinationChainId: toChain.id,
+    destinationChainId: toChainId,
     inputToken: inputToken,
     outputToken: outputToken,
-    originChainId: fromChain.id
+    originChainId: fromChainId
   })
 
   const depositV3abi = parseAbi([
@@ -165,7 +176,7 @@ export const acrossEncodeBridgingUserOp = async (
         outputToken,
         bridgingAmount,
         outputAmount,
-        BigInt(toChain.id),
+        BigInt(toChainId),
         suggestedFees.exclusiveRelayer,
         Number.parseInt(suggestedFees.timestamp),
         fillDeadline,
@@ -177,7 +188,7 @@ export const acrossEncodeBridgingUserOp = async (
 
   const userOp: Instruction = {
     calls: [approveCall, depositCall],
-    chainId: fromChain.id
+    chainId: fromChainId
   }
 
   return {
@@ -195,9 +206,10 @@ export const acrossEncodeBridgingUserOp = async (
  * const acrossPlugin = toAcrossPlugin()
  * const bridgeResult = await acrossPlugin.encodeBridgeUserOp({
  *   bridgingAmount: 1000000n,
- *   fromChain: sourceChain,
- *   toChain: destChain,
- *   account: userAccount,
+ *   fromChainId: 11155111,
+ *   toChainId: 84532,
+ *   depositor: "0x00000000000000000000000000000000000a11ce",
+ *   recipient: "0x00000000000000000000000000000000000a11ce",
  *   tokenMapping: tokens
  * })
  */

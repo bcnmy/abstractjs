@@ -156,9 +156,14 @@ describe("mee.createMeeClient", async () => {
     const currentInstructions = await mcNexus.build({
       type: "intent",
       data: {
-        amount: 50000n,
-        mcToken: mcUSDC,
-        toChain: targetChain
+        depositor: mcNexus.addressOn(paymentChain.id, true),
+        recipient: mcNexus.addressOn(targetChain.id, true),
+        token: {
+          mcToken: mcUSDC,
+          unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+        },
+        amount: 5000n,
+        toChainId: targetChain.id
       }
     })
 
@@ -309,9 +314,14 @@ describe("mee.createMeeClient", async () => {
           mcNexus.build({
             type: "intent",
             data: {
+              depositor: mcNexus.addressOn(paymentChain.id, true),
+              recipient: mcNexus.addressOn(targetChain.id, true),
               amount: amountToSupply,
-              mcToken: mcUSDC,
-              toChain: targetChain
+              token: {
+                mcToken: mcUSDC,
+                unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+              },
+              toChainId: targetChain.id
             }
           }),
           mcNexus.build({

@@ -60,7 +60,7 @@ describe("mee.buildTransfer", () => {
 
   it("should highlight building transfer instructions", async () => {
     const instructions: Instruction[] = await buildTransfer(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address },
       {
         chainId: targetChain.id,
         tokenAddress,
