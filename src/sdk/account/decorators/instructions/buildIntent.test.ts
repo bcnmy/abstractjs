@@ -102,7 +102,7 @@ describe("mee.buildIntent", () => {
         amount: 1000000n,
         token: {
           mcToken: mcUSDC,
-          unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+          unifiedBalance: await newMcNexus.getUnifiedERC20Balance(mcUSDC)
         },
         toChainId: paymentChain.id,
         mode: "OPTIMISTIC"

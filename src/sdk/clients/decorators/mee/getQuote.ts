@@ -1177,7 +1177,7 @@ const prepareCleanUpUserOps = async (
 ) => {
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
-      let cleanUpInstrsution: Instruction
+      let cleanUpInstruction: Instruction
 
       if (cleanUp.tokenAddress === zeroAddress) {
         if (cleanUp.amount === undefined) {
@@ -1215,7 +1215,7 @@ const prepareCleanUpUserOps = async (
           }
         )
 
-        cleanUpInstrsution = cleanUpNativeTransferInstruction
+        cleanUpInstruction = cleanUpNativeTransferInstruction
       } else {
         let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
 
@@ -1241,7 +1241,7 @@ const prepareCleanUpUserOps = async (
           }
         )
 
-        cleanUpInstrsution = cleanUpERC20TransferInstruction
+        cleanUpInstruction = cleanUpERC20TransferInstruction
       }
 
       const nonceDependencies: RuntimeValue[] = []
@@ -1287,14 +1287,14 @@ const prepareCleanUpUserOps = async (
         (dep) => dep.inputParams
       )
 
-      cleanUpInstrsution.calls = (
-        cleanUpInstrsution.calls as ComposableCall[]
+      cleanUpInstruction.calls = (
+        cleanUpInstruction.calls as ComposableCall[]
       ).map((call) => {
         call.inputParams.push(...nonceDependencyInputParams)
         return call
       })
 
-      return cleanUpInstrsution
+      return cleanUpInstruction
     })
   )
 
