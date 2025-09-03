@@ -12,7 +12,6 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
-import { type GetPaymentTokenPayload, getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
 import {
   type CleanUp,
@@ -79,7 +78,7 @@ export type GetFusionQuoteParams = GetQuoteParams & {
  *   walletProvider: "metamask",
  *   trigger: {
  *     chainId: "1",
- *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+ *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
  *   },
  *   instructions: [{
  *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
@@ -104,26 +103,8 @@ export const getFusionQuote = async (
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
-  // if it is not mm-dtk, then it is permit or on-chain
 
-  const trigger = parameters.trigger
-
-  let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-  if (trigger.tokenAddress) {
-    paymentTokenInfo = await getPaymentToken(client, {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId
-    })
-  }
-
-  const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
-
-  const signatureType = await getQuoteType(
-    walletClient,
-    parameters,
-    paymentTokenInfo
-  )
+  const signatureType = await getQuoteType(client, parameters)
 
   switch (signatureType) {
     case "permit":

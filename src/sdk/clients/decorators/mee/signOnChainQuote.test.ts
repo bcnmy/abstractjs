@@ -42,9 +42,11 @@ import {
 import executeSignedQuote from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import getOnChainQuote from "./getOnChainQuote"
-import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
+import getSupportedFeeToken, {
+  type GetSupportedFeeTokenPayload
+} from "./getSupportedFeeToken"
 import {
   ON_CHAIN_PREFIX,
   formatSignedOnChainQuotePayload,
@@ -718,20 +720,7 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
     expect(signedOnChainQuote.signature).toBeDefined()
     expect(isHex(signedOnChainQuote.signature)).toEqual(true)
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (fusionQuote.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: fusionQuote.trigger.tokenAddress,
-        chainId: fusionQuote.trigger.chainId
-      })
-    }
-
-    const quoteType = await getQuoteType(
-      walletClient,
-      fusionQuote,
-      paymentTokenInfo
-    )
+    const quoteType = await getQuoteType(meeClient, fusionQuote)
 
     expect(quoteType).toEqual("onchain")
 
