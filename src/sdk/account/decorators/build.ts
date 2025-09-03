@@ -252,7 +252,7 @@ export type BuildComposableInstructionTypes =
  * @example
  * // Default action example
  * const defaultInstructions = await build(
- *   { accountAddress: "0xaaaaaaaaaaaaaaaaaaaa" },
+ *   { accountAddress: "0x00000000000000000000000000000000000a11ce" },
  *   {
  *     type: "default",
  *     data: {
