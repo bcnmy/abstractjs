@@ -208,8 +208,8 @@ export const acrossEncodeBridgingUserOp = async (
  *   bridgingAmount: 1000000n,
  *   fromChainId: 11155111,
  *   toChainId: 84532,
- *   depositor: "0x...",
- *   recipient: "0x...",
+ *   depositor: "0x00000000000000000000000000000000000a11ce",
+ *   recipient: "0x00000000000000000000000000000000000a11ce",
  *   tokenMapping: tokens
  * })
  */
