@@ -6,7 +6,7 @@ on:
 jobs:
   paid-tests:
     name: paid-tests
-    if: github.event.review.state == 'approved'
+    if: github.event_name == 'workflow_dispatch' || github.event.review.state == 'approved'
     permissions: write-all
     runs-on: ubuntu-latest
     concurrency:
