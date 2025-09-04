@@ -38,6 +38,7 @@ import {
   testnetMcUniswapSwapRouter
 } from "../../../constants"
 import {
+  type RuntimeValue,
   getMEEVersion,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
@@ -102,7 +103,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     "should highlight building composable instructions",
     async () => {
       const instructions: Instruction[] = await buildComposable(
-        { account: mcNexus },
+        { accountAddress: mcNexus.signer.address },
         {
           to: tokenAddress,
           abi: erc20Abi,
@@ -1132,6 +1133,272 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       feeToken: {
         chainId: chain.id,
         address: tokenAddress
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      if (userOp.isCleanUpUserOp) {
+        expect(userOp.executionStatus).to.be.oneOf([
+          "MINED_FAIL",
+          "PENDING",
+          "MINING",
+          "MINED_SUCCESS"
+        ])
+      } else {
+        expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+      }
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should execute composable cleanup for composable call with custom constraints", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.08", 6)
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress,
+      amount: amountToSupply
+    }
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: runtimeTransferAddress as Address,
+        tokenAddress,
+        amount: amountToTransfer,
+        chainId: chain.id
+      }
+    })
+
+    const transferFundsInstructions: Instruction[] =
+      await mcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: runtimeTransferAddress,
+          abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+          functionName: "transferFunds",
+          args: [
+            tokenAddress,
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress,
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          amount: runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [greaterThanOrEqualTo(5n)] // custom constraints
+          })
+        }
+      ],
+      instructions: [...transferInstruction, ...transferFundsInstructions],
+      feeToken: {
+        chainId: chain.id,
+        address: tokenAddress
+      }
+    })
+
+    const { hash } = await meeClient.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      if (userOp.isCleanUpUserOp) {
+        expect(userOp.executionStatus).to.be.oneOf([
+          "MINED_FAIL",
+          "PENDING",
+          "MINING",
+          "MINED_SUCCESS"
+        ])
+      } else {
+        expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+      }
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should native token composable cleanup throw an error when amount field is not configured", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger,
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address
+          }
+        ],
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 500n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: zeroAddress // native token payment
+        }
+      })
+    ).rejects.toThrowError(
+      "Please configure the amount for the native token cleanup."
+    )
+  })
+
+  it("should native token composable cleanup throw an error when amount field is runtime value", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    const mockRuntimeValue = {} as RuntimeValue
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger,
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: mockRuntimeValue
+          }
+        ],
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 500n
+              }
+            ],
+            chainId: chain.id
+          }
+        ],
+        feeToken: {
+          chainId: chain.id,
+          address: zeroAddress // native token payment
+        }
+      })
+    ).rejects.toThrowError(
+      "Runtime amount for the native token cleanup is not supported yet."
+    )
+  })
+
+  it("should composable cleanup throw an error when there is no instruction", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger,
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: 1n
+          }
+        ],
+        instructions: [],
+        feeToken: {
+          chainId: chain.id,
+          address: zeroAddress // native token payment
+        }
+      })
+    ).rejects.toThrowError(
+      "Atleast one instruction should be configured to use cleanups."
+    )
+  })
+
+  it("should execute native token composable cleanup for composable call", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    const quote = await meeClient.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: zeroAddress,
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          amount: 500n
+        }
+      ],
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 500n
+            }
+          ],
+          chainId: chain.id
+        }
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: zeroAddress // native token payment
       }
     })
 

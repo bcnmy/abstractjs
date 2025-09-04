@@ -54,7 +54,7 @@ describe("mee.build", () => {
 
   it("should use the default option while building instructions", async () => {
     const instructions = await build(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address },
       {
         type: "default",
         data: {
@@ -89,19 +89,24 @@ describe("mee.build", () => {
 
   it("should use the bridge action while building instructions", async () => {
     const currentInstructions = await build(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address },
       {
         type: "intent",
         data: {
+          depositor: mcNexus.addressOn(paymentChain.id, true),
+          recipient: mcNexus.addressOn(targetChain.id, true),
           amount: 1n,
-          mcToken: mcUSDC,
-          toChain: targetChain
+          token: {
+            mcToken: mcUSDC,
+            unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+          },
+          toChainId: targetChain.id
         }
       }
     )
 
     const instructions = await build(
-      { account: mcNexus, currentInstructions },
+      { accountAddress: mcNexus.signer.address, currentInstructions },
       {
         type: "default",
         data: {

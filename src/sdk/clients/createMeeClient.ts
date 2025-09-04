@@ -55,6 +55,22 @@ export const DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID = 84532
 export const DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS: Address =
   "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
 
+export const getDefaultMeeGasTank = (isTestnet = false) => {
+  if (isTestnet) {
+    return {
+      address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+      token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+      chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+    }
+  }
+
+  return {
+    address: DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
+    token: DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
+    chainId: DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+  }
+}
+
 /**
  * Parameters for creating a Mee client
  */

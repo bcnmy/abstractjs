@@ -1,6 +1,5 @@
-import type { Chain } from "viem"
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
-import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import type {
   BridgingPlugin,
@@ -9,24 +8,27 @@ import type {
 
 /**
  * Parameters for querying bridge operations
- * @property fromChain - {@link Chain} Source chain for the bridge operation
- * @property toChain - {@link Chain} Destination chain for the bridge operation
+ * @property depositor - {@link Address} Account address of the source chain
+ * @property recipient - {@link Address} Account address of the destination chain
+ * @property fromChainId - Source chain id for the bridge operation
+ * @property toChainId - Destination chain id for the bridge operation
  * @property plugin - Optional {@link BridgingPlugin} implementation (defaults to Across)
  * @property amount - Amount to bridge in base units (wei) as BigInt
- * @property account - {@link BaseMultichainSmartAccount} Smart account to execute the bridging
  * @property tokenMapping - {@link MultichainAddressMapping} Token addresses across chains
  */
 export type QueryBridgeParams = {
-  /** Source chain for the bridge operation */
-  fromChain: Chain
-  /** Destination chain for the bridge operation */
-  toChain: Chain
-  /** OptionalPlugin implementation for the bridging operation */
+  /** Account address of the source chain */
+  depositor: Address
+  /** Account address of the destination chain */
+  recipient: Address
+  /** Source chain id for the bridge operation */
+  fromChainId: number
+  /** Destination chain id for the bridge operation */
+  toChainId: number
+  /** Optional plugin implementation for the bridging operation */
   plugin?: BridgingPlugin
   /** Amount to bridge in base units (wei) */
   amount: bigint
-  /** Multi-chain smart account configuration */
-  account: BaseMultichainSmartAccount
   /** Mapping of token addresses across chains */
   tokenMapping: MultichainAddressMapping
 }
@@ -59,11 +61,12 @@ export type BridgeQueryResult = {
  * Queries a bridge operation to determine expected outcomes and fees
  *
  * @param params - {@link QueryBridgeParams} Configuration for the bridge query
- * @param params.fromChain - Source chain for the bridge operation
- * @param params.toChain - Destination chain for the bridge operation
+ * @param params.depositor - Account address of the source chain
+ * @param params.recipient - Account address of the destination chain
+ * @param params.fromChainId - Source chain id for the bridge operation
+ * @param params.toChainId - Destination chain id for the bridge operation
  * @param params.plugin - Optional bridging plugin (defaults to Across)
  * @param params.amount - Amount to bridge in base units (wei)
- * @param params.account - Smart account to execute the bridging
  * @param params.tokenMapping - Token addresses across chains
  *
  * @returns Promise resolving to {@link BridgeQueryResult} or null if received amount cannot be determined
@@ -72,14 +75,15 @@ export type BridgeQueryResult = {
  *
  * @example
  * const result = await queryBridge({
- *   fromChain: optimism,
- *   toChain: base,
+ *   depositor: "0xabc...",
+ *   recipient: "0xdef...",
+ *   fromChainId: 10,
+ *   toChainId: 8453,
  *   amount: BigInt("1000000"), // 1 USDC
- *   account: myMultichainAccount,
  *   tokenMapping: {
  *     deployments: [
  *       { chainId: 10, address: "0x123..." },
- *       { chainId: base.id, address: "0x456..." }
+ *       { chainId: 8453, address: "0x456..." }
  *     ],
  *     on: (chainId) => deployments.find(d => d.chainId === chainId).address
  *   }
@@ -94,18 +98,20 @@ export const queryBridge = async (
   params: QueryBridgeParams
 ): Promise<BridgeQueryResult | null> => {
   const {
-    account,
-    fromChain,
-    toChain,
+    depositor,
+    recipient,
+    fromChainId,
+    toChainId,
     plugin = toAcrossPlugin(),
     amount,
     tokenMapping
   } = params
 
   const result = await plugin.encodeBridgeUserOp({
-    fromChain,
-    toChain,
-    account,
+    depositor,
+    recipient,
+    fromChainId,
+    toChainId,
     tokenMapping,
     bridgingAmount: amount
   })
@@ -114,7 +120,7 @@ export const queryBridge = async (
   if (!result.receivedAtDestination) return null
 
   return {
-    fromChainId: fromChain.id,
+    fromChainId: fromChainId,
     amount,
     receivedAtDestination: result.receivedAtDestination,
     plugin,

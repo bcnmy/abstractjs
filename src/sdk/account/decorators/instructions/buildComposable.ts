@@ -46,12 +46,11 @@ export type BuildComposableParameters = {
 }
 
 export const buildComposableCall = async (
-  baseParams: BaseInstructionsParams,
+  _baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters,
   efficientMode: boolean
 ): Promise<ComposableCall[]> => {
-  const { account } = baseParams
-  const { to, gasLimit, value, functionName, args, abi, chainId } = parameters
+  const { to, gasLimit, value, functionName, args, abi } = parameters
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
@@ -63,12 +62,6 @@ export const buildComposableCall = async (
 
   if (!isAddress(to)) {
     throw new Error("Invalid target contract address")
-  }
-
-  const smartAccountAddress = account.addressOn(chainId, true)
-
-  if (!isAddress(smartAccountAddress)) {
-    throw new Error("Invalid smart account address")
   }
 
   if (args.length <= 0) {
@@ -128,7 +121,7 @@ export const buildComposableCall = async (
  * @example
  * ```typescript
  * const instructions = buildComposable(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   {
  *     to: targetContractAddress,
  *     functionName: 'exactInputSingle',

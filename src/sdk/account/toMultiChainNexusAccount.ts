@@ -307,23 +307,26 @@ export async function toMultichainNexusAccount(
     params: BuildInstructionTypes,
     currentInstructions?: Instruction[]
   ): Promise<Instruction[]> =>
-    buildDecorator({ currentInstructions, account: baseAccount }, params)
+    buildDecorator(
+      { currentInstructions, accountAddress: baseAccount.signer.address },
+      params
+    )
 
   const buildComposable = (
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
   ): Promise<Instruction[]> =>
     buildComposableDecorator(
-      { currentInstructions, account: baseAccount },
+      { currentInstructions, accountAddress: baseAccount.signer.address },
       params
     )
 
   const buildBridgeInstructions = (
     params: Omit<MultichainBridgingParams, "account">
-  ) => buildBridgeInstructionsDecorator({ ...params, account: baseAccount })
+  ) => buildBridgeInstructionsDecorator({ ...params })
 
   const queryBridge = (params: QueryBridgeParams) =>
-    queryBridgeDecorator({ ...params, account: baseAccount })
+    queryBridgeDecorator({ ...params })
 
   const isDelegated = (parameters?: IsDelegatedParameters) =>
     isDelegatedDecorator({ ...parameters, account: baseAccount })
@@ -335,9 +338,7 @@ export async function toMultichainNexusAccount(
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
   const read = <T>(params: MultichainReadParameters) =>
-    multichainRead({ account: baseAccount }, params) as Promise<
-      MultiChainReadPayload<T>[]
-    >
+    multichainRead(baseAccount, params) as Promise<MultiChainReadPayload<T>[]>
 
   // The specific deployment doesn't matter here because chainId = 0
   const toDelegation = async () =>

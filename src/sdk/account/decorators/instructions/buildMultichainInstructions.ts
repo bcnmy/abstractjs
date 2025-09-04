@@ -3,6 +3,7 @@ import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import type { Call } from "../../utils/Types"
 import type { BaseInstructionsParams } from "../build"
 
+import type { BaseMultichainSmartAccount } from "../.."
 import { erc7579Calls } from "../../../clients/decorators/erc7579"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
@@ -25,7 +26,9 @@ type ArgumentTypes<F extends Function> = F extends (
   ? A
   : never
 
-export type BuildMultichainInstructionsParameters = OneOf<
+export type BuildMultichainInstructionsParameters = {
+  account: BaseMultichainSmartAccount
+} & OneOf<
   | {
       calls: Call[]
     }
@@ -39,8 +42,13 @@ export const buildMultichainInstructions = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildMultichainInstructionsParameters
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [], account } = baseParams
-  const { calls: calls_, type, parameters: parametersForType } = parameters
+  const { currentInstructions = [] } = baseParams
+  const {
+    calls: calls_,
+    type,
+    parameters: parametersForType,
+    account
+  } = parameters
 
   const instructions = await Promise.all(
     account.deployments.map(async (account) => {

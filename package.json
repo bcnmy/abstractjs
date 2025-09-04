@@ -1,6 +1,6 @@
 {
   "name": "@biconomy/abstractjs",
-  "version": "1.1.1",
+  "version": "1.1.4",
   "description": "Biconomy SDK for building decentralized applications with ERC4337 Account Abstraction and Smart Accounts",
   "main": "./dist/_cjs/index.js",
   "module": "./dist/_esm/index.js",

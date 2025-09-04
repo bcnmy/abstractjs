@@ -56,10 +56,11 @@ describe("mee.buildBridgeInstructions", () => {
   it("should call the bridge with a unified balance", async () => {
     const unifiedBalance = await mcNexus.getUnifiedERC20Balance(mcUSDC)
     const payload = await buildBridgeInstructions({
-      account: mcNexus,
+      depositor: mcNexus.addressOn(paymentChain.id, true),
+      recipient: mcNexus.addressOn(targetChain.id, true),
       amount: 100000n,
       bridgingPlugins: [toAcrossPlugin()],
-      toChain: targetChain,
+      toChainId: targetChain.id,
       unifiedBalance
     })
 

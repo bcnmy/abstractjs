@@ -166,11 +166,12 @@ describe("mee.toMultiChainNexusAccount", async () => {
     }
 
     const payload = await mcNexus.queryBridge({
+      depositor: mcNexus.addressOn(optimism.id, true),
+      recipient: mcNexus.addressOn(base.id, true),
       amount: 1000000n,
-      toChain: base,
-      fromChain: optimism,
-      tokenMapping,
-      account: mcNexus
+      toChainId: base.id,
+      fromChainId: optimism.id,
+      tokenMapping
     })
 
     expect(payload?.amount).toBeGreaterThan(0n)

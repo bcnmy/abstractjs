@@ -37,7 +37,7 @@ export type BuildRawComposableParameters = {
  * @example
  * ```typescript
  * const instructions = buildRawComposable(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   {
  *     to: targetContractAddress,
  *     calldata: '0x000000',
@@ -51,18 +51,10 @@ export const buildRawComposable = async (
   parameters: BuildRawComposableParameters
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-
-  const { account } = baseParams
   const { to, calldata, gasLimit, value, chainId } = parameters
 
   if (!isAddress(to)) {
     throw new Error("Invalid target contract address")
-  }
-
-  const smartAccountAddress = account.addressOn(chainId, true)
-
-  if (!isAddress(smartAccountAddress)) {
-    throw new Error("Invalid smart account address")
   }
 
   if (calldata.length < 10 || !calldata.startsWith("0x")) {

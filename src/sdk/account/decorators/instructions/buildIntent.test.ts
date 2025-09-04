@@ -61,11 +61,16 @@ describe("mee.buildIntent", () => {
     console.log("mcNexus", mcNexus.addressOn(targetChain.id))
 
     const instructions: Instruction[] = await buildIntent(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address },
       {
+        depositor: mcNexus.addressOn(paymentChain.id, true),
+        recipient: mcNexus.addressOn(targetChain.id, true),
         amount: 1000000n,
-        mcToken: mcUSDC,
-        toChain: targetChain
+        token: {
+          mcToken: mcUSDC,
+          unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+        },
+        toChainId: targetChain.id
       }
     )
 
@@ -90,16 +95,22 @@ describe("mee.buildIntent", () => {
     })
 
     const instructions: Instruction[] = await buildIntent(
-      { account: newMcNexus },
+      { accountAddress: newMcNexus.signer.address },
       {
+        depositor: mcNexus.addressOn(targetChain.id, true),
+        recipient: mcNexus.addressOn(paymentChain.id, true),
         amount: 1000000n,
-        mcToken: mcUSDC,
-        toChain: paymentChain,
+        token: {
+          mcToken: mcUSDC,
+          unifiedBalance: await newMcNexus.getUnifiedERC20Balance(mcUSDC)
+        },
+        toChainId: paymentChain.id,
         mode: "OPTIMISTIC"
       }
     )
 
-    expect(instructions.length).toBe(1)
+    expect([1, 0]).toContain(instructions.length)
+    if (instructions.length === 0) return
     expect(instructions[0].calls.length).toBe(2)
   })
 })

@@ -1,5 +1,51 @@
 # @biconomy/abstractjs
 
+## 1.1.4
+
+### Patch Changes
+
+- Features/improvements included:
+
+  1. Native token cleanup support with fixed amounts
+  2. Modular SDK - Decoupled some dependencies on batcher and builder functions to ease the SDK usage in backend environments
+  3. Default cleanup userOps constraints are removed to speed up the cleanup execution
+  4. Improved CommonJS and ESM build support
+  5. Improved the getQuoteType util to reduce the number of RPC calls to detect the quote type
+  6. Added a Nexus MEE version check bypass flag which avoid checking all the contract deployment status to improve latency in backend environments
+  7. Added a utils to getGasTank for sponsorship
+
+  Breaking changes:
+
+  1. Intent builder interface has changed a bit. Token field expects both mcToken and unified balance now
+  ```
+  mcNexus.build({
+    type: "intent",
+    data: {
+      depositor: mcNexus.addressOn(paymentChain.id, true),
+      recipient: mcNexus.addressOn(targetChain.id, true),
+      amount: 1n,
+      token: {
+        mcToken: mcUSDC,
+        unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+      },
+      toChainId: targetChain.id
+    }
+  })
+  ```
+  2. `getPaymentToken` method has been renamed into `getSupportedFeeToken` now
+
+## 1.1.3
+
+### Patch Changes
+
+- Improved the permit token on-chain details fetch with batched multicall for better performance
+
+## 1.1.2
+
+### Patch Changes
+
+- Added fallback version for permit flow
+
 ## 1.1.1
 
 ### Patch Changes

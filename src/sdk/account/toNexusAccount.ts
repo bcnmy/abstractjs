@@ -129,6 +129,12 @@ export type ChainConfiguration = {
   transport: ClientConfig["transport"]
   /** MEE version config */
   version: MEEVersionConfig
+  /**
+   * Flag to enable/disable MEE Version check. Defaults to true.
+   * Only set this as false if you're very sure about MEE version support on specific chains otherwise SDK will
+   * fail to detect the unavailability of version on certains which may result in weird error because of undeployed contracts
+   */
+  versionCheck?: boolean
 }
 
 /**
@@ -458,7 +464,8 @@ export const toNexusAccount = async (
     chainConfiguration: {
       chain,
       version: meeConfig,
-      transport: transportConfig
+      transport: transportConfig,
+      versionCheck = true
     },
     index = 0n,
     validators: customValidators,
@@ -487,43 +494,49 @@ export const toNexusAccount = async (
 
   const publicClient = createPublicClient({ chain, transport: transportConfig })
 
-  // All these version specific contract addresses were checked whether it was deployed or not.
-  const addressesToDeploymentSet = new Set([
-    meeConfig.bootStrapAddress,
-    meeConfig.defaultValidatorAddress,
-    meeConfig.validatorAddress,
-    meeConfig.factoryAddress,
-    meeConfig.implementationAddress
-  ])
+  if (versionCheck) {
+    // All these version specific contract addresses were checked whether it was deployed or not.
+    const addressesToDeploymentSet = new Set([
+      meeConfig.bootStrapAddress,
+      meeConfig.defaultValidatorAddress,
+      meeConfig.validatorAddress,
+      meeConfig.factoryAddress,
+      meeConfig.implementationAddress
+    ])
 
-  if (meeConfig.moduleRegistry) {
-    addressesToDeploymentSet.add(meeConfig.moduleRegistry.registryAddress)
-  }
+    if (meeConfig.moduleRegistry) {
+      addressesToDeploymentSet.add(meeConfig.moduleRegistry.registryAddress)
+    }
 
-  if (meeConfig.composableModuleAddress) {
-    addressesToDeploymentSet.add(meeConfig.composableModuleAddress)
-  }
+    if (meeConfig.composableModuleAddress) {
+      addressesToDeploymentSet.add(meeConfig.composableModuleAddress)
+    }
 
-  // Filtering zero address because sometimes the default validator is zeroAddress which needs to be excluded
-  const addressesToDeploymentCheck = [...addressesToDeploymentSet].filter(
-    (address) => address !== zeroAddress
-  )
+    // Filtering zero address because sometimes the default validator is zeroAddress which needs to be excluded
+    const addressesToDeploymentCheck = [...addressesToDeploymentSet].filter(
+      (address) => address !== zeroAddress
+    )
 
-  await Promise.all(
-    addressesToDeploymentCheck.map(async (address) => {
-      // Checks if the MEE contracts are deployed or not
-      // This ensures the MEE version suite is supported or not for the chain
-      const bytecode = await publicClient.getCode({
-        address
+    await Promise.all(
+      addressesToDeploymentCheck.map(async (address) => {
+        // Checks if the MEE contracts are deployed or not
+        // This ensures the MEE version suite is supported or not for the chain
+        const bytecode = await publicClient.getCode({
+          address
+        })
+
+        if (!bytecode || bytecode === "0x") {
+          console.debug(
+            `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Contract address (${address}) is not deployed`
+          )
+
+          throw new Error(
+            `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
+          )
+        }
       })
-
-      if (!bytecode || bytecode === "0x") {
-        throw new Error(
-          `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
-        )
-      }
-    })
-  )
+    )
+  }
 
   const signer = await toSigner({ signer: _signer })
 

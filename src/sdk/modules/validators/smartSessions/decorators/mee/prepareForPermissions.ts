@@ -67,7 +67,7 @@ export const prepareForPermissions = async (
       // it will also include the deployment instruction if needed
       if (!isModuleInstalled_) {
         return build(
-          { account: client.account },
+          { accountAddress: client.account.signer.address },
           {
             type: "default",
             data: {

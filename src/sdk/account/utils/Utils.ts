@@ -51,6 +51,34 @@ export const isNullOrUndefined = (value: AnyData): value is undefined => {
 }
 
 /**
+ * Checks if the provided value can be safely converted to a BigInt.
+ *
+ * @param value - The value to check for BigInt compatibility.
+ * @returns True if the value can be converted to BigInt, false otherwise.
+ */
+export const isBigInt = (value: AnyData) => {
+  try {
+    // Attempt to convert the value to BigInt.
+    BigInt(value)
+    return true
+  } catch {
+    // If conversion fails, value is not a valid BigInt.
+    return false
+  }
+}
+
+/**
+ * Removes all HTTP/HTTPS URLs from the provided string.
+ *
+ * @param value - The string to sanitize.
+ * @returns The sanitized string with URLs removed.
+ */
+export const sanitizeUrl = (value: string) => {
+  // Replace all occurrences of http:// or https:// followed by non-whitespace characters with an empty string.
+  return value.replace(/https?:\/\/[^\s]+/g, "")
+}
+
+/**
  * Validates if a string is a valid RPC URL.
  *
  * @param url - The URL to validate

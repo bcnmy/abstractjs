@@ -1,30 +1,33 @@
-import type { Address, WalletClient } from "viem"
 import { type AnyData, isPermitSupported } from "../../../modules"
+import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetFusionQuoteParams } from "./getFusionQuote"
 import type { GetOnChainQuotePayload } from "./getOnChainQuote"
-import type { GetPaymentTokenPayload } from "./getPaymentToken"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
-import type { Trigger } from "./signPermitQuote"
+import { getSupportedFeeToken } from "./getSupportedFeeToken"
+import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
 export type QuoteType = "simple" | "onchain" | "permit"
 
 export const isPermitTokenInfo = async (
-  walletClient: WalletClient,
-  paymentTokenInfo: GetPaymentTokenPayload,
-  tokenAddress: Address,
-  chainId: number
+  client: BaseMeeClient,
+  trigger: TokenTrigger
 ): Promise<boolean> => {
   let permitEnabled = false
 
-  if (paymentTokenInfo.paymentToken) {
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
-  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-    permitEnabled = await isPermitSupported(walletClient, tokenAddress)
+  const supportedFeeTokenInfo = await getSupportedFeeToken(client, {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId
+  })
+
+  if (supportedFeeTokenInfo.supportedFeeToken) {
+    // detect w/o extra RPCcall
+    permitEnabled =
+      supportedFeeTokenInfo.supportedFeeToken.permitEnabled || false
   } else {
-    throw new Error(
-      `Payment token (${tokenAddress}) not supported for chain ${chainId}`
-    )
+    const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
+    // detect via RPCcall
+    permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
   }
 
   return permitEnabled
@@ -38,99 +41,74 @@ const isNormalQuote = (
 }
 
 const isPermitQuote = async (
-  walletClient: WalletClient,
-  payload: AnyData,
-  paymentTokenInfo?: GetPaymentTokenPayload
+  client: BaseMeeClient,
+  payload: AnyData
 ): Promise<boolean> => {
   const isTriggerAvailable = "trigger" in payload
 
-  // If trigger is not available ? It is not considered as permit quote
+  // If trigger is not available, it is not considered as permit quote
   if (!isTriggerAvailable) return false
 
   const trigger = payload.trigger as Trigger
 
-  // If trigger call is available ? It is not permit quote
+  // If trigger call is available, it is not permit quote
   if ("call" in trigger) {
     return false
   }
-
-  // For non normal quote, if the payment info is not available ?
-  // It means the token is not supported by the network and also swap routers
-  if (!paymentTokenInfo) {
-    throw new Error(
-      `Payment token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId}`
-    )
-  }
-
+  // after this point, trigger can only be of type TokenTrigger
   const permitEnabled = await isPermitTokenInfo(
-    walletClient,
-    paymentTokenInfo,
-    trigger.tokenAddress,
-    trigger.chainId
+    client,
+    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
   )
 
-  return !!permitEnabled
+  // If permit is enabled, it is a permit quote
+  return permitEnabled
 }
 
 const isOnChainQuote = async (
-  walletClient: WalletClient,
-  payload: AnyData,
-  paymentTokenInfo?: GetPaymentTokenPayload
+  client: BaseMeeClient,
+  payload: AnyData
 ): Promise<boolean> => {
   const isTriggerAvailable = "trigger" in payload
 
-  // If trigger is not available ? It is not considered as on chain quote
+  // If trigger is not available, it is not considered as on chain quote
   if (!isTriggerAvailable) return false
 
   const trigger = payload.trigger as Trigger
 
-  // If triggger has a call ? It is considered as on chain quote
+  // If triggger has a call, it is considered as on chain quote
   if ("call" in trigger) {
     return true
   }
 
-  // For non normal quote, if the payment info is not available ?
-  // It means the token is not supported by the network and also swap routers
-  if (!paymentTokenInfo) {
-    throw new Error(
-      `Payment token (${trigger.tokenAddress}) not supported for chain ${trigger.chainId}`
-    )
-  }
-
   const permitEnabled = await isPermitTokenInfo(
-    walletClient,
-    paymentTokenInfo,
-    trigger.tokenAddress,
-    trigger.chainId
+    client,
+    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
   )
 
-  // If permit is enabled ? It is not an on chain quote
+  // If permit is enabled, it is not an on chain quote
   return !permitEnabled
 }
 
 // NOTE: MM DTK is not supported for now - It is experimental and need to support once it is mainstream
 export const getQuoteType = async (
-  walletClient: WalletClient,
+  client: BaseMeeClient,
   quoteParams:
     | GetQuotePayload
     | GetQuoteParams
     | GetPermitQuotePayload
     | GetOnChainQuotePayload
-    | GetFusionQuoteParams,
-  paymentTokenInfo?: GetPaymentTokenPayload
+    | GetFusionQuoteParams
 ): Promise<QuoteType> => {
   // If the quote payload doesn't have trigger ? It is considered as normal quote
   if (isNormalQuote(quoteParams)) {
     return "simple"
   }
-
-  if (await isPermitQuote(walletClient, quoteParams, paymentTokenInfo)) {
+  if (await isPermitQuote(client, quoteParams)) {
     return "permit"
   }
-
-  if (await isOnChainQuote(walletClient, quoteParams, paymentTokenInfo)) {
+  if (await isOnChainQuote(client, quoteParams)) {
     return "onchain"
   }
-
   throw new Error("Invalid quote, can't determine signature type")
 }
