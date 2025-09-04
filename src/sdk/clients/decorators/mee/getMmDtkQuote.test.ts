@@ -201,9 +201,14 @@ describe("mee.getMmDtkQuote", () => {
         mcNexus.build({
           type: "intent",
           data: {
+            depositor: mcNexus.addressOn(paymentChain.id, true),
+            recipient: mcNexus.addressOn(targetChain.id, true),
             amount: 1n,
-            mcToken: mcUSDC,
-            toChain: targetChain
+            token: {
+              mcToken: mcUSDC,
+              unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+            },
+            toChainId: targetChain.id
           }
         }),
         mcNexus.build({

@@ -7,7 +7,7 @@ import { getGasToken } from "./getGasToken"
  * Represents a payment token configuration with its properties and capabilities.
  * This interface defines the structure of tokens that can be used for gas payments.
  */
-export interface PaymentToken {
+export interface SupportedFeeToken {
   /**
    * Human-readable name of the token
    * @example "USD Coin"
@@ -39,7 +39,7 @@ export interface PaymentToken {
 /**
  * Parameters for retrieving payment token information
  */
-export type GetPaymentTokenParams = {
+export type GetSupportedFeeTokenParams = {
   /**
    * The blockchain chain ID to query
    * @example 1 // Ethereum Mainnet
@@ -56,9 +56,9 @@ export type GetPaymentTokenParams = {
 /**
  * Response payload containing payment token information and arbitrary token support info
  */
-export type GetPaymentTokenPayload = {
-  isArbitraryPaymentTokensSupported: boolean
-  paymentToken?: PaymentToken
+export type GetSupportedFeeTokenPayload = {
+  isArbitraryFeeTokensSupported: boolean
+  supportedFeeToken?: SupportedFeeToken
 }
 
 /**
@@ -74,14 +74,14 @@ export type GetPaymentTokenPayload = {
  *
  * @example
  * ```typescript
- * const tokenInfo = await getPaymentToken(client, {
+ * const tokenInfo = await getSupportedFeeToken(client, {
  *   chainId: 1,
  *   tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
  * });
  * // Returns:
  * // {
- * //   isArbitraryPaymentTokensSupported: true,
- * //   paymentToken: {
+ * //   isArbitraryFeeTokensSupported: true,
+ * //   supportedFeeToken: {
  * //     name: "USD Coin",
  * //     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
  * //     symbol: "USDC",
@@ -95,22 +95,21 @@ export type GetPaymentTokenPayload = {
  * - The token is not supported on the specified chain
  * - The chain ID is not supported
  */
-export const getPaymentToken = async (
+export const getSupportedFeeToken = async (
   client: BaseMeeClient,
-  parameters: GetPaymentTokenParams
-): Promise<GetPaymentTokenPayload> => {
+  parameters: GetSupportedFeeTokenParams
+): Promise<GetSupportedFeeTokenPayload> => {
   const gasToken = await getGasToken(client, {
     chainId: parameters.chainId,
     address: parameters.tokenAddress
   })
-  const paymentToken = gasToken.paymentTokens.find((paymentToken) =>
-    addressEquals(paymentToken.address, parameters.tokenAddress)
+  const supportedFeeToken = gasToken.paymentTokens.find((supportedFeeToken) =>
+    addressEquals(supportedFeeToken.address, parameters.tokenAddress)
   )
   return {
-    isArbitraryPaymentTokensSupported:
-      gasToken.isArbitraryPaymentTokensSupported,
-    paymentToken
+    isArbitraryFeeTokensSupported: gasToken.isArbitraryFeeTokensSupported,
+    supportedFeeToken
   }
 }
 
-export default getPaymentToken
+export default getSupportedFeeToken

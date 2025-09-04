@@ -43,6 +43,10 @@ export const TESTNET_RPC_URLS: Record<number, string> = {
 // Configuration
 const NATIVE_TOKEN_AMOUNT = parseEther("0.0005")
 const USDC_TOKEN_AMOUNT = parseUnits("3", 6)
+
+const NATIVE_TOKEN_FUNDING_THRESHOLD = (NATIVE_TOKEN_AMOUNT * 15n) / 100n
+const USDC_TOKEN_FUNDING_THRESHOLD = (USDC_TOKEN_AMOUNT * 15n) / 100n
+
 const ACCOUNT_INDEX = 0n
 const ACCOUNT_INDEX_ONE = 1n
 
@@ -222,7 +226,9 @@ async function processChain(
     }).extend(publicActions)
 
     // Fund with native token if needed
-    if (nexusTokenInfoWithBalances[0].balance < NATIVE_TOKEN_AMOUNT) {
+    if (
+      nexusTokenInfoWithBalances[0].balance < NATIVE_TOKEN_FUNDING_THRESHOLD
+    ) {
       if (masterTokenInfoWithBalances[0].balance < NATIVE_TOKEN_AMOUNT) {
         console.warn(
           `Master: Insufficient ${masterTokenInfoWithBalances[0].name} balance to fund on ${chain.name}`
@@ -251,7 +257,9 @@ async function processChain(
 
     // Fund all the ERC20 tokens required for the tests
     for (let i = 1; i < tokensForFunding.length; i++) {
-      if (nexusTokenInfoWithBalances[i].balance < USDC_TOKEN_AMOUNT) {
+      if (
+        nexusTokenInfoWithBalances[i].balance < USDC_TOKEN_FUNDING_THRESHOLD
+      ) {
         if (masterTokenInfoWithBalances[i].balance < USDC_TOKEN_AMOUNT) {
           console.warn(
             `Master: Insufficient ${masterTokenInfoWithBalances[i].name} balance on ${chain.name}`

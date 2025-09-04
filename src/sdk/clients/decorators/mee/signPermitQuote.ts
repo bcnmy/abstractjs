@@ -7,9 +7,9 @@ import {
   type WalletClient,
   concatHex,
   encodeAbiParameters,
-  getContract,
   parseSignature
 } from "viem"
+import { multicall } from "viem/actions"
 import type { EIP712DomainReturn } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { PERMIT_TYPEHASH } from "../../../constants"
@@ -195,20 +195,37 @@ export const prepareSignablePermitQuotePayload = async (
 
   const amount = trigger.approvalAmount ?? trigger.amount
 
-  const token = getContract({
-    abi: TokenWithPermitAbi,
-    address: trigger.tokenAddress,
-    client: publicClient
+  // Fetch required token data for EIP-712 domain and permit using multicall
+  const values = await multicall(publicClient, {
+    contracts: [
+      {
+        address: trigger.tokenAddress,
+        abi: TokenWithPermitAbi,
+        functionName: "nonces",
+        args: [owner]
+      },
+      {
+        address: trigger.tokenAddress,
+        abi: TokenWithPermitAbi,
+        functionName: "name"
+      },
+      {
+        address: trigger.tokenAddress,
+        abi: TokenWithPermitAbi,
+        functionName: "version"
+      },
+      {
+        address: trigger.tokenAddress,
+        abi: TokenWithPermitAbi,
+        functionName: "DOMAIN_SEPARATOR"
+      },
+      {
+        address: trigger.tokenAddress,
+        abi: TokenWithPermitAbi,
+        functionName: "eip712Domain"
+      }
+    ]
   })
-
-  // Fetch required token data for EIP-712 domain and permit
-  const values = await Promise.allSettled([
-    token.read.nonces([owner]),
-    token.read.name(),
-    token.read.version(),
-    token.read.DOMAIN_SEPARATOR(),
-    token.read.eip712Domain()
-  ])
 
   const [nonce, name, version, domainSeparator, eip712Domain] = values.map(
     (value, i) => {
@@ -219,10 +236,10 @@ export const prepareSignablePermitQuotePayload = async (
         "domainSeparator",
         "eip712Domain"
       ][i]
-      if (value.status === "fulfilled") {
-        return value.value
+      if (value.status === "success") {
+        return value.result
       }
-      if (value.status === "rejected") {
+      if (value.status === "failure") {
         if (key === "nonce") {
           // Tokens must implement the nonces function, otherwise we throw a error here
           throw new Error(

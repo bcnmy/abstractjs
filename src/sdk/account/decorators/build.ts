@@ -1,7 +1,6 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { RuntimeValue } from "../../modules"
-import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
 } from "./instructions/buildAcrossIntentComposable"
@@ -66,11 +65,11 @@ export type TokenParams = {
 
 /**
  * Base parameters for building instructions
- * @property account - {@link BaseMultichainSmartAccount} The multichain smart account to check balances for
+ * @property account address - EOA wallet or owner account address
  * @property currentInstructions - {@link Instruction[]} Optional array of existing instructions to append to
  */
 export type BaseInstructionsParams = {
-  account: BaseMultichainSmartAccount
+  accountAddress: Address
   currentInstructions?: Instruction[]
 }
 
@@ -234,13 +233,18 @@ export type BuildComposableInstructionTypes =
  * @example
  * // Bridge tokens example
  * const bridgeInstructions = await build(
- *   { account: myMultichainAccount },
+ *   { accountAddres: mcNexus.signer.address },
  *   {
  *     type: "intent",
  *     data: {
- *       amount: BigInt(1000000),
- *       mcToken: mcUSDC,
- *       toChain: optimism
+ *       depositor: mcNexus.addressOn(paymentChain.id, true),
+ *       recipient: mcNexus.addressOn(targetChain.id, true),
+ *       amount: 1n,
+ *       token: {
+ *         mcToken: mcUSDC,
+ *         unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+ *       },
+ *       toChainId: targetChain.id
  *     }
  *   }
  * );
@@ -248,7 +252,7 @@ export type BuildComposableInstructionTypes =
  * @example
  * // Default action example
  * const defaultInstructions = await build(
- *   { account: myMultichainAccount },
+ *   { accountAddress: "0x00000000000000000000000000000000000a11ce" },
  *   {
  *     type: "default",
  *     data: {

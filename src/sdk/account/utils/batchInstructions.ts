@@ -1,12 +1,12 @@
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
-import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
 
 type BatchInstructionsParameters = {
   /**
-   * The account to execute the instructions on.
+   * The account address to execute the instructions on.
    */
-  account: MultichainSmartAccount
+  accountAddress: Address
   /**
    * The remaining instructions to be executed.
    */
@@ -18,7 +18,7 @@ type BatchInstructionsParameters = {
  * Instructions can only be batched if they are consecutive and share the same chainId.
  *
  * @param parameters - The parameters for the batching.
- * @param parameters.account - The account to execute the instructions on.
+ * @param parameters.accountAddress - The account address to execute the instructions on.
  * @param parameters.triggerCall - The first instruction to be executed.
  * @param parameters.instructions - The remaining instructions to be executed.
  *
@@ -27,7 +27,7 @@ type BatchInstructionsParameters = {
 export const batchInstructions = async (
   parameters: BatchInstructionsParameters
 ): Promise<Instruction[]> => {
-  const { account, instructions } = parameters
+  const { accountAddress, instructions } = parameters
 
   const result: Instruction[] = []
   let currentBatch: Instruction[] = []
@@ -43,7 +43,7 @@ export const batchInstructions = async (
       // Chain ID changed, process current batch
       if (currentBatch.length > 1) {
         const [batchedOp] = await buildBatch(
-          { account },
+          { accountAddress },
           { instructions: currentBatch }
         )
         result.push(batchedOp)
@@ -60,7 +60,7 @@ export const batchInstructions = async (
   // Process the final batch
   if (currentBatch.length > 1) {
     const [batchedOp] = await buildBatch(
-      { account },
+      { accountAddress },
       { instructions: currentBatch }
     )
     result.push(batchedOp)

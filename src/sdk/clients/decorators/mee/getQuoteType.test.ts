@@ -1,8 +1,17 @@
-import { http, type Chain, type LocalAccount, createWalletClient } from "viem"
+import {
+  http,
+  type Chain,
+  type LocalAccount,
+  type WalletClient,
+  createWalletClient
+} from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import type { GetFusionQuoteParams, GetQuoteParams } from "."
 import { toNetwork } from "../../../../test/testSetup"
-import { testnetMcTestUSDCP } from "../../../../test/testTokens"
+import {
+  testnetMcTestUSDC,
+  testnetMcTestUSDCP
+} from "../../../../test/testTokens"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -11,8 +20,10 @@ import {
 import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import getPaymentToken, { type GetPaymentTokenPayload } from "./getPaymentToken"
-import { getQuoteType } from "./getQuoteType"
+import { getQuoteType, isPermitTokenInfo } from "./getQuoteType"
+import getSupportedFeeToken, {
+  type GetSupportedFeeTokenPayload
+} from "./getSupportedFeeToken"
 
 describe("mee.getQuoteType", () => {
   let network: NetworkConfig
@@ -20,6 +31,7 @@ describe("mee.getQuoteType", () => {
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
   let chain: Chain
+  let walletClient: WalletClient
 
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
@@ -41,9 +53,15 @@ describe("mee.getQuoteType", () => {
       account: mcNexus,
       apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
     })
+
+    walletClient = createWalletClient({
+      account: eoaAccount,
+      chain,
+      transport: http(network.rpcUrl)
+    })
   })
 
-  test("Should get quote type for normal quote params", async () => {
+  test("Should get quote type for simple quote params", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -62,16 +80,10 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
-
-    expect(await getQuoteType(walletClient, quoteParam)).to.eq("simple")
+    expect(await getQuoteType(meeClient, quoteParam)).to.eq("simple")
   })
 
-  test("Should get quote type for normal quote payload", async () => {
+  test("Should get quote type for simple quote payload", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -90,13 +102,7 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
-
-    expect(await getQuoteType(walletClient, quote)).to.eq("simple")
+    expect(await getQuoteType(meeClient, quote)).to.eq("simple")
   })
 
   test("Should get quote type for permit quote param", async () => {
@@ -123,24 +129,7 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
-
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quoteParams.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quoteParams.trigger.tokenAddress,
-        chainId: quoteParams.trigger.chainId
-      })
-    }
-
-    expect(
-      await getQuoteType(walletClient, quoteParams, paymentTokenInfo)
-    ).to.eq("permit")
+    expect(await getQuoteType(meeClient, quoteParams)).to.eq("permit")
   })
 
   test("Should get quote type for permit quote payload", async () => {
@@ -167,24 +156,7 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
-
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quote.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quote.trigger.tokenAddress,
-        chainId: quote.trigger.chainId
-      })
-    }
-
-    expect(await getQuoteType(walletClient, quote, paymentTokenInfo)).to.eq(
-      "permit"
-    )
+    expect(await getQuoteType(meeClient, quote)).to.eq("permit")
   })
 
   test("Should get quote type for onchain quote param", async () => {
@@ -211,23 +183,7 @@ describe("mee.getQuoteType", () => {
       }
     }
 
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
-
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quoteParam.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quoteParam.trigger.tokenAddress,
-        chainId: quoteParam.trigger.chainId
-      })
-    }
-    expect(
-      await getQuoteType(walletClient, quoteParam, paymentTokenInfo)
-    ).to.eq("onchain")
+    expect(await getQuoteType(meeClient, quoteParam)).to.eq("onchain")
   })
 
   test("Should get quote type for onchain quote payload", async () => {
@@ -254,22 +210,28 @@ describe("mee.getQuoteType", () => {
       }
     })
 
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
+    expect(await getQuoteType(meeClient, quote)).to.eq("onchain")
+  })
+
+  describe("isPermitTokenInfo", () => {
+    test("Trigger token is permit enabled", async () => {
+      const trigger = {
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        chainId: chain.id,
+        amount: 1n
+      }
+      const isPermit = await isPermitTokenInfo(meeClient, trigger)
+      expect(isPermit).to.be.true
     })
 
-    let paymentTokenInfo: GetPaymentTokenPayload | undefined = undefined
-
-    if (quote.trigger.tokenAddress) {
-      paymentTokenInfo = await getPaymentToken(meeClient, {
-        tokenAddress: quote.trigger.tokenAddress,
-        chainId: quote.trigger.chainId
-      })
-    }
-    expect(await getQuoteType(walletClient, quote, paymentTokenInfo)).to.eq(
-      "onchain"
-    )
+    test("Payment token specified + payment token same as the trigger token + permit not enabled", async () => {
+      const trigger = {
+        tokenAddress: testnetMcTestUSDC.addressOn(chain.id), // not permittable token
+        chainId: chain.id,
+        amount: 1n
+      }
+      const isPermit = await isPermitTokenInfo(meeClient, trigger)
+      expect(isPermit).to.be.false
+    })
   })
 })

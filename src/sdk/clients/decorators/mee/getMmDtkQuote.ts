@@ -52,22 +52,6 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
  *
  * @returns Promise resolving to quote payload with permit-specific trigger information
  *
- * @example
- * ```typescript
- * const quote = await getPermitQuote(meeClient, {
- *   instructions: [{
- *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
- *     data: "0x...",
- *     value: "0"
- *   }],
- *   trigger: {
- *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
- *     amount: "1000000", // 1 USDC (6 decimals)
- *     owner: "0x...", // Token owner address
- *     spender: "0x..." // Address approved to spend tokens
- *   }
- * });
- * ```
  *
  * @throws Will throw an error if:
  * - The trigger parameters are invalid

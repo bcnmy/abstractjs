@@ -57,7 +57,7 @@ describe("mee.buildDefaultInstructions", () => {
 
   it("should highlight building default instructions", async () => {
     const instructions: Instruction[] = await buildDefaultInstructions(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address },
       {
         chainId: targetChain.id,
         calls: [

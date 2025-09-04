@@ -81,10 +81,11 @@ describe("mee.buildMultichainInstructions", () => {
   it("should build multichain instructions", async () => {
     const meeValidator = toDefaultModule({ signer: eoaAccount })
     const instructions: Instruction[] = await buildMultichainInstructions(
-      { account: mcNexus, currentInstructions: [] },
+      { accountAddress: mcNexus.signer.address, currentInstructions: [] },
       {
         type: "toInstallModuleCalls",
-        parameters: toInstallData(meeValidator)
+        parameters: toInstallData(meeValidator),
+        account: mcNexus
       }
     )
     expect(instructions.length).toBe(mcNexus.deployments.length)
@@ -92,7 +93,7 @@ describe("mee.buildMultichainInstructions", () => {
 
   it("should build multichain instructions with calls instead of a type", async () => {
     const instructions: Instruction[] = await buildMultichainInstructions(
-      { account: mcNexus, currentInstructions: [] },
+      { accountAddress: mcNexus.signer.address, currentInstructions: [] },
       {
         calls: [
           {
@@ -103,7 +104,8 @@ describe("mee.buildMultichainInstructions", () => {
             to: tokenAddress,
             data: "0x"
           }
-        ]
+        ],
+        account: mcNexus
       }
     )
     expect(instructions.length).toBe(mcNexus.deployments.length)
@@ -120,46 +122,51 @@ describe("mee.buildMultichainInstructions", () => {
 
     const instructions: InstructionLike[] = await Promise.all([
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        { accountAddress: mcNexus.signer.address, currentInstructions: [] },
         {
           type: "toInstallModuleCalls",
-          parameters: toInstallData(meeValidator)
+          parameters: toInstallData(meeValidator),
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        { accountAddress: mcNexus.signer.address, currentInstructions: [] },
         {
           type: "toInstallModuleCalls",
-          parameters: toInstallData(smartSessionValidator)
+          parameters: toInstallData(smartSessionValidator),
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        { accountAddress: mcNexus.signer.address, currentInstructions: [] },
         {
           calls: [
             {
               to: tokenAddress,
               data: "0x"
             }
-          ]
+          ],
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        { accountAddress: mcNexus.signer.address, currentInstructions: [] },
         {
           type: "toInstallModuleCalls",
-          parameters: toInstallData(ownableValidator)
+          parameters: toInstallData(ownableValidator),
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        { accountAddress: mcNexus.signer.address, currentInstructions: [] },
         {
           type: "toSetThresholdCalls",
-          parameters: { threshold: 1 }
+          parameters: { threshold: 1 },
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        { accountAddress: mcNexus.signer.address, currentInstructions: [] },
         {
           type: "toEnableActionPoliciesCalls",
           parameters: {
@@ -179,7 +186,8 @@ describe("mee.buildMultichainInstructions", () => {
                 ]
               }
             ]
-          }
+          },
+          account: mcNexus
         }
       )
     ])

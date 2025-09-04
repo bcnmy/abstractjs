@@ -29,7 +29,7 @@ import { batchInstructions } from "./batchInstructions"
 
 const createBaseApproval = (account: MultichainSmartAccount, amount: string) =>
   buildApprove(
-    { account },
+    { accountAddress: account.signer.address },
     {
       chainId: base.id,
       tokenAddress: mcUSDC.addressOn(base.id),
@@ -43,7 +43,7 @@ const createOptimismApproval = (
   amount: string
 ) =>
   buildApprove(
-    { account },
+    { accountAddress: account.signer.address },
     {
       chainId: optimism.id,
       tokenAddress: mcUSDC.addressOn(optimism.id),
@@ -57,7 +57,7 @@ const createMainnetApproval = (
   amount: string
 ) =>
   buildApprove(
-    { account },
+    { accountAddress: account.signer.address },
     {
       chainId: mainnet.id,
       tokenAddress: mcUSDC.addressOn(mainnet.id),
@@ -71,7 +71,7 @@ const createBaseTriggerCall = (
   sender: string
 ) =>
   buildTransferFrom(
-    { account },
+    { accountAddress: account.signer.address },
     {
       chainId: base.id,
       tokenAddress: mcUSDC.addressOn(base.id),
@@ -133,7 +133,7 @@ describe("utils.batchInstructions", () => {
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
-      account: mcNexus,
+      accountAddress: mcNexus.signer.address,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
@@ -151,7 +151,7 @@ describe("utils.batchInstructions", () => {
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
-      account: mcNexus,
+      accountAddress: mcNexus.signer.address,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
@@ -176,7 +176,7 @@ describe("utils.batchInstructions", () => {
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
-      account: mcNexus,
+      accountAddress: mcNexus.signer.address,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
@@ -197,7 +197,7 @@ describe("utils.batchInstructions", () => {
     const triggerCall = await createBaseTriggerCall(mcNexus, eoaAccount.address)
 
     const result = await batchInstructions({
-      account: mcNexus,
+      accountAddress: mcNexus.signer.address,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 

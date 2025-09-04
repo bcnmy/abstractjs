@@ -36,7 +36,7 @@ export type BuildBatchParams = BaseInstructionsParams & {
  * @example
  * ```typescript
  * const instructions = await buildBatch(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   { instructions: [buildApprove, buildSwap] }
  * )
  * ```
