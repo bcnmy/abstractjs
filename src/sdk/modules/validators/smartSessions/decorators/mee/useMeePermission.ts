@@ -76,25 +76,44 @@ export const useMeePermission = async (
     // If we've iterated over this chainId before, it will never require enable mode again.
     const alreadyUsed = !!modeMap[userOpEntry.chainId]
 
+    // Fix: Handle both number and BigInt chain IDs properly
     const relevantIndex = sessionDetailsArray.findIndex(
-      ({ enableSessionData }) =>
-        enableSessionData?.enableSession?.sessionToEnable?.chainId ===
-        BigInt(userOpEntry.chainId)
+      ({ enableSessionData }) => {
+        const sessionChainId = enableSessionData?.enableSession?.sessionToEnable?.chainId
+        const userOpChainId = userOpEntry.chainId
+        
+        // Handle both number and BigInt chain IDs
+        if (typeof sessionChainId === 'bigint' && typeof userOpChainId === 'number') {
+          return sessionChainId === BigInt(userOpChainId)
+        }
+        if (typeof sessionChainId === 'number' && typeof userOpChainId === 'bigint') {
+          return BigInt(sessionChainId) === userOpChainId
+        }
+        if (typeof sessionChainId === 'bigint' && typeof userOpChainId === 'bigint') {
+          return sessionChainId === userOpChainId
+        }
+        if (typeof sessionChainId === 'number' && typeof userOpChainId === 'number') {
+          return sessionChainId === userOpChainId
+        }
+        return false
+      }
     )
 
-                if (relevantIndex === -1) {
-              throw new Error(
-                `No session details found for chain ID ${userOpEntry.chainId}. ` +
-                `Available session details: ${sessionDetailsArray.length} entries.`
-              )
-            }
+    if (relevantIndex === -1) {
+      throw new Error(
+        `No session details found for chain ID ${userOpEntry.chainId}. ` +
+        `Available session details: ${sessionDetailsArray.length} entries.`
+      )
+    }
 
-    // Mark the session as used or unused
-    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : mode
+    // Fix: Use the mode from session details instead of overriding it
+    // The session details already contain the correct mode from grantPermissionTypedDataSign
+    const sessionDetails = sessionDetailsArray[relevantIndex]
+    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : sessionDetails.mode
 
     // Set the session details for the user op
     userOpEntry.sessionDetails = {
-      ...sessionDetailsArray[relevantIndex], // ✅ SAFE: relevantIndex is guaranteed to be >= 0
+      ...sessionDetails,
       mode: dynamicMode
     }
 
