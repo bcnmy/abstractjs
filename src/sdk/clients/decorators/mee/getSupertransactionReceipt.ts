@@ -155,7 +155,8 @@ export async function getSupertransactionReceipt(
 
         receipts = await Promise.all(
           explorerResponse.userOps
-            .filter((userOp) => {
+            .filter((userOp, index) => {
+              // Cleanup userOps are ignored for transaction receipt
               if (
                 userOp.isCleanUpUserOp &&
                 userOp.executionStatus !== "MINED_SUCCESS"
@@ -163,6 +164,10 @@ export async function getSupertransactionReceipt(
                 return false
               }
 
+              // Payment userOp is ignored for transaction receipt
+              if (index === 0) return false
+
+              // Only the main userOps will be considered
               return true
             })
             .map(async ({ chainId, executionData }, index) => {
