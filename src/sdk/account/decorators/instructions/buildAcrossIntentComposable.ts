@@ -16,9 +16,9 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { createChainAddressMap } from "../../../modules/utils/createChainAddressMap"
 import type { BaseInstructionsParams } from "../build"
+import buildBatch from "./buildBatch"
 import { buildComposableUtil } from "./buildComposable"
 import buildTransfer from "./buildTransfer"
-import buildBatch from "./buildBatch"
 
 /**
  * Default Across Intent Wrapper address
