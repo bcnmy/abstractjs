@@ -1,137 +1,69 @@
 {
   "name": "@biconomy/abstractjs",
   "version": "1.1.1",
-  "author": "Biconomy",
-  "repository": "github:bcnmy/abstractjs",
+  "description": "Biconomy SDK for building decentralized applications with ERC4337 Account Abstraction and Smart Accounts",
   "main": "./dist/_cjs/index.js",
   "module": "./dist/_esm/index.js",
-  "access": "public",
-  "devDependencies": {
-    "@biconomy/ecosystem": "0.5.2",
-    "@biomejs/biome": "1.9.4",
-    "@changesets/cli": "^2.28.1",
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
-    "@ethersproject/abi": "^5.8.0",
-    "@ethersproject/providers": "^5.8.0",
-    "@ethersproject/wallet": "^5.8.0",
-    "@metamask/delegation-toolkit": "^0.11.0",
-    "@pimlico/alto": "^0.0.4",
-    "@rhinestone/module-sdk": "0.2.7",
-    "@size-limit/esbuild-why": "^11.2.0",
-    "@size-limit/preset-small-lib": "^11.2.0",
-    "@types/bun": "^1.2.4",
-    "@types/yargs": "^17.0.33",
-    "@vitest/coverage-istanbul": "^3.0.7",
-    "buffer": "^6.0.3",
-    "concurrently": "^9.1.2",
-    "dotenv": "^16.4.7",
-    "ethers": "^6.13.5",
-    "execa": "^9.5.2",
-    "get-port": "^7.1.0",
-    "gh-pages": "^6.3.0",
-    "permissionless": "^0.2.47",
-    "prool": "^0.0.23",
-    "rimraf": "^6.0.1",
-    "simple-git-hooks": "^2.11.1",
-    "size-limit": "^11.2.0",
-    "ts-node": "^10.9.2",
-    "tsc-alias": "^1.8.16",
-    "tslib": "^2.8.1",
-    "typedoc": "^0.27.9",
-    "viem": "^2.26.2",
-    "vitest": "^3.0.7",
-    "yargs": "^17.7.2"
-  },
-  "peerDependencies": {
-    "@metamask/delegation-toolkit": "^0.11.0",
-    "@rhinestone/module-sdk": "0.2.7",
-    "typescript": "^5.8.2",
-    "viem": "^2.26.2"
-  },
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/_types/index.d.ts",
       "import": "./dist/_esm/index.js",
-      "default": "./dist/_cjs/index.js"
-    },
-    "./account": {
-      "types": "./_types/account/index.d.ts",
-      "import": "./_esm/account/index.js",
-      "default": "./_cjs/account/index.js"
-    },
-    "./bundler": {
-      "types": "./_types/bundler/index.d.ts",
-      "import": "./_esm/bundler/index.js",
-      "default": "./_cjs/bundler/index.js"
-    },
-    "./paymaster": {
-      "types": "./_types/paymaster/index.d.ts",
-      "import": "./_esm/paymaster/index.js",
-      "default": "./_cjs/paymaster/index.js"
-    },
-    "./modules": {
-      "types": "./_types/modules/index.d.ts",
-      "import": "./_esm/modules/index.js",
-      "default": "./_cjs/modules/index.js"
+      "require": "./dist/_cjs/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
-  "description": "SDK for Biconomy integration with support for account abstraction, smart accounts, ERC-4337.",
   "files": [
-    "dist/*",
-    "README.md"
+    "dist"
   ],
-  "homepage": "https://biconomy.io",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "size": "size-limit",
+    "fund:nexus": "tsx src/test/fundNexus.ts"
+  },
+  "dependencies": {
+    "@biconomy/ecosystem": "^1.0.0",
+    "@rhinestone/module-sdk": "^1.0.0",
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.5.0",
+    "@size-limit/preset-small-lib": "^11.0.0",
+    "@types/node": "^20.19.12",
+    "@vitest/coverage-v8": "^1.0.0",
+    "biome": "^1.5.0",
+    "dotenv": "^16.4.5",
+    "foundry": "^0.2.0",
+    "prool": "^0.0.0",
+    "size-limit": "^11.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.9.2",
+    "vitest": "^1.0.0"
+  },
   "keywords": [
-    "erc-7579",
-    "modular smart account",
-    "account abstraction",
     "biconomy",
+    "account-abstraction",
+    "erc4337",
+    "smart-accounts",
+    "blockchain",
+    "ethereum",
+    "dapp",
     "sdk"
   ],
+  "author": "Biconomy",
   "license": "MIT",
-  "scripts": {
-    "format": "biome format . --write",
-    "lint": "biome check .",
-    "lint:fix": "bun run lint --apply",
-    "dev": "bun run build && bun link && concurrently \"bun run esm:watch\" \"bun run cjs:watch\" \"bun run esm:watch:aliases\" \"bun run cjs:watch:aliases\"",
-    "build": "bun run clean && bun run build:cjs && bun run build:esm && bun run build:types",
-    "clean": "rimraf ./dist/_esm ./dist/_cjs ./dist/_types ./dist/tsconfig",
-    "coverage": "vitest run -c ./src/test/vitest.config.ts --coverage",
-    "test": "vitest run -c ./src/test/vitest.config.ts",
-    "test:watch": "vitest --watch -c ./src/test/vitest.config.ts",
-    "playground": "RUN_PLAYGROUND=true vitest -c ./src/test/vitest.config.ts -t=playground",
-    "playground:watch": "RUN_PLAYGROUND=true bun run test -t=playground --watch",
-    "fetch:tokenMap": "bun run scripts/fetch:tokenMap.ts && bun run lint:fix",
-    "size": "size-limit",
-    "docs": "typedoc --tsconfig ./tsconfig/tsconfig.esm.json",
-    "docs:deploy": "bun run docs && gh-pages -d docs",
-    "changeset": "changeset",
-    "changeset:release": "bun run build && changeset publish",
-    "changeset:version": "changeset version && bun install --lockfile-only",
-    "changeset:release:canary": "original_name=$(bun run scripts/publish:canary.ts | grep ORIGINAL_NAME | cut -d'=' -f2) && npm publish && git checkout package.json && git tag -l '*-canary.*' | xargs git tag -d && git fetch --tags && git reset --hard && git clean -fd && echo \"Published canary version of $original_name as latest\"",
-    "esm:watch": "tsc --project ./tsconfig/tsconfig.esm.json --watch",
-    "cjs:watch": "tsc --project ./tsconfig/tsconfig.cjs.json --watch",
-    "esm:watch:aliases": "tsc-alias -p ./tsconfig/tsconfig.esm.json --watch",
-    "cjs:watch:aliases": "tsc-alias -p ./tsconfig/tsconfig.cjs.json --watch",
-    "build:cjs": "tsc --project ./tsconfig/tsconfig.cjs.json && tsc-alias -p ./tsconfig/tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > ./dist/_cjs/package.json",
-    "build:esm": "tsc --project ./tsconfig/tsconfig.esm.json && tsc-alias -p ./tsconfig/tsconfig.esm.json && echo '{\"type\": \"module\",\"sideEffects\":false}' > ./dist/_esm/package.json",
-    "build:types": "tsc --project ./tsconfig/tsconfig.types.json && tsc-alias -p ./tsconfig/tsconfig.types.json",
-    "fetch:deployment": "bun run ./scripts/fetch:deployment.ts && bun run lint --apply-unsafe",
-    "fetch:deployment:raw": "bun run ./scripts/fetch:deployment.ts",
-    "fund:nexus": "bun run ./scripts/fund:nexus.ts"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bcnmy/abstractjs.git"
   },
-  "sideEffects": false,
-  "simple-git-hooks": {
-    "pre-commit": "bun run format && bun run lint:fix",
-    "commit-msg": "npx --no -- commitlint --edit ${1}"
+  "bugs": {
+    "url": "https://github.com/bcnmy/abstractjs/issues"
   },
-  "type": "module",
-  "types": "./dist/_types/index.d.ts",
-  "typings": "./dist/_types/index.d.ts"
+  "homepage": "https://biconomy.io"
 }

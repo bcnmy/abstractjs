@@ -82,12 +82,19 @@ export const useMeePermission = async (
         BigInt(userOpEntry.chainId)
     )
 
+                if (relevantIndex === -1) {
+              throw new Error(
+                `No session details found for chain ID ${userOpEntry.chainId}. ` +
+                `Available session details: ${sessionDetailsArray.length} entries.`
+              )
+            }
+
     // Mark the session as used or unused
     const dynamicMode = alreadyUsed ? SmartSessionMode.USE : mode
 
     // Set the session details for the user op
     userOpEntry.sessionDetails = {
-      ...sessionDetailsArray[relevantIndex],
+      ...sessionDetailsArray[relevantIndex], // ✅ SAFE: relevantIndex is guaranteed to be >= 0
       mode: dynamicMode
     }
 
