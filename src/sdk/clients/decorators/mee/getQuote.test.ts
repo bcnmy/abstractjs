@@ -2556,4 +2556,42 @@ describe("mee.getQuote", () => {
 
     expect(isDelegated).toBe(true)
   })
+
+  test("Should include gasRefundAddress in quote payment info if configured in feeToken", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({ account: mcNexus })
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id,
+        gasRefundAddress: eoaAccount.address
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.paymentInfo.gasRefundAddress).toEqual(eoaAccount.address)
+  })
 })

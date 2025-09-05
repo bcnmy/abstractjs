@@ -74,6 +74,12 @@ export type FeeTokenInfo = {
    * @example 1 // Ethereum Mainnet
    */
   chainId: number
+  /**
+   * Custom gas refund address to get the refunds for the remaining unspent gas. Defaults to Nexus SCA.
+   * The gas refunds will be always in ETH irrespective of any feeToken and will be refunded on multiple chains depends upon the userOps involved
+   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // can be any address such as EOA, SCA, etc...
+   */
+  gasRefundAddress?: Address
 }
 
 /**
@@ -397,6 +403,8 @@ export type PaymentInfo = {
   sponsored?: boolean
   /** Sponsorship url  */
   sponsorshipUrl?: Url
+  /** Custom gas refund address to get the refunds for the remaining unspent gas. Defaults to Nexus SCA. */
+  gasRefundAddress?: Address
 }
 
 /**
@@ -1051,6 +1059,9 @@ const preparePaymentInfo = async (
       verificationGasLimit:
         verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT,
       chainId: feeToken.chainId.toString(),
+      ...(feeToken.gasRefundAddress
+        ? { gasRefundAddress: feeToken.gasRefundAddress }
+        : {}),
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       ...initData,
       shortEncoding: shortEncodingSuperTxn,

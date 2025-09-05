@@ -11,10 +11,12 @@ import {
 import type { Instruction } from "../../../clients/decorators/mee"
 import {
   type RuntimeERC20BalanceOfParams,
+  greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
 import { createChainAddressMap } from "../../../modules/utils/createChainAddressMap"
 import type { BaseInstructionsParams } from "../build"
+import buildBatch from "./buildBatch"
 import { buildComposableUtil } from "./buildComposable"
 import buildTransfer from "./buildTransfer"
 
@@ -171,10 +173,12 @@ export const buildAcrossIntentComposable = async (
     "function depositV3Composable(address pool, address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputRatioPacked, uint256 destinationChainId, address exclusiveRelayer, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes calldata message) external payable"
   ])
 
+  const { constraints } = inputAmountRuntimeParams
+
   const wrapperRuntimeBalance = runtimeERC20BalanceOf({
     targetAddress: acrossIntentWrapperOnOrigin,
     tokenAddress: inputAmountRuntimeParams.tokenAddress,
-    constraints: inputAmountRuntimeParams.constraints
+    constraints: constraints ?? [greaterThanOrEqualTo(1n)]
   })
 
   const depositToPoolInstruction = await buildComposableUtil(
@@ -205,7 +209,12 @@ export const buildAcrossIntentComposable = async (
     true // efficientMode
   )
 
-  return [...transferFromNexusToWrapperInstruction, ...depositToPoolInstruction]
+  return buildBatch(baseParams, {
+    instructions: [
+      ...transferFromNexusToWrapperInstruction,
+      ...depositToPoolInstruction
+    ]
+  })
 }
 
 export default buildAcrossIntentComposable

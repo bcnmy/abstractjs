@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.1.5
+
+### Patch Changes
+
+- Added custom gas refund address param for the entrypoint refunds
+
 ## 1.1.4
 
 ### Patch Changes
@@ -17,6 +23,7 @@
   Breaking changes:
 
   1. Intent builder interface has changed a bit. Token field expects both mcToken and unified balance now
+
   ```
   mcNexus.build({
     type: "intent",
@@ -32,6 +39,7 @@
     }
   })
   ```
+
   2. `getPaymentToken` method has been renamed into `getSupportedFeeToken` now
 
 ## 1.1.3
