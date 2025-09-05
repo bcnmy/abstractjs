@@ -1542,9 +1542,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
-    // payment userops
-    expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
-
     // actual dev defined userops
     expect(userOps[1].executionStatus).to.be.eq("MINED_SUCCESS")
 
@@ -1561,7 +1558,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
   it("should composable cleanup execute when main userops fails", async () => {
     const amountToSupply = parseUnits("0.1", 6)
-    const amountToTransfer = parseUnits("1", 6)
+    const amountToTransfer = parseUnits("1000000", 6)
 
     const tx = await mcNexus
       .deploymentOn(chain.id)
@@ -1617,9 +1614,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         })
 
       expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-
-      // payment userops
-      expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
 
       // actual dev defined userops
       expect(userOps[1].executionStatus).to.be.eq("MINED_FAIL")

@@ -43,6 +43,7 @@ const DUMMY_USER_OP: MeeFilledUserOpDetails & UserOpStatus = {
   },
   userOpHash: "0x123",
   meeUserOpHash: "0x123",
+  shortEncoding: false,
   lowerBoundTimestamp: "1000000",
   upperBoundTimestamp: "1000000",
   maxGasLimit: "1000000",
@@ -66,6 +67,11 @@ const rejectedReceipt: PromiseSettledResult<TransactionReceipt> = {
 const successUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
   executionStatus: "SUCCESS"
+}
+
+const paymentUserOp: MeeFilledUserOpDetails & UserOpStatus = {
+  ...DUMMY_USER_OP,
+  executionStatus: "MINED_SUCCESS"
 }
 
 const minedSuccessUserOp: MeeFilledUserOpDetails & UserOpStatus = {
@@ -135,16 +141,21 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return MINED_SUCCESS with finalised=true when all userOps have MINED_SUCCESS status", async () => {
-    const userOps = [minedSuccessUserOp, minedSuccessUserOp, minedSuccessUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      minedSuccessUserOp,
+      minedSuccessUserOp
+    ]
 
     const result = await parseTransactionStatus(userOps)
     expect(result.status).toBe("MINED_SUCCESS")
     expect(result.isFinalised).toBe(true)
-    expect(result.message).toBe("[0] Transaction executed successfully")
+    expect(result.message).toBe("[1] Transaction executed successfully")
   })
 
   test("should return SUCCESS for legacy status handling with finalised=false", async () => {
-    const userOps = [successUserOp, successUserOp, successUserOp]
+    const userOps = [paymentUserOp, successUserOp, successUserOp, successUserOp]
 
     const result = await parseTransactionStatus(userOps)
     expect(result.status).toBe("PENDING") // Since we removed backward compatibility
@@ -153,7 +164,12 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return PENDING with finalised=false when any userOp has PENDING status", async () => {
-    const userOps = [minedSuccessUserOp, pendingUserOp, minedSuccessUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      pendingUserOp,
+      minedSuccessUserOp
+    ]
 
     const result = await parseTransactionStatus(userOps)
     expect(result.status).toBe("PENDING")
@@ -164,18 +180,29 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return MINING with finalised=false when any userOp has MINING status", async () => {
-    const userOps = [minedSuccessUserOp, miningUserOp, minedSuccessUserOp]
+    // Payment userOps will be skipped for main sprtx status
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      miningUserOp,
+      minedSuccessUserOp
+    ]
 
     const result = await parseTransactionStatus(userOps)
     expect(result.status).toBe("MINING")
     expect(result.isFinalised).toBe(false)
     expect(result.message).toBe(
-      "[1] Transaction is mining, waiting for blockchain confirmation"
+      "[2] Transaction is mining, waiting for blockchain confirmation"
     )
   })
 
   test("should return FAILED with finalised=false when mixed final and non-final userOps exist", async () => {
-    const userOps = [minedSuccessUserOp, failedUserOp, pendingUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      failedUserOp,
+      pendingUserOp
+    ]
     failedUserOp.executionError = "Test error message"
 
     const result = await parseTransactionStatus(userOps)
@@ -185,7 +212,12 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return FAILED with finalised=true when all userOps have final status", async () => {
-    const userOps = [minedSuccessUserOp, failedUserOp, minedSuccessUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      failedUserOp,
+      minedSuccessUserOp
+    ]
     failedUserOp.executionError = "Custom error message"
 
     const result = await parseTransactionStatus(userOps)
@@ -195,7 +227,12 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return MINED_FAIL with finalised=true when all userOps have final status", async () => {
-    const userOps = [minedSuccessUserOp, minedFailUserOp, minedSuccessUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      minedFailUserOp,
+      minedSuccessUserOp
+    ]
     minedFailUserOp.executionError = "UserOperation reverted"
 
     const result = await parseTransactionStatus(userOps)
@@ -205,7 +242,12 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return MINED_FAIL with finalised=false when mixed final and non-final userOps exist", async () => {
-    const userOps = [minedSuccessUserOp, minedFailUserOp, miningUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedSuccessUserOp,
+      minedFailUserOp,
+      miningUserOp
+    ]
     minedFailUserOp.executionError = "Transaction reverted on-chain"
 
     const result = await parseTransactionStatus(userOps)
@@ -215,7 +257,12 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should handle priority correctly - FAILED takes precedence over MINED_FAIL", async () => {
-    const userOps = [minedFailUserOp, failedUserOp, minedSuccessUserOp]
+    const userOps = [
+      paymentUserOp,
+      minedFailUserOp,
+      failedUserOp,
+      minedSuccessUserOp
+    ]
     failedUserOp.executionError = "Priority error message"
     minedFailUserOp.executionError = "Should not see this"
 
@@ -226,12 +273,17 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should handle priority correctly - MINING takes precedence over PENDING", async () => {
-    const userOps = [miningUserOp, pendingUserOp, minedSuccessUserOp]
+    const userOps = [
+      paymentUserOp,
+      miningUserOp,
+      pendingUserOp,
+      minedSuccessUserOp
+    ]
     const result = await parseTransactionStatus(userOps)
     expect(result.status).toBe("MINING")
     expect(result.isFinalised).toBe(false)
     expect(result.message).toContain(
-      "[0] Transaction is mining, waiting for blockchain confirmation"
+      "[1] Transaction is mining, waiting for blockchain confirmation"
     )
   })
 
