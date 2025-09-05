@@ -92,10 +92,11 @@ describe("mee.buildAcrossIntentComposable", () => {
         address: mcUSDC.addressOn(base.id),
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [mcNexus.addressOn(base.id)!]
+        args: [mcNexus.addressOn(base.id, true)]
       })
 
-      const actualInputAmount = parseUnits("0.5", 6) // USDC 6 decimals
+      // No need to deposit 0.5 now, because the nexus will always assumed to have fund. But here we are testing along with fusion mode as well
+      const actualInputAmount = 1n
       const benchmarkInputAmount = parseUnits("2", 6) // USDC 6 decimals
 
       const trigger: Trigger = {
@@ -107,12 +108,12 @@ describe("mee.buildAcrossIntentComposable", () => {
       const optimismToBaseAcrossCall = await mcNexus.buildComposable({
         type: "acrossIntent",
         data: {
-          depositor: mcNexus.addressOn(optimism.id)!,
-          recipient: mcNexus.addressOn(base.id)!,
+          depositor: mcNexus.addressOn(optimism.id, true),
+          recipient: mcNexus.addressOn(base.id, true),
           inputToken: mcUSDC.addressOn(optimism.id),
           outputToken: mcUSDC.addressOn(base.id),
           inputAmountRuntimeParams: {
-            targetAddress: mcNexus.addressOn(optimism.id)!,
+            targetAddress: mcNexus.addressOn(optimism.id, true),
             tokenAddress: mcUSDC.addressOn(optimism.id),
             constraints: []
           },
@@ -149,7 +150,7 @@ describe("mee.buildAcrossIntentComposable", () => {
         address: mcUSDC.addressOn(optimism.id),
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [mcNexus.addressOn(optimism.id)!]
+        args: [mcNexus.addressOn(optimism.id, true)]
       })
 
       expect(orchOnPaymentBalanceAfter).toEqual(0n)
@@ -158,7 +159,7 @@ describe("mee.buildAcrossIntentComposable", () => {
         address: mcUSDC.addressOn(base.id),
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [mcNexus.addressOn(base.id)!]
+        args: [mcNexus.addressOn(base.id, true)]
       })
 
       // expect the balance to be balance before + actual input amount - fees and fees are not more than 30%
@@ -176,12 +177,12 @@ describe("mee.buildAcrossIntentComposable", () => {
       const baseToOptimismAcrossCall = await mcNexus.buildComposable({
         type: "acrossIntent",
         data: {
-          depositor: mcNexus.addressOn(base.id)!,
-          recipient: eoaAccount.address,
+          depositor: mcNexus.addressOn(base.id, true),
+          recipient: mcNexus.addressOn(optimism.id, true),
           inputToken: mcUSDC.addressOn(base.id),
           outputToken: mcUSDC.addressOn(optimism.id),
           inputAmountRuntimeParams: {
-            targetAddress: mcNexus.addressOn(base.id)!,
+            targetAddress: mcNexus.addressOn(base.id, true),
             tokenAddress: mcUSDC.addressOn(base.id),
             constraints: []
           },
@@ -217,7 +218,7 @@ describe("mee.buildAcrossIntentComposable", () => {
         address: mcUSDC.addressOn(base.id),
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [mcNexus.addressOn(base.id)!]
+        args: [mcNexus.addressOn(base.id, true)]
       })
 
       expect(orchOnPaymentBalanceAfter).toEqual(0n)
