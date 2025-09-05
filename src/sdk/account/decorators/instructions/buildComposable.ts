@@ -9,6 +9,7 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
+import type { ComposabilityParams } from "../build"
 
 // type OverrideObjectValues<T, OverrideType> = {
 //   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type
@@ -48,9 +49,10 @@ export type BuildComposableParameters = {
 export const buildComposableCall = async (
   _baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters,
-  efficientMode: boolean
+  composabilityParameters: ComposabilityParams
 ): Promise<ComposableCall[]> => {
   const { to, gasLimit, value, functionName, args, abi } = parameters
+  const { efficientMode, composabilityVersion } = composabilityParameters
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
@@ -75,6 +77,9 @@ export const buildComposableCall = async (
   if (functionContext?.inputs?.length !== args?.length) {
     throw new Error(`Invalid arguments for the ${functionName} function`)
   }
+
+  // TODO: NOW DEPENDING ON THE COMPOSABILITY VERSION, 
+  // WE NEED TO PREPARE INPUT PARAMS AND COMPOSABLE CALL DIFFERENTLY
 
   const composableParams: InputParam[] = prepareComposableParams(
     [...functionContext.inputs],
@@ -146,11 +151,18 @@ export const buildComposableCall = async (
 export const buildComposableUtil = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters,
-  efficientMode = true
+  composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
 
-  const calls = await buildComposableCall(baseParams, parameters, efficientMode)
+  const calls = await buildComposableCall(
+    baseParams, 
+    parameters, 
+    {
+      efficientMode: composabilityParams.efficientMode ?? true,
+      composabilityVersion: composabilityParams.composabilityVersion
+    }
+  )
 
   return [
     ...currentInstructions,
@@ -179,6 +191,9 @@ const compressInputParams = (inputParams: InputParam[]): InputParam[] => {
     constraints: [],
     paramData: ""
   }
+
+  // TODO: support new composability version: FILTER INPUT PARAMS BY PARAM TYPE
+  // TARGET AND VALUE ARE NOT COMPRESSIBLE
 
   for (const param of inputParams) {
     // Static call or constraint based params are left as is

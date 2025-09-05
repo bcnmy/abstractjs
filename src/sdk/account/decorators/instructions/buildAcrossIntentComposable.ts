@@ -134,7 +134,9 @@ export const buildAcrossIntentComposable = async (
       tokenAddress: inputToken,
       amount: runtimeERC20BalanceOf(inputAmountRuntimeParams), // use without changes
       recipient: acrossIntentWrapperOnOrigin
-    }
+    },
+    true, // forceComposableEncoding => to save on the inner check that checks if one of the arguments is a runtime value
+    false // efficientMode => explicitly provided for readability
   )
 
   // 2. Deposit to Pool

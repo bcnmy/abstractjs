@@ -1,4 +1,4 @@
-import type { Address } from "viem"
+import { type Address, OneOf } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { RuntimeValue } from "../../modules"
 import buildAcrossIntentComposable, {
@@ -40,6 +40,7 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
+import { ComposabilityVersion } from "../../constants"
 
 /**
  * Parameters for a token builders
@@ -193,6 +194,12 @@ export type BuildMultichainInstructionInstruction = {
   efficientMode?: false // non composable currently => no need to compress
 }
 
+export type ComposabilityParams = {
+  forceComposableEncoding?: boolean
+  composabilityVersion?: ComposabilityVersion
+  efficientMode?: boolean
+}
+
 export type BaseInstructionTypes =
   | BuildIntentInstruction
   | BuildTransferFromInstruction
@@ -213,7 +220,11 @@ export type BuildInstructionTypes =
  * Union type of all possible build composable instruction types
  */
 export type BuildComposableInstructionTypes =
-  | BaseInstructionTypes
+  | BuildTransferFromInstruction
+  | BuildTransferInstruction
+  | BuildApproveInstruction
+  | BuildWithdrawalInstruction
+  | BuildBatchInstruction
   | BuildComposableInstruction
   | BuildComposableRawInstruction
   | BuildAcrossIntentComposableInstruction
@@ -299,18 +310,20 @@ export const build = async (
 }
 
 // Exactly same as build decorator, but forces to use composable call.
+// If this is used via mcNexus.buildComposable, then the composabilityVersion is auto-detected for all the required cases.
 export const buildComposable = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildComposableInstructionTypes
+  parameters: BuildComposableInstructionTypes,
+  composabilityVersion?: ComposabilityVersion
 ): Promise<Instruction[]> => {
   const { type, data, efficientMode } = parameters
 
   switch (type) {
     case "default": {
-      return buildComposableUtil(baseParams, data, efficientMode)
+      return buildComposableUtil(baseParams, data, {efficientMode, composabilityVersion})
     }
     case "rawCalldata": {
-      return buildRawComposable(baseParams, data)
+      return buildRawComposable(baseParams, data, {composabilityVersion})
     }
     case "transferFrom": {
       return buildTransferFrom(baseParams, data, true, efficientMode)
@@ -328,7 +341,7 @@ export const buildComposable = async (
       return buildBatch(baseParams, data)
     }
     case "acrossIntent": {
-      return buildAcrossIntentComposable(baseParams, data)
+      return buildAcrossIntentComposable(baseParams, data, {composabilityVersion})
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

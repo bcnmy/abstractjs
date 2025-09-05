@@ -54,6 +54,7 @@ import {
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
 import type { MultichainToken } from "./utils/Types"
+import { ComposabilityVersion } from "../constants"
 
 /**
  * Parameters required to create a multichain Nexus account
@@ -315,11 +316,39 @@ export async function toMultichainNexusAccount(
   const buildComposable = (
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
-  ): Promise<Instruction[]> =>
-    buildComposableDecorator(
+  ): Promise<Instruction[]> => {
+
+    let composabilityVersion: ComposabilityVersion | undefined = undefined;
+    let chainId: number | undefined = undefined;
+    
+    const type = params.type;
+    if (type === "batch") {
+      //do nothing
+    } else if (type === "acrossIntent") {
+      chainId = params.data.originChainId;
+    } else {
+      chainId = params.data.chainId;
+    }
+    
+    if (chainId) {
+      const chainConfiguration = chainConfigurations.find(
+        (chainConfiguration) => chainConfiguration.chain.id === chainId
+      )
+      if (!chainConfiguration) {
+        throw new Error(`Chain configuration not found in mc account for chainId: ${chainId} that is used in the instruction params`)
+      }
+      composabilityVersion = chainConfiguration.version.composabilityVersion;
+    }
+
+    // Debugging log TODO: Remove this
+    console.log(`Build Composable type: ${type} with composabilityVersion: ${composabilityVersion}`)
+
+    return buildComposableDecorator(
       { currentInstructions, accountAddress: baseAccount.signer.address },
-      params
+      params,
+      composabilityVersion
     )
+  }
 
   const buildBridgeInstructions = (
     params: Omit<MultichainBridgingParams, "account">
