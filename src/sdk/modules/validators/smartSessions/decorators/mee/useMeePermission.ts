@@ -77,17 +77,40 @@ export const useMeePermission = async (
     const alreadyUsed = !!modeMap[userOpEntry.chainId]
 
     const relevantIndex = sessionDetailsArray.findIndex(
-      ({ enableSessionData }) =>
-        enableSessionData?.enableSession?.sessionToEnable?.chainId ===
-        BigInt(userOpEntry.chainId)
+      ({ enableSessionData }) => {
+        const sessionChainId = enableSessionData?.enableSession?.sessionToEnable?.chainId
+        const userOpChainId = userOpEntry.chainId
+        
+        // Handle all type combinations properly
+        if (typeof sessionChainId === 'bigint' && typeof userOpChainId === 'number') {
+          return sessionChainId === BigInt(userOpChainId)
+        }
+        if (typeof sessionChainId === 'number' && typeof userOpChainId === 'bigint') {
+          return BigInt(sessionChainId) === userOpChainId
+        }
+        if (typeof sessionChainId === 'bigint' && typeof userOpChainId === 'bigint') {
+          return sessionChainId === userOpChainId
+        }
+        if (typeof sessionChainId === 'number' && typeof userOpChainId === 'number') {
+          return sessionChainId === userOpChainId
+        }
+        return false
+      }
     )
 
-    // Mark the session as used or unused
-    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : mode
+    if (relevantIndex === -1) {
+      throw new Error(
+        `No session details found for chain ID ${userOpEntry.chainId}. ` +
+        `Available session details: ${sessionDetailsArray.length} entries.`
+      )
+    }
+
+    const sessionDetails = sessionDetailsArray[relevantIndex]
+    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : sessionDetails.mode
 
     // Set the session details for the user op
     userOpEntry.sessionDetails = {
-      ...sessionDetailsArray[relevantIndex],
+      ...sessionDetails,
       mode: dynamicMode
     }
 
