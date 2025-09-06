@@ -1,6 +1,6 @@
+import { CHAIN_ID, DELEGATOR_CONTRACTS } from "@metamask/delegation-deployments"
 import {
-  CHAIN_ID,
-  DELEGATOR_CONTRACTS,
+  type Caveat,
   type MetaMaskSmartAccount,
   createCaveatBuilder,
   createOpenDelegation
@@ -164,7 +164,7 @@ export const signMMDtkQuote = async (
         delegate: openRootDelegation.delegate,
         delegator: openRootDelegation.delegator,
         authority: openRootDelegation.authority,
-        caveats: openRootDelegation.caveats.map((caveat) => ({
+        caveats: openRootDelegation.caveats.map((caveat: Caveat) => ({
           enforcer: caveat.enforcer,
           terms: caveat.terms,
           args: caveat.args

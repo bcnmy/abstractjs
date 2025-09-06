@@ -15,7 +15,8 @@
     "@ethersproject/abi": "^5.8.0",
     "@ethersproject/providers": "^5.8.0",
     "@ethersproject/wallet": "^5.8.0",
-    "@metamask/delegation-toolkit": "^0.11.0",
+    "@metamask/delegation-deployments": "^0.12.0",
+    "@metamask/delegation-toolkit": "^0.12.0",
     "@pimlico/alto": "^0.0.4",
     "@rhinestone/module-sdk": "0.2.7",
     "@size-limit/esbuild-why": "^11.2.0",
@@ -44,7 +45,8 @@
     "yargs": "^17.7.2"
   },
   "peerDependencies": {
-    "@metamask/delegation-toolkit": "^0.11.0",
+    "@metamask/delegation-deployments": "^0.12.0",
+    "@metamask/delegation-toolkit": "^0.12.0",
     "@rhinestone/module-sdk": "0.2.7",
     "typescript": "^5.8.2",
     "viem": "^2.26.2"

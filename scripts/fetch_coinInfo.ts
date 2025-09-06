@@ -1,5 +1,5 @@
 import path from "node:path"
-import { writeJsonToFile } from "./fetch:tokenMap"
+import { writeJsonToFile } from "./fetch_tokenMap"
 
 const coinId = "aave-v3-usdc"
 
