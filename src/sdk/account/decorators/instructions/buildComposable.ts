@@ -5,11 +5,14 @@ import {
   type ComposableCall,
   type InputParam,
   InputParamFetcherType,
-  prepareComposableParams
+  InputParamType,
+  prepareComposableInputCalldataParams
 } from "../../../modules/utils/composabilityCalls"
-import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
+import { FunctionContext, getFunctionContextFromAbi, RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
 import type { ComposabilityParams } from "../build"
+import { ComposabilityVersion } from "../../../constants"
+import { encodeAddress } from "../../../modules/utils/runtimeAbiEncoding"
 
 // type OverrideObjectValues<T, OverrideType> = {
 //   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type
@@ -37,22 +40,24 @@ import type { ComposabilityParams } from "../build"
  * Parameters for building a composable instruction
  */
 export type BuildComposableParameters = {
-  to: Address
+  to: Address | RuntimeValue
   functionName: string
   args: Array<AnyData> // This is being a generic function, if we add generic type, it is affecting previous parent function which can be handled later
   abi: Abi
   chainId: number
   gasLimit?: bigint
-  value?: bigint
+  value?: bigint | RuntimeValue
 }
 
 export const buildComposableCall = async (
-  _baseParams: BaseInstructionsParams,
   parameters: BuildComposableParameters,
   composabilityParameters: ComposabilityParams
 ): Promise<ComposableCall[]> => {
   const { to, gasLimit, value, functionName, args, abi } = parameters
-  const { efficientMode, composabilityVersion } = composabilityParameters
+  const { 
+    efficientMode = true,  // saving gas by default
+    composabilityVersion 
+  } = composabilityParameters
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
@@ -60,10 +65,6 @@ export const buildComposableCall = async (
 
   if (!abi) {
     throw new Error("Invalid ABI")
-  }
-
-  if (!isAddress(to)) {
-    throw new Error("Invalid target contract address")
   }
 
   if (args.length <= 0) {
@@ -78,31 +79,92 @@ export const buildComposableCall = async (
     throw new Error(`Invalid arguments for the ${functionName} function`)
   }
 
-  // TODO: NOW DEPENDING ON THE COMPOSABILITY VERSION, 
-  // WE NEED TO PREPARE INPUT PARAMS AND COMPOSABLE CALL DIFFERENTLY
-
-  const composableParams: InputParam[] = prepareComposableParams(
+  const versionAgnosticComposableInputParams: InputParam[] = prepareComposableInputCalldataParams(
     [...functionContext.inputs],
-    args
+    args,
   )
 
-  const composableCalls: ComposableCall[] = []
+  const composableCall = resolveComposableCallVersion(
+    composabilityVersion, 
+    efficientMode, 
+    versionAgnosticComposableInputParams, 
+    functionContext.functionSig, 
+    to, 
+    value,
+    gasLimit
+  )
 
-  const composableCall: ComposableCall = {
-    to: to,
-    value: value ?? BigInt(0),
-    functionSig: functionContext.functionSig,
-    inputParams: efficientMode
-      ? compressInputParams(composableParams)
-      : composableParams,
-    //inputParams: composableParams,
-    outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
-    ...(gasLimit ? { gasLimit } : {})
+  console.log("composableCall", composableCall)
+
+  return [composableCall]
+}
+
+/**
+ * Formats the composable call version based on the composability version
+ * @param composabilityVersion 
+ * @param efficientMode 
+ * @param versionAgnosticComposableInputParams 
+ * @param functionContext 
+ * @param to 
+ * @param value 
+ * @param gasLimit 
+ * @returns 
+ */
+export const resolveComposableCallVersion = (
+  composabilityVersion: ComposabilityVersion,
+  efficientMode: boolean,
+  versionAgnosticComposableInputParams: InputParam[],
+  functionSig: string,
+  to: Address | RuntimeValue,
+  value?: bigint | RuntimeValue,
+  gasLimit?: bigint,
+): ComposableCall => {
+  let composableInputParams: InputParam[];
+  let composableCall: ComposableCall;
+  // Handle different composability versions
+  if(composabilityVersion === ComposabilityVersion.V1_0_0) {
+    composableInputParams = versionAgnosticComposableInputParams
+    if(!isAddress(to as Address)) {
+      throw new Error("Invalid target contract address")
+    }
+    // format composable call for composability version 1.0.0 with to and value
+    composableCall = {
+      to: to as Address,
+      value: value as bigint ?? BigInt(0),
+      functionSig,
+      inputParams: efficientMode
+        ? compressCalldataInputParams(composableInputParams)
+        : composableInputParams,
+      //inputParams: composableParams,
+      outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
+      ...(gasLimit ? { gasLimit } : {})
+    }
+  } else {
+      composableInputParams = versionAgnosticComposableInputParams.map(param => ({
+        ...param,
+        paramType: InputParamType.CALL_DATA
+      }))
+      const callDataInputParams = efficientMode
+        ? compressCalldataInputParams(composableInputParams)
+        : composableInputParams
+
+      const {targetInputParam, valueInputParam} = prepareTargetAndValueInputParams(to, value)
+
+      const inputParams = [
+        ...callDataInputParams,
+        targetInputParam,
+        valueInputParam
+      ]
+
+      // format composable call for composability version 1.1.0+ with target and value as input params
+      composableCall = {      
+        functionSig,
+        inputParams: inputParams,
+        outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
+        ...(gasLimit ? { gasLimit } : {})
+      }
   }
-
-  composableCalls.push(composableCall)
-
-  return composableCalls
+  return composableCall
 }
 
 /**
@@ -155,14 +217,7 @@ export const buildComposableUtil = async (
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
 
-  const calls = await buildComposableCall(
-    baseParams, 
-    parameters, 
-    {
-      efficientMode: composabilityParams.efficientMode ?? true,
-      composabilityVersion: composabilityParams.composabilityVersion
-    }
-  )
+  const calls = await buildComposableCall(parameters, composabilityParams)
 
   return [
     ...currentInstructions,
@@ -184,18 +239,15 @@ export default buildComposableUtil
  * It allows for less input params in the composable call => less iterations in the composable smart contract
  * => less gas used
  */
-const compressInputParams = (inputParams: InputParam[]): InputParam[] => {
+const compressCalldataInputParams = (inputParams: InputParam[]): InputParam[] => {
   const compressedParams: InputParam[] = []
   let currentParam: InputParam = {
     fetcherType: InputParamFetcherType.RAW_BYTES,
     constraints: [],
     paramData: ""
   }
-
-  // TODO: support new composability version: FILTER INPUT PARAMS BY PARAM TYPE
-  // TARGET AND VALUE ARE NOT COMPRESSIBLE
-
-  for (const param of inputParams) {
+  // compress only calldata input params
+  for (const param of inputParams.filter(param => param.paramType === InputParamType.CALL_DATA)) {
     // Static call or constraint based params are left as is
     if (
       param.fetcherType === InputParamFetcherType.STATIC_CALL ||
@@ -228,4 +280,39 @@ const compressInputParams = (inputParams: InputParam[]): InputParam[] => {
   }
 
   return compressedParams
+}
+
+const prepareTargetAndValueInputParams = (to: Address | RuntimeValue, value?: bigint | RuntimeValue): {targetInputParam: InputParam, valueInputParam: InputParam} => {
+  // Prepare target and value input params
+  // if to is of type Address, then we need to prepare the target input param as raw_bytes
+  // else if to is of type RuntimeValue, then we need to prepare the target input param
+  let targetInputParam: InputParam
+  if(isAddress(to as Address)) {
+    targetInputParam = { 
+      paramType: InputParamType.TARGET, 
+      fetcherType: InputParamFetcherType.RAW_BYTES, 
+      paramData: encodeAddress(to as Address).data[0] as `0x${string}`, 
+      constraints: [] 
+    }
+  } else {
+    targetInputParam = { ...(to as RuntimeValue).inputParams[0], paramType: InputParamType.TARGET }
+  }
+
+  let valueInputParam: InputParam
+  if(!value) {
+    // value not provided, default to 0
+    valueInputParam = { paramType: InputParamType.VALUE, fetcherType: InputParamFetcherType.RAW_BYTES, paramData: "0x00", constraints: [] }
+  } else if ((value as RuntimeValue).isRuntime && (value as RuntimeValue).inputParams.length > 0) {
+    // value is a runtime value, use the first input param
+    valueInputParam = { ...(value as RuntimeValue).inputParams[0], paramType: InputParamType.VALUE }
+  } else {
+    // value is a static value, use it as raw_bytes
+    valueInputParam = { 
+      paramType: InputParamType.VALUE, 
+      fetcherType: InputParamFetcherType.RAW_BYTES, 
+      paramData: (value as bigint).toString(16).padStart(64, '0') as `0x${string}`,
+      constraints: [] 
+    }
+  }
+  return {targetInputParam, valueInputParam}
 }

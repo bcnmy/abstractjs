@@ -52,7 +52,6 @@ export type FunctionContext = {
 
 export type RuntimeValue = {
   isRuntime: boolean
-  // hasNested: boolean
   inputParams: InputParam[]
   outputParams: OutputParam[]
 }
@@ -194,7 +193,7 @@ const encodeBool = (value: boolean): PreparedParam => {
 
 // Address value is converted into 32 bytes hex
 // Example: 0x000...g132gj1 for false
-const encodeAddress = (value: Hex): PreparedParam => {
+export const encodeAddress = (value: Hex): PreparedParam => {
   if (!isAddress(value)) throw new InvalidAddressError({ address: value })
 
   // Simply converting a address into hex value

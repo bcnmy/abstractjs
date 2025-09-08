@@ -1,5 +1,6 @@
 import { type Address, OneOf } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
@@ -40,7 +41,6 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
-import { ComposabilityVersion } from "../../constants"
 
 /**
  * Parameters for a token builders
@@ -195,8 +195,8 @@ export type BuildMultichainInstructionInstruction = {
 }
 
 export type ComposabilityParams = {
+  composabilityVersion: ComposabilityVersion
   forceComposableEncoding?: boolean
-  composabilityVersion?: ComposabilityVersion
   efficientMode?: boolean
 }
 
@@ -318,12 +318,24 @@ export const buildComposable = async (
 ): Promise<Instruction[]> => {
   const { type, data, efficientMode } = parameters
 
+  // in batch mode only, we do not need to specify the composability version
+  if (type !== "batch" && !composabilityVersion) {
+    throw new Error(`Composability version is required for composable type: ${type}`)
+  }
+
   switch (type) {
     case "default": {
-      return buildComposableUtil(baseParams, data, {efficientMode, composabilityVersion})
+      return buildComposableUtil(
+        baseParams, 
+        data, 
+        {
+          composabilityVersion: composabilityVersion!,
+          efficientMode,
+        }
+      )
     }
     case "rawCalldata": {
-      return buildRawComposable(baseParams, data, {composabilityVersion})
+      return buildRawComposable(baseParams, data, { composabilityVersion: composabilityVersion! })
     }
     case "transferFrom": {
       return buildTransferFrom(baseParams, data, true, efficientMode)
@@ -341,7 +353,9 @@ export const buildComposable = async (
       return buildBatch(baseParams, data)
     }
     case "acrossIntent": {
-      return buildAcrossIntentComposable(baseParams, data, {composabilityVersion})
+      return buildAcrossIntentComposable(baseParams, data, {
+        composabilityVersion
+      })
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

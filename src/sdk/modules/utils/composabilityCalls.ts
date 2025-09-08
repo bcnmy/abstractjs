@@ -2,6 +2,7 @@ import {
   type AbiParameter,
   type Address,
   type Hex,
+  OneOf,
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
@@ -15,7 +16,15 @@ import {
   encodeRuntimeFunctionData
 } from "./runtimeAbiEncoding"
 
+/**
+ * fetcherType: Defines how to fetch the param
+ * paramData: The data that is used duting fetching the param
+ * constraints: The constraints that the resulting param needs to satisfy
+ * paramType: The type of the param. This field is optional and it is introduced in the composability version 1.1.0
+ * If earlier versions are used, this field may not not present.
+ */
 export type InputParam = {
+  paramType?: InputParamType
   fetcherType: InputParamFetcherType
   paramData: string
   constraints: Constraint[]
@@ -26,9 +35,16 @@ export type OutputParam = {
   paramData: string
 }
 
+export const InputParamType = {
+  TARGET: 0,
+  VALUE: 1,
+  CALL_DATA: 2
+} as const
+
 export const InputParamFetcherType = {
   RAW_BYTES: 0,
-  STATIC_CALL: 1
+  STATIC_CALL: 1,
+  BALANCE: 2
 } as const
 
 export const OutputParamFetcherType = {
@@ -49,15 +65,27 @@ export type OutputParamFetcherType =
   (typeof OutputParamFetcherType)[keyof typeof OutputParamFetcherType]
 export type ConstraintType =
   (typeof ConstraintType)[keyof typeof ConstraintType]
+export type InputParamType =
+  (typeof InputParamType)[keyof typeof InputParamType]
 
 export type Constraint = {
   constraintType: ConstraintType
   referenceData: string
 }
 
+/**
+ * Base composable call type
+ * @param functionSig - The function signature of the composable call
+ * @param inputParams - The input parameters of the composable call
+ * @param outputParams - The output parameters of the composable call
+ * @param to - The address of the target contract. 
+ * @param value - The value of the composable call.
+ * Since Composability version 1.1.0, to and value are not required 
+ * as they are replaced by the input params with according types (TARGET, VALUE)
+ */
 export type BaseComposableCall = {
-  to: Address
-  value: bigint
+  to?: Address
+  value?: bigint
   functionSig: string
   inputParams: InputParam[]
   outputParams: OutputParam[]
@@ -280,6 +308,10 @@ export const runtimeERC20AllowanceOf = ({
   }
 }
 
+// COMPOS 1.1.0 TODO:  
+// Add native runtime balance function
+
+// COMPOS 1.1.0 TODO:  Make it use BALANCE fetcherType
 export const runtimeERC20BalanceOf = ({
   targetAddress,
   tokenAddress,
@@ -358,7 +390,7 @@ export const runtimeEncodeAbiParameters = (
   args: Array<AnyData>
 ): RuntimeValue => {
   // prepare functionContext and args out of what this helper is expecting
-  const inputParams: InputParam[] = prepareComposableParams(inputs, args)
+  const inputParams: InputParam[] = prepareComposableInputCalldataParams(inputs, args)
 
   // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
   // wrapped into a RuntimeValue object with several InputParam's.
@@ -415,7 +447,7 @@ export const isComposableCallRequired = (
   return isComposableCall
 }
 
-export const prepareComposableParams = (
+export const prepareComposableInputCalldataParams = (
   inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {

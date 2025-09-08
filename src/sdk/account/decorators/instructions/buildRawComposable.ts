@@ -5,17 +5,19 @@ import {
   type InputParam,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
-import type { BaseInstructionsParams } from "../build"
+import type { BaseInstructionsParams, ComposabilityParams } from "../build"
+import { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
+import { resolveComposableCallVersion } from "./buildComposable"
 
 /**
  * Parameters for building a raw composable instruction
  */
 export type BuildRawComposableParameters = {
-  to: Address
+  to: Address | RuntimeValue
   calldata: Hex
   chainId: number
   gasLimit?: bigint
-  value?: bigint
+  value?: bigint | RuntimeValue
 }
 
 /**
@@ -48,14 +50,12 @@ export type BuildRawComposableParameters = {
  */
 export const buildRawComposable = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildRawComposableParameters
+  parameters: BuildRawComposableParameters,
+  composabilityParameters: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { to, calldata, gasLimit, value, chainId } = parameters
-
-  if (!isAddress(to)) {
-    throw new Error("Invalid target contract address")
-  }
+  const { composabilityVersion } = composabilityParameters
 
   if (calldata.length < 10 || !calldata.startsWith("0x")) {
     throw new Error("Invalid calldata")
@@ -63,27 +63,24 @@ export const buildRawComposable = async (
 
   const functionSig = calldata.slice(0, 10) as Hex
 
-  const composableParams: InputParam[] = prepareRawComposableParams(
+  const versionAgnosticComposableParams: InputParam[] = prepareRawComposableParams(
     `0x${calldata.slice(10)}` as Hex
   )
 
-  const composableCalls: ComposableCall[] = []
-
-  const composableCall: ComposableCall = {
-    to,
-    value: value ?? BigInt(0),
+  const composableCall: ComposableCall = resolveComposableCallVersion(
+    composabilityVersion,
+    false, // efficientMode is false for raw composable calls
+    versionAgnosticComposableParams,
     functionSig,
-    inputParams: composableParams,
-    outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
-    ...(gasLimit ? { gasLimit } : {})
-  }
-
-  composableCalls.push(composableCall)
+    to,
+    value,
+    gasLimit
+  )
 
   return [
     ...currentInstructions,
     {
-      calls: composableCalls,
+      calls: [composableCall],
       chainId,
       isComposable: true
     }

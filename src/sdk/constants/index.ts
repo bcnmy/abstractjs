@@ -9,7 +9,7 @@ export * from "./protocols"
  * Supported MEE versions with descriptions.
  */
 export enum MEEVersion {
-  /** 
+  /**
    * Nexus 1.2.1
    * - Composability 1.1.0
    * - 7702 accounts initialization with eoa's signature (relayers' support)

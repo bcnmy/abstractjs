@@ -702,6 +702,10 @@ export const toNexusAccount = async (
   const encodeExecuteComposable = async (
     calls: ComposableCall[]
   ): Promise<Hex> => {
+
+    // COMPOS 1.1.0 TODO: account for the new executeComposable interface with the 
+    // new types
+
     const composableCalls: BaseComposableCall[] = calls.map((call) => {
       return {
         to: call.to,
