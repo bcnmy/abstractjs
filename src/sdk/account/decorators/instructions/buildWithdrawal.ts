@@ -4,6 +4,7 @@ import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
+  InputParamFetcherType,
   isComposableCallRequired,
   isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
@@ -12,11 +13,13 @@ import {
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
 import { addressEquals } from "../../utils"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type { BaseInstructionsParams, ComposabilityParams, TokenParams } from "../build"
 import {
   type BuildComposableParameters,
-  buildComposableCall
+  buildComposableCall,
+  buildValueTransferComposableCall
 } from "./buildComposable"
+import { ComposabilityVersion } from "../../../constants"
 
 /**
  * Parameters for building a transfer instruction
@@ -30,6 +33,7 @@ export type BuildWithdrawalParameters = TokenParams & {
   gasLimit?: bigint
   /**
    * Recipient address. Defaults to the account's signer address.
+   * Is not injectable in case of withdrawals.
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   recipient?: Address
@@ -79,8 +83,7 @@ export type BuildWithdrawalParams = BaseInstructionsParams & {
 export const buildWithdrawal = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildWithdrawalParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], accountAddress } = baseParams
   const {
@@ -90,26 +93,41 @@ export const buildWithdrawal = async (
     gasLimit,
     recipient = accountAddress // EOA or owner account address
   } = parameters
+  const { forceComposableEncoding = false, composabilityVersion } = composabilityParams
 
   const isNativeToken = addressEquals(
-    tokenAddress,
+    tokenAddress as Address,
     "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  ) || addressEquals(
+    tokenAddress as Address,
+    "0x0000000000000000000000000000000000000000"
   )
 
-  let triggerCalls: AbstractCall[] | ComposableCall[]
+  let withdrawalCall: AbstractCall[] | ComposableCall[]
 
   if (isNativeToken) {
     if (isRuntimeComposableValue(amount)) {
-      throw new Error("Runtime balance is not supported for Native tokens")
-    }
-
-    triggerCalls = [
-      {
-        to: recipient,
-        value: amount as bigint,
-        ...(gasLimit ? { gasLimit } : {})
+      if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+        throw new Error("Runtime balance for Native tokens is not supported for Composability v1.0.0")
       }
-    ]
+      withdrawalCall = await buildValueTransferComposableCall(
+        {
+          to: recipient,
+          value: amount,
+          chainId,
+          ...(gasLimit ? { gasLimit } : {})
+        }
+      )
+    } else {
+      // not composable call
+      withdrawalCall = [
+        {
+          to: recipient as Address,
+          value: amount as bigint,
+          ...(gasLimit ? { gasLimit } : {})
+        } as AbstractCall
+      ] 
+    }
   } else {
     const abi = TokenWithPermitAbi
     const functionSig = "transfer"
@@ -139,22 +157,21 @@ export const buildWithdrawal = async (
         ...(gasLimit ? { gasLimit } : {})
       }
 
-      triggerCalls = await buildComposableCall(
-        baseParams,
+      withdrawalCall = await buildComposableCall(
         composableCallParams,
-        efficientMode
+        composabilityParams
       )
 
       return [
         ...currentInstructions,
         {
-          calls: triggerCalls,
+          calls: withdrawalCall,
           chainId,
           isComposable: true
         }
       ]
     }
-    triggerCalls = [
+    withdrawalCall = [
       {
         to: tokenAddress,
         data: encodeFunctionData({
@@ -170,7 +187,7 @@ export const buildWithdrawal = async (
   return [
     ...currentInstructions,
     {
-      calls: triggerCalls,
+      calls: withdrawalCall,
       chainId
     }
   ]

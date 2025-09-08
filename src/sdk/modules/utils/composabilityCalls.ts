@@ -78,9 +78,9 @@ export type Constraint = {
  * @param functionSig - The function signature of the composable call
  * @param inputParams - The input parameters of the composable call
  * @param outputParams - The output parameters of the composable call
- * @param to - The address of the target contract. 
+ * @param to - The address of the target contract.
  * @param value - The value of the composable call.
- * Since Composability version 1.1.0, to and value are not required 
+ * Since Composability version 1.1.0, to and value are not required
  * as they are replaced by the input params with according types (TARGET, VALUE)
  */
 export type BaseComposableCall = {
@@ -308,7 +308,7 @@ export const runtimeERC20AllowanceOf = ({
   }
 }
 
-// COMPOS 1.1.0 TODO:  
+// COMPOS 1.1.0 TODO:
 // Add native runtime balance function
 
 // COMPOS 1.1.0 TODO:  Make it use BALANCE fetcherType
@@ -390,7 +390,10 @@ export const runtimeEncodeAbiParameters = (
   args: Array<AnyData>
 ): RuntimeValue => {
   // prepare functionContext and args out of what this helper is expecting
-  const inputParams: InputParam[] = prepareComposableInputCalldataParams(inputs, args)
+  const inputParams: InputParam[] = prepareComposableInputCalldataParams(
+    inputs,
+    args
+  )
 
   // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
   // wrapped into a RuntimeValue object with several InputParam's.

@@ -10,7 +10,7 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type { BaseInstructionsParams, ComposabilityParams, TokenParams } from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -77,11 +77,11 @@ export type BuildTransferParams = BaseInstructionsParams & {
 export const buildTransfer = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, recipient } = parameters
+  const { forceComposableEncoding = false} = composabilityParams
 
   const abi = TokenWithPermitAbi
   const functionSig = "transfer"
@@ -114,9 +114,8 @@ export const buildTransfer = async (
     }
 
     triggerCalls = await buildComposableCall(
-      baseParams,
       composableCallParams,
-      efficientMode
+      composabilityParams
     )
   } else {
     triggerCalls = [

@@ -50,7 +50,7 @@ export type TokenParams = {
    * The address of the token to use on the relevant chain
    * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
    */
-  tokenAddress: Address
+  tokenAddress: Address | RuntimeValue
   /**
    * The chainId to use
    * @example 1 // Ethereum Mainnet
@@ -320,31 +320,31 @@ export const buildComposable = async (
 
   // in batch mode only, we do not need to specify the composability version
   if (type !== "batch" && !composabilityVersion) {
-    throw new Error(`Composability version is required for composable type: ${type}`)
+    throw new Error(
+      `Composability version param is required for composable type: ${type}`
+    )
   }
 
   switch (type) {
     case "default": {
-      return buildComposableUtil(
-        baseParams, 
-        data, 
-        {
-          composabilityVersion: composabilityVersion!,
-          efficientMode,
-        }
-      )
+      return buildComposableUtil(baseParams, data, {
+        composabilityVersion: composabilityVersion!,
+        efficientMode
+      })
     }
     case "rawCalldata": {
-      return buildRawComposable(baseParams, data, { composabilityVersion: composabilityVersion! })
+      return buildRawComposable(baseParams, data, {
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data, true, efficientMode)
+      return buildTransferFrom(baseParams, data, { forceComposableEncoding: true, efficientMode, composabilityVersion: composabilityVersion! })
     }
     case "transfer": {
-      return buildTransfer(baseParams, data, true, efficientMode)
+      return buildTransfer(baseParams, data, { forceComposableEncoding: true, efficientMode, composabilityVersion: composabilityVersion! })
     }
     case "approve": {
-      return buildApprove(baseParams, data, true, efficientMode)
+      return buildApprove(baseParams, data, { forceComposableEncoding: true, efficientMode, composabilityVersion: composabilityVersion! })
     }
     case "withdrawal": {
       return buildWithdrawal(baseParams, data, true, efficientMode)

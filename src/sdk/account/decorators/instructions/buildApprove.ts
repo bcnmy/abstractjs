@@ -9,7 +9,7 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type { BaseInstructionsParams, ComposabilityParams, TokenParams } from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -77,11 +77,11 @@ export type BuildApproveParams = BaseInstructionsParams & {
 export const buildApprove = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildApproveParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
+  const { forceComposableEncoding = false } = composabilityParams
 
   const abi = erc20Abi
   const functionSig = "approve"
@@ -100,7 +100,7 @@ export const buildApprove = async (
         args as unknown as Array<AnyData>
       )
 
-  let triggerCalls: AbstractCall[] | ComposableCall[]
+  let approvalCall: AbstractCall[] | ComposableCall[]
 
   // If the composable call is detected ? The call needs to composed with runtime encoding
   if (isComposableCall) {
@@ -113,13 +113,12 @@ export const buildApprove = async (
       ...(gasLimit ? { gasLimit } : {})
     }
 
-    triggerCalls = await buildComposableCall(
-      baseParams,
+    approvalCall = await buildComposableCall(
       composableCallParams,
-      efficientMode
+      composabilityParams
     )
   } else {
-    triggerCalls = [
+    approvalCall = [
       {
         to: tokenAddress,
         data: encodeFunctionData({
@@ -135,7 +134,7 @@ export const buildApprove = async (
   return [
     ...currentInstructions,
     {
-      calls: triggerCalls,
+      calls: approvalCall,
       chainId,
       isComposable: isComposableCall
     }

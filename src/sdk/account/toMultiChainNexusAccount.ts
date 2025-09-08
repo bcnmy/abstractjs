@@ -329,6 +329,7 @@ export async function toMultichainNexusAccount(
       chainId = params.data.chainId
     }
 
+    // TODO:convert to getComposabilityVersion(chainId)
     if (chainId) {
       const chainConfiguration = chainConfigurations.find(
         (chainConfiguration) => chainConfiguration.chain.id === chainId

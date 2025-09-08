@@ -5,9 +5,9 @@ import {
   type InputParam,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
+import type { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
-import { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
-import { resolveComposableCallVersion } from "./buildComposable"
+import { formatComposableCallWithVersion } from "./buildComposable"
 
 /**
  * Parameters for building a raw composable instruction
@@ -63,11 +63,10 @@ export const buildRawComposable = async (
 
   const functionSig = calldata.slice(0, 10) as Hex
 
-  const versionAgnosticComposableParams: InputParam[] = prepareRawComposableParams(
-    `0x${calldata.slice(10)}` as Hex
-  )
+  const versionAgnosticComposableParams: InputParam[] =
+    prepareRawComposableParams(`0x${calldata.slice(10)}` as Hex)
 
-  const composableCall: ComposableCall = resolveComposableCallVersion(
+  const composableCall: ComposableCall = formatComposableCallWithVersion(
     composabilityVersion,
     false, // efficientMode is false for raw composable calls
     versionAgnosticComposableParams,
