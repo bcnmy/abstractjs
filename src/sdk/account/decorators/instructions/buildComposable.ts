@@ -64,7 +64,7 @@ export type BuildValueTransferComposableParameters = {
 export const buildValueTransferComposableCall = async (
   parameters: BuildValueTransferComposableParameters
 ): Promise<ComposableCall[]> => {
-  const { to, gasLimit, value, chainId } = parameters
+  const { to, gasLimit, value } = parameters
 
   const { targetInputParam, valueInputParam } =
     prepareTargetAndValueInputParams(to, value)
@@ -89,6 +89,12 @@ export const buildComposableCall = async (
     efficientMode = true, // saving gas by default
     composabilityVersion
   } = composabilityParameters
+
+  if (!composabilityVersion) {
+    throw new Error(`Composability version is required to build a composable call. 
+      This error may be caused by using a non-composable .build decorator with a composable call. 
+      Please use buildComposable instead.`) 
+  }
 
   if (!functionName || !args) {
     throw new Error("Invalid params for composable call")
@@ -185,8 +191,8 @@ export const formatComposableCallWithVersion = (
     const inputParams = [
       ...callDataInputParams,
       targetInputParam,
-      valueInputParam
-    ]
+      ...(valueInputParam ? [valueInputParam] : []) // do not add valueInputParam if it is undefined
+    ] 
 
     // format composable call for composability version 1.1.0+ with target and value as input params
     composableCall = {
@@ -321,7 +327,7 @@ const compressCalldataInputParams = (
 const prepareTargetAndValueInputParams = (
   to: Address | RuntimeValue,
   value?: bigint | RuntimeValue
-): { targetInputParam: InputParam; valueInputParam: InputParam } => {
+): { targetInputParam: InputParam; valueInputParam: InputParam | undefined } => {
   // Prepare target and value input params
   // if to is of type Address, then we need to prepare the target input param as raw_bytes
   // else if to is of type RuntimeValue, then we need to prepare the target input param
@@ -340,15 +346,13 @@ const prepareTargetAndValueInputParams = (
     }
   }
 
-  let valueInputParam: InputParam
+  let valueInputParam: InputParam | undefined
   if (!value) {
     // value not provided, default to 0
-    valueInputParam = {
-      paramType: InputParamType.VALUE,
-      fetcherType: InputParamFetcherType.RAW_BYTES,
-      paramData: "0x00",
-      constraints: []
-    }
+    valueInputParam = undefined
+    // undefined valueInputParam would not be added to the composable call
+    // and then the smart contract will use the default value of 0
+    // thus saving gas on processing one input param
   } else if (
     (value as RuntimeValue).isRuntime &&
     (value as RuntimeValue).inputParams.length > 0
@@ -360,13 +364,15 @@ const prepareTargetAndValueInputParams = (
     }
   } else {
     // value is a static value, use it as raw_bytes
-    valueInputParam = {
-      paramType: InputParamType.VALUE,
-      fetcherType: InputParamFetcherType.RAW_BYTES,
-      paramData: (value as bigint)
-        .toString(16)
-        .padStart(64, "0") as `0x${string}`,
-      constraints: []
+    if (value !== 0n) {
+        valueInputParam = {
+        paramType: InputParamType.VALUE,
+        fetcherType: InputParamFetcherType.RAW_BYTES,
+        paramData: (value as bigint)
+          .toString(16)
+          .padStart(64, "0") as `0x${string}`,
+        constraints: []
+      }
     }
   }
   return { targetInputParam, valueInputParam }

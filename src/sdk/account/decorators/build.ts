@@ -195,7 +195,7 @@ export type BuildMultichainInstructionInstruction = {
 }
 
 export type ComposabilityParams = {
-  composabilityVersion: ComposabilityVersion
+  composabilityVersion?: ComposabilityVersion
   forceComposableEncoding?: boolean
   efficientMode?: boolean
 }
@@ -286,16 +286,16 @@ export const build = async (
       return buildDefaultInstructions(baseParams, data)
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data)
+      return buildTransferFrom(baseParams, data, {forceComposableEncoding: false})
     }
     case "transfer": {
-      return buildTransfer(baseParams, data)
+      return buildTransfer(baseParams, data, {forceComposableEncoding: false})
     }
     case "approve": {
-      return buildApprove(baseParams, data)
+      return buildApprove(baseParams, data, {forceComposableEncoding: false})
     }
     case "withdrawal": {
-      return buildWithdrawal(baseParams, data)
+      return buildWithdrawal(baseParams, data, {forceComposableEncoding: false})
     }
     case "batch": {
       return buildBatch(baseParams, data)
@@ -372,8 +372,8 @@ export const buildComposable = async (
       return buildAcrossIntentComposable(baseParams, data, {
         composabilityVersion: composabilityVersion!,
         efficientMode: false, // nothing to group in this case
-        forceComposableEncoding: true // bot subactions are composable 
-      }) 
+        forceComposableEncoding: true // bot subactions are composable
+      })
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

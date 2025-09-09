@@ -1121,21 +1121,21 @@ const prepareUserOps = async (
   validatorAddress?: Address
 ) => {
   return await Promise.all(
-    instructions.map((userOp) => {
-      const deployment = account.deploymentOn(userOp.chainId, true)
-      const accountAddress = account.addressOn(userOp.chainId, true)
+    instructions.map((instruction) => {
+      const deployment = account.deploymentOn(instruction.chainId, true)
+      const accountAddress = account.addressOn(instruction.chainId, true)
 
       let callsPromise: Promise<Hex>
 
-      if (userOp.isComposable) {
+      if (instruction.isComposable) {
         callsPromise = deployment.encodeExecuteComposable(
-          userOp.calls as ComposableCall[]
+          instruction.calls as ComposableCall[]
         )
       } else {
         callsPromise =
-          userOp.calls.length > 1
-            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
-            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
+          instruction.calls.length > 1
+            ? deployment.encodeExecuteBatch(instruction.calls as AbstractCall[])
+            : deployment.encodeExecute(instruction.calls[0] as AbstractCall)
       }
 
       // This is the place to set the short encoding flag
@@ -1147,7 +1147,7 @@ const prepareUserOps = async (
       // ERC-7683 Cross-chain intents can be included in the superTxn
       // And this function will have to convert them out of instructions
       // Such 'off-chain' entities will have to be used with short encoding flag
-      // For we just set it to false for now
+      // We just set it to `false` for now
       const shortEncoding = false
 
       return Promise.all([
@@ -1158,11 +1158,11 @@ const prepareUserOps = async (
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
-        userOp.calls
+        instruction.calls
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
           .reduce((curr, acc) => curr + acc, 0n)
           .toString(),
-        userOp.chainId.toString(),
+        instruction.chainId.toString(),
         isCleanUpUserOps,
         deployment,
         shortEncoding

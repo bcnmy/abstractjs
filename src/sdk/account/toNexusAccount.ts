@@ -702,9 +702,6 @@ export const toNexusAccount = async (
   const encodeExecuteComposable = async (
     calls: ComposableCall[]
   ): Promise<Hex> => {
-    // COMPOS 1.1.0 TODO: account for the new executeComposable interface with the
-    // new types
-
     const composableCalls: BaseComposableCall[] = calls.map((call) => {
       return {
         to: call.to,
@@ -714,6 +711,14 @@ export const toNexusAccount = async (
         outputParams: call.outputParams
       }
     })
+
+    // as of now, we can decide b/w 1.0.0 and 1.1.0 based on `to` field.
+    // it must be present for 1.0.0 and must not be present for 1.1.0+
+    // instead, an input param with type TARGET should be present for 1.1.0+
+    
+    // since this is the method on the toNexusAccount which is single chain,
+    // all the composable calls should be of the same version
+    
 
     return encodeFunctionData({
       abi: COMPOSABILITY_MODULE_ABI,

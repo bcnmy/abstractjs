@@ -6,7 +6,8 @@ import {
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
-  parseAbi
+  parseAbi,
+  encodePacked
 } from "viem"
 import { ENTRY_POINT_ADDRESS } from "../../constants"
 import type { AnyData } from "../../modules/utils/Types"
@@ -113,6 +114,11 @@ export type RuntimeERC20BalanceOfParams = {
   constraints?: ConstraintField[]
 }
 
+export type RuntimeNativeBalanceOfParams = {
+  targetAddress: Address
+  constraints?: ConstraintField[]
+}
+
 export type RuntimeNonceOfParams = {
   smartAccountAddress: Address
   nonceKey: bigint
@@ -170,6 +176,47 @@ export const equalTo = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.EQ, value }
 }
 
+/**
+ * Validates and processes constraints for runtime functions
+ * @param constraints - Array of constraint fields to validate and process
+ * @returns Array of processed constraints ready for use
+ */
+const validateAndProcessConstraints = (constraints: ConstraintField[]): Constraint[] => {
+  const constraintsToAdd: Constraint[] = []
+
+  if (constraints.length > 0) {
+    for (const constraint of constraints) {
+      // Constraint type IN is ignored for runtime functions
+      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
+      if (
+        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
+      ) {
+        throw new Error("Invalid constraint type")
+      }
+
+      // Handle value validation in a appropriate to runtime function
+      if (
+        typeof constraint.value !== "bigint" ||
+        constraint.value < BigInt(0)
+      ) {
+        throw new Error("Invalid constraint value")
+      }
+
+      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
+      const encodedConstraintValue = encodeAbiParameters(
+        [{ type: "bytes32" }],
+        [valueHex as Hex]
+      )
+
+      constraintsToAdd.push(
+        prepareConstraint(constraint.type, encodedConstraintValue)
+      )
+    }
+  }
+
+  return constraintsToAdd
+}
+
 export const runtimeNonceOf = ({
   smartAccountAddress,
   nonceKey,
@@ -193,37 +240,7 @@ export const runtimeNonceOf = ({
     ]
   )
 
-  const constraintsToAdd: Constraint[] = []
-
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Contraint type IN is ignored for the runtimeBalanceOf
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid contraint type")
-      }
-
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" ||
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid contraint value")
-      }
-
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
-      )
-
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
-      )
-    }
-  }
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
   return {
     isRuntime: true,
@@ -263,37 +280,7 @@ export const runtimeERC20AllowanceOf = ({
     ]
   )
 
-  const constraintsToAdd: Constraint[] = []
-
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Constraint type IN is ignored for the runtimeBalanceOf
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid constraint type")
-      }
-
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" ||
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid constraint value")
-      }
-
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
-      )
-
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
-      )
-    }
-  }
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
   return {
     isRuntime: true,
@@ -308,10 +295,45 @@ export const runtimeERC20AllowanceOf = ({
   }
 }
 
-// COMPOS 1.1.0 TODO:
-// Add native runtime balance function
+/**
+ * Returns the runtime value for the native balance of the target address
+ * Utilizes the BALANCE fetcherType
+ * @param targetAddress - The address of the target account
+ * @returns The runtime value for the native balance of the target address
+ */
+export const runtimeNativeBalanceOf = ({
+  targetAddress,
+  constraints = []
+}: RuntimeNativeBalanceOfParams): RuntimeValue => {
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
-// COMPOS 1.1.0 TODO:  Make it use BALANCE fetcherType
+  const encodedInputParamData = encodePacked(
+    [{ type: "address" }, { type: "address" }],
+    ["0x0000000000000000000000000000000000000000", targetAddress]
+  )
+
+  console.log("encodedInputParamData", encodedInputParamData)
+
+  return {
+    isRuntime: true,
+    inputParams: [
+      prepareInputParam(
+        InputParamFetcherType.BALANCE,
+        encodedInputParamData,
+        constraintsToAdd
+      )
+    ],
+    outputParams: []
+  }
+}
+
+/**
+ * Returns the runtime value for the ERC20 balance of the target address
+ * @param targetAddress - The address of the target account
+ * @param tokenAddress - The address of the ERC20 token
+ * @returns The runtime value for the ERC20 balance of the target address
+ */
+// TODO:  Make it use BALANCE fetcherType instead of STATIC_CALL
 export const runtimeERC20BalanceOf = ({
   targetAddress,
   tokenAddress,
@@ -331,37 +353,7 @@ export const runtimeERC20BalanceOf = ({
     ]
   )
 
-  const constraintsToAdd: Constraint[] = []
-
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Constraint type IN is ignored for the runtimeBalanceOf
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid constraint type")
-      }
-
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" ||
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid constraint value")
-      }
-
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
-      )
-
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
-      )
-    }
-  }
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
   return {
     isRuntime: true,

@@ -67,7 +67,7 @@ export const buildRawComposable = async (
     prepareRawComposableParams(`0x${calldata.slice(10)}` as Hex)
 
   const composableCall: ComposableCall = formatComposableCallWithVersion(
-    composabilityVersion,
+    composabilityVersion!,
     false, // efficientMode is false for raw composable calls
     versionAgnosticComposableParams,
     functionSig,
