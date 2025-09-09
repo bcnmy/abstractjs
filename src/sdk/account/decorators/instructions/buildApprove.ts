@@ -9,7 +9,11 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, ComposabilityParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -102,7 +106,7 @@ export const buildApprove = async (
 
   let approvalCall: AbstractCall[] | ComposableCall[]
 
-  // If the composable call is detected ? The call needs to composed with runtime encoding
+  // If the composable call is detected, the call needs to composed with runtime encoding
   if (isComposableCall) {
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,

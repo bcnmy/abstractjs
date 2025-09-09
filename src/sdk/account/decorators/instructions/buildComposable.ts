@@ -60,18 +60,18 @@ export type BuildValueTransferComposableParameters = {
   chainId: number
 }
 
-
-// For Composability version 1.1.0+ only 
+// For Composability version 1.1.0+ only
 export const buildValueTransferComposableCall = async (
-  parameters: BuildValueTransferComposableParameters,
+  parameters: BuildValueTransferComposableParameters
 ): Promise<ComposableCall[]> => {
   const { to, gasLimit, value, chainId } = parameters
 
-  const { targetInputParam, valueInputParam } = prepareTargetAndValueInputParams(to, value)
-  
+  const { targetInputParam, valueInputParam } =
+    prepareTargetAndValueInputParams(to, value)
+
   // TODO: test that a functionSig 0x successfully processed by the composability stack Smart Contracts
   const composableCall: ComposableCall = {
-    functionSig: "0x", 
+    functionSig: "0x",
     inputParams: [targetInputParam, valueInputParam],
     outputParams: [],
     ...(gasLimit ? { gasLimit } : {})

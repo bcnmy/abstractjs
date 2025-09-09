@@ -9,7 +9,11 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, ComposabilityParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -83,7 +87,7 @@ export type BuildTransferFromParams = BaseInstructionsParams & {
 export const buildTransferFrom = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferFromParameters,
-  composabilityParams: ComposabilityParams,
+  composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, sender, recipient } =

@@ -338,24 +338,42 @@ export const buildComposable = async (
       })
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data, { forceComposableEncoding: true, efficientMode, composabilityVersion: composabilityVersion! })
+      return buildTransferFrom(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "transfer": {
-      return buildTransfer(baseParams, data, { forceComposableEncoding: true, efficientMode, composabilityVersion: composabilityVersion! })
+      return buildTransfer(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "approve": {
-      return buildApprove(baseParams, data, { forceComposableEncoding: true, efficientMode, composabilityVersion: composabilityVersion! })
+      return buildApprove(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "withdrawal": {
-      return buildWithdrawal(baseParams, data, true, efficientMode)
+      return buildWithdrawal(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "batch": {
       return buildBatch(baseParams, data)
     }
     case "acrossIntent": {
       return buildAcrossIntentComposable(baseParams, data, {
-        composabilityVersion
-      })
+        composabilityVersion: composabilityVersion!,
+        efficientMode: false, // nothing to group in this case
+        forceComposableEncoding: true // bot subactions are composable 
+      }) 
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

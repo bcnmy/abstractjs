@@ -1,5 +1,6 @@
 import { type Address, encodeFunctionData } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import { ComposabilityVersion } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
@@ -13,13 +14,16 @@ import {
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
 import { addressEquals } from "../../utils"
-import type { BaseInstructionsParams, ComposabilityParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall,
   buildValueTransferComposableCall
 } from "./buildComposable"
-import { ComposabilityVersion } from "../../../constants"
 
 /**
  * Parameters for building a transfer instruction
@@ -93,31 +97,34 @@ export const buildWithdrawal = async (
     gasLimit,
     recipient = accountAddress // EOA or owner account address
   } = parameters
-  const { forceComposableEncoding = false, composabilityVersion } = composabilityParams
+  const { forceComposableEncoding = false, composabilityVersion } =
+    composabilityParams
 
-  const isNativeToken = addressEquals(
-    tokenAddress as Address,
-    "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-  ) || addressEquals(
-    tokenAddress as Address,
-    "0x0000000000000000000000000000000000000000"
-  )
+  const isNativeToken =
+    addressEquals(
+      tokenAddress as Address,
+      "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    ) ||
+    addressEquals(
+      tokenAddress as Address,
+      "0x0000000000000000000000000000000000000000"
+    )
 
   let withdrawalCall: AbstractCall[] | ComposableCall[]
 
   if (isNativeToken) {
     if (isRuntimeComposableValue(amount)) {
       if (composabilityVersion === ComposabilityVersion.V1_0_0) {
-        throw new Error("Runtime balance for Native tokens is not supported for Composability v1.0.0")
+        throw new Error(
+          "Runtime balance for Native tokens is not supported for Composability v1.0.0"
+        )
       }
-      withdrawalCall = await buildValueTransferComposableCall(
-        {
-          to: recipient,
-          value: amount,
-          chainId,
-          ...(gasLimit ? { gasLimit } : {})
-        }
-      )
+      withdrawalCall = await buildValueTransferComposableCall({
+        to: recipient,
+        value: amount,
+        chainId,
+        ...(gasLimit ? { gasLimit } : {})
+      })
     } else {
       // not composable call
       withdrawalCall = [
@@ -126,7 +133,7 @@ export const buildWithdrawal = async (
           value: amount as bigint,
           ...(gasLimit ? { gasLimit } : {})
         } as AbstractCall
-      ] 
+      ]
     }
   } else {
     const abi = TokenWithPermitAbi
