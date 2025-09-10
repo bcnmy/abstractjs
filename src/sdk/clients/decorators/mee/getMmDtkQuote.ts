@@ -36,6 +36,9 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
    */
   delegatorSmartAccount: MetaMaskSmartAccount
 
+  /** For fusion mode, batching will be always true */
+  batch?: true
+
   feePayer?: undefined
 }
 

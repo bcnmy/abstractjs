@@ -28,6 +28,9 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
 
+  /** For fusion mode, batching will be always true */
+  batch?: true
+
   feePayer?: undefined
 }
 

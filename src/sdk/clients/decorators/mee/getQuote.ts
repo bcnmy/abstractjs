@@ -31,6 +31,7 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
+import { batchInstructions } from "../../../account"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -257,6 +258,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+  /**
+   * batch flag to enable/disable instruction batching. Defaults to true
+   */
+  batch?: boolean
   /**
    * Active module address. Used to fetch the nonce for the active module
    */
@@ -553,6 +558,7 @@ export const getQuote = async (
     authorizations = [],
     multichain7702Auth = false,
     moduleAddress,
+    batch = true,
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
@@ -561,13 +567,23 @@ export const getQuote = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
+  let finalInstructions = resolvedInstructions
+
+  // By default, all the main instructions are batched
+  if (batch) {
+    finalInstructions = await batchInstructions({
+      accountAddress: account_.signer.address,
+      instructions: [...resolvedInstructions]
+    })
+  }
+
   // if feePayer is provided, we need to use the /quote-permit path
   let pathToQuery = path
   if (feePayer) {
     pathToQuery = "/quote-permit"
   }
 
-  const validUserOps = resolvedInstructions.every(
+  const validUserOps = finalInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
       client.info.supportedChains
@@ -577,7 +593,7 @@ export const getQuote = async (
 
   if (!validUserOps) {
     throw Error(
-      `User operation chain(s) not supported by the node: ${resolvedInstructions
+      `User operation chain(s) not supported by the node: ${finalInstructions
         .map((x) => x.chainId)
         .join(", ")}`
     )
@@ -598,7 +614,7 @@ export const getQuote = async (
   if (feeToken) sprtxChainIdsSet.add(feeToken.chainId)
 
   // Chains IDS from instructions are considered
-  for (const inx of resolvedInstructions) {
+  for (const inx of finalInstructions) {
     sprtxChainIdsSet.add(inx.chainId)
   }
 
@@ -773,7 +789,7 @@ export const getQuote = async (
 
   const preparedUserOps = await prepareUserOps(
     account_,
-    resolvedInstructions,
+    finalInstructions,
     false,
     moduleAddress
   )

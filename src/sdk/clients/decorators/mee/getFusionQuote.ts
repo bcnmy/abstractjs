@@ -46,6 +46,9 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    */
   cleanUps?: CleanUp[]
 
+  /** For fusion mode, batching will be always true */
+  batch?: true
+
   feePayer?: undefined
   /**
    * Optional delegator smart account
