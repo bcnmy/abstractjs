@@ -1,9 +1,4 @@
-import {
-  type Address,
-  type Hex,
-  type OneOf,
-  encodeFunctionData
-} from "viem"
+import { type Address, type Hex, type OneOf, encodeFunctionData } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -15,7 +10,10 @@ import {
 } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
-import { SMART_SESSIONS_ADDRESS } from "../../../constants"
+import {
+  ComposabilityVersion,
+  SMART_SESSIONS_ADDRESS
+} from "../../../constants"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
@@ -1198,6 +1196,11 @@ const prepareCleanUpUserOps = async (
 
       if (isNativeToken(cleanUp.tokenAddress)) {
         if (!isBigInt(cleanUp.amount) || cleanUp.amount === 0n) {
+          if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+            throw new Error(
+              "Native token cleanup with runtime-injected amount is not supported for Composability v1.0.0"
+            )
+          }
           // If the amount is not a bigint, or is 0, then build a runtime injected cleanup
           let amount: RuntimeValue
           if (cleanUp.amount === undefined || cleanUp.amount === 0n) {

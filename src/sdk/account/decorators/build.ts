@@ -1,4 +1,4 @@
-import { type Address} from "viem"
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"

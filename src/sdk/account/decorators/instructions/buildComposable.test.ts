@@ -37,6 +37,7 @@ import {
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
 } from "../../../constants"
+import { ComposabilityVersion } from "../../../constants"
 import {
   type RuntimeValue,
   getMEEVersion,
@@ -49,7 +50,6 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
-import { ComposabilityVersion } from "../../../constants"
 
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
@@ -103,7 +103,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   // Test for all available composability versions
   const composabilityVersions = Object.values(ComposabilityVersion)
 
-  composabilityVersions.forEach((version) => {
+  for (const version of composabilityVersions) {
     it.concurrent(
       `should highlight building composable instructions with ${version}`,
       async () => {
@@ -131,7 +131,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         expect(instructions.length).toBeGreaterThan(0)
       }
     )
-  })
+  }
 
   // Skipping this just because this file takes a long time to run.
   it("should batch execute composable transaction with getQuotes (Without fusion)", async () => {

@@ -735,7 +735,9 @@ export const toNexusAccount = async (
         )
       )
 
-    let composabilityAbi
+    let composabilityAbi:
+      | typeof COMPOSABILITY_MODULE_ABI_V1_0_0
+      | typeof COMPOSABILITY_MODULE_ABI_V1_1_0
     if (isComposability_v1_0_0) {
       composabilityAbi = COMPOSABILITY_MODULE_ABI_V1_0_0
     } else {
