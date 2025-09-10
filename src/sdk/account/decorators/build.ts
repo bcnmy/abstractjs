@@ -2,6 +2,7 @@ import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
+import { isRuntimeComposableValue } from "../../modules/utils/composabilityCalls"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
 } from "./instructions/buildAcrossIntentComposable"
@@ -277,6 +278,12 @@ export const build = async (
   parameters: BuildInstructionTypes
 ): Promise<Instruction[]> => {
   const { type, data } = parameters
+
+  // go through all the `parameters` fields and check if they are runtime values
+  const containsRuntimeValues = Object.values(data).some((value) => isRuntimeComposableValue(value))
+  if (containsRuntimeValues) {
+    throw new Error("Runtime values are not supported for `build` action. Use `buildComposable` instead.")
+  }
 
   switch (type) {
     case "intent": {

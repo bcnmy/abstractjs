@@ -133,6 +133,22 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     )
   }
 
+  it("should throw an error when runtime values are used for `build` action", async () => {
+    await expect(mcNexus.build({
+      type: "transfer", 
+      data: {
+        amount: runtimeERC20BalanceOf({
+          targetAddress: eoaAccount.address,
+          tokenAddress,
+          constraints: []
+        }),
+        tokenAddress,
+        chainId: chain.id,
+        recipient: runtimeTransferAddress
+      }
+    })).rejects.toThrowError("Runtime values are not supported for `build` action. Use `buildComposable` instead.")
+  })
+
   // Skipping this just because this file takes a long time to run.
   it("should batch execute composable transaction with getQuotes (Without fusion)", async () => {
     const amountToSupply = parseUnits("0.1", 6)
