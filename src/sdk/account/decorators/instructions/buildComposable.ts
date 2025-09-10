@@ -10,7 +10,6 @@ import {
   prepareComposableInputCalldataParams
 } from "../../../modules/utils/composabilityCalls"
 import {
-  FunctionContext,
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
@@ -69,10 +68,12 @@ export const buildValueTransferComposableCall = async (
   const { targetInputParam, valueInputParam } =
     prepareTargetAndValueInputParams(to, value)
 
-  // TODO: test that a functionSig 0x successfully processed by the composability stack Smart Contracts
   const composableCall: ComposableCall = {
     functionSig: "0x",
-    inputParams: [targetInputParam, valueInputParam],
+    inputParams: [
+      targetInputParam,
+      ...(valueInputParam ? [valueInputParam] : [])
+    ],
     outputParams: [],
     ...(gasLimit ? { gasLimit } : {})
   }
@@ -93,7 +94,7 @@ export const buildComposableCall = async (
   if (!composabilityVersion) {
     throw new Error(`Composability version is required to build a composable call. 
       This error may be caused by using a non-composable .build decorator with a composable call. 
-      Please use buildComposable instead.`) 
+      Please use buildComposable instead.`)
   }
 
   if (!functionName || !args) {
@@ -192,7 +193,7 @@ export const formatComposableCallWithVersion = (
       ...callDataInputParams,
       targetInputParam,
       ...(valueInputParam ? [valueInputParam] : []) // do not add valueInputParam if it is undefined
-    ] 
+    ]
 
     // format composable call for composability version 1.1.0+ with target and value as input params
     composableCall = {
@@ -218,6 +219,9 @@ export const formatComposableCallWithVersion = (
  * @param parameters.args - Function arguments of the composable transaction call
  * @param parameters.abi - ABI of the contract where the composable transaction call is being generated from
  * @param parameters.chainId - Chain where the composable transaction will be executed
+ * @param composabilityParams.composabilityVersion - Composability version to use
+ * @param composabilityParams.efficientMode - boolean whether to compress the calldata input params or not
+ * @param composabilityParams.forceComposableEncoding - boolean whether to force use composability or not
  * @param [parameters.gasLimit] - Optional gas limit
  * @param [parameters.value] - Optional native token value
  *
@@ -244,6 +248,11 @@ export const formatComposableCallWithVersion = (
  *     ]
  *     chainId: baseSepolia.id,
  *     abi: UniswapSwapRouterAbi
+ *   },
+ *   {
+ *     composabilityVersion: ComposabilityVersion.V1_0_0
+ *     efficientMode: true
+ *     forceComposableEncoding: false
  *   }
  * )
  * ```
@@ -327,7 +336,10 @@ const compressCalldataInputParams = (
 const prepareTargetAndValueInputParams = (
   to: Address | RuntimeValue,
   value?: bigint | RuntimeValue
-): { targetInputParam: InputParam; valueInputParam: InputParam | undefined } => {
+): {
+  targetInputParam: InputParam
+  valueInputParam: InputParam | undefined
+} => {
   // Prepare target and value input params
   // if to is of type Address, then we need to prepare the target input param as raw_bytes
   // else if to is of type RuntimeValue, then we need to prepare the target input param
@@ -365,7 +377,7 @@ const prepareTargetAndValueInputParams = (
   } else {
     // value is a static value, use it as raw_bytes
     if (value !== 0n) {
-        valueInputParam = {
+      valueInputParam = {
         paramType: InputParamType.VALUE,
         fetcherType: InputParamFetcherType.RAW_BYTES,
         paramData: (value as bigint)

@@ -1,4 +1,4 @@
-import { type Address, type Hex, isAddress } from "viem"
+import { type Address, type Hex } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import {
   type ComposableCall,

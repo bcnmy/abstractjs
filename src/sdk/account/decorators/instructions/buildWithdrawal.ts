@@ -5,7 +5,6 @@ import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  InputParamFetcherType,
   isComposableCallRequired,
   isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
@@ -13,7 +12,7 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import { addressEquals } from "../../utils"
+import { isNativeToken } from "../../utils"
 import type {
   BaseInstructionsParams,
   ComposabilityParams,
@@ -100,19 +99,9 @@ export const buildWithdrawal = async (
   const { forceComposableEncoding = false, composabilityVersion } =
     composabilityParams
 
-  const isNativeToken =
-    addressEquals(
-      tokenAddress as Address,
-      "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-    ) ||
-    addressEquals(
-      tokenAddress as Address,
-      "0x0000000000000000000000000000000000000000"
-    )
-
   let withdrawalCall: AbstractCall[] | ComposableCall[]
 
-  if (isNativeToken) {
+  if (isNativeToken(tokenAddress as Address)) {
     if (isRuntimeComposableValue(amount)) {
       if (composabilityVersion === ComposabilityVersion.V1_0_0) {
         throw new Error(

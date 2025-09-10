@@ -2,12 +2,11 @@ import {
   type AbiParameter,
   type Address,
   type Hex,
-  OneOf,
   encodeAbiParameters,
   encodeFunctionData,
+  encodePacked,
   erc20Abi,
-  parseAbi,
-  encodePacked
+  parseAbi
 } from "viem"
 import { ENTRY_POINT_ADDRESS } from "../../constants"
 import type { AnyData } from "../../modules/utils/Types"
@@ -181,7 +180,9 @@ export const equalTo = (value: AnyData): ConstraintField => {
  * @param constraints - Array of constraint fields to validate and process
  * @returns Array of processed constraints ready for use
  */
-const validateAndProcessConstraints = (constraints: ConstraintField[]): Constraint[] => {
+const validateAndProcessConstraints = (
+  constraints: ConstraintField[]
+): Constraint[] => {
   const constraintsToAdd: Constraint[] = []
 
   if (constraints.length > 0) {

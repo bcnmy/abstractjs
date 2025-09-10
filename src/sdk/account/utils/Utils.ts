@@ -99,6 +99,10 @@ export const isValidRpcUrl = (url: string): boolean => {
 export const addressEquals = (a?: string, b?: string): boolean =>
   !!a && !!b && a?.toLowerCase() === b.toLowerCase()
 
+export const isNativeToken = (tokenAddress: Address): boolean =>
+  addressEquals(tokenAddress, "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") ||
+  addressEquals(tokenAddress, "0x0000000000000000000000000000000000000000")
+
 /**
  * Parameters for wrapping a signature according to EIP-6492.
  */

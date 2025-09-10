@@ -49,6 +49,7 @@ import {
 } from "../../toMultiChainNexusAccount"
 import { getMeeScanLink, getMultichainContract } from "../../utils"
 import buildComposable from "./buildComposable"
+import { ComposabilityVersion } from "../../../constants"
 
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
@@ -99,31 +100,38 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     fooContractAddress = "0x40Ad19a280cdD7649981A7c3C76A5D725840efCF"
   })
 
-  it.concurrent(
-    "should highlight building composable instructions",
-    async () => {
-      const instructions: Instruction[] = await buildComposable(
-        { accountAddress: mcNexus.signer.address },
-        {
-          to: tokenAddress,
-          abi: erc20Abi,
-          functionName: "transferFrom",
-          args: [
-            eoaAccount.address,
-            mcNexus.addressOn(chain.id, true),
-            runtimeERC20BalanceOf({
-              targetAddress: eoaAccount.address,
-              tokenAddress,
-              constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
-            })
-          ],
-          chainId: chain.id
-        }
-      )
+  // Test for all available composability versions
+  const composabilityVersions = Object.values(ComposabilityVersion)
 
-      expect(instructions.length).toBeGreaterThan(0)
-    }
-  )
+  composabilityVersions.forEach((version) => {
+    it.concurrent(
+      `should highlight building composable instructions with ${version}`,
+      async () => {
+        const instructions: Instruction[] = await buildComposable(
+          { accountAddress: mcNexus.signer.address },
+          {
+            to: tokenAddress,
+            abi: erc20Abi,
+            functionName: "transferFrom",
+            args: [
+              eoaAccount.address,
+              mcNexus.addressOn(chain.id, true),
+              runtimeERC20BalanceOf({
+                targetAddress: eoaAccount.address,
+                tokenAddress,
+                constraints: [greaterThanOrEqualTo(parseUnits("0.01", 6))]
+              })
+            ],
+            chainId: chain.id
+          },
+          {
+            composabilityVersion: version
+          }
+        )
+        expect(instructions.length).toBeGreaterThan(0)
+      }
+    )
+  })
 
   // Skipping this just because this file takes a long time to run.
   it("should batch execute composable transaction with getQuotes (Without fusion)", async () => {

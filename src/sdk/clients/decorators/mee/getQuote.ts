@@ -2,14 +2,17 @@ import {
   type Address,
   type Hex,
   type OneOf,
-  encodeFunctionData,
-  zeroAddress
+  encodeFunctionData
 } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
-import { addressEquals, isBigInt } from "../../../account/utils/Utils"
+import {
+  addressEquals,
+  isBigInt,
+  isNativeToken
+} from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import { SMART_SESSIONS_ADDRESS } from "../../../constants"
@@ -19,6 +22,7 @@ import {
   type ComposableCall,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf,
+  runtimeNativeBalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponseEntry } from "../../../modules/validators/smartSessions/decorators/grantPermission"
@@ -1189,48 +1193,65 @@ const prepareCleanUpUserOps = async (
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
+      const { version } = account.deploymentOn(cleanUp.chainId, true)
+      const composabilityVersion = version.composabilityVersion
 
-      if (cleanUp.tokenAddress === zeroAddress) {
-        if (cleanUp.amount === undefined) {
-          throw new Error(
-            "Please configure the amount for the native token cleanup."
-          )
-        }
-
-        if (!isBigInt(cleanUp.amount)) {
-          throw new Error(
-            "Runtime amount for the native token cleanup is not supported yet."
-          )
-        }
-
-        const amount = cleanUp.amount as bigint
-
-        const { version } = account.deploymentOn(cleanUp.chainId, true)
-
-        const forwardCalldata = encodeFunctionData({
-          abi: ForwarderAbi,
-          functionName: "forward",
-          args: [cleanUp.recipientAddress]
-        })
-
-        const [cleanUpNativeTransferInstruction] = await buildComposable(
-          { accountAddress: account.signer.address, currentInstructions: [] },
-          {
-            type: "rawCalldata",
-            data: {
-              to: version.ethForwarderAddress,
-              calldata: forwardCalldata,
-              chainId: cleanUp.chainId,
-              value: amount
-            }
+      if (isNativeToken(cleanUp.tokenAddress)) {
+        if (!isBigInt(cleanUp.amount) || cleanUp.amount === 0n) {
+          // If the amount is not a bigint, or is 0, then build a runtime injected cleanup
+          let amount: RuntimeValue
+          if (cleanUp.amount === undefined || cleanUp.amount === 0n) {
+            amount = runtimeNativeBalanceOf({
+              targetAddress: account.addressOn(cleanUp.chainId, true)
+            })
+          } else {
+            amount = cleanUp.amount as RuntimeValue
           }
-        )
+          const [cleanUpNativeTransferInstruction] = await buildComposable(
+            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              type: "default",
+              data: {
+                to: cleanUp.recipientAddress,
+                functionName: "forward",
+                args: [cleanUp.recipientAddress],
+                abi: ForwarderAbi,
+                value: amount,
+                chainId: cleanUp.chainId,
+                ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
+              }
+            },
+            composabilityVersion
+          )
+          cleanUpInstruction = cleanUpNativeTransferInstruction
+        } else {
+          const amount = cleanUp.amount as bigint
+          const forwardCalldata = encodeFunctionData({
+            abi: ForwarderAbi,
+            functionName: "forward",
+            args: [cleanUp.recipientAddress]
+          })
 
-        cleanUpInstruction = cleanUpNativeTransferInstruction
+          const [cleanUpNativeTransferInstruction] = await buildComposable(
+            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              type: "rawCalldata",
+              data: {
+                to: version.ethForwarderAddress,
+                calldata: forwardCalldata,
+                chainId: cleanUp.chainId,
+                value: amount
+              }
+            },
+            composabilityVersion
+          )
+          cleanUpInstruction = cleanUpNativeTransferInstruction
+        }
       } else {
+        // Else ERC20 cleanup
         let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
 
-        // If there is no amount specified ? Runtime amount will be used for cleanup by default
+        // If there is no amount specified, runtime amount will be used for cleanup by default
         if (amount === 0n) {
           amount = runtimeERC20BalanceOf({
             targetAddress: account.addressOn(cleanUp.chainId, true),
@@ -1249,7 +1270,8 @@ const prepareCleanUpUserOps = async (
               chainId: cleanUp.chainId,
               ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
             }
-          }
+          },
+          composabilityVersion
         )
 
         cleanUpInstruction = cleanUpERC20TransferInstruction

@@ -1,4 +1,4 @@
-import { type Address, OneOf } from "viem"
+import { type Address} from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
@@ -286,16 +286,20 @@ export const build = async (
       return buildDefaultInstructions(baseParams, data)
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data, {forceComposableEncoding: false})
+      return buildTransferFrom(baseParams, data, {
+        forceComposableEncoding: false
+      })
     }
     case "transfer": {
-      return buildTransfer(baseParams, data, {forceComposableEncoding: false})
+      return buildTransfer(baseParams, data, { forceComposableEncoding: false })
     }
     case "approve": {
-      return buildApprove(baseParams, data, {forceComposableEncoding: false})
+      return buildApprove(baseParams, data, { forceComposableEncoding: false })
     }
     case "withdrawal": {
-      return buildWithdrawal(baseParams, data, {forceComposableEncoding: false})
+      return buildWithdrawal(baseParams, data, {
+        forceComposableEncoding: false
+      })
     }
     case "batch": {
       return buildBatch(baseParams, data)
@@ -372,7 +376,7 @@ export const buildComposable = async (
       return buildAcrossIntentComposable(baseParams, data, {
         composabilityVersion: composabilityVersion!,
         efficientMode: false, // nothing to group in this case
-        forceComposableEncoding: true // bot subactions are composable
+        forceComposableEncoding: true // both subactions are composable
       })
     }
     default: {

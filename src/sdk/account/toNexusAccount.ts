@@ -42,12 +42,17 @@ import type { SignAuthorizationReturnType } from "viem/accounts"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
-import { COMPOSABILITY_MODULE_ABI, EntrypointAbi } from "../constants/abi"
+import {
+  COMPOSABILITY_MODULE_ABI_V1_0_0,
+  COMPOSABILITY_MODULE_ABI_V1_1_0,
+  EntrypointAbi
+} from "../constants/abi"
 import { toComposableExecutor, toComposableFallback } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import type {
-  BaseComposableCall,
-  ComposableCall
+import {
+  type BaseComposableCall,
+  type ComposableCall,
+  InputParamType
 } from "../modules/utils/composabilityCalls"
 import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
@@ -712,16 +717,32 @@ export const toNexusAccount = async (
       }
     })
 
-    // as of now, we can decide b/w 1.0.0 and 1.1.0 based on `to` field.
+    // as of now, we just need to decide b/w 1.0.0 and 1.1.0
+    // and we can decide this based on the `to` field:
     // it must be present for 1.0.0 and must not be present for 1.1.0+
     // instead, an input param with type TARGET should be present for 1.1.0+
-    
+
     // since this is the method on the toNexusAccount which is single chain,
     // all the composable calls should be of the same version
-    
 
+    // check that every call in `calls` has `to` field defined
+    // AND every call has an input parameter of type `TARGET` amongst input parameters
+    const isComposability_v1_0_0 =
+      calls.every((call) => !!call.to) &&
+      calls.every((call) =>
+        call.inputParams.some(
+          (param) => param.paramType === InputParamType.TARGET
+        )
+      )
+
+    let composabilityAbi
+    if (isComposability_v1_0_0) {
+      composabilityAbi = COMPOSABILITY_MODULE_ABI_V1_0_0
+    } else {
+      composabilityAbi = COMPOSABILITY_MODULE_ABI_V1_1_0
+    }
     return encodeFunctionData({
-      abi: COMPOSABILITY_MODULE_ABI,
+      abi: composabilityAbi,
       functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
       args: [composableCalls] // Multiple composable calls can be batched here.
     })
