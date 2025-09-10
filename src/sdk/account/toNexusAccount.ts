@@ -717,19 +717,22 @@ export const toNexusAccount = async (
       }
     })
 
+    console.log("encodeExecuteComposable::composableCalls::", composableCalls)
+
     // as of now, we just need to decide b/w 1.0.0 and 1.1.0
     // and we can decide this based on the `to` field:
     // it must be present for 1.0.0 and must not be present for 1.1.0+
     // instead, an input param with type TARGET should be present for 1.1.0+
+    // In future, when more version are introduced, this logic will have to be updated
+    // One approach for more version will be to just add a `composabilityVersion` field
+    // `ComposableCall` type during the ComposableCall creation, since at the point where
+    // we create the ComposableCall, we will know the composabilityVersion for sure
 
     // since this is the method on the toNexusAccount which is single chain,
     // all the composable calls should be of the same version
-
-    // check that every call in `calls` has `to` field defined
-    // AND every call has an input parameter of type `TARGET` amongst input parameters
     const isComposability_v1_0_0 =
       calls.every((call) => !!call.to) &&
-      calls.every((call) =>
+      !calls.every((call) =>
         call.inputParams.some(
           (param) => param.paramType === InputParamType.TARGET
         )

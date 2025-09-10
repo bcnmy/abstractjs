@@ -130,8 +130,6 @@ export const buildComposableCall = async (
     gasLimit
   )
 
-  console.log("composableCall", composableCall)
-
   return [composableCall]
 }
 
@@ -297,7 +295,9 @@ const compressCalldataInputParams = (
   }
   // compress only calldata input params
   for (const param of inputParams.filter(
-    (param) => param.paramType === InputParamType.CALL_DATA
+    (param) =>
+      param.paramType === InputParamType.CALL_DATA ||
+      param.paramType === undefined
   )) {
     // Static call or constraint based params are left as is
     if (

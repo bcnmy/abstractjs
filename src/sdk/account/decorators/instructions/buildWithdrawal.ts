@@ -106,7 +106,7 @@ export const buildWithdrawal = async (
   if (isNativeToken(tokenAddress as Address)) {
     // native token withdrawal
     if (isRuntimeComposableValue(amount) || forceComposableEncoding) {
-    // composable call
+      // composable call
       if (!composabilityParams?.composabilityVersion) {
         throw new Error(
           "Composability version is required to build a call with the runtime injected param"
@@ -132,7 +132,7 @@ export const buildWithdrawal = async (
           isComposable: true
         }
       ]
-    } 
+    }
     // not composable call
     withdrawalCall = [
       {
@@ -162,7 +162,7 @@ export const buildWithdrawal = async (
 
     // If the composable call is detected ? The call needs to composed with runtime encoding
     if (isComposableCall) {
-    // composable call
+      // composable call
       if (!composabilityParams) {
         throw new Error(
           "Composability params are required to build a call with the runtime injected param"

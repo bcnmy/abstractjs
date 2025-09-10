@@ -92,8 +92,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       account: mcNexus
     })
     tokenAddress = testnetMcTestUSDCP.addressOn(chain.id)
-    console.log("mcNexus", mcNexus.addressOn(chain.id, true))
-    console.log("eoa.address", eoaAccount.address)
+    //console.log("mcNexus", mcNexus.addressOn(chain.id, true))
+    //console.log("eoa.address", eoaAccount.address)
 
     // Mock testing contract for composability testing
     runtimeTransferAddress = "0x7c3b315E1d72CFdB8999A68a12e87fc3cc490fec"
@@ -491,7 +491,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       }
     })
 
-    const { hash } = await meeClient.executeFusionQuote({
+    const fusionQuote = {
       fusionQuote: await meeClient.getFusionQuote({
         trigger,
         instructions: [transferInstruction, ...instructions],
@@ -500,7 +500,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           address: tokenAddress
         }
       })
-    })
+    }
+
+    console.log("fusionQuote::", fusionQuote.fusionQuote)
+
+    const { hash } = await meeClient.executeFusionQuote(fusionQuote)
 
     const { transactionStatus, explorerLinks } =
       await meeClient.waitForSupertransactionReceipt({
