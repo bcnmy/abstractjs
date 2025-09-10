@@ -6,6 +6,7 @@ import {
   zeroAddress
 } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { batchInstructions } from "../../../account"
 import { buildComposable } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
@@ -31,7 +32,6 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
-import { batchInstructions } from "../../../account"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
