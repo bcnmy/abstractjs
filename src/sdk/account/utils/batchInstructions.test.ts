@@ -35,8 +35,7 @@ const createBaseApproval = (account: MultichainSmartAccount, amount: string) =>
       tokenAddress: mcUSDC.addressOn(base.id),
       spender: account.addressOn(base.id, true),
       amount: parseEther(amount)
-    },
-    { forceComposableEncoding: false }
+    }
   )
 
 const createOptimismApproval = (
@@ -50,8 +49,7 @@ const createOptimismApproval = (
       tokenAddress: mcUSDC.addressOn(optimism.id),
       spender: account.addressOn(optimism.id, true),
       amount: parseEther(amount)
-    },
-    { forceComposableEncoding: false }
+    }
   )
 
 const createMainnetApproval = (
@@ -65,8 +63,7 @@ const createMainnetApproval = (
       tokenAddress: mcUSDC.addressOn(mainnet.id),
       spender: account.addressOn(mainnet.id, true),
       amount: parseEther(amount)
-    },
-    { forceComposableEncoding: false }
+    }
   )
 
 const createBaseTriggerCall = (
@@ -81,8 +78,7 @@ const createBaseTriggerCall = (
       amount: 100n,
       recipient: account.addressOn(base.id, true),
       sender: zeroAddress
-    },
-    { forceComposableEncoding: false }
+    }
   )
 
 describe("utils.batchInstructions", () => {

@@ -195,7 +195,7 @@ export type BuildMultichainInstructionInstruction = {
 }
 
 export type ComposabilityParams = {
-  composabilityVersion?: ComposabilityVersion
+  composabilityVersion: ComposabilityVersion
   forceComposableEncoding?: boolean
   efficientMode?: boolean
 }
@@ -286,20 +286,16 @@ export const build = async (
       return buildDefaultInstructions(baseParams, data)
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data, {
-        forceComposableEncoding: false
-      })
+      return buildTransferFrom(baseParams, data)
     }
     case "transfer": {
-      return buildTransfer(baseParams, data, { forceComposableEncoding: false })
+      return buildTransfer(baseParams, data)
     }
     case "approve": {
-      return buildApprove(baseParams, data, { forceComposableEncoding: false })
+      return buildApprove(baseParams, data)
     }
     case "withdrawal": {
-      return buildWithdrawal(baseParams, data, {
-        forceComposableEncoding: false
-      })
+      return buildWithdrawal(baseParams, data)
     }
     case "batch": {
       return buildBatch(baseParams, data)
@@ -328,6 +324,7 @@ export const buildComposable = async (
       `Composability version param is required for composable type: ${type}`
     )
   }
+  // so here and below we are sure, that composabilityVersion is defined
 
   switch (type) {
     case "default": {

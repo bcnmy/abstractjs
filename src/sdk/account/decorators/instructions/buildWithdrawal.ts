@@ -86,7 +86,7 @@ export type BuildWithdrawalParams = BaseInstructionsParams & {
 export const buildWithdrawal = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildWithdrawalParameters,
-  composabilityParams: ComposabilityParams
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], accountAddress } = baseParams
   const {
@@ -96,13 +96,23 @@ export const buildWithdrawal = async (
     gasLimit,
     recipient = accountAddress // EOA or owner account address
   } = parameters
-  const { forceComposableEncoding = false, composabilityVersion } =
-    composabilityParams
+  const { forceComposableEncoding = false } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
+  composabilityParams
 
   let withdrawalCall: AbstractCall[] | ComposableCall[]
 
   if (isNativeToken(tokenAddress as Address)) {
-    if (isRuntimeComposableValue(amount)) {
+    // native token withdrawal
+    if (isRuntimeComposableValue(amount) || forceComposableEncoding) {
+    // composable call
+      if (!composabilityParams?.composabilityVersion) {
+        throw new Error(
+          "Composability version is required to build a call with the runtime injected param"
+        )
+      }
+      const { composabilityVersion } = composabilityParams
       if (composabilityVersion === ComposabilityVersion.V1_0_0) {
         throw new Error(
           "Runtime balance for Native tokens is not supported for Composability v1.0.0"
@@ -114,17 +124,25 @@ export const buildWithdrawal = async (
         chainId,
         ...(gasLimit ? { gasLimit } : {})
       })
-    } else {
-      // not composable call
-      withdrawalCall = [
+      return [
+        ...currentInstructions,
         {
-          to: recipient as Address,
-          value: amount as bigint,
-          ...(gasLimit ? { gasLimit } : {})
-        } as AbstractCall
+          calls: withdrawalCall,
+          chainId,
+          isComposable: true
+        }
       ]
-    }
+    } 
+    // not composable call
+    withdrawalCall = [
+      {
+        to: recipient as Address,
+        value: amount as bigint,
+        ...(gasLimit ? { gasLimit } : {})
+      } as AbstractCall
+    ]
   } else {
+    // ERC20 withdrawal
     const abi = TokenWithPermitAbi
     const functionSig = "transfer"
     const args: readonly [`0x${string}`, bigint | RuntimeValue] = [
@@ -144,6 +162,13 @@ export const buildWithdrawal = async (
 
     // If the composable call is detected ? The call needs to composed with runtime encoding
     if (isComposableCall) {
+    // composable call
+      if (!composabilityParams) {
+        throw new Error(
+          "Composability params are required to build a call with the runtime injected param"
+        )
+      }
+
       const composableCallParams: BuildComposableParameters = {
         to: tokenAddress,
         functionName: functionSig,
@@ -167,6 +192,7 @@ export const buildWithdrawal = async (
         }
       ]
     }
+    // not composable call
     withdrawalCall = [
       {
         to: tokenAddress,
@@ -180,6 +206,8 @@ export const buildWithdrawal = async (
     ] as AbstractCall[]
   }
 
+  // composable calls return early
+  // so if we reach this point, it means that the call is not composable
   return [
     ...currentInstructions,
     {

@@ -59,6 +59,9 @@ export type BuildApproveParams = BaseInstructionsParams & {
  * @param parameters.chainId - Chain ID where the approval will be executed
  * @param parameters.tokenAddress - Address of the token to approve
  * @param parameters.amount - Amount to approve
+ * @param composabilityParams.forceComposableEncoding - Optional boolean whether to force use composability or not
+ * @param composabilityParams.composabilityVersion - Optional composability version to use
+ * @param composabilityParams.efficientMode - Optional boolean whether to compress the calldata input params or not
  * @param [parameters.gasLimit] - Optional gas limit for the approval
  * @param [parameters.spender] - Optional spender address
  *
@@ -74,6 +77,11 @@ export type BuildApproveParams = BaseInstructionsParams & {
  *     amount: 1000000n, // 1 USDC
  *     gasLimit: 50000n,
  *     spender: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+ *   },
+ *   {
+ *     forceComposableEncoding: false,
+ *     composabilityVersion: ComposabilityVersion.V1_0_0,
+ *     efficientMode: true
  *   }
  * );
  * ```
@@ -81,11 +89,13 @@ export type BuildApproveParams = BaseInstructionsParams & {
 export const buildApprove = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildApproveParameters,
-  composabilityParams: ComposabilityParams
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
-  const { forceComposableEncoding = false } = composabilityParams
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
   const abi = erc20Abi
   const functionSig = "approve"
@@ -108,6 +118,11 @@ export const buildApprove = async (
 
   // If the composable call is detected, the call needs to composed with runtime encoding
   if (isComposableCall) {
+    if (!composabilityParams) {
+      throw new Error(
+        "Composability params are required to build a composable call"
+      )
+    }
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
       functionName: functionSig,

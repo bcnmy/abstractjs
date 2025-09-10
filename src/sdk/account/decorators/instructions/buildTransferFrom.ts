@@ -87,12 +87,14 @@ export type BuildTransferFromParams = BaseInstructionsParams & {
 export const buildTransferFrom = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferFromParameters,
-  composabilityParams: ComposabilityParams
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, sender, recipient } =
     parameters
-  const { forceComposableEncoding = false } = composabilityParams
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
   const abi = erc20Abi
   const functionSig = "transferFrom"
@@ -115,6 +117,11 @@ export const buildTransferFrom = async (
 
   // If the composable call is detected ? The call needs to composed with runtime encoding
   if (isComposableCall) {
+    if (!composabilityParams) {
+      throw new Error(
+        "Composability params are required to build a composable call"
+      )
+    }
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
       functionName: functionSig,
