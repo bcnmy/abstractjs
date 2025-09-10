@@ -1630,8 +1630,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     } catch (error) {
       // UserOp one always reverts
       expect(error.message).to.be.oneOf([
-        "[1] UserOperation reverted",
-        "[1] ERC20: transfer amount exceeds balance"
+        "[0] UserOperation reverted",
+        "[0] ERC20: transfer amount exceeds balance"
       ])
     }
   })
