@@ -457,6 +457,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       args: [eoaAccount.address]
     })
 
+    console.log("balanceBefore", balanceBefore)
+
     const trigger = {
       chainId: chain.id,
       tokenAddress,
@@ -944,7 +946,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       amount: amount
     }
 
-    const approval = await mcNexus.build({
+    const approval = await mcNexus.buildComposable({
       type: "approve",
       data: {
         amount: runtimeERC20BalanceOf({
@@ -957,7 +959,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       }
     })
 
-    const transfer = await mcNexus.build({
+    const transfer = await mcNexus.buildComposable({
       type: "transferFrom",
       data: {
         chainId: chain.id,
@@ -1264,7 +1266,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-  it("should native token composable cleanup throw an error when amount field is not configured", async () => {
+  it("should native token composable cleanup throw an error when amount field is not configured for Composability v1.0.0", async () => {
     const amountToFund = 1000n
 
     const trigger = {
@@ -1300,11 +1302,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         }
       })
     ).rejects.toThrowError(
-      "Please configure the amount for the native token cleanup."
+      "Native token cleanup with runtime-injected amount is not supported for Composability v1.0.0"
     )
   })
 
-  it("should native token composable cleanup throw an error when amount field is runtime value", async () => {
+  it("should native token composable cleanup throw an error when amount field is runtime value for Composability v1.0.0", async () => {
     const amountToFund = 1000n
 
     const trigger = {
@@ -1343,7 +1345,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         }
       })
     ).rejects.toThrowError(
-      "Runtime amount for the native token cleanup is not supported yet."
+      "Native token cleanup with runtime-injected amount is not supported for Composability v1.0.0"
     )
   })
 

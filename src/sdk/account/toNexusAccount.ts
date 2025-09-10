@@ -717,8 +717,6 @@ export const toNexusAccount = async (
       }
     })
 
-    console.log("encodeExecuteComposable::composableCalls::", composableCalls)
-
     // as of now, we just need to decide b/w 1.0.0 and 1.1.0
     // and we can decide this based on the `to` field:
     // it must be present for 1.0.0 and must not be present for 1.1.0+
