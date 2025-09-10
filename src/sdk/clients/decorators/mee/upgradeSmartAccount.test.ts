@@ -7,8 +7,8 @@ import {
   encodeAbiParameters,
   encodeFunctionData,
   parseAbi,
-  zeroAddress,
-  parseEther
+  parseEther,
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
