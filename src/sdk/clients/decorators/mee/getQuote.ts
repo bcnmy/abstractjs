@@ -799,7 +799,7 @@ export const getQuote = async (
     preparedUserOps.push(...cleanUpUserOps)
   }
 
-  console.log("cleanups stage completed::" , cleanUps?.length)
+  console.log("cleanups stage completed::", cleanUps?.length)
 
   // complete the userOps including cleanup ones
   const indexPerChainId = new Map<string, number>()

@@ -707,7 +707,6 @@ export const toNexusAccount = async (
   const encodeExecuteComposable = async (
     calls: ComposableCall[]
   ): Promise<Hex> => {
-
     // as of now, we just need to decide b/w 1.0.0 and 1.1.0
     // and we can decide this based on the `to` field:
     // it must be present for 1.0.0 and must not be present for 1.1.0+
@@ -728,19 +727,21 @@ export const toNexusAccount = async (
       )
 
     const composableCallsFormattedByVersion = calls.map((call) => {
-        return isComposability_v1_0_0 ? {
-          to: call.to,
-          value: call.value ?? 0n,
-          functionSig: call.functionSig,
-          inputParams: call.inputParams,
-          outputParams: call.outputParams
-        } : {
-          functionSig: call.functionSig,
-          inputParams: call.inputParams,
-          outputParams: call.outputParams
-        }
-      })
-    
+      return isComposability_v1_0_0
+        ? {
+            to: call.to,
+            value: call.value ?? 0n,
+            functionSig: call.functionSig,
+            inputParams: call.inputParams,
+            outputParams: call.outputParams
+          }
+        : {
+            functionSig: call.functionSig,
+            inputParams: call.inputParams,
+            outputParams: call.outputParams
+          }
+    })
+
     console.log("isComposability_v1_0_0", isComposability_v1_0_0)
     //console.log("calls", composableCallsFormattedByVersion)
     /*

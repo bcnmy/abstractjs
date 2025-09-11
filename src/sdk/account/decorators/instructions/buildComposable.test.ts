@@ -63,7 +63,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   let mcNexus_compos_v1_1_0: MultichainSmartAccount
   let meeClient: MeeClient
   let meeClient_compos_v1_1_0: MeeClient
-  let accountConfigs: { name: string, mcNexus: MultichainSmartAccount, meeClient: MeeClient }[]
+  let accountConfigs: {
+    name: string
+    mcNexus: MultichainSmartAccount
+    meeClient: MeeClient
+  }[]
   let publicClient: PublicClient
 
   let tokenAddress: Address
@@ -113,15 +117,15 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
 
     accountConfigs = [
-      { 
-        name: "Composability v1.0.0", 
-        mcNexus, 
-        meeClient 
+      {
+        name: "Composability v1.0.0",
+        mcNexus,
+        meeClient
       },
-      { 
-        name: "Composability v1.1.0", 
-        mcNexus: mcNexus_compos_v1_1_0, 
-        meeClient: meeClient_compos_v1_1_0 
+      {
+        name: "Composability v1.1.0",
+        mcNexus: mcNexus_compos_v1_1_0,
+        meeClient: meeClient_compos_v1_1_0
       }
     ]
 
@@ -500,9 +504,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-    // Skipping this just because this file takes a long time to run.
-  it(`should execute composable transaction for static args`, async () => {
-    for (const { name, mcNexus: testMcNexus, meeClient: testMeeClient } of accountConfigs) {
+  // Skipping this just because this file takes a long time to run.
+  it("should execute composable transaction for static args", async () => {
+    for (const {
+      name,
+      mcNexus: testMcNexus,
+      meeClient: testMeeClient
+    } of accountConfigs) {
       console.log(`[${name}] executing composable transaction for static args`)
       const amountToSupply = parseUnits("0.1", 6)
 
@@ -591,7 +599,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       */
     }
   })
-  
 
   // Skipping this just because this file takes a long time to run.
   it("should execute composable transaction for struct args", async () => {
