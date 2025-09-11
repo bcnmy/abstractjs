@@ -280,9 +280,13 @@ export const build = async (
   const { type, data } = parameters
 
   // go through all the `parameters` fields and check if they are runtime values
-  const containsRuntimeValues = Object.values(data).some((value) => isRuntimeComposableValue(value))
+  const containsRuntimeValues = Object.values(data).some((value) =>
+    isRuntimeComposableValue(value)
+  )
   if (containsRuntimeValues) {
-    throw new Error("Runtime values are not supported for `build` action. Use `buildComposable` instead.")
+    throw new Error(
+      "Runtime values are not supported for `build` action. Use `buildComposable` instead."
+    )
   }
 
   switch (type) {

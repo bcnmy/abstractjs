@@ -129,6 +129,7 @@ export const buildComposableCall = async (
     value,
     gasLimit
   )
+  console.log("build Composable Call with version:", composabilityVersion, composableCall)
 
   return [composableCall]
 }
@@ -180,6 +181,7 @@ export const formatComposableCallWithVersion = (
         paramType: InputParamType.CALL_DATA
       })
     )
+    console.log("formatComposableCallWithVersion:: composableInputParams", composableInputParams)
     const callDataInputParams = efficientMode
       ? compressCalldataInputParams(composableInputParams)
       : composableInputParams
@@ -289,6 +291,7 @@ const compressCalldataInputParams = (
 ): InputParam[] => {
   const compressedParams: InputParam[] = []
   let currentParam: InputParam = {
+    paramType: InputParamType.CALL_DATA,
     fetcherType: InputParamFetcherType.RAW_BYTES,
     constraints: [],
     paramData: ""
@@ -309,6 +312,7 @@ const compressCalldataInputParams = (
       if (currentParam.paramData.length > 0) {
         compressedParams.push(currentParam)
         currentParam = {
+          paramType: InputParamType.CALL_DATA,
           fetcherType: InputParamFetcherType.RAW_BYTES,
           constraints: [],
           paramData: ""

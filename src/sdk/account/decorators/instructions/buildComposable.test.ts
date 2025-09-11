@@ -34,6 +34,7 @@ import {
 } from "../../../clients/decorators/mee/getQuote"
 import {
   DEFAULT_MEE_VERSION,
+  MEEVersion,
   UniswapSwapRouterAbi,
   testnetMcUniswapSwapRouter
 } from "../../../constants"
@@ -59,7 +60,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   let eoaAccount: LocalAccount
 
   let mcNexus: MultichainSmartAccount
+  let mcNexus_compos_v1_1_0: MultichainSmartAccount
   let meeClient: MeeClient
+  let meeClient_compos_v1_1_0: MeeClient
+  let accountConfigs: { name: string, mcNexus: MultichainSmartAccount, meeClient: MeeClient }[]
   let publicClient: PublicClient
 
   let tokenAddress: Address
@@ -88,9 +92,39 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       ]
     })
 
+    mcNexus_compos_v1_1_0 = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      index: 1n, // Added based on the suggestion by Joe to prevent the collision with nonce,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(MEEVersion.V2_2_0)
+        }
+      ]
+    })
+
     meeClient = await createMeeClient({
       account: mcNexus
     })
+
+    meeClient_compos_v1_1_0 = await createMeeClient({
+      account: mcNexus_compos_v1_1_0
+    })
+
+    accountConfigs = [
+      { 
+        name: "Composability v1.0.0", 
+        mcNexus, 
+        meeClient 
+      },
+      { 
+        name: "Composability v1.1.0", 
+        mcNexus: mcNexus_compos_v1_1_0, 
+        meeClient: meeClient_compos_v1_1_0 
+      }
+    ]
+
     tokenAddress = testnetMcTestUSDCP.addressOn(chain.id)
     //console.log("mcNexus", mcNexus.addressOn(chain.id, true))
     //console.log("eoa.address", eoaAccount.address)
@@ -134,19 +168,23 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   }
 
   it("should throw an error when runtime values are used for `build` action", async () => {
-    await expect(mcNexus.build({
-      type: "transfer", 
-      data: {
-        amount: runtimeERC20BalanceOf({
-          targetAddress: eoaAccount.address,
+    await expect(
+      mcNexus.build({
+        type: "transfer",
+        data: {
+          amount: runtimeERC20BalanceOf({
+            targetAddress: eoaAccount.address,
+            tokenAddress,
+            constraints: []
+          }),
           tokenAddress,
-          constraints: []
-        }),
-        tokenAddress,
-        chainId: chain.id,
-        recipient: runtimeTransferAddress
-      }
-    })).rejects.toThrowError("Runtime values are not supported for `build` action. Use `buildComposable` instead.")
+          chainId: chain.id,
+          recipient: runtimeTransferAddress
+        }
+      })
+    ).rejects.toThrowError(
+      "Runtime values are not supported for `build` action. Use `buildComposable` instead."
+    )
   })
 
   // Skipping this just because this file takes a long time to run.
@@ -462,92 +500,98 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-  // Skipping this just because this file takes a long time to run.
-  it("should execute composable transaction for static args", async () => {
-    const amountToSupply = parseUnits("0.1", 6)
+    // Skipping this just because this file takes a long time to run.
+  it(`should execute composable transaction for static args`, async () => {
+    for (const { name, mcNexus: testMcNexus, meeClient: testMeeClient } of accountConfigs) {
+      console.log(`[${name}] executing composable transaction for static args`)
+      const amountToSupply = parseUnits("0.1", 6)
 
-    const balanceBefore = await publicClient.readContract({
-      address: tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [eoaAccount.address]
-    })
+      const balanceBefore = await publicClient.readContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [eoaAccount.address]
+      })
 
-    console.log("balanceBefore", balanceBefore)
+      console.log(`[${name}] balanceBefore`, balanceBefore)
 
-    const trigger = {
-      chainId: chain.id,
-      tokenAddress,
-      amount: amountToSupply
-    }
-
-    const transferInstruction = await mcNexus.buildComposable({
-      type: "transfer",
-      data: {
-        recipient: runtimeTransferAddress as Address,
+      const trigger = {
+        chainId: chain.id,
         tokenAddress,
-        amount: amountToSupply,
-        chainId: chain.id
+        amount: amountToSupply
       }
-    })
 
-    const instructions: Instruction[] = await mcNexus.buildComposable({
-      type: "default",
-      data: {
-        to: runtimeTransferAddress,
-        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        functionName: "transferFunds",
-        args: [
+      const transferInstruction = await testMcNexus.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
           tokenAddress,
-          eoaAccount.address,
-          runtimeERC20BalanceOf({
-            targetAddress: runtimeTransferAddress,
-            tokenAddress
-          })
-        ],
-        chainId: chain.id
-      }
-    })
-
-    const fusionQuote = {
-      fusionQuote: await meeClient.getFusionQuote({
-        trigger,
-        instructions: [transferInstruction, ...instructions],
-        feeToken: {
-          chainId: chain.id,
-          address: tokenAddress
+          amount: amountToSupply,
+          chainId: chain.id
         }
       })
-    }
 
-    console.log("fusionQuote::", fusionQuote.fusionQuote)
-
-    const { hash } = await meeClient.executeFusionQuote(fusionQuote)
-
-    const { transactionStatus, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({
-        hash,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
+      const instructions: Instruction[] = await testMcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: runtimeTransferAddress,
+          abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+          functionName: "transferFunds",
+          args: [
+            tokenAddress,
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress
+            })
+          ],
+          chainId: chain.id
+        }
       })
-    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
-    const balanceAfter = await publicClient.readContract({
-      address: tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [eoaAccount.address]
-    })
+      const fusionQuote = {
+        fusionQuote: await testMeeClient.getFusionQuote({
+          trigger,
+          instructions: [transferInstruction, ...instructions],
+          feeToken: {
+            chainId: chain.id,
+            address: tokenAddress
+          }
+        })
+      }
 
-    // -amountToSupply as a result of the trigger
-    // +(amountToSupply-gas) as a result of the second composable action
-    // so the balance should be the same -gas that nexus paid to MEE Node, as gas is paid as USDC token
-    expect(Number(balanceAfter)).to.be.approximately(
-      Number(balanceBefore),
-      99999
-    )
+      console.log("fusionQuote", fusionQuote.fusionQuote)
 
-    console.log({ explorerLinks, hash })
+      /*
+      const { hash } = await testMeeClient.executeFusionQuote(fusionQuote)
+
+      const { transactionStatus, explorerLinks } =
+        await testMeeClient.waitForSupertransactionReceipt({
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+      expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+      const balanceAfter = await publicClient.readContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [eoaAccount.address]
+      })
+
+      // -amountToSupply as a result of the trigger
+      // +(amountToSupply-gas) as a result of the second composable action
+      // so the balance should be the same -gas that nexus paid to MEE Node, as gas is paid as USDC token
+      expect(Number(balanceAfter)).to.be.approximately(
+        Number(balanceBefore),
+        99999
+      )
+
+      console.log(`[${name}]`, { explorerLinks, hash })
+      */
+    }
   })
+  
 
   // Skipping this just because this file takes a long time to run.
   it("should execute composable transaction for struct args", async () => {

@@ -780,6 +780,8 @@ export const getQuote = async (
     moduleAddress
   )
 
+  console.log("userOps prepared")
+
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
   if (cleanUps && cleanUps.length > 0) {
@@ -796,6 +798,8 @@ export const getQuote = async (
 
     preparedUserOps.push(...cleanUpUserOps)
   }
+
+  console.log("cleanups stage completed::" , cleanUps?.length)
 
   // complete the userOps including cleanup ones
   const indexPerChainId = new Map<string, number>()
@@ -894,6 +898,8 @@ export const getQuote = async (
     )
   )
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
+
+  console.log("quoteRequest", quoteRequest)
 
   let quote = await client.request<GetQuotePayload>({
     path: pathToQuery,
@@ -1133,6 +1139,7 @@ const prepareUserOps = async (
         callsPromise = deployment.encodeExecuteComposable(
           instruction.calls as ComposableCall[]
         )
+        //console.log("callsPromise", callsPromise)
       } else {
         callsPromise =
           instruction.calls.length > 1

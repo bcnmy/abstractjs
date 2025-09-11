@@ -707,15 +707,6 @@ export const toNexusAccount = async (
   const encodeExecuteComposable = async (
     calls: ComposableCall[]
   ): Promise<Hex> => {
-    const composableCalls: BaseComposableCall[] = calls.map((call) => {
-      return {
-        to: call.to,
-        value: call.value ?? 0n,
-        functionSig: call.functionSig,
-        inputParams: call.inputParams,
-        outputParams: call.outputParams
-      }
-    })
 
     // as of now, we just need to decide b/w 1.0.0 and 1.1.0
     // and we can decide this based on the `to` field:
@@ -736,6 +727,28 @@ export const toNexusAccount = async (
         )
       )
 
+    const composableCallsFormattedByVersion = calls.map((call) => {
+        return isComposability_v1_0_0 ? {
+          to: call.to,
+          value: call.value ?? 0n,
+          functionSig: call.functionSig,
+          inputParams: call.inputParams,
+          outputParams: call.outputParams
+        } : {
+          functionSig: call.functionSig,
+          inputParams: call.inputParams,
+          outputParams: call.outputParams
+        }
+      })
+    
+    console.log("isComposability_v1_0_0", isComposability_v1_0_0)
+    //console.log("calls", composableCallsFormattedByVersion)
+    /*
+    for (const call of composableCallsFormattedByVersion) {
+      console.log("call input params", call.inputParams)
+    }
+    */
+
     let composabilityAbi:
       | typeof COMPOSABILITY_MODULE_ABI_V1_0_0
       | typeof COMPOSABILITY_MODULE_ABI_V1_1_0
@@ -747,7 +760,7 @@ export const toNexusAccount = async (
     return encodeFunctionData({
       abi: composabilityAbi,
       functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
-      args: [composableCalls] // Multiple composable calls can be batched here.
+      args: [composableCallsFormattedByVersion] // Multiple composable calls can be batched here.
     })
   }
 
