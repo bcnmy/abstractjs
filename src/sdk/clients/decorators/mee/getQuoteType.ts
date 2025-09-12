@@ -7,7 +7,7 @@ import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
 import { getSupportedFeeToken } from "./getSupportedFeeToken"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
-export type QuoteType = "simple" | "onchain" | "permit"
+export type QuoteType = "simple" | "onchain" | "permit" | "mm-dtk"
 
 export const isPermitTokenInfo = async (
   client: BaseMeeClient,
@@ -110,5 +110,5 @@ export const getQuoteType = async (
   if (await isOnChainQuote(client, quoteParams)) {
     return "onchain"
   }
-  throw new Error("Invalid quote, can't determine signature type")
+  throw new Error("Invalid quote, can't determine quote type")
 }

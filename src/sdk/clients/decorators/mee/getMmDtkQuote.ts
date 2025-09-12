@@ -94,19 +94,37 @@ export const getMmDtkQuote = async (
       account: account_
     })
 
+  const triggerInfo: Trigger = {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    gasLimit: triggerGasLimit,
+    amount: triggerAmount, // Amount without fees and fees will be added below
+    ...(trigger.approvalAmount
+      ? { approvalAmount: trigger.approvalAmount }
+      : {}),
+    ...(trigger.recipientAddress
+      ? { recipientAddress: trigger.recipientAddress }
+      : {})
+  }
+
   // using the quote-permit endpoint as the redeemed permission
   // will aprove whatever is required to be approved, so the
   // rest is similar to the regular permit fusion mode
-  const quote = await getQuote(client, {
-    path: "quote-permit",
-    eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
-    instructions: batchedInstructions,
-    gasLimit: gasLimit || triggerGasLimit,
-    verificationGasLimit:
-      verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
-    ...(cleanUps ? { cleanUps } : {}),
-    ...rest
-  })
+  const quote = await getQuote(
+    client,
+    {
+      path: "quote-permit",
+      eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || triggerGasLimit,
+      verificationGasLimit:
+        verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    },
+    "mm-dtk",
+    triggerInfo
+  )
 
   // For useMaxAvailableFunds case, fees will be taken from max available funds.
   // else it will be explicitly defined here
@@ -119,16 +137,11 @@ export const getMmDtkQuote = async (
     fees = 0n
   }
 
-  const amount = triggerAmount + fees
+  triggerInfo.amount += fees
 
   return {
     quote,
-    trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      amount,
-      gasLimit: triggerGasLimit
-    }
+    trigger: triggerInfo
   }
 }
 

@@ -5,10 +5,11 @@ import {
   type Transport,
   createWalletClient,
   erc20Abi,
-  publicActions
+  publicActions,
+  parseUnits
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { baseSepolia, optimismSepolia } from "viem/chains"
+import { baseSepolia, optimism, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   TESTNET_RPC_URLS,
@@ -2593,5 +2594,61 @@ describe("mee.getQuote", () => {
     expect(quote).toBeDefined()
 
     expect(quote.paymentInfo.gasRefundAddress).toEqual(eoaAccount.address)
+  })
+
+  test("Simulations flow", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      url: "http://localhost:4001/v1"
+    })
+
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        amount: 1n,
+        chainId: baseSepolia.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id,
+        amount: 1n
+      },
+      instructions: [...transferInstruction],
+      simulation: {
+        simulate: true,
+        overrides: {
+          tokenOverrides: [
+            {
+              tokenAddress: mcUSDC.addressOn(optimism.id),
+              chainId: optimism.id,
+              balance: parseUnits("100", 6),
+              accountAddress: eoaAccount.address
+            }
+          ]
+        }
+      },
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
   })
 })

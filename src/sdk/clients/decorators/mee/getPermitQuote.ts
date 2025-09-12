@@ -108,14 +108,32 @@ export const getPermitQuote = async (
 
   const eoa = account_.signer.address
 
-  const quote = await getQuote(client, {
-    path: "quote-permit", // Use different endpoint for permit enabled tokens
-    eoa,
-    instructions: batchedInstructions,
-    gasLimit: gasLimit || triggerGasLimit,
-    ...(cleanUps ? { cleanUps } : {}),
-    ...rest
-  })
+  const triggerInfo: Trigger = {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    gasLimit: triggerGasLimit,
+    amount: triggerAmount, // Amount without fees and fees will be added below
+    ...(trigger.approvalAmount
+      ? { approvalAmount: trigger.approvalAmount }
+      : {}),
+    ...(trigger.recipientAddress
+      ? { recipientAddress: trigger.recipientAddress }
+      : {})
+  }
+
+  const quote = await getQuote(
+    client,
+    {
+      path: "quote-permit", // Use different endpoint for permit enabled tokens
+      eoa,
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || triggerGasLimit,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    },
+    "permit",
+    triggerInfo
+  )
 
   // For useMaxAvailableFunds case, fees will be taken from max available funds.
   // else it will be explicitly defined here
@@ -128,22 +146,11 @@ export const getPermitQuote = async (
     fees = 0n
   }
 
-  const amount = triggerAmount + fees
+  triggerInfo.amount += fees
 
   return {
     quote,
-    trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      gasLimit: triggerGasLimit,
-      amount,
-      ...(trigger.approvalAmount
-        ? { approvalAmount: trigger.approvalAmount }
-        : {}),
-      ...(trigger.recipientAddress
-        ? { recipientAddress: trigger.recipientAddress }
-        : {})
-    }
+    trigger: triggerInfo
   }
 }
 

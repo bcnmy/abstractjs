@@ -32,6 +32,8 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
+import { type QuoteType } from "./getQuoteType"
+import { type TokenTrigger } from "./signPermitQuote"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -210,6 +212,43 @@ export type SponsorshipOptionsParams = {
   }
 }
 
+export interface TokenOverride {
+  /** Token contract address */
+  tokenAddress: Address
+  /** Account address (EOA or Smart Contract Account) */
+  accountAddress: Address
+  /** Chain ID */
+  chainId: number
+  /** Token balance in wei */
+  balance: bigint
+}
+
+export interface CustomOverride {
+  /** Contract address */
+  contractAddress: Address
+  /** Storage slot in hex format */
+  storageSlot: Hex
+  /** Chain ID */
+  chainId: number
+  /** Override value - can be bigint, hex string, address, or regular string */
+  value: bigint | Address | Hex | string
+}
+
+export interface Overrides {
+  /** Token balance overrides */
+  tokenOverrides?: TokenOverride[]
+  /** Custom contract storage overrides */
+  customOverrides?: CustomOverride[]
+}
+
+export interface Simulation {
+  /** Flag to enable/disable simulations  */
+  simulate: boolean
+
+  /** Storage overrides to override token balance and some custom storage slots for simulation */
+  overrides?: Overrides
+}
+
 /**
  * Parameters required for requesting a quote from the MEE service
  */
@@ -254,6 +293,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * verificationGasLimit option to override the default payment verification gas limit
    */
   verificationGasLimit?: bigint
+  /**
+   * Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations
+   */
+  simulation?: Simulation
   /**
    * token cleanup option to pull the funds on failure or dust cleanup
    */
@@ -378,6 +421,13 @@ type QuoteRequest = {
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
+
+  quoteType?: QuoteType
+
+  trigger?: TokenTrigger
+
+  /** Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations */
+  simulation?: Simulation
 }
 
 /**
@@ -504,6 +554,8 @@ export type GetQuotePayload = {
   paymentInfo: FilledPaymentInfo
   /** Array of user operations with their details */
   userOps: MeeFilledUserOpDetails[]
+  /** Quote type - determines the supertransaction mode */
+  quoteType?: QuoteType
 }
 
 export type InitData = { eip7702Auth: MeeAuthorization } | { initCode: Hex }
@@ -543,7 +595,9 @@ export type InitDataOrUndefined = InitData | undefined
  */
 export const getQuote = async (
   client: BaseMeeClient,
-  parameters: GetQuoteParams
+  parameters: GetQuoteParams,
+  quoteType: QuoteType = "simple",
+  trigger?: TokenTrigger
 ): Promise<GetQuotePayload> => {
   const {
     account: account_ = client.account,
@@ -559,6 +613,7 @@ export const getQuote = async (
     multichain7702Auth = false,
     moduleAddress,
     batch = true,
+    simulation,
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
@@ -907,7 +962,14 @@ export const getQuote = async (
       }
     )
   )
-  const quoteRequest: QuoteRequest = { userOps, paymentInfo }
+
+  const quoteRequest: QuoteRequest = {
+    quoteType,
+    userOps,
+    paymentInfo,
+    simulation,
+    trigger
+  }
 
   let quote = await client.request<GetQuotePayload>({
     path: pathToQuery,
