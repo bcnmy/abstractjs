@@ -209,20 +209,6 @@ export type SponsorshipOptionsParams = {
   }
 }
 
-export type ActiveModuleParams = {
-  /**
-   * The address of the active module
-   * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-   */
-  moduleAddress: Address
-
-  /**
-   * The verification gas limit for the active module
-   * @example 150000n
-   */
-  customVerificationGasLimit?: bigint
-}
-
 /**
  * Parameters required for requesting a quote from the MEE service
  */
@@ -268,9 +254,14 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   cleanUps?: CleanUp[]
   /**
-   * Active module params. Used to fetch the nonce for the active module and resolve verification gas limit
+   * Active module address. Used to fetch the nonce for the active module and resolve verification gas limit
    */
-  activeModuleParams?: ActiveModuleParams
+  moduleAddress?: Address
+  /**
+   * The verification gas limit for the active module
+   * @example 150000n
+   */
+  customVerificationGasLimit?: bigint
   /**
    * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
    * This flag is set true when the whole superTxn with all entries require short encoding
@@ -562,14 +553,13 @@ export const getQuote = async (
     delegate = false,
     authorizations = [],
     multichain7702Auth = false,
-    activeModuleParams,
+    moduleAddress,
+    customVerificationGasLimit,
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
     feeToken
   } = parameters
-
-  const { moduleAddress } = activeModuleParams || {}
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -869,7 +859,8 @@ export const getQuote = async (
         }
 
         const verificationGasLimit = resolveVerificationGasLimit({
-          activeModuleParams,
+          moduleAddress,
+          customVerificationGasLimit,
           sponsorship,
           index: indexPerChainId.get(chainId)!,
           paymentChainId: paymentInfo.chainId,
@@ -944,9 +935,9 @@ const preparePaymentInfo = async (
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
-    activeModuleParams
+    moduleAddress,
+    customVerificationGasLimit,
   } = parameters
-  const { moduleAddress, customVerificationGasLimit } = activeModuleParams || {}
 
   let paymentInfo: PaymentInfo | undefined = undefined
   let isInitDataProcessed = false
@@ -1057,7 +1048,7 @@ const preparePaymentInfo = async (
 
     // for non-sponsored superTxn, the verification gas limit is resolved here
     const paymentVerificationGasLimit =
-      resolvePaymentUserOpVerificationGasLimitNonSponsored(activeModuleParams)
+      resolvePaymentUserOpVerificationGasLimitNonSponsored(moduleAddress, customVerificationGasLimit)
 
     paymentInfo = {
       sponsored: false,
@@ -1331,12 +1322,14 @@ const prepareCleanUpUserOps = async (
 // ============ resolve verification gas limit functions ============
 /**
  * Parameters for the resolveVerificationGasLimit function
- * @param activeModuleParams - The active module params
+ * @param moduleAddress - The active module address
+ * @param customVerificationGasLimit - The custom verification gas limit
  * @param index - The index of the userOp during the userOps completion process
  * @param sponsorship - Whether the superTxn is sponsored
  */
 export type resolveVerificationGasLimitParams = {
-  activeModuleParams?: ActiveModuleParams
+  moduleAddress?: Address
+  customVerificationGasLimit?: bigint
   sponsorship: boolean
   index: number
 }
@@ -1362,7 +1355,8 @@ const resolveVerificationGasLimit = (
   }
 ): verificationGasLimitPayload | undefined => {
   const {
-    activeModuleParams,
+    moduleAddress,
+    customVerificationGasLimit,
     sponsorship,
     index,
     paymentChainId,
@@ -1370,13 +1364,15 @@ const resolveVerificationGasLimit = (
   } = parameters
   if (currentChainId === paymentChainId) {
     return resolveVerificationGasLimitForPaymentChain({
-      activeModuleParams,
+      moduleAddress,
+      customVerificationGasLimit,
       sponsorship,
       index
     })
   }
   return resolveVerificationGasLimitForNonPaymentChain({
-    activeModuleParams,
+    moduleAddress,
+    customVerificationGasLimit,
     index
   })
 }
@@ -1391,14 +1387,13 @@ const resolveVerificationGasLimit = (
 const resolveVerificationGasLimitForPaymentChain = (
   parameters: resolveVerificationGasLimitParams
 ): verificationGasLimitPayload | undefined => {
-  const { activeModuleParams, sponsorship, index } = parameters
-  const { moduleAddress, customVerificationGasLimit } = activeModuleParams || {}
+  const { moduleAddress, customVerificationGasLimit, sponsorship, index } = parameters
 
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
   if (!moduleAddress && !customVerificationGasLimit) {
     return undefined
-  } 
+  }
   if (!moduleAddress && customVerificationGasLimit) {
     return { verificationGasLimit: customVerificationGasLimit }
   }
@@ -1443,13 +1438,12 @@ const resolveVerificationGasLimitForPaymentChain = (
 const resolveVerificationGasLimitForNonPaymentChain = (
   parameters: Omit<resolveVerificationGasLimitParams, "sponsorship">
 ): verificationGasLimitPayload | undefined => {
-  const { activeModuleParams, index } = parameters
-  const { moduleAddress, customVerificationGasLimit } = activeModuleParams || {}
+  const { moduleAddress, customVerificationGasLimit, index } = parameters
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
   if (!moduleAddress && !customVerificationGasLimit) {
     return undefined
-  } 
+  }
   if (!moduleAddress && customVerificationGasLimit) {
     return { verificationGasLimit: customVerificationGasLimit }
   }
@@ -1479,9 +1473,9 @@ const resolveVerificationGasLimitForNonPaymentChain = (
  * 'undefined' means the node will apply the default verification gas limit
  */
 const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
-  parameters?: ActiveModuleParams
+    moduleAddress?: Address,
+    customVerificationGasLimit?: bigint
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, customVerificationGasLimit } = parameters || {}
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
   if (!moduleAddress && !customVerificationGasLimit) {
