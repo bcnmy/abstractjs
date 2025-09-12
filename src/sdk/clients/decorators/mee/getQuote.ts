@@ -977,8 +977,7 @@ const preparePaymentInfo = async (
       token,
       nonce,
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
-      verificationGasLimit:
-        customVerificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT, // when sponsored, it is whether the custom one or the default one
+      verificationGasLimit: DEFAULT_VERIFICATION_GAS_LIMIT, // when sponsored, this will be set by the node
       chainId: chainId.toString(),
       sponsorshipUrl,
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
