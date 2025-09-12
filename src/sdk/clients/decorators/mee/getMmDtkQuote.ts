@@ -67,7 +67,7 @@ export const getMmDtkQuote = async (
     cleanUps,
     instructions,
     gasLimit,
-    verificationGasLimit,
+    customVerificationGasLimit,
     delegatorSmartAccount,
     ...rest
   } = parameters
@@ -99,8 +99,8 @@ export const getMmDtkQuote = async (
     eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
     instructions: batchedInstructions,
     gasLimit: gasLimit || triggerGasLimit,
-    verificationGasLimit:
-      verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
+    customVerificationGasLimit:
+      customVerificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
     ...(cleanUps ? { cleanUps } : {}),
     ...rest
   })

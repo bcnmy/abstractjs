@@ -936,7 +936,7 @@ const preparePaymentInfo = async (
     sponsorshipOptions,
     shortEncodingSuperTxn,
     moduleAddress,
-    customVerificationGasLimit,
+    customVerificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
@@ -1048,7 +1048,10 @@ const preparePaymentInfo = async (
 
     // for non-sponsored superTxn, the verification gas limit is resolved here
     const paymentVerificationGasLimit =
-      resolvePaymentUserOpVerificationGasLimitNonSponsored(moduleAddress, customVerificationGasLimit)
+      resolvePaymentUserOpVerificationGasLimitNonSponsored(
+        moduleAddress,
+        customVerificationGasLimit
+      )
 
     paymentInfo = {
       sponsored: false,
@@ -1387,7 +1390,8 @@ const resolveVerificationGasLimit = (
 const resolveVerificationGasLimitForPaymentChain = (
   parameters: resolveVerificationGasLimitParams
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, customVerificationGasLimit, sponsorship, index } = parameters
+  const { moduleAddress, customVerificationGasLimit, sponsorship, index } =
+    parameters
 
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
@@ -1473,8 +1477,8 @@ const resolveVerificationGasLimitForNonPaymentChain = (
  * 'undefined' means the node will apply the default verification gas limit
  */
 const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
-    moduleAddress?: Address,
-    customVerificationGasLimit?: bigint
+  moduleAddress?: Address,
+  customVerificationGasLimit?: bigint
 ): verificationGasLimitPayload | undefined => {
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
