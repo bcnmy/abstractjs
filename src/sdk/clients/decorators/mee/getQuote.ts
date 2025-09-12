@@ -337,7 +337,6 @@ export type MeeAuthorization = {
   nonce: Hex
   r: Hex
   s: Hex
-  v: Hex
   yParity: Hex
 }
 /**

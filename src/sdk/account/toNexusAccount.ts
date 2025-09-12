@@ -878,7 +878,6 @@ export const toNexusAccount = async (
       nonce: `0x${authorization.nonce.toString(16)}` as Hex,
       r: authorization.r as Hex,
       s: authorization.s as Hex,
-      v: `0x${authorization.v!.toString(16)}` as Hex,
       yParity: `0x${authorization.yParity!.toString(16)}` as Hex
     }
 
