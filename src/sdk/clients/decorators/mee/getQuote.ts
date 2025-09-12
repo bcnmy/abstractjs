@@ -32,8 +32,8 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
-import { type QuoteType } from "./getQuoteType"
-import { type TokenTrigger } from "./signPermitQuote"
+import type { QuoteType } from "./getQuoteType"
+import type { TokenTrigger } from "./signPermitQuote"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
