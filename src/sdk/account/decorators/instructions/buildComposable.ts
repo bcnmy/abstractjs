@@ -7,6 +7,7 @@ import {
   type InputParam,
   InputParamFetcherType,
   InputParamType,
+  isRuntimeComposableValue,
   prepareComposableInputCalldataParams
 } from "../../../modules/utils/composabilityCalls"
 import {
@@ -14,6 +15,7 @@ import {
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
 import { encodeAddress } from "../../../modules/utils/runtimeAbiEncoding"
+import { isBigInt } from "../../utils/Utils"
 import type { BaseInstructionsParams } from "../build"
 import type { ComposabilityParams } from "../build"
 
@@ -74,6 +76,17 @@ export const buildValueTransferComposableCall = async (
   let composableCall: ComposableCall
 
   if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+    if (!isAddress(to as Address)) {
+      throw new Error("Invalid target contract address")
+    }
+    if (isRuntimeComposableValue(value)) {
+      throw new Error(
+        "Runtime-injected native token value is not supported for Composability v1.0.0"
+      )
+    }
+    if (!isBigInt(value as bigint)) {
+      throw new Error("Invalid value")
+    }
     composableCall = {
       to: to as Address,
       value: (value as bigint) ?? BigInt(0),
@@ -96,12 +109,6 @@ export const buildValueTransferComposableCall = async (
       ...(gasLimit ? { gasLimit } : {})
     }
   }
-
-  console.log(
-    "build Value Transfer Composable Call with version:",
-    composabilityVersion,
-    composableCall
-  )
 
   return [composableCall]
 }
