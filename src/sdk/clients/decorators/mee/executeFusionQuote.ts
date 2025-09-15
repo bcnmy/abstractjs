@@ -4,6 +4,7 @@ import executeSignedQuote from "./executeSignedQuote"
 import signFusionQuote, {
   type SignFusionQuoteParameters
 } from "./signFusionQuote"
+import { type TokenTrigger } from "./signPermitQuote"
 
 /**
  * Parameters for executing a fusion quote
@@ -65,7 +66,20 @@ export const executeFusionQuote = async (
   parameters: ExecuteFusionQuoteParams
 ): Promise<ExecuteFusionQuotePayload> => {
   const signedFusionQuote = await signFusionQuote(client, parameters)
-  return executeSignedQuote(client, { signedQuote: signedFusionQuote })
+
+  let trigger: TokenTrigger | undefined = undefined
+
+  // If there is no call ? It is always TokenTrigger
+  if (parameters.fusionQuote.trigger && !parameters.fusionQuote.trigger.call) {
+    trigger = parameters.fusionQuote.trigger
+  }
+
+  return executeSignedQuote(client, {
+    signedQuote: {
+      ...signedFusionQuote,
+      trigger
+    }
+  })
 }
 
 export default executeFusionQuote
