@@ -13,8 +13,11 @@ import {
 import buildBatch, {
   type BuildBatchParameters
 } from "./instructions/buildBatch"
-import buildComposableUtil, {
-  type BuildComposableParameters
+import {
+  type BuildComposableParameters,
+  type BuildValueTransferComposableParameters,
+  buildComposableUtil,
+  buildComposableValueTransferUtil
 } from "./instructions/buildComposable"
 import {
   type BuildDefaultParameters,
@@ -115,6 +118,17 @@ export type BuildTransferFromInstruction = {
 export type BuildTransferInstruction = {
   type: "transfer"
   data: BuildTransferParameters
+  efficientMode?: boolean
+}
+
+/**
+ * Build action which is used to build instructions for a value transfer
+ * @property type - Literal "valueTransfer" to identify the action type
+ * @property data - {@link BuildValueTransferComposableParameters} The parameters for the value transfer action
+ */
+export type BuildValueTransferInstruction = {
+  type: "valueTransfer"
+  data: BuildValueTransferComposableParameters
   efficientMode?: boolean
 }
 
@@ -223,6 +237,7 @@ export type BuildInstructionTypes =
 export type BuildComposableInstructionTypes =
   | BuildTransferFromInstruction
   | BuildTransferInstruction
+  | BuildValueTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
@@ -360,6 +375,11 @@ export const buildComposable = async (
       return buildTransfer(baseParams, data, {
         forceComposableEncoding: true,
         efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
+    }
+    case "valueTransfer": {
+      return buildComposableValueTransferUtil(baseParams, data, {
         composabilityVersion: composabilityVersion!
       })
     }

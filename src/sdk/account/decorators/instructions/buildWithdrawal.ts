@@ -118,12 +118,15 @@ export const buildWithdrawal = async (
           "Runtime balance for Native tokens is not supported for Composability v1.0.0"
         )
       }
-      withdrawalCall = await buildValueTransferComposableCall({
-        to: recipient,
-        value: amount,
-        chainId,
-        ...(gasLimit ? { gasLimit } : {})
-      })
+      withdrawalCall = await buildValueTransferComposableCall(
+        {
+          to: recipient,
+          value: amount,
+          chainId,
+          ...(gasLimit ? { gasLimit } : {})
+        },
+        composabilityParams
+      )
       return [
         ...currentInstructions,
         {

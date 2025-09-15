@@ -50,7 +50,6 @@ import {
 import { toComposableExecutor, toComposableFallback } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
 import {
-  type BaseComposableCall,
   type ComposableCall,
   InputParamType
 } from "../modules/utils/composabilityCalls"
@@ -741,14 +740,6 @@ export const toNexusAccount = async (
             outputParams: call.outputParams
           }
     })
-
-    console.log("isComposability_v1_0_0", isComposability_v1_0_0)
-    //console.log("calls", composableCallsFormattedByVersion)
-    /*
-    for (const call of composableCallsFormattedByVersion) {
-      console.log("call input params", call.inputParams)
-    }
-    */
 
     let composabilityAbi:
       | typeof COMPOSABILITY_MODULE_ABI_V1_0_0

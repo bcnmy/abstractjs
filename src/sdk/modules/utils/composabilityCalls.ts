@@ -309,11 +309,9 @@ export const runtimeNativeBalanceOf = ({
   const constraintsToAdd = validateAndProcessConstraints(constraints)
 
   const encodedInputParamData = encodePacked(
-    [{ type: "address" }, { type: "address" }],
+    ["address", "address"],
     ["0x0000000000000000000000000000000000000000", targetAddress]
   )
-
-  console.log("encodedInputParamData", encodedInputParamData)
 
   return {
     isRuntime: true,

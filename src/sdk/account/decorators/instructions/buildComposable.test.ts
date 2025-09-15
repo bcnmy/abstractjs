@@ -43,7 +43,8 @@ import {
   type RuntimeValue,
   getMEEVersion,
   greaterThanOrEqualTo,
-  runtimeERC20BalanceOf
+  runtimeERC20BalanceOf,
+  runtimeNativeBalanceOf
 } from "../../../modules"
 import {
   type MultichainSmartAccount,
@@ -511,7 +512,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       mcNexus: testMcNexus,
       meeClient: testMeeClient
     } of accountConfigs) {
-      console.log(`[${name}] executing composable transaction for static args`)
       const amountToSupply = parseUnits("0.1", 6)
 
       const balanceBefore = await publicClient.readContract({
@@ -520,8 +520,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         functionName: "balanceOf",
         args: [eoaAccount.address]
       })
-
-      console.log(`[${name}] balanceBefore`, balanceBefore)
 
       const trigger = {
         chainId: chain.id,
@@ -568,9 +566,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         })
       }
 
-      console.log("fusionQuote", fusionQuote.fusionQuote)
-
-      /*
       const { hash } = await testMeeClient.executeFusionQuote(fusionQuote)
 
       const { transactionStatus, explorerLinks } =
@@ -596,7 +591,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       )
 
       console.log(`[${name}]`, { explorerLinks, hash })
-      */
     }
   })
 
@@ -1447,7 +1441,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     )
   })
 
-  it("should execute native token composable cleanup for composable call", async () => {
+  it("should execute native token composable cleanup for composable call for composability v1.0.0 with fixed amount", async () => {
     const amountToFund = 1000n
 
     const trigger = {
@@ -1505,6 +1499,74 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         ])
       } else {
         expect(userOp.executionStatus).to.be.eq("MINED_SUCCESS")
+      }
+    }
+
+    console.log({ explorerLinks, hash })
+  })
+
+  it("should execute native token composable cleanup for composable call for composability v1.1.0 with runtime amount", async () => {
+    const amountToFund = 1000n
+
+    const trigger = {
+      chainId: chain.id,
+      tokenAddress: zeroAddress, // Native token representation
+      amount: amountToFund
+    }
+
+    const orchestratorAddress = await mcNexus
+      .deploymentOn(chain.id, true)
+      .getAddress()
+
+    const quote = await meeClient_compos_v1_1_0.getFusionQuote({
+      trigger,
+      cleanUps: [
+        {
+          tokenAddress: zeroAddress,
+          chainId: chain.id,
+          recipientAddress: eoaAccount.address,
+          amount: runtimeNativeBalanceOf({
+            targetAddress: orchestratorAddress
+          })
+        }
+      ],
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 500n
+            }
+          ],
+          chainId: chain.id
+        }
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: zeroAddress // native token payment
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_0.executeFusionQuote({
+      fusionQuote: quote
+    })
+
+    const { transactionStatus, explorerLinks, userOps } =
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+
+    for (const userOp of userOps) {
+      if (userOp.isCleanUpUserOp) {
+        expect(userOp.executionStatus).to.be.oneOf([
+          "MINED_FAIL",
+          "PENDING",
+          "MINING",
+          "MINED_SUCCESS"
+        ])
       }
     }
 

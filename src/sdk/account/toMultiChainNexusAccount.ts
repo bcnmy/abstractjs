@@ -178,6 +178,14 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     parameter?: IsDelegatedParameters
   ) => Promise<IsDelegatedPayload>
   /**
+   * Function to get the composability version for a specific chain
+   * @param chainId - The ID of the chain to query
+   * @returns The composability version of a given multichain account on the specified chain
+   * @example
+   * const composabilityVersion = await mcAccount.getComposabilityVersion(1)
+   */
+  getComposabilityVersion: (chainId: number) => ComposabilityVersion
+  /**
    * Function to undelegate the account
    * @returns The transaction hashes of the undelegate transactions
    * @example
@@ -329,23 +337,9 @@ export async function toMultichainNexusAccount(
       chainId = params.data.chainId
     }
 
-    // TODO:convert to getComposabilityVersion(chainId)
     if (chainId) {
-      const chainConfiguration = chainConfigurations.find(
-        (chainConfiguration) => chainConfiguration.chain.id === chainId
-      )
-      if (!chainConfiguration) {
-        throw new Error(
-          `Chain configuration not found in mc account for chainId: ${chainId} that is used in the instruction params`
-        )
-      }
-      composabilityVersion = chainConfiguration.version.composabilityVersion
+      composabilityVersion = getComposabilityVersion(chainId)
     }
-
-    // Debugging log TODO: Remove this
-    console.log(
-      `Build Composable type: ${type} with composabilityVersion: ${composabilityVersion}`
-    )
 
     return buildComposableDecorator(
       { currentInstructions, accountAddress: baseAccount.signer.address },
@@ -370,6 +364,18 @@ export async function toMultichainNexusAccount(
   ) =>
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
+  const getComposabilityVersion = (chainId: number) => {
+    const chainConfiguration = chainConfigurations.find(
+      (chainConfiguration) => chainConfiguration.chain.id === chainId
+    )
+    if (!chainConfiguration) {
+      throw new Error(
+        `Chain configuration not found in mc account for chainId: ${chainId} that is used in the instruction params`
+      )
+    }
+    return chainConfiguration.version.composabilityVersion
+  }
+
   const read = <T>(params: MultichainReadParameters) =>
     multichainRead(baseAccount, params) as Promise<MultiChainReadPayload<T>[]>
 
@@ -385,6 +391,7 @@ export async function toMultichainNexusAccount(
     buildBridgeInstructions,
     queryBridge,
     isDelegated,
+    getComposabilityVersion,
     unDelegate,
     waitForTransactionReceipts,
     read,

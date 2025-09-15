@@ -59,24 +59,49 @@ export type BuildValueTransferComposableParameters = {
   chainId: number
 }
 
-// For Composability version 1.1.0+ only
 export const buildValueTransferComposableCall = async (
-  parameters: BuildValueTransferComposableParameters
+  parameters: BuildValueTransferComposableParameters,
+  composabilityParams: ComposabilityParams
 ): Promise<ComposableCall[]> => {
   const { to, gasLimit, value } = parameters
-
-  const { targetInputParam, valueInputParam } =
-    prepareTargetAndValueInputParams(to, value)
-
-  const composableCall: ComposableCall = {
-    functionSig: "0x",
-    inputParams: [
-      targetInputParam,
-      ...(valueInputParam ? [valueInputParam] : [])
-    ],
-    outputParams: [],
-    ...(gasLimit ? { gasLimit } : {})
+  const { composabilityVersion } = composabilityParams
+  if (!composabilityVersion) {
+    throw new Error(
+      "Composability version is required to build a composable native token transfer call."
+    )
   }
+
+  let composableCall: ComposableCall
+
+  if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+    composableCall = {
+      to: to as Address,
+      value: (value as bigint) ?? BigInt(0),
+      functionSig: "0x00000000",
+      inputParams: [],
+      outputParams: []
+    }
+  } else {
+    // composability version 1.1.0+
+    const { targetInputParam, valueInputParam } =
+      prepareTargetAndValueInputParams(to, value)
+
+    composableCall = {
+      functionSig: "0x00000000",
+      inputParams: [
+        targetInputParam,
+        ...(valueInputParam ? [valueInputParam] : [])
+      ],
+      outputParams: [],
+      ...(gasLimit ? { gasLimit } : {})
+    }
+  }
+
+  console.log(
+    "build Value Transfer Composable Call with version:",
+    composabilityVersion,
+    composableCall
+  )
 
   return [composableCall]
 }
@@ -129,11 +154,6 @@ export const buildComposableCall = async (
     value,
     gasLimit
   )
-  console.log(
-    "build Composable Call with version:",
-    composabilityVersion,
-    composableCall
-  )
 
   return [composableCall]
 }
@@ -158,11 +178,9 @@ export const formatComposableCallWithVersion = (
   value?: bigint | RuntimeValue,
   gasLimit?: bigint
 ): ComposableCall => {
-  let composableInputParams: InputParam[]
   let composableCall: ComposableCall
   // Handle different composability versions
   if (composabilityVersion === ComposabilityVersion.V1_0_0) {
-    composableInputParams = versionAgnosticComposableInputParams
     if (!isAddress(to as Address)) {
       throw new Error("Invalid target contract address")
     }
@@ -171,27 +189,20 @@ export const formatComposableCallWithVersion = (
       to: to as Address,
       value: (value as bigint) ?? BigInt(0),
       functionSig,
-      inputParams: efficientMode
-        ? compressCalldataInputParams(composableInputParams)
-        : composableInputParams,
-      //inputParams: composableParams,
+      inputParams: formatCallDataInputParamsWithVersion(
+        composabilityVersion,
+        efficientMode,
+        versionAgnosticComposableInputParams
+      ),
       outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
       ...(gasLimit ? { gasLimit } : {})
     }
   } else {
-    composableInputParams = versionAgnosticComposableInputParams.map(
-      (param) => ({
-        ...param,
-        paramType: InputParamType.CALL_DATA
-      })
+    const callDataInputParams = formatCallDataInputParamsWithVersion(
+      composabilityVersion,
+      efficientMode,
+      versionAgnosticComposableInputParams
     )
-    console.log(
-      "formatComposableCallWithVersion:: composableInputParams",
-      composableInputParams
-    )
-    const callDataInputParams = efficientMode
-      ? compressCalldataInputParams(composableInputParams)
-      : composableInputParams
 
     const { targetInputParam, valueInputParam } =
       prepareTargetAndValueInputParams(to, value)
@@ -211,6 +222,30 @@ export const formatComposableCallWithVersion = (
     }
   }
   return composableCall
+}
+
+/**
+ * Formats the call data input params based on the composability version
+ * @param composabilityVersion
+ * @param efficientMode
+ * @param versionAgnosticInputParams
+ * @returns
+ */
+export const formatCallDataInputParamsWithVersion = (
+  composabilityVersion: ComposabilityVersion,
+  efficientMode: boolean,
+  versionAgnosticInputParams: InputParam[]
+): InputParam[] => {
+  let inputParams: InputParam[]
+  if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+    inputParams = versionAgnosticInputParams
+  } else {
+    inputParams = versionAgnosticInputParams.map((param) => ({
+      ...param,
+      paramType: InputParamType.CALL_DATA
+    }))
+  }
+  return efficientMode ? compressCalldataInputParams(inputParams) : inputParams
 }
 
 /**
@@ -273,6 +308,27 @@ export const buildComposableUtil = async (
 
   const calls = await buildComposableCall(parameters, composabilityParams)
 
+  return [
+    ...currentInstructions,
+    {
+      calls: calls,
+      chainId: parameters.chainId,
+      isComposable: true
+    }
+  ]
+}
+
+export const buildComposableValueTransferUtil = async (
+  baseParams: BaseInstructionsParams,
+  parameters: BuildValueTransferComposableParameters,
+  composabilityParams: ComposabilityParams
+): Promise<Instruction[]> => {
+  const { currentInstructions = [] } = baseParams
+
+  const calls = await buildValueTransferComposableCall(
+    parameters,
+    composabilityParams
+  )
   return [
     ...currentInstructions,
     {

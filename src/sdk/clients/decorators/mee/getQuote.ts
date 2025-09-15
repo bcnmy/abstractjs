@@ -1,6 +1,9 @@
-import { type Address, type Hex, type OneOf, encodeFunctionData } from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { buildComposable } from "../../../account/decorators"
+import {
+  buildComposable,
+  formatCallDataInputParamsWithVersion
+} from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
@@ -14,7 +17,6 @@ import {
   ComposabilityVersion,
   SMART_SESSIONS_ADDRESS
 } from "../../../constants"
-import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
@@ -780,11 +782,10 @@ export const getQuote = async (
     moduleAddress
   )
 
-  console.log("userOps prepared")
-
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
   if (cleanUps && cleanUps.length > 0) {
+    console.log("cleanUp stage started")
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
@@ -798,8 +799,6 @@ export const getQuote = async (
 
     preparedUserOps.push(...cleanUpUserOps)
   }
-
-  console.log("cleanups stage completed::", cleanUps?.length)
 
   // complete the userOps including cleanup ones
   const indexPerChainId = new Map<string, number>()
@@ -898,8 +897,6 @@ export const getQuote = async (
     )
   )
   const quoteRequest: QuoteRequest = { userOps, paymentInfo }
-
-  console.log("quoteRequest", quoteRequest)
 
   let quote = await client.request<GetQuotePayload>({
     path: pathToQuery,
@@ -1139,7 +1136,6 @@ const prepareUserOps = async (
         callsPromise = deployment.encodeExecuteComposable(
           instruction.calls as ComposableCall[]
         )
-        //console.log("callsPromise", callsPromise)
       } else {
         callsPromise =
           instruction.calls.length > 1
@@ -1211,21 +1207,21 @@ const prepareCleanUpUserOps = async (
           // If the amount is not a bigint, or is 0, then build a runtime injected cleanup
           let amount: RuntimeValue
           if (cleanUp.amount === undefined || cleanUp.amount === 0n) {
+            // if it is not properly supplied as runtime value,
+            // then use the runtime native balance of the account
             amount = runtimeNativeBalanceOf({
               targetAddress: account.addressOn(cleanUp.chainId, true)
             })
           } else {
+            // else just use provided runtime value
             amount = cleanUp.amount as RuntimeValue
           }
           const [cleanUpNativeTransferInstruction] = await buildComposable(
             { accountAddress: account.signer.address, currentInstructions: [] },
             {
-              type: "default",
+              type: "valueTransfer",
               data: {
                 to: cleanUp.recipientAddress,
-                functionName: "forward",
-                args: [cleanUp.recipientAddress],
-                abi: ForwarderAbi,
                 value: amount,
                 chainId: cleanUp.chainId,
                 ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
@@ -1236,19 +1232,14 @@ const prepareCleanUpUserOps = async (
           cleanUpInstruction = cleanUpNativeTransferInstruction
         } else {
           const amount = cleanUp.amount as bigint
-          const forwardCalldata = encodeFunctionData({
-            abi: ForwarderAbi,
-            functionName: "forward",
-            args: [cleanUp.recipientAddress]
-          })
 
           const [cleanUpNativeTransferInstruction] = await buildComposable(
             { accountAddress: account.signer.address, currentInstructions: [] },
             {
               type: "rawCalldata",
               data: {
-                to: version.ethForwarderAddress,
-                calldata: forwardCalldata,
+                to: cleanUp.recipientAddress,
+                calldata: "0x00000000",
                 chainId: cleanUp.chainId,
                 value: amount
               }
@@ -1310,7 +1301,7 @@ const prepareCleanUpUserOps = async (
       } else {
         if (userOpsNonceInfo.length === 0) {
           throw new Error(
-            "Atleast one instruction should be configured to use cleanups."
+            "At least one instruction should be configured to use cleanups."
           )
         }
 
@@ -1329,11 +1320,17 @@ const prepareCleanUpUserOps = async (
       const nonceDependencyInputParams = nonceDependencies.flatMap(
         (dep) => dep.inputParams
       )
+      const formattedNonceDependencyInputParams =
+        formatCallDataInputParamsWithVersion(
+          composabilityVersion,
+          false,
+          nonceDependencyInputParams
+        )
 
       cleanUpInstruction.calls = (
         cleanUpInstruction.calls as ComposableCall[]
       ).map((call) => {
-        call.inputParams.push(...nonceDependencyInputParams)
+        call.inputParams.push(...formattedNonceDependencyInputParams)
         return call
       })
 
