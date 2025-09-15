@@ -1389,8 +1389,7 @@ const resolveVerificationGasLimit = (
 const resolveVerificationGasLimitForPaymentChain = (
   parameters: resolveVerificationGasLimitParams
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, verificationGasLimit, sponsorship, index } =
-    parameters
+  const { moduleAddress, verificationGasLimit, sponsorship, index } = parameters
 
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
