@@ -294,7 +294,6 @@ export const build = async (
 ): Promise<Instruction[]> => {
   const { type, data } = parameters
 
-  // go through all the `parameters` fields and check if they are runtime values
   const containsRuntimeValues = Object.values(data).some((value) =>
     isRuntimeComposableValue(value)
   )
