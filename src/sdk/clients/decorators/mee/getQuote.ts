@@ -261,7 +261,7 @@ export type GetQuoteParams = SupertransactionLike & {
    * The verification gas limit for the active module
    * @example 150000n
    */
-  customVerificationGasLimit?: bigint
+  verificationGasLimit?: bigint
   /**
    * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
    * This flag is set true when the whole superTxn with all entries require short encoding
@@ -554,7 +554,7 @@ export const getQuote = async (
     authorizations = [],
     multichain7702Auth = false,
     moduleAddress,
-    customVerificationGasLimit,
+    verificationGasLimit,
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
@@ -858,9 +858,9 @@ export const getQuote = async (
           }
         }
 
-        const verificationGasLimit = resolveVerificationGasLimit({
+        const resolvedVerificationGasLimit = resolveVerificationGasLimit({
           moduleAddress,
-          customVerificationGasLimit,
+          verificationGasLimit,
           sponsorship,
           index: indexPerChainId.get(chainId)!,
           paymentChainId: paymentInfo.chainId,
@@ -882,7 +882,7 @@ export const getQuote = async (
           chainId,
           isCleanUpUserOp,
           ...initDataOrUndefined,
-          ...verificationGasLimit,
+          ...resolvedVerificationGasLimit,
           shortEncoding: shortEncodingSuperTxn || shortEncoding
         }
       }
@@ -936,7 +936,7 @@ const preparePaymentInfo = async (
     sponsorshipOptions,
     shortEncodingSuperTxn,
     moduleAddress,
-    customVerificationGasLimit
+    verificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
@@ -1049,7 +1049,7 @@ const preparePaymentInfo = async (
     const paymentVerificationGasLimit =
       resolvePaymentUserOpVerificationGasLimitNonSponsored(
         moduleAddress,
-        customVerificationGasLimit
+        verificationGasLimit
       )
 
     paymentInfo = {
@@ -1325,13 +1325,13 @@ const prepareCleanUpUserOps = async (
 /**
  * Parameters for the resolveVerificationGasLimit function
  * @param moduleAddress - The active module address
- * @param customVerificationGasLimit - The custom verification gas limit
+ * @param verificationGasLimit - The custom verification gas limit
  * @param index - The index of the userOp during the userOps completion process
  * @param sponsorship - Whether the superTxn is sponsored
  */
 export type resolveVerificationGasLimitParams = {
   moduleAddress?: Address
-  customVerificationGasLimit?: bigint
+  verificationGasLimit?: bigint
   sponsorship: boolean
   index: number
 }
@@ -1358,7 +1358,7 @@ const resolveVerificationGasLimit = (
 ): verificationGasLimitPayload | undefined => {
   const {
     moduleAddress,
-    customVerificationGasLimit,
+    verificationGasLimit,
     sponsorship,
     index,
     paymentChainId,
@@ -1367,14 +1367,14 @@ const resolveVerificationGasLimit = (
   if (currentChainId === paymentChainId) {
     return resolveVerificationGasLimitForPaymentChain({
       moduleAddress,
-      customVerificationGasLimit,
+      verificationGasLimit,
       sponsorship,
       index
     })
   }
   return resolveVerificationGasLimitForNonPaymentChain({
     moduleAddress,
-    customVerificationGasLimit,
+    verificationGasLimit,
     index
   })
 }
@@ -1389,16 +1389,16 @@ const resolveVerificationGasLimit = (
 const resolveVerificationGasLimitForPaymentChain = (
   parameters: resolveVerificationGasLimitParams
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, customVerificationGasLimit, sponsorship, index } =
+  const { moduleAddress, verificationGasLimit, sponsorship, index } =
     parameters
 
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
-  if (!moduleAddress && !customVerificationGasLimit) {
+  if (!moduleAddress && !verificationGasLimit) {
     return undefined
   }
-  if (!moduleAddress && customVerificationGasLimit) {
-    return { verificationGasLimit: customVerificationGasLimit }
+  if (!moduleAddress && verificationGasLimit) {
+    return { verificationGasLimit }
   }
   // at this stage moduleAddress is definitely provided
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
@@ -1412,7 +1412,7 @@ const resolveVerificationGasLimitForPaymentChain = (
         // return increased verification gas limit for the first userOp
         // as it this userOp will be enabling the permission => requires more gas
         return {
-          verificationGasLimit: customVerificationGasLimit || 1_000_000n
+          verificationGasLimit: verificationGasLimit || 1_000_000n
         }
       }
     }
@@ -1423,8 +1423,8 @@ const resolveVerificationGasLimitForPaymentChain = (
   // if module is defined, however it is not SMART_SESSIONS_ADDRESS,
   // return the custom verification gas limit
   // more manual handling for other modules can be added here if needed
-  if (customVerificationGasLimit) {
-    return { verificationGasLimit: customVerificationGasLimit }
+  if (verificationGasLimit) {
+    return { verificationGasLimit }
   }
   // if module is provided but no custom verification gas limit is provided,
   // return undefined == default verification gas limit
@@ -1441,14 +1441,14 @@ const resolveVerificationGasLimitForPaymentChain = (
 const resolveVerificationGasLimitForNonPaymentChain = (
   parameters: Omit<resolveVerificationGasLimitParams, "sponsorship">
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, customVerificationGasLimit, index } = parameters
+  const { moduleAddress, verificationGasLimit, index } = parameters
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
-  if (!moduleAddress && !customVerificationGasLimit) {
+  if (!moduleAddress && !verificationGasLimit) {
     return undefined
   }
-  if (!moduleAddress && customVerificationGasLimit) {
-    return { verificationGasLimit: customVerificationGasLimit }
+  if (!moduleAddress && verificationGasLimit) {
+    return { verificationGasLimit }
   }
   // at this stage moduleAddress is definitely provided
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
@@ -1456,13 +1456,13 @@ const resolveVerificationGasLimitForNonPaymentChain = (
     if (index === 0) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
-      return { verificationGasLimit: customVerificationGasLimit || 1_000_000n }
+      return { verificationGasLimit: verificationGasLimit || 1_000_000n }
     }
     // for all other userOps, return USE session verification gas limit
     return { verificationGasLimit: 250_000n }
   }
-  if (customVerificationGasLimit) {
-    return { verificationGasLimit: customVerificationGasLimit }
+  if (verificationGasLimit) {
+    return { verificationGasLimit }
   }
   // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
@@ -1477,27 +1477,27 @@ const resolveVerificationGasLimitForNonPaymentChain = (
  */
 const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
   moduleAddress?: Address,
-  customVerificationGasLimit?: bigint
+  verificationGasLimit?: bigint
 ): verificationGasLimitPayload | undefined => {
   // if neither module address nor custom verification gas limit is provided,
   // the default verification gas limit will be applied
-  if (!moduleAddress && !customVerificationGasLimit) {
+  if (!moduleAddress && !verificationGasLimit) {
     return undefined
   }
-  if (!moduleAddress && customVerificationGasLimit) {
-    return { verificationGasLimit: customVerificationGasLimit }
+  if (!moduleAddress && verificationGasLimit) {
+    return { verificationGasLimit }
   }
   // at this stage moduleAddress is definitely provided
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
     // return increased verification gas limit for payment userOp
     // in a non-sponsored superTxn
-    return { verificationGasLimit: customVerificationGasLimit || 1_000_000n }
+    return { verificationGasLimit: verificationGasLimit || 1_000_000n }
     // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
     // so doesn't need any custom verification gas limit
     // also payment userOp never utilizes USE mode of Smart Sessions Module
   }
-  if (customVerificationGasLimit) {
-    return { verificationGasLimit: customVerificationGasLimit }
+  if (verificationGasLimit) {
+    return { verificationGasLimit }
   }
   // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
