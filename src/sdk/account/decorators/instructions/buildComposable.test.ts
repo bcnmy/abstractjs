@@ -1437,7 +1437,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         }
       })
     ).rejects.toThrowError(
-      "Atleast one instruction should be configured to use cleanups."
+      "At least one instruction should be configured to use cleanups."
     )
   })
 
@@ -1505,7 +1505,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     console.log({ explorerLinks, hash })
   })
 
-  it("should execute native token composable cleanup for composable call for composability v1.1.0 with runtime amount", async () => {
+  it("should execute native token composable cleanup for composable call for composability v1.1.0 with runtime amount using runtime native balance helper", async () => {
     const amountToFund = 1000n
 
     const trigger = {
