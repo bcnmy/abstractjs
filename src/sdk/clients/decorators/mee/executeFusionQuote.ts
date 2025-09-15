@@ -4,7 +4,7 @@ import executeSignedQuote from "./executeSignedQuote"
 import signFusionQuote, {
   type SignFusionQuoteParameters
 } from "./signFusionQuote"
-import { type TokenTrigger } from "./signPermitQuote"
+import type { TokenTrigger } from "./signPermitQuote"
 
 /**
  * Parameters for executing a fusion quote
