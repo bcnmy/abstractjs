@@ -1,26 +1,26 @@
 import {
-  Chain,
-  createWalletClient,
   http,
-  LocalAccount,
-  parseUnits,
-  WalletClient
+  type Chain,
+  type LocalAccount,
+  type WalletClient,
+  createWalletClient,
+  parseUnits
 } from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  NetworkConfig,
+  type NetworkConfig,
   TESTNET_RPC_URLS,
   toNetwork
 } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
-  MultichainSmartAccount,
+  type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
-import { createMeeClient, MeeClient } from "../../createMeeClient"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { type MeeClient, createMeeClient } from "../../createMeeClient"
 
 describe("mee.getQuote({ simulations })", () => {
   let network: NetworkConfig
