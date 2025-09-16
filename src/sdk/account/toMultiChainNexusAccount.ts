@@ -329,11 +329,9 @@ export async function toMultichainNexusAccount(
     let chainId: number | undefined = undefined
 
     const type = params.type
-    if (type === "batch") {
-      //do nothing
-    } else if (type === "acrossIntent") {
+    if (type === "acrossIntent") {
       chainId = params.data.originChainId
-    } else {
+    } else if (type !== "batch") {
       chainId = params.data.chainId
     }
 

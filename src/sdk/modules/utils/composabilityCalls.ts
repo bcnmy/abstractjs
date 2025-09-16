@@ -19,7 +19,7 @@ import {
 
 /**
  * fetcherType: Defines how to fetch the param
- * paramData: The data that is used duting fetching the param
+ * paramData: The data that is used during fetching the param
  * constraints: The constraints that the resulting param needs to satisfy
  * paramType: The type of the param. This field is optional and it is introduced in the composability version 1.1.0
  * If earlier versions are used, this field may not not present.
@@ -36,12 +36,27 @@ export type OutputParam = {
   paramData: string
 }
 
+/**
+ * paramType: The type of the param.
+ * TARGET: The target address => used as a target address for the call
+ * VALUE: The value => used as a native value for the call
+ * CALL_DATA: processed param will be part of the calldata for the call
+ * This field is optional and it is introduced in the composability version 1.1.0
+ * If earlier versions are used, this field may not not present.
+ */
 export const InputParamType = {
   TARGET: 0,
   VALUE: 1,
   CALL_DATA: 2
 } as const
 
+/**
+ * fetcherType: Defines how to fetch the param
+ * RAW_BYTES: just use param data as is (raw bytes)
+ * STATIC_CALL: param data defines the params for the static call
+ * Outputs of the static call will form the processed param
+ * BALANCE: param data defines the params for the balance query
+ */
 export const InputParamFetcherType = {
   RAW_BYTES: 0,
   STATIC_CALL: 1,

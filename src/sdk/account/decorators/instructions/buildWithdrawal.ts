@@ -99,7 +99,6 @@ export const buildWithdrawal = async (
   const { forceComposableEncoding = false } = composabilityParams ?? {
     forceComposableEncoding: false
   }
-  composabilityParams
 
   let withdrawalCall: AbstractCall[] | ComposableCall[]
 

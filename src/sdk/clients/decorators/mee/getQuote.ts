@@ -785,7 +785,6 @@ export const getQuote = async (
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
   if (cleanUps && cleanUps.length > 0) {
-    console.log("cleanUp stage started")
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
