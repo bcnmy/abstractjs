@@ -198,24 +198,22 @@ export const formatCallDataInputParamsWithVersion = (
   efficientMode: boolean,
   versionAgnosticInputParams: InputParam[]
 ): InputParam[] => {
-  let inputParams: InputParam[]
+  const compressedVersionAgnosticInputParams = efficientMode
+    ? compressCalldataInputParams(versionAgnosticInputParams)
+    : versionAgnosticInputParams
   if (composabilityVersion === ComposabilityVersion.V1_0_0) {
     // backwards compatibility for composability version 1.0.0
     // for composability version 1.0.0, we need to back convert
     // input params with fetcherType BALANCE to input params with fetcherType STATIC_CALL
     // since the BALANCE fetcher type is not supported in composability version 1.0.0
-    inputParams = versionAgnosticInputParams.map((param) => {
+    return compressedVersionAgnosticInputParams.map((param) => {
       if (param.fetcherType === InputParamFetcherType.BALANCE) {
-        console.log("converting BALANCE to STATIC_CALL")
-
         // param data for Balance is abi.encodePacked([tokenAddress, targetAddress])
         // slice it accordingly to get the tokenAddress and targetAddress
         const tokenAddress =
           `0x${param.paramData.slice(2, 42)}` as `0x${string}`
         const targetAddress =
           `0x${param.paramData.slice(42, 82)}` as `0x${string}`
-        console.log("tokenAddress", tokenAddress)
-        console.log("targetAddress", targetAddress)
 
         if (isNativeToken(tokenAddress)) {
           throw new Error(
@@ -243,15 +241,13 @@ export const formatCallDataInputParamsWithVersion = (
       // for other input params, return them as is
       return param
     })
-  } else {
-    // for composability version 1.1.0+, we need to add paramType: CALL_DATA to the input params
-    // since the input param type field is required for composability version 1.1.0+
-    inputParams = versionAgnosticInputParams.map((param) => ({
-      ...param,
-      paramType: InputParamType.CALL_DATA
-    }))
   }
-  return efficientMode ? compressCalldataInputParams(inputParams) : inputParams
+  // for composability version 1.1.0+, we need to add paramType: CALL_DATA to the input params
+  // since the input param type field is required for composability version 1.1.0+
+  return compressedVersionAgnosticInputParams.map((param) => ({
+    ...param,
+    paramType: InputParamType.CALL_DATA
+  }))
 }
 
 /**
@@ -339,17 +335,18 @@ const compressCalldataInputParams = (
 ): InputParam[] => {
   const compressedParams: InputParam[] = []
   let currentParam: InputParam = {
-    paramType: InputParamType.CALL_DATA,
     fetcherType: InputParamFetcherType.RAW_BYTES,
     constraints: [],
     paramData: ""
   }
   // compress only calldata input params
-  for (const param of inputParams.filter(
-    (param) =>
-      param.paramType === InputParamType.CALL_DATA ||
-      param.paramType === undefined
-  )) {
+  for (const param of inputParams) {
+    if (
+      param.paramType === InputParamType.TARGET ||
+      param.paramType === InputParamType.VALUE
+    ) {
+      throw new Error("Target or value input params should not be compressed")
+    }
     // Static call, balance or constraint based params are left as is
     if (
       param.fetcherType === InputParamFetcherType.STATIC_CALL ||
@@ -361,7 +358,6 @@ const compressCalldataInputParams = (
       if (currentParam.paramData.length > 0) {
         compressedParams.push(currentParam)
         currentParam = {
-          paramType: InputParamType.CALL_DATA,
           fetcherType: InputParamFetcherType.RAW_BYTES,
           constraints: [],
           paramData: ""

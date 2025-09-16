@@ -402,16 +402,6 @@ const getBalanceOf = ({
     [tokenAddress, targetAddress]
   )
 
-  console.log("encodedInputParamData", encodedInputParamData)
-  console.log(
-    "input param",
-    prepareInputParam(
-      InputParamFetcherType.BALANCE,
-      encodedInputParamData,
-      constraintsToAdd
-    )
-  )
-
   return {
     isRuntime: true,
     inputParams: [

@@ -119,14 +119,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     accountConfigs = [
       {
-        name: "Composability v1.1.0",
-        mcNexus: mcNexus_compos_v1_1_0,
-        meeClient: meeClient_compos_v1_1_0
-      },
-      {
         name: "Composability v1.0.0",
         mcNexus,
         meeClient
+      },
+      {
+        name: "Composability v1.1.0",
+        mcNexus: mcNexus_compos_v1_1_0,
+        meeClient: meeClient_compos_v1_1_0
       }
     ]
 
@@ -276,13 +276,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           instructions: [...transferInstruction, ...instructions]
         }
       })
-
-      /*
-      console.log("batchedInstructions", batchedInstructions)
-      for (const call of batchedInstructions[0].calls) {
-        console.log("call", call)
-      }
-      */
 
       const { hash: hashTwo } = await testMeeClient.executeQuote({
         quote: await testMeeClient.getQuote({
