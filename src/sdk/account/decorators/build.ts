@@ -215,13 +215,11 @@ export type ComposabilityParams = {
 }
 
 export type BaseInstructionTypes =
-  | BuildIntentInstruction
   | BuildTransferFromInstruction
   | BuildTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
-  | BuildMultichainInstructionInstruction
 
 /**
  * Union type of all possible build instruction types
@@ -229,17 +227,15 @@ export type BaseInstructionTypes =
 export type BuildInstructionTypes =
   | BaseInstructionTypes
   | BuildDefaultInstruction
+  | BuildMultichainInstructionInstruction
+  | BuildIntentInstruction
 
 /**
  * Union type of all possible build composable instruction types
  */
 export type BuildComposableInstructionTypes =
-  | BuildTransferFromInstruction
-  | BuildTransferInstruction
+  | BaseInstructionTypes
   | BuildValueTransferInstruction
-  | BuildApproveInstruction
-  | BuildWithdrawalInstruction
-  | BuildBatchInstruction
   | BuildComposableInstruction
   | BuildComposableRawInstruction
   | BuildAcrossIntentComposableInstruction
