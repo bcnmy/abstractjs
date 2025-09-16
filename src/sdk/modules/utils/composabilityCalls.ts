@@ -8,6 +8,7 @@ import {
   erc20Abi,
   parseAbi
 } from "viem"
+import type { Abi } from "viem"
 import { ENTRY_POINT_ADDRESS } from "../../constants"
 import type { AnyData } from "../../modules/utils/Types"
 import {
@@ -98,6 +99,14 @@ export type ComposableCall = BaseComposableCall & {
 export type ConstraintField = {
   type: ConstraintType
   value: AnyData // type any is being implicitly used. The appropriate value validation happens in the runtime function
+}
+
+export type RuntimeParamViaCustomStaticCallParams = {
+  targetContractAddress: Address
+  functionAbi: Abi
+  args: Array<AnyData>
+  functionName?: string
+  constraints?: ConstraintField[]
 }
 
 export type runtimeERC20AllowanceOfParams = {
@@ -237,6 +246,40 @@ export const runtimeNonceOf = ({
         abi: entryPointNonceAbi,
         functionName: defaultFunctionSig,
         args: [smartAccountAddress, nonceKey]
+      })
+    ]
+  )
+
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
+
+  return {
+    isRuntime: true,
+    inputParams: [
+      prepareInputParam(
+        InputParamFetcherType.STATIC_CALL,
+        encodedParam,
+        constraintsToAdd
+      )
+    ],
+    outputParams: []
+  }
+}
+
+export const runtimeParamViaCustomStaticCall = ({
+  targetContractAddress,
+  functionAbi,
+  functionName,
+  args,
+  constraints = []
+}: RuntimeParamViaCustomStaticCallParams): RuntimeValue => {
+  const encodedParam = encodeAbiParameters(
+    [{ type: "address" }, { type: "bytes" }],
+    [
+      targetContractAddress,
+      encodeFunctionData({
+        abi: functionAbi,
+        functionName: functionName,
+        args
       })
     ]
   )

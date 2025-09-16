@@ -378,11 +378,11 @@ export const buildComposable = async (
     }
     case "valueTransfer": {
       return buildRawComposable(
-        baseParams, 
+        baseParams,
         {
           ...data,
           calldata: "0x00000000"
-        }, 
+        },
         {
           composabilityVersion: composabilityVersion!
         }

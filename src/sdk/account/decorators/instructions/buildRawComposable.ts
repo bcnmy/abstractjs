@@ -66,9 +66,10 @@ export const buildRawComposable = async (
 
   let versionAgnosticComposableParams: InputParam[] = []
   if (callDataEncodedArgs.length !== 0) {
-    versionAgnosticComposableParams = prepareRawComposableParams(callDataEncodedArgs)
+    versionAgnosticComposableParams =
+      prepareRawComposableParams(callDataEncodedArgs)
   }
-  
+
   const composableCall: ComposableCall = formatComposableCallWithVersion(
     composabilityVersion!,
     false, // efficientMode is false for raw composable calls
