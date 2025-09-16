@@ -7,7 +7,6 @@ import {
   type InputParam,
   InputParamFetcherType,
   InputParamType,
-  isRuntimeComposableValue,
   prepareComposableInputCalldataParams
 } from "../../../modules/utils/composabilityCalls"
 import {
@@ -15,7 +14,6 @@ import {
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
 import { encodeAddress } from "../../../modules/utils/runtimeAbiEncoding"
-import { isBigInt } from "../../utils/Utils"
 import type { BaseInstructionsParams } from "../build"
 import type { ComposabilityParams } from "../build"
 
@@ -59,58 +57,6 @@ export type BuildValueTransferComposableParameters = {
   gasLimit?: bigint
   value: bigint | RuntimeValue
   chainId: number
-}
-
-export const buildValueTransferComposableCall = async (
-  parameters: BuildValueTransferComposableParameters,
-  composabilityParams: ComposabilityParams
-): Promise<ComposableCall[]> => {
-  const { to, gasLimit, value } = parameters
-  const { composabilityVersion } = composabilityParams
-  if (!composabilityVersion) {
-    throw new Error(
-      "Composability version is required to build a composable native token transfer call."
-    )
-  }
-
-  let composableCall: ComposableCall
-
-  if (composabilityVersion === ComposabilityVersion.V1_0_0) {
-    if (!isAddress(to as Address)) {
-      throw new Error("Invalid target contract address")
-    }
-    if (isRuntimeComposableValue(value)) {
-      throw new Error(
-        "Runtime-injected native token value is not supported for Composability v1.0.0"
-      )
-    }
-    if (!isBigInt(value as bigint)) {
-      throw new Error("Invalid value")
-    }
-    composableCall = {
-      to: to as Address,
-      value: (value as bigint) ?? BigInt(0),
-      functionSig: "0x00000000",
-      inputParams: [],
-      outputParams: []
-    }
-  } else {
-    // composability version 1.1.0+
-    const { targetInputParam, valueInputParam } =
-      prepareTargetAndValueInputParams(to, value)
-
-    composableCall = {
-      functionSig: "0x00000000",
-      inputParams: [
-        targetInputParam,
-        ...(valueInputParam ? [valueInputParam] : [])
-      ],
-      outputParams: [],
-      ...(gasLimit ? { gasLimit } : {})
-    }
-  }
-
-  return [composableCall]
 }
 
 export const buildComposableCall = async (
@@ -315,27 +261,6 @@ export const buildComposableUtil = async (
 
   const calls = await buildComposableCall(parameters, composabilityParams)
 
-  return [
-    ...currentInstructions,
-    {
-      calls: calls,
-      chainId: parameters.chainId,
-      isComposable: true
-    }
-  ]
-}
-
-export const buildComposableValueTransferUtil = async (
-  baseParams: BaseInstructionsParams,
-  parameters: BuildValueTransferComposableParameters,
-  composabilityParams: ComposabilityParams
-): Promise<Instruction[]> => {
-  const { currentInstructions = [] } = baseParams
-
-  const calls = await buildValueTransferComposableCall(
-    parameters,
-    composabilityParams
-  )
   return [
     ...currentInstructions,
     {

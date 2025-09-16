@@ -20,9 +20,9 @@ import type {
 } from "../build"
 import {
   type BuildComposableParameters,
-  buildComposableCall,
-  buildValueTransferComposableCall
+  buildComposableCall
 } from "./buildComposable"
+import { buildRawComposable } from "./buildRawComposable"
 
 /**
  * Parameters for building a transfer instruction
@@ -118,23 +118,18 @@ export const buildWithdrawal = async (
           "Runtime balance for Native tokens is not supported for Composability v1.0.0"
         )
       }
-      withdrawalCall = await buildValueTransferComposableCall(
+      // build value transfer composable call using raw composable build function
+      return buildRawComposable(
+        baseParams,
         {
           to: recipient,
           value: amount,
           chainId,
-          ...(gasLimit ? { gasLimit } : {})
+          ...(gasLimit ? { gasLimit } : {}),
+          calldata: "0x00000000"
         },
         composabilityParams
       )
-      return [
-        ...currentInstructions,
-        {
-          calls: withdrawalCall,
-          chainId,
-          isComposable: true
-        }
-      ]
     }
     // not composable call
     withdrawalCall = [

@@ -16,8 +16,7 @@ import buildBatch, {
 import {
   type BuildComposableParameters,
   type BuildValueTransferComposableParameters,
-  buildComposableUtil,
-  buildComposableValueTransferUtil
+  buildComposableUtil
 } from "./instructions/buildComposable"
 import {
   type BuildDefaultParameters,
@@ -378,9 +377,16 @@ export const buildComposable = async (
       })
     }
     case "valueTransfer": {
-      return buildComposableValueTransferUtil(baseParams, data, {
-        composabilityVersion: composabilityVersion!
-      })
+      return buildRawComposable(
+        baseParams, 
+        {
+          ...data,
+          calldata: "0x00000000"
+        }, 
+        {
+          composabilityVersion: composabilityVersion!
+        }
+      )
     }
     case "approve": {
       return buildApprove(baseParams, data, {

@@ -208,7 +208,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         tokenAddress,
         amount: amountToSupply
       }
-  
+
       const fusionQuote = await testMeeClient.getFusionQuote({
         trigger,
         instructions: [
@@ -227,11 +227,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           address: tokenAddress
         }
       })
-  
+
       const { hash: hashOne } = await testMeeClient.executeFusionQuote({
         fusionQuote
       })
-  
+
       const { transactionStatus: transactionStatusOne } =
         await testMeeClient.waitForSupertransactionReceipt({
           hash: hashOne,
