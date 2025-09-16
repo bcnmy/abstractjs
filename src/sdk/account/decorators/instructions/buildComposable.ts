@@ -1,4 +1,13 @@
-import { type Abi, type Address, concatHex, isAddress } from "viem"
+import {
+  type Abi,
+  type Address,
+  concatHex,
+  encodeAbiParameters,
+  encodeFunctionData,
+  erc20Abi,
+  isAddress
+} from "viem"
+import { isNativeToken } from "../../../account/utils"
 import type { Instruction } from "../../../clients/decorators/mee"
 import { ComposabilityVersion } from "../../../constants"
 import type { AnyData } from "../../../modules/utils/Types"
@@ -7,15 +16,15 @@ import {
   type InputParam,
   InputParamFetcherType,
   InputParamType,
-  prepareComposableInputCalldataParams
+  prepareComposableInputCalldataParams,
+  prepareInputParam
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
 import { encodeAddress } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams } from "../build"
-import type { ComposabilityParams } from "../build"
+import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 
 // type OverrideObjectValues<T, OverrideType> = {
 //   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type
@@ -191,8 +200,52 @@ export const formatCallDataInputParamsWithVersion = (
 ): InputParam[] => {
   let inputParams: InputParam[]
   if (composabilityVersion === ComposabilityVersion.V1_0_0) {
-    inputParams = versionAgnosticInputParams
+    // backwards compatibility for composability version 1.0.0
+    // for composability version 1.0.0, we need to back convert
+    // input params with fetcherType BALANCE to input params with fetcherType STATIC_CALL
+    // since the BALANCE fetcher type is not supported in composability version 1.0.0
+    inputParams = versionAgnosticInputParams.map((param) => {
+      if (param.fetcherType === InputParamFetcherType.BALANCE) {
+        console.log("converting BALANCE to STATIC_CALL")
+
+        // param data for Balance is abi.encodePacked([tokenAddress, targetAddress])
+        // slice it accordingly to get the tokenAddress and targetAddress
+        const tokenAddress =
+          `0x${param.paramData.slice(2, 42)}` as `0x${string}`
+        const targetAddress =
+          `0x${param.paramData.slice(42, 82)}` as `0x${string}`
+        console.log("tokenAddress", tokenAddress)
+        console.log("targetAddress", targetAddress)
+
+        if (isNativeToken(tokenAddress)) {
+          throw new Error(
+            "Native token balance as a runtime value is not supported for Composability v1.0.0"
+          )
+        }
+
+        const encodedParam = encodeAbiParameters(
+          [{ type: "address" }, { type: "bytes" }],
+          [
+            tokenAddress,
+            encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "balanceOf",
+              args: [targetAddress]
+            })
+          ]
+        )
+        return prepareInputParam(
+          InputParamFetcherType.STATIC_CALL,
+          encodedParam,
+          param.constraints
+        )
+      }
+      // for other input params, return them as is
+      return param
+    })
   } else {
+    // for composability version 1.1.0+, we need to add paramType: CALL_DATA to the input params
+    // since the input param type field is required for composability version 1.1.0+
     inputParams = versionAgnosticInputParams.map((param) => ({
       ...param,
       paramType: InputParamType.CALL_DATA
@@ -297,9 +350,10 @@ const compressCalldataInputParams = (
       param.paramType === InputParamType.CALL_DATA ||
       param.paramType === undefined
   )) {
-    // Static call or constraint based params are left as is
+    // Static call, balance or constraint based params are left as is
     if (
       param.fetcherType === InputParamFetcherType.STATIC_CALL ||
+      param.fetcherType === InputParamFetcherType.BALANCE ||
       param.constraints.length > 0
     ) {
       // If there is a current param, push it to the compressed params

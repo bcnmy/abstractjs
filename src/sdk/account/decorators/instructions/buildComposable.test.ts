@@ -119,14 +119,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     accountConfigs = [
       {
-        name: "Composability v1.0.0",
-        mcNexus,
-        meeClient
-      },
-      {
         name: "Composability v1.1.0",
         mcNexus: mcNexus_compos_v1_1_0,
         meeClient: meeClient_compos_v1_1_0
+      },
+      {
+        name: "Composability v1.0.0",
+        mcNexus,
+        meeClient
       }
     ]
 
@@ -202,6 +202,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       mcNexus: testMcNexus,
       meeClient: testMeeClient
     } of accountConfigs) {
+      console.log("name", name)
       // transfer funds to orchestrator first
       const trigger = {
         chainId: chain.id,
@@ -276,6 +277,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         }
       })
 
+      /*
+      console.log("batchedInstructions", batchedInstructions)
+      for (const call of batchedInstructions[0].calls) {
+        console.log("call", call)
+      }
+      */
+
       const { hash: hashTwo } = await testMeeClient.executeQuote({
         quote: await testMeeClient.getQuote({
           instructions: batchedInstructions,
@@ -285,6 +293,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           }
         })
       })
+
       const { transactionStatus: transactionStatusTwo, explorerLinks } =
         await testMeeClient.waitForSupertransactionReceipt({
           hash: hashTwo,
@@ -297,95 +306,101 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
   // Skipping this just because this file takes a long time to run.
   it("should execute composable transaction with getQuotes (Without fusion)", async () => {
-    const amountToSupply = parseUnits("0.1", 6)
-    const amountToTransfer = parseUnits("0.08", 6)
+    for (const {
+      name,
+      mcNexus: testMcNexus,
+      meeClient: testMeeClient
+    } of accountConfigs) {
+      const amountToSupply = parseUnits("0.1", 6)
+      const amountToTransfer = parseUnits("0.03", 6)
 
-    const trigger = {
-      chainId: chain.id,
-      tokenAddress,
-      amount: amountToSupply
-    }
+      const trigger = {
+        chainId: chain.id,
+        tokenAddress,
+        amount: amountToSupply
+      }
 
-    const { hash: hashOne } = await meeClient.executeFusionQuote({
-      fusionQuote: await meeClient.getFusionQuote({
-        trigger,
-        instructions: [
-          {
-            calls: [
-              {
-                to: zeroAddress,
-                value: 0n
-              }
-            ],
-            chainId: chain.id
+      const { hash: hashOne } = await testMeeClient.executeFusionQuote({
+        fusionQuote: await testMeeClient.getFusionQuote({
+          trigger,
+          instructions: [
+            {
+              calls: [
+                {
+                  to: zeroAddress,
+                  value: 0n
+                }
+              ],
+              chainId: chain.id
+            }
+          ],
+          feeToken: {
+            chainId: chain.id,
+            address: tokenAddress
           }
-        ],
-        feeToken: {
-          chainId: chain.id,
-          address: tokenAddress
+        })
+      })
+
+      const { transactionStatus: transactionStatusOne, explorerLinks } =
+        await testMeeClient.waitForSupertransactionReceipt({
+          hash: hashOne,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+      expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
+      console.log({ explorerLinks, hash: hashOne })
+
+      const transferInstruction = await testMcNexus.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
         }
       })
-    })
 
-    const { transactionStatus: transactionStatusOne, explorerLinks } =
-      await meeClient.waitForSupertransactionReceipt({
-        hash: hashOne,
+      const instructions: Instruction[] = await testMcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: runtimeTransferAddress,
+          abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+          functionName: "transferFunds",
+          args: [
+            tokenAddress,
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+
+      const { hash: hashTwo } = await testMeeClient.executeQuote({
+        quote: await testMeeClient.getQuote({
+          instructions: [
+            ...transferInstruction,
+            ...instructions,
+            ...instructions
+          ],
+          feeToken: {
+            chainId: chain.id,
+            address: tokenAddress
+          }
+        })
+      })
+
+      const {
+        transactionStatus: transactionStatusTwo,
+        explorerLinks: explorerLinksTwo
+      } = await testMeeClient.waitForSupertransactionReceipt({
+        hash: hashTwo,
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
-    expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
-    console.log({ explorerLinks, hash: hashOne })
-
-    const transferInstruction = await mcNexus.buildComposable({
-      type: "transfer",
-      data: {
-        recipient: runtimeTransferAddress as Address,
-        tokenAddress,
-        amount: amountToTransfer,
-        chainId: chain.id
-      }
-    })
-
-    const instructions: Instruction[] = await mcNexus.buildComposable({
-      type: "default",
-      data: {
-        to: runtimeTransferAddress,
-        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
-        functionName: "transferFunds",
-        args: [
-          tokenAddress,
-          eoaAccount.address,
-          runtimeERC20BalanceOf({
-            targetAddress: runtimeTransferAddress,
-            tokenAddress
-          })
-        ],
-        chainId: chain.id
-      }
-    })
-
-    const { hash: hashTwo } = await meeClient.executeQuote({
-      quote: await meeClient.getQuote({
-        instructions: [
-          ...transferInstruction,
-          ...instructions,
-          ...instructions
-        ],
-        feeToken: {
-          chainId: chain.id,
-          address: tokenAddress
-        }
-      })
-    })
-
-    const {
-      transactionStatus: transactionStatusTwo,
-      explorerLinks: explorerLinksTwo
-    } = await meeClient.waitForSupertransactionReceipt({
-      hash: hashTwo,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-    expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
-    console.log({ explorerLinks: explorerLinksTwo })
+      expect(transactionStatusTwo).to.be.eq("MINED_SUCCESS")
+      console.log({ explorerLinks: explorerLinksTwo })
+    }
   })
 
   // Skipping this just because this file takes a long time to run.
