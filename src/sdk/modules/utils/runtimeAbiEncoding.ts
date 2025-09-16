@@ -332,7 +332,8 @@ const encodeParams = (
       // Calculate the length for all the `data` elements, which are values of Hex or RuntimeValue
       // this length will be used to properly calculate the length of the whole static section
       const len = data.reduce((acc, val) => {
-        // if `val` is a RuntimeValue, in theory it can contain both STATIC_CALL and RAW_BYTES InputParams
+        // if `val` is a RuntimeValue, in theory it can contain all of STATIC_CALL,
+        // BALANCE and RAW_BYTES InputParams
         // calculate the length for all the inputParams
         if (isRuntimeComposableValue(val)) {
           // val can only be a RuntimeValue in this `if` block
@@ -556,7 +557,11 @@ export const getRuntimeValueLength = (inputParams: InputParam[]) => {
   return inputParams.reduce((acc: number, inputParam: InputParam) => {
     // if it is a STATIC_CALL, we can not know the size beforehand
     // so we will assume it is 32 bytes, as we do not expect non-static types to be used as runtime values
-    if (inputParam.fetcherType === InputParamFetcherType.STATIC_CALL) {
+    // if it is a BALANCE, return data length is uint256 => 32 bytes
+    if (
+      inputParam.fetcherType === InputParamFetcherType.STATIC_CALL ||
+      inputParam.fetcherType === InputParamFetcherType.BALANCE
+    ) {
       return acc + 32
     }
     // if it is a RAW_BYTES, the length is the length of the paramData
