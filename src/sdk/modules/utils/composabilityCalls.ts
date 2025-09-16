@@ -6,7 +6,8 @@ import {
   encodeFunctionData,
   encodePacked,
   erc20Abi,
-  parseAbi
+  parseAbi,
+  zeroAddress
 } from "viem"
 import type { Abi } from "viem"
 import { ENTRY_POINT_ADDRESS } from "../../constants"
@@ -131,16 +132,16 @@ export type runtimeERC20AllowanceOfParams = {
   constraints?: ConstraintField[]
 }
 
-export type RuntimeERC20BalanceOfParams = {
+export type RuntimeBalanceOfParams = {
   targetAddress: Address
   tokenAddress: Address
   constraints?: ConstraintField[]
 }
 
-export type RuntimeNativeBalanceOfParams = {
-  targetAddress: Address
-  constraints?: ConstraintField[]
-}
+export type RuntimeNativeBalanceOfParams = Omit<
+  RuntimeBalanceOfParams,
+  "tokenAddress"
+>
 
 export type RuntimeNonceOfParams = {
   smartAccountAddress: Address
@@ -364,24 +365,11 @@ export const runtimeNativeBalanceOf = ({
   targetAddress,
   constraints = []
 }: RuntimeNativeBalanceOfParams): RuntimeValue => {
-  const constraintsToAdd = validateAndProcessConstraints(constraints)
-
-  const encodedInputParamData = encodePacked(
-    ["address", "address"],
-    ["0x0000000000000000000000000000000000000000", targetAddress]
-  )
-
-  return {
-    isRuntime: true,
-    inputParams: [
-      prepareInputParam(
-        InputParamFetcherType.BALANCE,
-        encodedInputParamData,
-        constraintsToAdd
-      )
-    ],
-    outputParams: []
-  }
+  return getBalanceOf({
+    targetAddress,
+    tokenAddress: zeroAddress,
+    constraints
+  })
 }
 
 /**
@@ -390,34 +378,36 @@ export const runtimeNativeBalanceOf = ({
  * @param tokenAddress - The address of the ERC20 token
  * @returns The runtime value for the ERC20 balance of the target address
  */
-// TODO:  Make it use BALANCE fetcherType instead of STATIC_CALL
 export const runtimeERC20BalanceOf = ({
   targetAddress,
   tokenAddress,
   constraints = []
-}: RuntimeERC20BalanceOfParams): RuntimeValue => {
-  const defaultFunctionSig = "balanceOf"
+}: RuntimeBalanceOfParams): RuntimeValue => {
+  return getBalanceOf({
+    targetAddress,
+    tokenAddress,
+    constraints
+  })
+}
 
-  const encodedParam = encodeAbiParameters(
-    [{ type: "address" }, { type: "bytes" }],
-    [
-      tokenAddress,
-      encodeFunctionData({
-        abi: erc20Abi,
-        functionName: defaultFunctionSig,
-        args: [targetAddress]
-      })
-    ]
-  )
-
+const getBalanceOf = ({
+  targetAddress,
+  tokenAddress,
+  constraints = []
+}: RuntimeBalanceOfParams): RuntimeValue => {
   const constraintsToAdd = validateAndProcessConstraints(constraints)
+
+  const encodedInputParamData = encodePacked(
+    ["address", "address"],
+    [tokenAddress, targetAddress]
+  )
 
   return {
     isRuntime: true,
     inputParams: [
       prepareInputParam(
-        InputParamFetcherType.STATIC_CALL,
-        encodedParam,
+        InputParamFetcherType.BALANCE,
+        encodedInputParamData,
         constraintsToAdd
       )
     ],

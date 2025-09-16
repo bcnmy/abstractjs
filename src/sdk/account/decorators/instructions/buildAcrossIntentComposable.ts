@@ -10,7 +10,7 @@ import {
 } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import {
-  type RuntimeERC20BalanceOfParams,
+  type RuntimeBalanceOfParams,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
@@ -75,7 +75,7 @@ export type BuildAcrossIntentComposableParams = {
   recipient: Address
   inputToken: Address
   outputToken: Address
-  inputAmountRuntimeParams: RuntimeERC20BalanceOfParams
+  inputAmountRuntimeParams: RuntimeBalanceOfParams
   approximateExpectedInputAmount: bigint // approximate amount of deposited tokens.
   originChainId: number
   destinationChainId: number

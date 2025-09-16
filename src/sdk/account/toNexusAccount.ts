@@ -742,7 +742,9 @@ export const toNexusAccount = async (
     })
 
     return encodeFunctionData({
-      abi: isComposability_v1_0_0 ? COMPOSABILITY_MODULE_ABI_V1_0_0 : COMPOSABILITY_MODULE_ABI_V1_1_0,
+      abi: isComposability_v1_0_0
+        ? COMPOSABILITY_MODULE_ABI_V1_0_0
+        : COMPOSABILITY_MODULE_ABI_V1_1_0,
       functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
       args: [composableCallsFormattedByVersion] // Multiple composable calls can be batched here.
     })
