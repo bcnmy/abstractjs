@@ -10,8 +10,8 @@ import {
 import { isNativeToken } from "../../../account/utils"
 import type { Instruction } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
-import { functionNameToLabel } from "../../../modules/utils/Helpers"
 import { ComposabilityVersion } from "../../../constants"
+import { functionNameToLabel } from "../../../modules/utils/Helpers"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
