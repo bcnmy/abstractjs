@@ -224,7 +224,8 @@ describe("modules.toSmartSessionsModule", () => {
           )
         }
       ],
-      mode: "ENABLE_AND_USE"
+      mode: "ENABLE_AND_USE",
+      verificationGasLimit: 20000000n
     })
     const receiptTypedDataSignOne =
       await nexusClient.waitForUserOperationReceipt({
