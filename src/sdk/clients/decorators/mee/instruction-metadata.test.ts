@@ -14,7 +14,7 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
-import { AnyData, getMEEVersion } from "../../../modules"
+import { type AnyData, getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type {
   InstructionMetadata,
