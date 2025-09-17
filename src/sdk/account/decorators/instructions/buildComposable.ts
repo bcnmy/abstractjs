@@ -19,6 +19,7 @@ import {
   prepareComposableInputCalldataParams,
   prepareInputParam
 } from "../../../modules/utils/composabilityCalls"
+import { isRuntimeComposableValue } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
   getFunctionContextFromAbi
@@ -143,8 +144,18 @@ export const formatComposableCallWithVersion = (
   let composableCall: ComposableCall
   // Handle different composability versions
   if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+    if (isRuntimeComposableValue(to)) {
+      throw new Error(
+        "Runtime injected target is not supported for Composability v1.0.0"
+      )
+    }
     if (!isAddress(to as Address)) {
       throw new Error("Invalid target contract address")
+    }
+    if (isRuntimeComposableValue(value)) {
+      throw new Error(
+        "Runtime injected value is not supported for Composability v1.0.0"
+      )
     }
     // format composable call for composability version 1.0.0 with to and value
     composableCall = {
