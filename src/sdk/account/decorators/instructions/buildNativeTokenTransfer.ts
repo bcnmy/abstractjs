@@ -12,10 +12,10 @@
 import { type Address, zeroAddress } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
+import { ComposabilityVersion } from "../../../constants"
 import { type RuntimeValue, isRuntimeComposableValue } from "../../../modules"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 import buildRawComposable from "./buildRawComposable"
-import { ComposabilityVersion } from "../../../constants"
 
 /**
  * Parameters for building a native token transfer instruction.
