@@ -31,6 +31,7 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
+import { type InstructionMetadata } from "./types/instruction-metadata.type"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -96,6 +97,8 @@ export type Instruction = {
   chainId: number
   /** Flag for composable call */
   isComposable?: boolean
+  /** Instruction metadata */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -340,37 +343,42 @@ export type MeeAuthorization = {
   s: Hex
   yParity: Hex
 }
+
+export type UserOp = {
+  /** Address of the account initiating the operation */
+  sender: string
+  /** Encoded transaction data */
+  callData: string
+  /** Gas limit for the call execution */
+  callGasLimit: string
+  /** Account nonce */
+  nonce: string
+  /** Chain ID where the operation will be executed */
+  chainId: string
+  /** Lower bound timestamp for operation validity */
+  lowerBoundTimestamp?: number
+  /** Upper bound timestamp for operation validity */
+  upperBoundTimestamp?: number
+  /** EIP7702Auth */
+  eip7702Auth?: MeeAuthorization
+  /** Cleanup userop flag - Special user op */
+  isCleanUpUserOp?: boolean
+  /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
+   * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
+   **/
+  shortEncoding?: boolean
+  /** UserOp instructions metadata */
+  metadata?: InstructionMetadata[]
+}
+
 /**
  * Internal structure for submitting a quote request to the MEE service
  * @internal
  */
 type QuoteRequest = {
   /** Array of user operations to be executed */
-  userOps: {
-    /** Address of the account initiating the operation */
-    sender: string
-    /** Encoded transaction data */
-    callData: string
-    /** Gas limit for the call execution */
-    callGasLimit: string
-    /** Account nonce */
-    nonce: string
-    /** Chain ID where the operation will be executed */
-    chainId: string
-    /** Lower bound timestamp for operation validity */
-    lowerBoundTimestamp?: number
-    /** Upper bound timestamp for operation validity */
-    upperBoundTimestamp?: number
-    /** EIP7702Auth */
-    eip7702Auth?: MeeAuthorization
-    /** Cleanup userop flag - Special user op */
-    isCleanUpUserOp?: boolean
-    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
-     * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
-     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
-     **/
-    shortEncoding?: boolean
-  }[]
+  userOps: UserOp[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
 }
@@ -481,6 +489,8 @@ export interface MeeFilledUserOpDetails {
    *  fusion signature for a given userOp
    **/
   shortEncoding: boolean
+  /** Instruction metadata */
+  metadata?: InstructionMetadata[]
   /** Userop signature signed by sponsorship service */
   signature?: Hex
 }
@@ -792,7 +802,7 @@ export const getQuote = async (
 
   // complete the userOps including cleanup ones
   const indexPerChainId = new Map<string, number>()
-  const userOps = await Promise.all(
+  const userOps: UserOp[] = await Promise.all(
     preparedUserOps.map(
       async ([
         callData,
@@ -804,7 +814,8 @@ export const getQuote = async (
         chainId,
         isCleanUpUserOp,
         nexusAccount,
-        shortEncoding
+        shortEncoding,
+        metadata
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -882,7 +893,8 @@ export const getQuote = async (
           isCleanUpUserOp,
           ...initDataOrUndefined,
           ...resolvedVerificationGasLimit,
-          shortEncoding: shortEncodingSuperTxn || shortEncoding
+          shortEncoding: shortEncodingSuperTxn || shortEncoding,
+          metadata
         }
       }
     )
@@ -1122,21 +1134,21 @@ const prepareUserOps = async (
   validatorAddress?: Address
 ) => {
   return await Promise.all(
-    instructions.map((userOp) => {
-      const deployment = account.deploymentOn(userOp.chainId, true)
-      const accountAddress = account.addressOn(userOp.chainId, true)
+    instructions.map((instruction) => {
+      const deployment = account.deploymentOn(instruction.chainId, true)
+      const accountAddress = account.addressOn(instruction.chainId, true)
 
       let callsPromise: Promise<Hex>
 
-      if (userOp.isComposable) {
+      if (instruction.isComposable) {
         callsPromise = deployment.encodeExecuteComposable(
-          userOp.calls as ComposableCall[]
+          instruction.calls as ComposableCall[]
         )
       } else {
         callsPromise =
-          userOp.calls.length > 1
-            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
-            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
+          instruction.calls.length > 1
+            ? deployment.encodeExecuteBatch(instruction.calls as AbstractCall[])
+            : deployment.encodeExecute(instruction.calls[0] as AbstractCall)
       }
 
       // This is the place to set the short encoding flag
@@ -1159,14 +1171,15 @@ const prepareUserOps = async (
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
-        userOp.calls
+        instruction.calls
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
           .reduce((curr, acc) => curr + acc, 0n)
           .toString(),
-        userOp.chainId.toString(),
+        instruction.chainId.toString(),
         isCleanUpUserOps,
         deployment,
-        shortEncoding
+        shortEncoding,
+        instruction.metadata
       ])
     })
   )

@@ -9,6 +9,8 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
+import { functionNameToLabel } from "../../../modules/utils/Helpers"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 // type OverrideObjectValues<T, OverrideType> = {
 //   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type
@@ -43,6 +45,7 @@ export type BuildComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint
+  metadata?: InstructionMetadata[]
 }
 
 export const buildComposableCall = async (
@@ -149,6 +152,7 @@ export const buildComposableUtil = async (
   efficientMode = true
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
+  const { metadata } = parameters
 
   const calls = await buildComposableCall(baseParams, parameters, efficientMode)
 
@@ -157,7 +161,14 @@ export const buildComposableUtil = async (
     {
       calls: calls,
       chainId: parameters.chainId,
-      isComposable: true
+      isComposable: true,
+      metadata: metadata || [
+        {
+          type: "CUSTOM",
+          description: `${functionNameToLabel(parameters.functionName)} on-chain action`,
+          chainId: parameters.chainId
+        }
+      ]
     }
   ]
 }

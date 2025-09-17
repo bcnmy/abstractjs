@@ -4,6 +4,7 @@ import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import type { UnifiedERC20Balance } from "./getUnifiedERC20Balance"
 import type { BridgeQueryResult } from "./queryBridge"
 import { queryBridge } from "./queryBridge"
+import { type InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Mapping of a token address to a specific chain
@@ -55,6 +56,7 @@ export type MultichainBridgingParams = {
   bridgingPlugins?: BridgingPlugin[]
   feeData?: FeeData
   mode?: "DEBIT" | "OPTIMISTIC"
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -166,7 +168,8 @@ export const buildBridgeInstructions = async (
     unifiedBalance,
     bridgingPlugins = [toAcrossPlugin()],
     feeData,
-    mode = "DEBIT"
+    mode = "DEBIT",
+    metadata
   } = params
 
   const tokenMapping = {
@@ -263,16 +266,29 @@ export const buildBridgeInstructions = async (
         const receivedFromRoute =
           (result.receivedAtDestination * amountToTake) / result.amount
 
+        const instruction: Instruction = {
+          ...result.userOp,
+          metadata: metadata ||
+            result.userOp.metadata || [
+              // If no metadata from plugin ? Custom metadata will be added
+              {
+                type: "CUSTOM",
+                chainId: result.userOp.chainId,
+                description: "Custom Bridging on-chain action"
+              }
+            ]
+        }
+
         return {
           bridgingInstructions: [
             ...acc.bridgingInstructions,
             {
-              userOp: result.userOp,
+              userOp: instruction,
               receivedAtDestination: receivedFromRoute,
               bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
             }
           ],
-          instructions: [...acc.instructions, result.userOp],
+          instructions: [...acc.instructions, instruction],
           totalBridged: acc.totalBridged + receivedFromRoute,
           remainingNeeded: acc.remainingNeeded - amountToTake
         }

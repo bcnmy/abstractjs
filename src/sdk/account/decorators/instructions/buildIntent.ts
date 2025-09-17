@@ -5,6 +5,7 @@ import type { MultichainToken } from "../../utils/Types"
 import type { BaseInstructionsParams } from "../build"
 import buildBridgeInstructions from "../buildBridgeInstructions"
 import type { UnifiedERC20Balance } from "../getUnifiedERC20Balance"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building bridge intent instructions
@@ -27,6 +28,7 @@ export type BuildIntentParameters = {
   }
   toChainId: number
   mode?: "DEBIT" | "OPTIMISTIC"
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -86,7 +88,8 @@ export const buildIntent = async (
     toChainId,
     depositor,
     recipient,
-    mode
+    mode,
+    metadata
   } = parameters
 
   const { instructions } = await buildBridgeInstructions({
@@ -95,7 +98,8 @@ export const buildIntent = async (
     amount: amount,
     toChainId,
     unifiedBalance,
-    mode
+    mode,
+    metadata
   })
 
   return [...currentInstructions, ...instructions]

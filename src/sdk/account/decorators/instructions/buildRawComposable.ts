@@ -6,6 +6,7 @@ import {
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseInstructionsParams } from "../build"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building a raw composable instruction
@@ -16,6 +17,7 @@ export type BuildRawComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -51,7 +53,7 @@ export const buildRawComposable = async (
   parameters: BuildRawComposableParameters
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { to, calldata, gasLimit, value, chainId } = parameters
+  const { to, calldata, gasLimit, value, chainId, metadata } = parameters
 
   if (!isAddress(to)) {
     throw new Error("Invalid target contract address")
@@ -85,7 +87,14 @@ export const buildRawComposable = async (
     {
       calls: composableCalls,
       chainId,
-      isComposable: true
+      isComposable: true,
+      metadata: metadata || [
+        {
+          type: "CUSTOM",
+          description: "Custom composable on-chain action",
+          chainId
+        }
+      ]
     }
   ]
 }

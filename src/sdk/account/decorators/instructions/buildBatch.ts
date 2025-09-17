@@ -3,6 +3,7 @@ import type {
   Instruction,
   InstructionLike
 } from "../../../clients/decorators/mee"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData, ComposableCall } from "../../../modules"
 import { resolveInstructions } from "../../utils"
 import type { BaseInstructionsParams } from "../build"
@@ -79,6 +80,9 @@ export const buildBatch = async (
   const calls: AbstractCall[] | ComposableCall[] = resolvedInstructions.flatMap(
     ({ calls }) => calls as AnyData
   )
+  const metadata: InstructionMetadata[] = resolvedInstructions.flatMap(
+    ({ metadata }) => metadata || []
+  )
 
   return [
     ...currentInstructions,
@@ -87,7 +91,8 @@ export const buildBatch = async (
         ? (calls as ComposableCall[])
         : (calls as AbstractCall[]),
       chainId: resolvedInstructions[0].chainId, // Batch instructions must be on the same chain
-      isComposable
+      isComposable,
+      metadata
     }
   ]
 }

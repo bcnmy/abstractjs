@@ -17,6 +17,7 @@ import {
   type BuildComposableParameters,
   buildComposableCall
 } from "./buildComposable"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building a transfer instruction
@@ -33,6 +34,8 @@ export type BuildWithdrawalParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   recipient?: Address
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -88,8 +91,22 @@ export const buildWithdrawal = async (
     tokenAddress,
     amount,
     gasLimit,
-    recipient = accountAddress // EOA or owner account address
+    recipient = accountAddress, // EOA or owner account address
+    metadata: metadataOverride
   } = parameters
+
+  const metadata: InstructionMetadata[] = metadataOverride || [
+    {
+      type: "WITHDRAW",
+      tokenAddress,
+      fromAddress: accountAddress,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
 
   const isNativeToken = addressEquals(
     tokenAddress,
@@ -150,7 +167,8 @@ export const buildWithdrawal = async (
         {
           calls: triggerCalls,
           chainId,
-          isComposable: true
+          isComposable: true,
+          metadata
         }
       ]
     }
@@ -171,7 +189,8 @@ export const buildWithdrawal = async (
     ...currentInstructions,
     {
       calls: triggerCalls,
-      chainId
+      chainId,
+      metadata
     }
   ]
 }

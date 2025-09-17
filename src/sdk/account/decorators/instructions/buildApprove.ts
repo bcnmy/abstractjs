@@ -3,7 +3,8 @@ import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  isComposableCallRequired
+  isComposableCallRequired,
+  isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
@@ -14,6 +15,7 @@ import {
   type BuildComposableParameters,
   buildComposableCall
 } from "./buildComposable"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building an approval instruction
@@ -30,6 +32,8 @@ export type BuildApproveParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   spender: Address
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -80,8 +84,9 @@ export const buildApprove = async (
   forceComposableEncoding = false,
   efficientMode = true
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
+  const { currentInstructions = [], accountAddress } = baseParams
+  const { chainId, tokenAddress, amount, gasLimit, spender, metadata } =
+    parameters
 
   const abi = erc20Abi
   const functionSig = "approve"
@@ -137,7 +142,19 @@ export const buildApprove = async (
     {
       calls: triggerCalls,
       chainId,
-      isComposable: isComposableCall
+      isComposable: isComposableCall,
+      metadata: metadata || [
+        {
+          type: "APPROVE",
+          tokenAddress,
+          fromAddress: accountAddress,
+          toAddress: spender,
+          amount: isRuntimeComposableValue(amount)
+            ? "RUNTIME_VALUE"
+            : (amount as bigint),
+          chainId
+        }
+      ]
     }
   ]
 }

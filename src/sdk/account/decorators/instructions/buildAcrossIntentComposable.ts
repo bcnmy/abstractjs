@@ -19,6 +19,7 @@ import type { BaseInstructionsParams } from "../build"
 import buildBatch from "./buildBatch"
 import { buildComposableUtil } from "./buildComposable"
 import buildTransfer from "./buildTransfer"
+import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Default Across Intent Wrapper address
@@ -84,6 +85,7 @@ export type BuildAcrossIntentComposableParams = {
   pool?: Address
   gasLimit?: bigint
   fees?: SuggestedFeesReturnType
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -106,7 +108,8 @@ export const buildAcrossIntentComposable = async (
     relayerAddress,
     gasLimit,
     pool = acrossSpokePool[originChainId],
-    fees: fees_
+    fees: fees_,
+    metadata
   } = parameters
 
   // sanity checks
@@ -181,6 +184,20 @@ export const buildAcrossIntentComposable = async (
     constraints: constraints ?? [greaterThanOrEqualTo(1n)]
   })
 
+  const bridgeMetadata: InstructionMetadata[] = [
+    {
+      type: "BRIDGE",
+      fromAddress: depositor,
+      toAddress: recipient,
+      fromTokenAddress: inputToken,
+      toTokenAddress: outputToken,
+      amount: "RUNTIME_VALUE",
+      fromChainId: originChainId,
+      toChainId: destinationChainId,
+      protocolNames: ["Across"]
+    }
+  ]
+
   const depositToPoolInstruction = await buildComposableUtil(
     baseParams,
     {
@@ -204,7 +221,8 @@ export const buildAcrossIntentComposable = async (
         message ?? "0x"
       ],
       chainId: originChainId,
-      gasLimit
+      gasLimit,
+      metadata: metadata || bridgeMetadata
     },
     true // efficientMode
   )

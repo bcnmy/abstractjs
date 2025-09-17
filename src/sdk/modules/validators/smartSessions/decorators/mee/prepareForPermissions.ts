@@ -76,7 +76,14 @@ export const prepareForPermissions = async (
                 initData: "0x",
                 type: parameters.smartSessionsValidator.type
               })) as AbstractCall[],
-              chainId
+              chainId,
+              metadata: [
+                {
+                  type: "CUSTOM",
+                  description: "Install smart sessions module",
+                  chainId
+                }
+              ]
             }
           }
         )
