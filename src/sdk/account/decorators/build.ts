@@ -1,4 +1,4 @@
-import { type Address } from "viem"
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
@@ -29,6 +29,9 @@ import {
   type BuildMultichainInstructionsParameters,
   buildMultichainInstructions
 } from "./instructions/buildMultichainInstructions"
+import buildNativeTokenTransfer, {
+  type BuildNativeTokenTransferParameters
+} from "./instructions/buildNativeTokenTransfer"
 import buildRawComposable, {
   type BuildRawComposableParameters
 } from "./instructions/buildRawComposable"
@@ -43,9 +46,6 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
-import buildNativeTokenTransfer, {
-  type BuildNativeTokenTransferParameters
-} from "./instructions/buildNativeTokenTransfer"
 
 /**
  * Parameters for a token builders

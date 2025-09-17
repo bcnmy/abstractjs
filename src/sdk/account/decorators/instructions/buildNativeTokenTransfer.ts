@@ -10,10 +10,10 @@
  */
 
 import { type Address, zeroAddress } from "viem"
-import { type Instruction } from "../../../clients/decorators/mee"
-import { isRuntimeComposableValue, type RuntimeValue } from "../../../modules"
-import { type BaseInstructionsParams, type ComposabilityParams } from "../build"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
+import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
+import { type RuntimeValue, isRuntimeComposableValue } from "../../../modules"
+import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 import buildRawComposable from "./buildRawComposable"
 
 /**

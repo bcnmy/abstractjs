@@ -1,4 +1,4 @@
-import { http, zeroAddress, type Chain, type LocalAccount } from "viem"
+import { http, type Chain, type LocalAccount, zeroAddress } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { toNetwork } from "../../../../test/testSetup"
 import type { NetworkConfig } from "../../../../test/testUtils"
