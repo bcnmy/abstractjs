@@ -76,14 +76,12 @@ export const buildNativeTokenTransfer = async (
     }
 
   // Detect if any parameter is a runtime-composable value
-  const isComposableValueFound = [value, to].some((val) =>
+  const isRuntimeValues = [value, to].some((val) =>
     isRuntimeComposableValue(val)
   )
 
   // Determine if the call should be encoded as composable
-  const isComposableCall = forceComposableEncoding
-    ? true
-    : isComposableValueFound
+  const isComposableCall = forceComposableEncoding ? true : isRuntimeValues
 
   let instructions: Instruction[]
 
@@ -95,12 +93,13 @@ export const buildNativeTokenTransfer = async (
       )
     }
 
-    if (isRuntimeComposableValue(value)) {
-      if (composabilityVersion === ComposabilityVersion.V1_0_0) {
-        throw new Error(
-          "Runtime balance for Native tokens is not supported for Composability v1.0.0"
-        )
-      }
+    if (
+      isRuntimeValues &&
+      composabilityVersion === ComposabilityVersion.V1_0_0
+    ) {
+      throw new Error(
+        "Runtime values for Native tokens are not supported for Composability v1.0.0"
+      )
     }
 
     // Compose metadata for the instruction, using RUNTIME_VALUE placeholders if needed

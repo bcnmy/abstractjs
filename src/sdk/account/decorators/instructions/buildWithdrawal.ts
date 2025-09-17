@@ -133,7 +133,7 @@ export const buildWithdrawal = async (
       const { composabilityVersion } = composabilityParams
       if (composabilityVersion === ComposabilityVersion.V1_0_0) {
         throw new Error(
-          "Runtime balance for Native tokens is not supported for Composability v1.0.0"
+          "Runtime values for Native tokens are not supported for Composability v1.0.0"
         )
       }
       // build value transfer composable call using raw composable build function

@@ -121,7 +121,7 @@ describe("mee.buildNativeTokenTransfer", () => {
         }
       })
     ).rejects.toThrowError(
-      "Runtime balance for Native tokens is not supported for Composability v1.0.0"
+      "Runtime values for Native tokens are not supported for Composability v1.0.0"
     )
   })
 
