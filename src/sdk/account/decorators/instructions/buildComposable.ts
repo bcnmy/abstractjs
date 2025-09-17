@@ -61,7 +61,7 @@ export type BuildComposableParameters = {
   value?: bigint | RuntimeValue
 }
 
-export type BuildValueTransferComposableParameters = {
+export type BuildNativeTokenTransferComposableParameters = {
   to: Address | RuntimeValue
   gasLimit?: bigint
   value: bigint | RuntimeValue

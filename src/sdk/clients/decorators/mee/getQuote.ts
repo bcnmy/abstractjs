@@ -1218,7 +1218,7 @@ const prepareCleanUpUserOps = async (
           const [cleanUpNativeTransferInstruction] = await buildComposable(
             { accountAddress: account.signer.address, currentInstructions: [] },
             {
-              type: "valueTransfer",
+              type: "nativeTokenTransfer",
               data: {
                 to: cleanUp.recipientAddress,
                 value: amount,

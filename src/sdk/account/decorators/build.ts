@@ -15,7 +15,7 @@ import buildBatch, {
 } from "./instructions/buildBatch"
 import {
   type BuildComposableParameters,
-  type BuildValueTransferComposableParameters,
+  type BuildNativeTokenTransferComposableParameters,
   buildComposableUtil
 } from "./instructions/buildComposable"
 import {
@@ -122,12 +122,12 @@ export type BuildTransferInstruction = {
 
 /**
  * Build action which is used to build instructions for a value transfer
- * @property type - Literal "valueTransfer" to identify the action type
- * @property data - {@link BuildValueTransferComposableParameters} The parameters for the value transfer action
+ * @property type - Literal "nativeTokenTransfer" to identify the action type
+ * @property data - {@link BuildNativeTokenTransferComposableParameters} The parameters for the value transfer action
  */
-export type BuildValueTransferInstruction = {
-  type: "valueTransfer"
-  data: BuildValueTransferComposableParameters
+export type BuildNativeTokenTransferInstruction = {
+  type: "nativeTokenTransfer"
+  data: BuildNativeTokenTransferComposableParameters
   efficientMode?: boolean
 }
 
@@ -235,7 +235,7 @@ export type BuildInstructionTypes =
  */
 export type BuildComposableInstructionTypes =
   | BaseInstructionTypes
-  | BuildValueTransferInstruction
+  | BuildNativeTokenTransferInstruction
   | BuildComposableInstruction
   | BuildComposableRawInstruction
   | BuildAcrossIntentComposableInstruction
@@ -372,7 +372,7 @@ export const buildComposable = async (
         composabilityVersion: composabilityVersion!
       })
     }
-    case "valueTransfer": {
+    case "nativeTokenTransfer": {
       return buildRawComposable(
         baseParams,
         {

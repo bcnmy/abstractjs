@@ -617,7 +617,7 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
         trigger: ethTrigger,
         instructions: [
           mcNexus_compos_v1_1_0.buildComposable({
-            type: "valueTransfer",
+            type: "nativeTokenTransfer",
             data: {
               chainId: network.chain.id,
               to: eoaAccount.address,

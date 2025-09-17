@@ -1398,7 +1398,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       })
 
     const transferInstruction = await mcNexus_compos_v1_1_0.buildComposable({
-      type: "valueTransfer",
+      type: "nativeTokenTransfer",
       data: {
         to: runtimeParamViaCustomStaticCallValue,
         value: amount,
