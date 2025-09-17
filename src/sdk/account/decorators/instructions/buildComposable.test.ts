@@ -2041,10 +2041,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
       // actual dev defined userops
-      expect(userOps[1].executionStatus).to.be.eq("MINED_SUCCESS")
+      expect(userOps[0].executionStatus).to.be.eq("MINED_SUCCESS")
 
       // cleanup userops - SDK doesn't wait for cleanup userOp status
-      expect(userOps[2].executionStatus).to.be.oneOf([
+      expect(userOps[0].executionStatus).to.be.oneOf([
         "MINED_FAIL",
         "PENDING",
         "MINING",
@@ -2120,10 +2120,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         expect(transactionStatus).to.be.eq("MINED_SUCCESS")
 
         // actual dev defined userops
-        expect(userOps[1].executionStatus).to.be.eq("MINED_FAIL")
+        expect(userOps[0].executionStatus).to.be.eq("MINED_FAIL")
 
         // cleanup userops - SDK doesn't wait for cleanup userOp status
-        expect(userOps[2].executionStatus).to.be.oneOf([
+        expect(userOps[1].executionStatus).to.be.oneOf([
           "MINED_FAIL",
           "PENDING",
           "MINING",
@@ -2134,8 +2134,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       } catch (error) {
         // UserOp one always reverts
         expect(error.message).to.be.oneOf([
-          "[1] UserOperation reverted",
-          "[1] ERC20: transfer amount exceeds balance"
+          "[0] UserOperation reverted",
+          "[0] ERC20: transfer amount exceeds balance"
         ])
       }
     }

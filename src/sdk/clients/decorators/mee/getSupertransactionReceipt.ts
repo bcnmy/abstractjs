@@ -1,8 +1,7 @@
-import {
-  type GetTransactionReceiptParameters,
-  type Hex,
-  type TransactionReceipt,
-  formatTransactionReceipt
+import type {
+  GetTransactionReceiptParameters,
+  Hex,
+  TransactionReceipt
 } from "viem"
 import { getTransactionReceipt as getTransactionReceiptFromViem } from "viem/actions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -13,12 +12,8 @@ import {
 } from "../../../account/utils/explorer"
 import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
-import type { AnyData } from "../../../modules"
-import { type Url, createHttpClient } from "../../createHttpClient"
-import {
-  type BaseMeeClient,
-  DEFAULT_PATHFINDER_URL
-} from "../../createMeeClient"
+import type { Url } from "../../createHttpClient"
+import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 
 /**
@@ -130,7 +125,9 @@ export async function getSupertransactionReceipt(
       method: "GET"
     })
 
-  const metaStatus = await parseTransactionStatus(explorerResponse.userOps)
+  const userOpsWithoutPayment = explorerResponse.userOps.slice(1)
+
+  const metaStatus = await parseTransactionStatus(userOpsWithoutPayment)
   switch (metaStatus.status) {
     case "FAILED": {
       console.log({ metaStatus, explorerResponse, hash: params.hash })
@@ -148,14 +145,9 @@ export async function getSupertransactionReceipt(
     }
     case "MINED_SUCCESS": {
       if (waitForReceipts) {
-        const isSponsoredSupertransaction =
-          explorerResponse.paymentInfo.sponsored
-        const sponsorshipUrl =
-          explorerResponse.paymentInfo.sponsorshipUrl || DEFAULT_PATHFINDER_URL
-
         receipts = await Promise.all(
-          explorerResponse.userOps
-            .filter((userOp, index) => {
+          userOpsWithoutPayment
+            .filter((userOp) => {
               // Cleanup userOps are ignored for transaction receipt if it is not successful
               if (
                 userOp.isCleanUpUserOp &&
@@ -164,27 +156,10 @@ export async function getSupertransactionReceipt(
                 return false
               }
 
-              // Payment userOp is ignored for transaction receipt if it is not successful
-              if (index === 0 && userOp.executionStatus !== "MINED_SUCCESS")
-                return false
-
               // Only the main userOps will be considered
               return true
             })
-            .map(async ({ chainId, executionData }, index) => {
-              // If sponsored tx ? the receipt for sponsored payment userOp needs to be fetched from
-              // sponsorship backend
-              if (isSponsoredSupertransaction && index === 0) {
-                const sponsorshipClient = createHttpClient(sponsorshipUrl)
-
-                const receipt = await sponsorshipClient.request({
-                  path: `sponsorship/receipt/${chainId}/${executionData}`,
-                  method: "GET"
-                })
-
-                return formatTransactionReceipt(receipt as AnyData)
-              }
-
+            .map(async ({ chainId, executionData }) => {
               return getTransactionReceiptFromViem(
                 account.deploymentOn(Number(chainId), true).publicClient,
                 {
@@ -203,7 +178,7 @@ export async function getSupertransactionReceipt(
     }
   }
 
-  const explorerLinks = explorerResponse.userOps.reduce(
+  const explorerLinks = userOpsWithoutPayment.reduce(
     (acc, userOp) => {
       acc.push(
         getExplorerTxLink(userOp.executionData, userOp.chainId),
@@ -216,6 +191,7 @@ export async function getSupertransactionReceipt(
 
   return {
     ...explorerResponse,
+    userOps: userOpsWithoutPayment,
     explorerLinks,
     receipts,
     transactionStatus: metaStatus.status
