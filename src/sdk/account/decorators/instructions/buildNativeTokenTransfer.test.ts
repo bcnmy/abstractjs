@@ -6,8 +6,8 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
+import { getMEEVersion, runtimeNativeBalanceOf } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -106,5 +106,44 @@ describe("mee.buildNativeTokenTransfer", () => {
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Using native runtime injection with composability v1 should fail", async () => {
+    await expect(mcNexus.buildComposable({
+      type: "nativeTokenTransfer",
+      data: {
+        to: eoaAccount.address,
+        chainId: chain.id,
+        value: runtimeNativeBalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true)
+        })
+      }
+    })).rejects.toThrowError("Runtime balance for Native tokens is not supported for Composability v1.0.0");
+  })
+
+  test("Using native runtime injection with composability v2 should work", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(MEEVersion.V2_2_0)
+        }
+      ]
+    })
+
+    const instruction = await mcNexus.buildComposable({
+      type: "nativeTokenTransfer",
+      data: {
+        to: eoaAccount.address,
+        chainId: chain.id,
+        value: runtimeNativeBalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true)
+        })
+      }
+    });
+
+    expect(instruction).toBeDefined()
   })
 })

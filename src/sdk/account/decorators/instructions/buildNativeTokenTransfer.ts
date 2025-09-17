@@ -15,6 +15,7 @@ import type { InstructionMetadata } from "../../../clients/decorators/mee/types/
 import { type RuntimeValue, isRuntimeComposableValue } from "../../../modules"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 import buildRawComposable from "./buildRawComposable"
+import { ComposabilityVersion } from "../../../constants"
 
 /**
  * Parameters for building a native token transfer instruction.
@@ -92,6 +93,14 @@ export const buildNativeTokenTransfer = async (
       throw new Error(
         "Composability version is required to build native token transfer instruction"
       )
+    }
+
+    if (isRuntimeComposableValue(value)) {
+      if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+        throw new Error(
+          "Runtime balance for Native tokens is not supported for Composability v1.0.0"
+        )
+      }
     }
 
     // Compose metadata for the instruction, using RUNTIME_VALUE placeholders if needed
