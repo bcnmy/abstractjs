@@ -1,5 +1,5 @@
 import type { Address } from "viem"
-import type { MEEVersion } from "../../constants"
+import type { ComposabilityVersion, MEEVersion } from "../../constants"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -183,6 +183,8 @@ export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 export type MEEVersionConfig = {
   /** The version of the Nexus account */
   version: MEEVersion
+  /** The version of the Composability */
+  composabilityVersion: ComposabilityVersion
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
   accountId: NexusAccountId
   /** The implementation address for the account */

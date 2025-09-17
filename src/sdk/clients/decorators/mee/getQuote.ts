@@ -1,24 +1,28 @@
-import {
-  type Address,
-  type Hex,
-  type OneOf,
-  encodeFunctionData,
-  zeroAddress
-} from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { buildComposable } from "../../../account/decorators"
+import {
+  buildComposable,
+  formatCallDataInputParamsWithVersion
+} from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
-import { addressEquals, isBigInt } from "../../../account/utils/Utils"
+import {
+  addressEquals,
+  isBigInt,
+  isNativeToken
+} from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
-import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
+import {
+  ComposabilityVersion,
+  SMART_SESSIONS_ADDRESS
+} from "../../../constants"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf,
+  runtimeNativeBalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponseEntry } from "../../../modules/validators/smartSessions/decorators/grantPermission"
@@ -1160,7 +1164,7 @@ const prepareUserOps = async (
       // ERC-7683 Cross-chain intents can be included in the superTxn
       // And this function will have to convert them out of instructions
       // Such 'off-chain' entities will have to be used with short encoding flag
-      // For we just set it to false for now
+      // We just set it to `false` for now
       const shortEncoding = false
 
       return Promise.all([
@@ -1203,48 +1207,65 @@ const prepareCleanUpUserOps = async (
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
+      const { version } = account.deploymentOn(cleanUp.chainId, true)
+      const composabilityVersion = version.composabilityVersion
 
-      if (cleanUp.tokenAddress === zeroAddress) {
-        if (cleanUp.amount === undefined) {
-          throw new Error(
-            "Please configure the amount for the native token cleanup."
-          )
-        }
-
-        if (!isBigInt(cleanUp.amount)) {
-          throw new Error(
-            "Runtime amount for the native token cleanup is not supported yet."
-          )
-        }
-
-        const amount = cleanUp.amount as bigint
-
-        const { version } = account.deploymentOn(cleanUp.chainId, true)
-
-        const forwardCalldata = encodeFunctionData({
-          abi: ForwarderAbi,
-          functionName: "forward",
-          args: [cleanUp.recipientAddress]
-        })
-
-        const [cleanUpNativeTransferInstruction] = await buildComposable(
-          { accountAddress: account.signer.address, currentInstructions: [] },
-          {
-            type: "rawCalldata",
-            data: {
-              to: version.ethForwarderAddress,
-              calldata: forwardCalldata,
-              chainId: cleanUp.chainId,
-              value: amount
-            }
+      if (isNativeToken(cleanUp.tokenAddress)) {
+        if (!isBigInt(cleanUp.amount) || cleanUp.amount === 0n) {
+          if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+            throw new Error(
+              "Native token cleanup with runtime-injected amount is not supported for Composability v1.0.0"
+            )
           }
-        )
+          // If the amount is not a bigint, or is 0, then build a runtime injected cleanup
+          let amount: RuntimeValue
+          if (cleanUp.amount === undefined || cleanUp.amount === 0n) {
+            // if it is not properly supplied as runtime value,
+            // then use the runtime native balance of the account
+            amount = runtimeNativeBalanceOf({
+              targetAddress: account.addressOn(cleanUp.chainId, true)
+            })
+          } else {
+            // else just use provided runtime value
+            amount = cleanUp.amount as RuntimeValue
+          }
+          const [cleanUpNativeTransferInstruction] = await buildComposable(
+            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              type: "nativeTokenTransfer",
+              data: {
+                to: cleanUp.recipientAddress,
+                value: amount,
+                chainId: cleanUp.chainId,
+                ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
+              }
+            },
+            composabilityVersion
+          )
+          cleanUpInstruction = cleanUpNativeTransferInstruction
+        } else {
+          const amount = cleanUp.amount as bigint
 
-        cleanUpInstruction = cleanUpNativeTransferInstruction
+          const [cleanUpNativeTransferInstruction] = await buildComposable(
+            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              type: "rawCalldata",
+              data: {
+                to: cleanUp.recipientAddress,
+                calldata: "0x00000000",
+                chainId: cleanUp.chainId,
+                value: amount
+              }
+            },
+            composabilityVersion
+          )
+          cleanUpInstruction = cleanUpNativeTransferInstruction
+        }
       } else {
+        // Else ERC20 cleanup
         let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
 
-        // If there is no amount specified ? Runtime amount will be used for cleanup by default
+        // If there is no amount specified, runtime amount will be used for cleanup by default
         if (amount === 0n) {
           amount = runtimeERC20BalanceOf({
             targetAddress: account.addressOn(cleanUp.chainId, true),
@@ -1263,7 +1284,8 @@ const prepareCleanUpUserOps = async (
               chainId: cleanUp.chainId,
               ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
             }
-          }
+          },
+          composabilityVersion
         )
 
         cleanUpInstruction = cleanUpERC20TransferInstruction
@@ -1292,7 +1314,7 @@ const prepareCleanUpUserOps = async (
       } else {
         if (userOpsNonceInfo.length === 0) {
           throw new Error(
-            "Atleast one instruction should be configured to use cleanups."
+            "At least one instruction should be configured to use cleanups."
           )
         }
 
@@ -1311,11 +1333,17 @@ const prepareCleanUpUserOps = async (
       const nonceDependencyInputParams = nonceDependencies.flatMap(
         (dep) => dep.inputParams
       )
+      const formattedNonceDependencyInputParams =
+        formatCallDataInputParamsWithVersion(
+          composabilityVersion,
+          false,
+          nonceDependencyInputParams
+        )
 
       cleanUpInstruction.calls = (
         cleanUpInstruction.calls as ComposableCall[]
       ).map((call) => {
-        call.inputParams.push(...nonceDependencyInputParams)
+        call.inputParams.push(...formattedNonceDependencyInputParams)
         return call
       })
 

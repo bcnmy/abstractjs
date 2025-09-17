@@ -2,10 +2,12 @@ import type { Address } from "viem"
 
 export type AmountType = bigint | "RUNTIME_VALUE"
 
+export type TokenType = Address | "RUNTIME_VALUE"
+
 // Known Transaction Metadata
 export interface TokenTransferMetadata {
   type: "TRANSFER" // 'TRANSFER'
-  tokenAddress: Address // Address of the token being transferred
+  tokenAddress: TokenType // Address of the token being transferred
   decimals?: number // Decimals of the token being transferred
   fromAddress: Address // Sender of the tokens
   toAddress: Address // Recipient of the tokens
@@ -15,7 +17,7 @@ export interface TokenTransferMetadata {
 
 export interface ApproveMetadata {
   type: "APPROVE" // 'APPROVE'
-  tokenAddress: Address // Token being approved
+  tokenAddress: TokenType // Token being approved
   decimals?: number // Decimals of the token being approved
   fromAddress: Address // Owner (approver)
   toAddress: Address // Spender being approved
@@ -25,7 +27,7 @@ export interface ApproveMetadata {
 
 export interface WithdrawMetadata {
   type: "WITHDRAW" // 'WITHDRAW'
-  tokenAddress: Address // Token being withdrawn
+  tokenAddress: TokenType // Token being withdrawn
   decimals?: number // Decimals of the token being withdrawn
   fromAddress: Address // Protocol or vault address
   toAddress: Address // User receiving the withdrawn tokens
@@ -38,9 +40,9 @@ export interface BridgeMetadata {
   type: "BRIDGE" // 'BRIDGE'
   fromAddress: Address // User initiating the bridge
   toAddress: Address // Recipient on destination chain
-  fromTokenAddress: Address // Token being bridged (on source chain)
+  fromTokenAddress: TokenType // Token being bridged (on source chain)
   fromTokenDecimals?: number // Decimals of the token being bridged (on source chain)
-  toTokenAddress: Address // Token received (on destination chain)
+  toTokenAddress: TokenType // Token received (on destination chain)
   toTokenDecimals?: number // Decimals of the token received (on destination chain)
   fromChainId: number // Source chain ID
   toChainId: number // Destination chain ID
@@ -51,9 +53,9 @@ export interface BridgeMetadata {
 // Swap Transaction Metadata
 export interface SwapMetadata {
   type: "SWAP" // 'SWAP'
-  fromTokenAddress: Address // Input token being swapped
+  fromTokenAddress: TokenType // Input token being swapped
   fromTokenDecimals?: number // Decimals of the input token
-  toTokenAddress: Address // Output token received
+  toTokenAddress: TokenType // Output token received
   toTokenDecimals?: number // Decimals of the output token
   fromAddress: Address // User initiating the swap
   toAddress: Address // Protocol contract facilitating the swap
@@ -64,7 +66,7 @@ export interface SwapMetadata {
 // Liquidity Transaction Metadata
 export interface AddLiquidityMetadata {
   type: "ADD_LIQUIDITY" // 'ADD_LIQUIDITY'
-  tokenAddress: Address // LP token or underlying token (can vary)
+  tokenAddress: TokenType // LP token or underlying token (can vary)
   decimals?: number // Decimals of the LP token or underlying token
   fromAddress: Address // User adding liquidity
   toAddress: Address // Pool or protocol receiving the liquidity
@@ -75,7 +77,7 @@ export interface AddLiquidityMetadata {
 
 export interface RemoveLiquidityMetadata {
   type: "REMOVE_LIQUIDITY" // 'REMOVE_LIQUIDITY'
-  tokenAddress: Address // LP token or underlying token
+  tokenAddress: TokenType // LP token or underlying token
   decimals?: number // Decimals of the LP token or underlying token
   fromAddress: Address // Pool or protocol returning funds
   toAddress: Address // User removing liquidity
@@ -87,7 +89,7 @@ export interface RemoveLiquidityMetadata {
 // Staking Transaction Metadata
 export interface StakeMetadata {
   type: "STAKE" // 'STAKE'
-  tokenAddress: Address // Token being staked
+  tokenAddress: TokenType // Token being staked
   decimals?: number // Decimals of the token being staked
   fromAddress: Address // User staking
   toAddress: Address // Staking contract or vault
@@ -98,7 +100,7 @@ export interface StakeMetadata {
 
 export interface UnstakeMetadata {
   type: "UNSTAKE" // 'UNSTAKE'
-  tokenAddress: Address // Token being unstaked
+  tokenAddress: TokenType // Token being unstaked
   decimals?: number // Decimals of the token being unstaked
   fromAddress: Address // Protocol or vault
   toAddress: Address // User receiving tokens
@@ -109,7 +111,7 @@ export interface UnstakeMetadata {
 
 export interface LendMetadata {
   type: "LEND" // 'LEND'
-  tokenAddress: Address // Supplied token (e.g., USDC)
+  tokenAddress: TokenType // Supplied token (e.g., USDC)
   decimals?: number // Decimals of the supplied token
   fromAddress: Address // User supplying the token
   toAddress: Address // Protocol contract
@@ -120,7 +122,7 @@ export interface LendMetadata {
 
 export interface BorrowMetadata {
   type: "BORROW" // 'BORROW'
-  tokenAddress: Address // Borrowed token (e.g., DAI)
+  tokenAddress: TokenType // Borrowed token (e.g., DAI)
   decimals?: number // Decimals of the borrowed token
   fromAddress: Address // Protocol contract (source of funds)
   toAddress: Address // User receiving the borrowed token

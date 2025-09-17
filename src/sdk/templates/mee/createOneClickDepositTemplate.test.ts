@@ -8,7 +8,7 @@ import {
 import { optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, it, vi } from "vitest"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
-import { testnetMcTestUSDCP } from "../../../test/testTokens"
+import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../../../test/testTokens"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -83,7 +83,7 @@ describe.runIf(runLifecycleTests)("createOneClickDepositTemplate", () => {
             tokenAddress: testnetMcTestUSDCP.addressOn(destChain.id),
             spender: zeroAddress,
             amount: runtimeERC20BalanceOf({
-              tokenAddress: zeroAddress,
+              tokenAddress: testnetMcTestUSDC.addressOn(destChain.id),
               targetAddress: mcNexus.addressOn(destChain.id, true)
             })
           }

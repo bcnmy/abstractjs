@@ -4,9 +4,12 @@ import {
   type Hex,
   encodeAbiParameters,
   encodeFunctionData,
+  encodePacked,
   erc20Abi,
-  parseAbi
+  parseAbi,
+  zeroAddress
 } from "viem"
+import type { Abi } from "viem"
 import { ENTRY_POINT_ADDRESS } from "../../constants"
 import type { AnyData } from "../../modules/utils/Types"
 import {
@@ -15,7 +18,15 @@ import {
   encodeRuntimeFunctionData
 } from "./runtimeAbiEncoding"
 
+/**
+ * fetcherType: Defines how to fetch the param
+ * paramData: The data that is used during fetching the param
+ * constraints: The constraints that the resulting param needs to satisfy
+ * paramType: The type of the param. This field is optional and it is introduced in the composability version 1.1.0
+ * If earlier versions are used, this field may not not present.
+ */
 export type InputParam = {
+  paramType?: InputParamType
   fetcherType: InputParamFetcherType
   paramData: string
   constraints: Constraint[]
@@ -26,9 +37,31 @@ export type OutputParam = {
   paramData: string
 }
 
+/**
+ * paramType: The type of the param.
+ * TARGET: The target address => used as a target address for the call
+ * VALUE: The value => used as a native value for the call
+ * CALL_DATA: processed param will be part of the calldata for the call
+ * This field is optional and it is introduced in the composability version 1.1.0
+ * If earlier versions are used, this field may not not present.
+ */
+export const InputParamType = {
+  TARGET: 0,
+  VALUE: 1,
+  CALL_DATA: 2
+} as const
+
+/**
+ * fetcherType: Defines how to fetch the param
+ * RAW_BYTES: just use param data as is (raw bytes)
+ * STATIC_CALL: param data defines the params for the static call
+ * Outputs of the static call will form the processed param
+ * BALANCE: param data defines the params for the balance query
+ */
 export const InputParamFetcherType = {
   RAW_BYTES: 0,
-  STATIC_CALL: 1
+  STATIC_CALL: 1,
+  BALANCE: 2
 } as const
 
 export const OutputParamFetcherType = {
@@ -49,15 +82,27 @@ export type OutputParamFetcherType =
   (typeof OutputParamFetcherType)[keyof typeof OutputParamFetcherType]
 export type ConstraintType =
   (typeof ConstraintType)[keyof typeof ConstraintType]
+export type InputParamType =
+  (typeof InputParamType)[keyof typeof InputParamType]
 
 export type Constraint = {
   constraintType: ConstraintType
   referenceData: string
 }
 
+/**
+ * Base composable call type
+ * @param functionSig - The function signature of the composable call
+ * @param inputParams - The input parameters of the composable call
+ * @param outputParams - The output parameters of the composable call
+ * @param to - The address of the target contract.
+ * @param value - The value of the composable call.
+ * Since Composability version 1.1.0, to and value are not required
+ * as they are replaced by the input params with according types (TARGET, VALUE)
+ */
 export type BaseComposableCall = {
-  to: Address
-  value: bigint
+  to?: Address
+  value?: bigint
   functionSig: string
   inputParams: InputParam[]
   outputParams: OutputParam[]
@@ -72,6 +117,14 @@ export type ConstraintField = {
   value: AnyData // type any is being implicitly used. The appropriate value validation happens in the runtime function
 }
 
+export type RuntimeParamViaCustomStaticCallParams = {
+  targetContractAddress: Address
+  functionAbi: Abi
+  args: Array<AnyData>
+  functionName?: string
+  constraints?: ConstraintField[]
+}
+
 export type runtimeERC20AllowanceOfParams = {
   owner: Address
   spender: Address
@@ -79,11 +132,16 @@ export type runtimeERC20AllowanceOfParams = {
   constraints?: ConstraintField[]
 }
 
-export type RuntimeERC20BalanceOfParams = {
+export type RuntimeBalanceOfParams = {
   targetAddress: Address
   tokenAddress: Address
   constraints?: ConstraintField[]
 }
+
+export type RuntimeNativeBalanceOfParams = Omit<
+  RuntimeBalanceOfParams,
+  "tokenAddress"
+>
 
 export type RuntimeNonceOfParams = {
   smartAccountAddress: Address
@@ -142,6 +200,49 @@ export const equalTo = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.EQ, value }
 }
 
+/**
+ * Validates and processes constraints for runtime functions
+ * @param constraints - Array of constraint fields to validate and process
+ * @returns Array of processed constraints ready for use
+ */
+const validateAndProcessConstraints = (
+  constraints: ConstraintField[]
+): Constraint[] => {
+  const constraintsToAdd: Constraint[] = []
+
+  if (constraints.length > 0) {
+    for (const constraint of constraints) {
+      // Constraint type IN is ignored for runtime functions
+      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
+      if (
+        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
+      ) {
+        throw new Error("Invalid constraint type")
+      }
+
+      // Handle value validation in a appropriate to runtime function
+      if (
+        typeof constraint.value !== "bigint" ||
+        constraint.value < BigInt(0)
+      ) {
+        throw new Error("Invalid constraint value")
+      }
+
+      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
+      const encodedConstraintValue = encodeAbiParameters(
+        [{ type: "bytes32" }],
+        [valueHex as Hex]
+      )
+
+      constraintsToAdd.push(
+        prepareConstraint(constraint.type, encodedConstraintValue)
+      )
+    }
+  }
+
+  return constraintsToAdd
+}
+
 export const runtimeNonceOf = ({
   smartAccountAddress,
   nonceKey,
@@ -165,37 +266,41 @@ export const runtimeNonceOf = ({
     ]
   )
 
-  const constraintsToAdd: Constraint[] = []
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Contraint type IN is ignored for the runtimeBalanceOf
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid contraint type")
-      }
-
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" ||
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid contraint value")
-      }
-
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
+  return {
+    isRuntime: true,
+    inputParams: [
+      prepareInputParam(
+        InputParamFetcherType.STATIC_CALL,
+        encodedParam,
+        constraintsToAdd
       )
-
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
-      )
-    }
+    ],
+    outputParams: []
   }
+}
+
+export const runtimeParamViaCustomStaticCall = ({
+  targetContractAddress,
+  functionAbi,
+  functionName,
+  args,
+  constraints = []
+}: RuntimeParamViaCustomStaticCallParams): RuntimeValue => {
+  const encodedParam = encodeAbiParameters(
+    [{ type: "address" }, { type: "bytes" }],
+    [
+      targetContractAddress,
+      encodeFunctionData({
+        abi: functionAbi,
+        functionName: functionName,
+        args
+      })
+    ]
+  )
+
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
   return {
     isRuntime: true,
@@ -235,37 +340,7 @@ export const runtimeERC20AllowanceOf = ({
     ]
   )
 
-  const constraintsToAdd: Constraint[] = []
-
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Constraint type IN is ignored for the runtimeBalanceOf
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid constraint type")
-      }
-
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" ||
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid constraint value")
-      }
-
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
-      )
-
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
-      )
-    }
-  }
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
 
   return {
     isRuntime: true,
@@ -280,63 +355,59 @@ export const runtimeERC20AllowanceOf = ({
   }
 }
 
+/**
+ * Returns the runtime value for the native balance of the target address
+ * Utilizes the BALANCE fetcherType
+ * @param targetAddress - The address of the target account
+ * @returns The runtime value for the native balance of the target address
+ */
+export const runtimeNativeBalanceOf = ({
+  targetAddress,
+  constraints = []
+}: RuntimeNativeBalanceOfParams): RuntimeValue => {
+  return getBalanceOf({
+    targetAddress,
+    tokenAddress: zeroAddress,
+    constraints
+  })
+}
+
+/**
+ * Returns the runtime value for the ERC20 balance of the target address
+ * @param targetAddress - The address of the target account
+ * @param tokenAddress - The address of the ERC20 token
+ * @returns The runtime value for the ERC20 balance of the target address
+ */
 export const runtimeERC20BalanceOf = ({
   targetAddress,
   tokenAddress,
   constraints = []
-}: RuntimeERC20BalanceOfParams): RuntimeValue => {
-  const defaultFunctionSig = "balanceOf"
+}: RuntimeBalanceOfParams): RuntimeValue => {
+  return getBalanceOf({
+    targetAddress,
+    tokenAddress,
+    constraints
+  })
+}
 
-  const encodedParam = encodeAbiParameters(
-    [{ type: "address" }, { type: "bytes" }],
-    [
-      tokenAddress,
-      encodeFunctionData({
-        abi: erc20Abi,
-        functionName: defaultFunctionSig,
-        args: [targetAddress]
-      })
-    ]
+const getBalanceOf = ({
+  targetAddress,
+  tokenAddress,
+  constraints = []
+}: RuntimeBalanceOfParams): RuntimeValue => {
+  const constraintsToAdd = validateAndProcessConstraints(constraints)
+
+  const encodedInputParamData = encodePacked(
+    ["address", "address"],
+    [tokenAddress, targetAddress]
   )
-
-  const constraintsToAdd: Constraint[] = []
-
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Constraint type IN is ignored for the runtimeBalanceOf
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid constraint type")
-      }
-
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" ||
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid constraint value")
-      }
-
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
-      )
-
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
-      )
-    }
-  }
 
   return {
     isRuntime: true,
     inputParams: [
       prepareInputParam(
-        InputParamFetcherType.STATIC_CALL,
-        encodedParam,
+        InputParamFetcherType.BALANCE,
+        encodedInputParamData,
         constraintsToAdd
       )
     ],
@@ -358,7 +429,10 @@ export const runtimeEncodeAbiParameters = (
   args: Array<AnyData>
 ): RuntimeValue => {
   // prepare functionContext and args out of what this helper is expecting
-  const inputParams: InputParam[] = prepareComposableParams(inputs, args)
+  const inputParams: InputParam[] = prepareComposableInputCalldataParams(
+    inputs,
+    args
+  )
 
   // so in the upper level function call encoding, there will be a runtime dynamic `bytes` argument
   // wrapped into a RuntimeValue object with several InputParam's.
@@ -415,7 +489,7 @@ export const isComposableCallRequired = (
   return isComposableCall
 }
 
-export const prepareComposableParams = (
+export const prepareComposableInputCalldataParams = (
   inputs: AbiParameter[],
   args: Array<AnyData>
 ) => {
