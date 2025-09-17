@@ -26,7 +26,7 @@ import {
 } from "../../../clients/createMeeClient"
 import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleInstalled"
 import type { FeeTokenInfo } from "../../../clients/decorators/mee"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../utils"
@@ -79,12 +79,12 @@ describe("mee.multichainSmartSessions", () => {
         {
           chain: paymentChain,
           transport: paymentChainTransport,
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(MEEVersion.V2_1_0)
         },
         {
           chain: targetChain,
           transport: targetChainTransport,
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
@@ -106,9 +106,10 @@ describe("mee.multichainSmartSessions", () => {
     async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
+      // if tests fail, increase the amount
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.3", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -315,6 +316,119 @@ describe("mee.multichainSmartSessions", () => {
   )
 
   test.runIf(runPaidTests)(
+    "should grant and use permission with custom verification gas limit",
+    async () => {
+      const sessionMeeClient = meeClient.extend(meeSessionActions)
+
+      const sessionDetails =
+        await sessionMeeClient.grantPermissionTypedDataSign({
+          redeemer: redeemerAddress,
+          feeToken,
+          // Could add a helper function to build the actions array,
+          // this architecture allows for more flexibility and customizations
+          actions: [
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "decrementNumber" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "revertOperation" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "getNumber" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: COUNTER_ON_OPTIMISM
+            }
+          ],
+          maxPaymentAmount: parseUnits("3", 6)
+        })
+
+      const dappNexusAccount = await toMultichainNexusAccount({
+        accountAddress: mcNexus.addressOn(paymentChain.id),
+        signer: redeemerAccount,
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
+          {
+            chain: targetChain,
+            transport: targetChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
+      })
+
+      const dappMeeClient = await createMeeClient({
+        account: dappNexusAccount
+      })
+      const dappSessionClient = dappMeeClient.extend(meeSessionActions)
+
+      const usePermissionPayload = await dappSessionClient.usePermission({
+        sessionDetails,
+        mode: "ENABLE_AND_USE",
+        instructions: [
+          {
+            calls: [
+              {
+                to: COUNTER_ON_OPTIMISM,
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
+              }
+            ],
+            chainId: paymentChain.id
+          },
+          {
+            calls: [
+              {
+                to: COUNTER_ON_OPTIMISM,
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "decrementNumber" })
+                )
+              }
+            ],
+            chainId: paymentChain.id
+          }
+        ],
+        feeToken,
+        verificationGasLimit: 3_000_000n
+      })
+
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash: usePermissionPayload?.hash!,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      for (const receipt_ of receipt.receipts) {
+        expect(receipt_.status).toBe("success")
+        expect(receipt_.logs).toBeDefined()
+      }
+    }
+  )
+
+  test.runIf(runPaidTests)(
     "should grant and use multichain permissions with sponsorship",
     async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
@@ -389,7 +503,8 @@ describe("mee.multichainSmartSessions", () => {
             ],
             chainId: paymentChain.id
           }
-        ]
+        ],
+        verificationGasLimit: 3_000_111n
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
