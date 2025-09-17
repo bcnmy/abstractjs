@@ -64,13 +64,6 @@ export type BuildComposableParameters = {
   metadata?: InstructionMetadata[]
 }
 
-export type BuildNativeTokenTransferComposableParameters = {
-  to: Address | RuntimeValue
-  gasLimit?: bigint
-  value: bigint | RuntimeValue
-  chainId: number
-}
-
 export const buildComposableCall = async (
   parameters: BuildComposableParameters,
   composabilityParameters: ComposabilityParams
