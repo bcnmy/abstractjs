@@ -3,7 +3,7 @@ import type {
   Instruction,
   InstructionLike
 } from "../../../clients/decorators/mee"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData, ComposableCall } from "../../../modules"
 import { resolveInstructions } from "../../utils"
 import type { BaseInstructionsParams } from "../build"

@@ -1,10 +1,10 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type { InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import type { UnifiedERC20Balance } from "./getUnifiedERC20Balance"
 import type { BridgeQueryResult } from "./queryBridge"
 import { queryBridge } from "./queryBridge"
-import { type InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Mapping of a token address to a specific chain

@@ -6,6 +6,7 @@ import {
   createWalletClient
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
+import type { Instruction } from "."
 import { type NetworkConfig, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
@@ -13,13 +14,12 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
+import { AnyData, getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import {
+import type {
   InstructionMetadata,
   InstructionMetadataType
 } from "./types/instruction-metadata.type"
-import { Instruction } from "."
 
 type TypeToFieldsMap = {
   [K in InstructionMetadata["type"]]: (keyof Extract<
@@ -130,7 +130,7 @@ const expectValidInstructionMetadata = (obj: unknown) => {
 
     const metadata = item as {
       type: InstructionMetadata["type"]
-      [key: string]: any
+      [key: string]: AnyData
     }
     const type = metadata.type
 

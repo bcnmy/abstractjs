@@ -31,7 +31,7 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
-import { type InstructionMetadata } from "./types/instruction-metadata.type"
+import type { InstructionMetadata } from "./types/instruction-metadata.type"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 

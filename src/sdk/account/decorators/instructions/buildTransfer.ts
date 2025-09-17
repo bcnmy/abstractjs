@@ -1,5 +1,6 @@
 import { type Address, encodeFunctionData } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
@@ -16,7 +17,6 @@ import {
   type BuildComposableParameters,
   buildComposableCall
 } from "./buildComposable"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building a transfer instruction

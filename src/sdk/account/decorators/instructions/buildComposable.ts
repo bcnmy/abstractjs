@@ -1,5 +1,7 @@
 import { type Abi, type Address, concatHex, isAddress } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
+import { functionNameToLabel } from "../../../modules/utils/Helpers"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
@@ -9,8 +11,6 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { getFunctionContextFromAbi } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams } from "../build"
-import { functionNameToLabel } from "../../../modules/utils/Helpers"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 // type OverrideObjectValues<T, OverrideType> = {
 //   [K in keyof T]: T[K] | OverrideType; // Union of original ABI inferred type and runtime value type

@@ -1,5 +1,6 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
@@ -15,7 +16,6 @@ import {
   type BuildComposableParameters,
   buildComposableCall
 } from "./buildComposable"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building an approval instruction

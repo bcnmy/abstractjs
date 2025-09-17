@@ -1,12 +1,12 @@
 import { type Address, type Hex, isAddress } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
   type ComposableCall,
   type InputParam,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
 import type { BaseInstructionsParams } from "../build"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building a raw composable instruction

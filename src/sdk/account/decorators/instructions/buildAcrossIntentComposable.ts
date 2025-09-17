@@ -9,6 +9,7 @@ import {
   zeroAddress
 } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
   type RuntimeERC20BalanceOfParams,
   greaterThanOrEqualTo,
@@ -19,7 +20,6 @@ import type { BaseInstructionsParams } from "../build"
 import buildBatch from "./buildBatch"
 import { buildComposableUtil } from "./buildComposable"
 import buildTransfer from "./buildTransfer"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Default Across Intent Wrapper address

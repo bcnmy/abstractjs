@@ -1,11 +1,11 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { BaseMultichainSmartAccount } from "../../toMultiChainNexusAccount"
 import type { MultichainToken } from "../../utils/Types"
 import type { BaseInstructionsParams } from "../build"
 import buildBridgeInstructions from "../buildBridgeInstructions"
 import type { UnifiedERC20Balance } from "../getUnifiedERC20Balance"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 
 /**
  * Parameters for building bridge intent instructions

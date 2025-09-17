@@ -5,12 +5,12 @@ import type { BaseInstructionsParams } from "../build"
 
 import type { BaseMultichainSmartAccount } from "../.."
 import { erc7579Calls } from "../../../clients/decorators/erc7579"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
+import { functionNameToLabel } from "../../../modules"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
 import { ownableCalls } from "../../../modules/validators/ownable/decorators"
 import { smartSessionCalls } from "../../../modules/validators/smartSessions"
-import { type InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
-import { functionNameToLabel } from "../../../modules"
 
 export const GLOBAL_COMPOSABLE_CALLS = {
   ...erc7579Calls,
