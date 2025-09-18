@@ -4,12 +4,13 @@ import {
   type LocalAccount,
   type WalletClient,
   createWalletClient,
-  zeroAddress,
   encodeFunctionData,
   erc20Abi,
+  parseUnits,
   stringify,
-  parseUnits
+  zeroAddress
 } from "viem"
+import { base, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import type { Instruction } from "."
 import {
@@ -18,6 +19,7 @@ import {
   toNetwork
 } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
+import { batchInstructions } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -29,8 +31,6 @@ import type {
   InstructionMetadata,
   InstructionMetadataType
 } from "./types/instruction-metadata.type"
-import { batchInstructions } from "../../../account"
-import { base, optimism } from "viem/chains"
 
 type TypeToFieldsMap = {
   [K in InstructionMetadata["type"]]: (keyof Extract<
