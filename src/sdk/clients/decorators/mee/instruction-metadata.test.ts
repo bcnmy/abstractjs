@@ -686,9 +686,11 @@ describe("Instruction metadata test", () => {
 
     expect(quote).toBeDefined()
 
-    expect(quote.userOps[1].metadata?.length || 0).to.be.eq(1)
+    expect(quote.userOps[1].metadata?.length || 0).to.be.eq(2)
 
-    expect(quote.userOps[1].metadata?.[0].type).to.eq("BRIDGE")
+    expect(quote.userOps[1].metadata?.[0].type).to.eq("TRANSFER")
+
+    expect(quote.userOps[1].metadata?.[1].type).to.eq("BRIDGE")
 
     expect(() =>
       expectValidInstructionMetadata(quote.userOps[1].metadata || [])
