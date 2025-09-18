@@ -37,8 +37,7 @@ describe("mee.buildNativeTokenTransfer", () => {
     })
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      url: "http://localhost:4001/v1"
+      account: mcNexus
     })
   })
 

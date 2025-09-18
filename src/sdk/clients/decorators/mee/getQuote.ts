@@ -574,7 +574,25 @@ export const getQuote = async (
     feeToken
   } = parameters
 
-  const resolvedInstructions = await resolveInstructions(instructions)
+  let resolvedInstructions = await resolveInstructions(instructions)
+
+  // If there is no metadata is configured by the SDK or developer ? Custom metadata will be added always
+  resolvedInstructions = resolvedInstructions.map((instruction) => {
+    if (!instruction.metadata || instruction.metadata.length === 0) {
+      return {
+        ...instruction,
+        metadata: [
+          {
+            type: "CUSTOM",
+            description: "Custom on-chain action",
+            chainId: instruction.chainId
+          }
+        ]
+      }
+    }
+
+    return instruction
+  })
 
   // if feePayer is provided, we need to use the /quote-permit path
   let pathToQuery = path

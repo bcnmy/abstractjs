@@ -60,6 +60,7 @@ export interface SwapMetadata {
   fromAddress: MetadataAddressType // User initiating the swap
   toAddress: MetadataAddressType // Protocol contract facilitating the swap
   chainId: number
+  amount: MetadataAmountType // Swap amount
   protocolNames?: string[] // DEXes used in the swap (e.g., ['Uniswap', '1inch'])
 }
 
