@@ -9,7 +9,11 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -83,12 +87,14 @@ export type BuildTransferFromParams = BaseInstructionsParams & {
 export const buildTransferFrom = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferFromParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { chainId, tokenAddress, amount, gasLimit, sender, recipient } =
     parameters
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
   const abi = erc20Abi
   const functionSig = "transferFrom"
@@ -107,10 +113,15 @@ export const buildTransferFrom = async (
         args as unknown as Array<AnyData>
       )
 
-  let triggerCalls: AbstractCall[] | ComposableCall[]
+  let transferFromCall: AbstractCall[] | ComposableCall[]
 
   // If the composable call is detected ? The call needs to composed with runtime encoding
   if (isComposableCall) {
+    if (!composabilityParams) {
+      throw new Error(
+        "Composability params are required to build a composable call"
+      )
+    }
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
       functionName: functionSig,
@@ -120,13 +131,12 @@ export const buildTransferFrom = async (
       ...(gasLimit ? { gasLimit } : {})
     }
 
-    triggerCalls = await buildComposableCall(
-      baseParams,
+    transferFromCall = await buildComposableCall(
       composableCallParams,
-      efficientMode
+      composabilityParams
     )
   } else {
-    triggerCalls = [
+    transferFromCall = [
       {
         to: tokenAddress,
         data: encodeFunctionData({
@@ -142,7 +152,7 @@ export const buildTransferFrom = async (
   return [
     ...currentInstructions,
     {
-      calls: triggerCalls,
+      calls: transferFromCall,
       chainId,
       isComposable: isComposableCall
     }

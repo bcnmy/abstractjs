@@ -1,25 +1,29 @@
-import {
-  type Address,
-  type Hex,
-  type OneOf,
-  encodeFunctionData,
-  zeroAddress
-} from "viem"
+import type { Address, Hex, OneOf } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { batchInstructions } from "../../../account"
-import { buildComposable } from "../../../account/decorators"
+import {
+  buildComposable,
+  formatCallDataInputParamsWithVersion
+} from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
-import { addressEquals, isBigInt } from "../../../account/utils/Utils"
+import {
+  addressEquals,
+  isBigInt,
+  isNativeToken
+} from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
-import { SMART_SESSIONS_ADDRESS } from "../../../constants"
-import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
+import {
+  ComposabilityVersion,
+  SMART_SESSIONS_ADDRESS
+} from "../../../constants"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf,
+  runtimeNativeBalanceOf,
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponseEntry } from "../../../modules/validators/smartSessions/decorators/grantPermission"
@@ -290,10 +294,6 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   gasLimit?: bigint
   /**
-   * verificationGasLimit option to override the default payment verification gas limit
-   */
-  verificationGasLimit?: bigint
-  /**
    * Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations
    */
   simulation?: Simulation
@@ -306,9 +306,14 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   batch?: boolean
   /**
-   * Active module address. Used to fetch the nonce for the active module
+   * Active module address. Used to fetch the nonce for the active module and resolve verification gas limit
    */
   moduleAddress?: Address
+  /**
+   * The verification gas limit for the active module
+   * @example 150000n
+   */
+  verificationGasLimit?: bigint
   /**
    * Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
    * This flag is set true when the whole superTxn with all entries require short encoding
@@ -385,7 +390,6 @@ export type MeeAuthorization = {
   nonce: Hex
   r: Hex
   s: Hex
-  v: Hex
   yParity: Hex
 }
 /**
@@ -614,6 +618,7 @@ export const getQuote = async (
     moduleAddress,
     batch = true,
     simulation,
+    verificationGasLimit,
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
@@ -655,11 +660,6 @@ export const getQuote = async (
   }
 
   const hasProcessedInitData: number[] = []
-
-  const paymentVerificationGasLimit = resolvePaymentUserOpVerificationGasLimit({
-    moduleAddress,
-    sponsorship
-  })
 
   const initDataTypeByChainId = new Map<number, INIT_DATA_TYPE>()
 
@@ -821,7 +821,6 @@ export const getQuote = async (
     client,
     {
       ...parameters,
-      paymentVerificationGasLimit,
       initDataTypeByChainId
     }
   )
@@ -933,8 +932,9 @@ export const getQuote = async (
           }
         }
 
-        const verificationGasLimit = resolveVerificationGasLimit({
+        const resolvedVerificationGasLimit = resolveVerificationGasLimit({
           moduleAddress,
+          verificationGasLimit,
           sponsorship,
           index: indexPerChainId.get(chainId)!,
           paymentChainId: paymentInfo.chainId,
@@ -956,7 +956,7 @@ export const getQuote = async (
           chainId,
           isCleanUpUserOp,
           ...initDataOrUndefined,
-          ...verificationGasLimit,
+          ...resolvedVerificationGasLimit,
           shortEncoding: shortEncodingSuperTxn || shortEncoding
         }
       }
@@ -1003,7 +1003,6 @@ export const getQuote = async (
 const preparePaymentInfo = async (
   client: BaseMeeClient,
   parameters: GetQuoteParams & {
-    paymentVerificationGasLimit?: { verificationGasLimit: bigint }
     initDataTypeByChainId: Map<number, INIT_DATA_TYPE>
   }
 ) => {
@@ -1013,13 +1012,12 @@ const preparePaymentInfo = async (
     feeToken,
     feePayer,
     gasLimit,
-    verificationGasLimit,
     authorizations = [],
     sponsorship,
     sponsorshipOptions,
     shortEncodingSuperTxn,
-    moduleAddress: validatorAddress,
-    paymentVerificationGasLimit
+    moduleAddress,
+    verificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
@@ -1060,8 +1058,7 @@ const preparePaymentInfo = async (
       token,
       nonce,
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
-      verificationGasLimit:
-        verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT,
+      verificationGasLimit: DEFAULT_VERIFICATION_GAS_LIMIT, // when sponsored, this will be set by the node
       chainId: chainId.toString(),
       sponsorshipUrl,
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
@@ -1075,6 +1072,7 @@ const preparePaymentInfo = async (
     // first developer defined userOp. To make this happen, this field should be false
     isInitDataProcessed = false
   } else {
+    // No sponsorship
     if (!feeToken) throw Error("Fee token should be configured")
 
     const validPaymentAccount = account_.deploymentOn(feeToken.chainId)
@@ -1100,7 +1098,7 @@ const preparePaymentInfo = async (
 
     const [nonce, isAccountDeployed, initCode] = await Promise.all([
       validPaymentAccount.getNonceWithKey(validPaymentAccount.address, {
-        moduleAddress: validatorAddress
+        moduleAddress
       }),
       validPaymentAccount.isDeployed(),
       validPaymentAccount.getInitCode()
@@ -1128,6 +1126,13 @@ const preparePaymentInfo = async (
       }
     }
 
+    // for non-sponsored superTxn, the verification gas limit is resolved here
+    const paymentVerificationGasLimit =
+      resolvePaymentUserOpVerificationGasLimitNonSponsored(
+        moduleAddress,
+        verificationGasLimit
+      )
+
     paymentInfo = {
       sponsored: false,
       sender: validPaymentAccount.address,
@@ -1135,15 +1140,15 @@ const preparePaymentInfo = async (
       nonce: nonce.nonce.toString(),
       callGasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       verificationGasLimit:
-        verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT,
+        paymentVerificationGasLimit?.verificationGasLimit ||
+        DEFAULT_VERIFICATION_GAS_LIMIT,
       chainId: feeToken.chainId.toString(),
       ...(feeToken.gasRefundAddress
         ? { gasRefundAddress: feeToken.gasRefundAddress }
         : {}),
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       ...initData,
-      shortEncoding: shortEncodingSuperTxn,
-      ...paymentVerificationGasLimit
+      shortEncoding: shortEncodingSuperTxn
     }
 
     // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
@@ -1199,21 +1204,21 @@ const prepareUserOps = async (
   validatorAddress?: Address
 ) => {
   return await Promise.all(
-    instructions.map((userOp) => {
-      const deployment = account.deploymentOn(userOp.chainId, true)
-      const accountAddress = account.addressOn(userOp.chainId, true)
+    instructions.map((instruction) => {
+      const deployment = account.deploymentOn(instruction.chainId, true)
+      const accountAddress = account.addressOn(instruction.chainId, true)
 
       let callsPromise: Promise<Hex>
 
-      if (userOp.isComposable) {
+      if (instruction.isComposable) {
         callsPromise = deployment.encodeExecuteComposable(
-          userOp.calls as ComposableCall[]
+          instruction.calls as ComposableCall[]
         )
       } else {
         callsPromise =
-          userOp.calls.length > 1
-            ? deployment.encodeExecuteBatch(userOp.calls as AbstractCall[])
-            : deployment.encodeExecute(userOp.calls[0] as AbstractCall)
+          instruction.calls.length > 1
+            ? deployment.encodeExecuteBatch(instruction.calls as AbstractCall[])
+            : deployment.encodeExecute(instruction.calls[0] as AbstractCall)
       }
 
       // This is the place to set the short encoding flag
@@ -1225,7 +1230,7 @@ const prepareUserOps = async (
       // ERC-7683 Cross-chain intents can be included in the superTxn
       // And this function will have to convert them out of instructions
       // Such 'off-chain' entities will have to be used with short encoding flag
-      // For we just set it to false for now
+      // We just set it to `false` for now
       const shortEncoding = false
 
       return Promise.all([
@@ -1236,11 +1241,11 @@ const prepareUserOps = async (
         deployment.isDeployed(),
         deployment.getInitCode(),
         deployment.address,
-        userOp.calls
+        instruction.calls
           .map((uo) => uo?.gasLimit ?? LARGE_DEFAULT_GAS_LIMIT)
           .reduce((curr, acc) => curr + acc, 0n)
           .toString(),
-        userOp.chainId.toString(),
+        instruction.chainId.toString(),
         isCleanUpUserOps,
         deployment,
         shortEncoding
@@ -1267,48 +1272,65 @@ const prepareCleanUpUserOps = async (
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
+      const { version } = account.deploymentOn(cleanUp.chainId, true)
+      const composabilityVersion = version.composabilityVersion
 
-      if (cleanUp.tokenAddress === zeroAddress) {
-        if (cleanUp.amount === undefined) {
-          throw new Error(
-            "Please configure the amount for the native token cleanup."
-          )
-        }
-
-        if (!isBigInt(cleanUp.amount)) {
-          throw new Error(
-            "Runtime amount for the native token cleanup is not supported yet."
-          )
-        }
-
-        const amount = cleanUp.amount as bigint
-
-        const { version } = account.deploymentOn(cleanUp.chainId, true)
-
-        const forwardCalldata = encodeFunctionData({
-          abi: ForwarderAbi,
-          functionName: "forward",
-          args: [cleanUp.recipientAddress]
-        })
-
-        const [cleanUpNativeTransferInstruction] = await buildComposable(
-          { accountAddress: account.signer.address, currentInstructions: [] },
-          {
-            type: "rawCalldata",
-            data: {
-              to: version.ethForwarderAddress,
-              calldata: forwardCalldata,
-              chainId: cleanUp.chainId,
-              value: amount
-            }
+      if (isNativeToken(cleanUp.tokenAddress)) {
+        if (!isBigInt(cleanUp.amount) || cleanUp.amount === 0n) {
+          if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+            throw new Error(
+              "Native token cleanup with runtime-injected amount is not supported for Composability v1.0.0"
+            )
           }
-        )
+          // If the amount is not a bigint, or is 0, then build a runtime injected cleanup
+          let amount: RuntimeValue
+          if (cleanUp.amount === undefined || cleanUp.amount === 0n) {
+            // if it is not properly supplied as runtime value,
+            // then use the runtime native balance of the account
+            amount = runtimeNativeBalanceOf({
+              targetAddress: account.addressOn(cleanUp.chainId, true)
+            })
+          } else {
+            // else just use provided runtime value
+            amount = cleanUp.amount as RuntimeValue
+          }
+          const [cleanUpNativeTransferInstruction] = await buildComposable(
+            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              type: "nativeTokenTransfer",
+              data: {
+                to: cleanUp.recipientAddress,
+                value: amount,
+                chainId: cleanUp.chainId,
+                ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
+              }
+            },
+            composabilityVersion
+          )
+          cleanUpInstruction = cleanUpNativeTransferInstruction
+        } else {
+          const amount = cleanUp.amount as bigint
 
-        cleanUpInstruction = cleanUpNativeTransferInstruction
+          const [cleanUpNativeTransferInstruction] = await buildComposable(
+            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              type: "rawCalldata",
+              data: {
+                to: cleanUp.recipientAddress,
+                calldata: "0x00000000",
+                chainId: cleanUp.chainId,
+                value: amount
+              }
+            },
+            composabilityVersion
+          )
+          cleanUpInstruction = cleanUpNativeTransferInstruction
+        }
       } else {
+        // Else ERC20 cleanup
         let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
 
-        // If there is no amount specified ? Runtime amount will be used for cleanup by default
+        // If there is no amount specified, runtime amount will be used for cleanup by default
         if (amount === 0n) {
           amount = runtimeERC20BalanceOf({
             targetAddress: account.addressOn(cleanUp.chainId, true),
@@ -1327,7 +1349,8 @@ const prepareCleanUpUserOps = async (
               chainId: cleanUp.chainId,
               ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
             }
-          }
+          },
+          composabilityVersion
         )
 
         cleanUpInstruction = cleanUpERC20TransferInstruction
@@ -1356,7 +1379,7 @@ const prepareCleanUpUserOps = async (
       } else {
         if (userOpsNonceInfo.length === 0) {
           throw new Error(
-            "Atleast one instruction should be configured to use cleanups."
+            "At least one instruction should be configured to use cleanups."
           )
         }
 
@@ -1375,11 +1398,17 @@ const prepareCleanUpUserOps = async (
       const nonceDependencyInputParams = nonceDependencies.flatMap(
         (dep) => dep.inputParams
       )
+      const formattedNonceDependencyInputParams =
+        formatCallDataInputParamsWithVersion(
+          composabilityVersion,
+          false,
+          nonceDependencyInputParams
+        )
 
       cleanUpInstruction.calls = (
         cleanUpInstruction.calls as ComposableCall[]
       ).map((call) => {
-        call.inputParams.push(...nonceDependencyInputParams)
+        call.inputParams.push(...formattedNonceDependencyInputParams)
         return call
       })
 
@@ -1400,12 +1429,14 @@ const prepareCleanUpUserOps = async (
 // ============ resolve verification gas limit functions ============
 /**
  * Parameters for the resolveVerificationGasLimit function
- * @param moduleAddress - The address of the module
+ * @param moduleAddress - The active module address
+ * @param verificationGasLimit - The custom verification gas limit
  * @param index - The index of the userOp during the userOps completion process
  * @param sponsorship - Whether the superTxn is sponsored
  */
 export type resolveVerificationGasLimitParams = {
   moduleAddress?: Address
+  verificationGasLimit?: bigint
   sponsorship: boolean
   index: number
 }
@@ -1430,17 +1461,25 @@ const resolveVerificationGasLimit = (
     currentChainId: string
   }
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship, index, paymentChainId, currentChainId } =
-    parameters
+  const {
+    moduleAddress,
+    verificationGasLimit,
+    sponsorship,
+    index,
+    paymentChainId,
+    currentChainId
+  } = parameters
   if (currentChainId === paymentChainId) {
     return resolveVerificationGasLimitForPaymentChain({
       moduleAddress,
+      verificationGasLimit,
       sponsorship,
       index
     })
   }
   return resolveVerificationGasLimitForNonPaymentChain({
     moduleAddress,
+    verificationGasLimit,
     index
   })
 }
@@ -1455,23 +1494,44 @@ const resolveVerificationGasLimit = (
 const resolveVerificationGasLimitForPaymentChain = (
   parameters: resolveVerificationGasLimitParams
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship, index } = parameters
-  // if module address is not provided, the default verification gas limit will be applied
-  if (!moduleAddress) {
+  const { moduleAddress, verificationGasLimit, sponsorship, index } = parameters
+
+  // if neither module address nor custom verification gas limit is provided,
+  // the default verification gas limit will be applied
+  if (!moduleAddress && !verificationGasLimit) {
     return undefined
   }
+  if (!moduleAddress && verificationGasLimit) {
+    return { verificationGasLimit }
+  }
+  // at this stage moduleAddress is definitely provided
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
     if (sponsorship) {
+      // handling this only for sponsored superTxn. (payment userOp
+      // is signed by the node and can not enable the permission) =>
+      // => the permission is enabled in the first meaningful userOp
+      // for non-sponsored superTxn, enabling the permission happens
+      // in the payment userOp see resolvePaymentUserOpVerificationGasLimit(...) below
       if (index === 0) {
         // return increased verification gas limit for the first userOp
         // as it this userOp will be enabling the permission => requires more gas
-        return { verificationGasLimit: 1_000_000n }
+        return {
+          verificationGasLimit: verificationGasLimit || 1_000_000n
+        }
       }
     }
     // return slighly increased verification gas limit
     // for USE session userOps
     return { verificationGasLimit: 250_000n }
   }
+  // if module is defined, however it is not SMART_SESSIONS_ADDRESS,
+  // return the custom verification gas limit
+  // more manual handling for other modules can be added here if needed
+  if (verificationGasLimit) {
+    return { verificationGasLimit }
+  }
+  // if module is provided but no custom verification gas limit is provided,
+  // return undefined == default verification gas limit
   return undefined
 }
 
@@ -1485,20 +1545,30 @@ const resolveVerificationGasLimitForPaymentChain = (
 const resolveVerificationGasLimitForNonPaymentChain = (
   parameters: Omit<resolveVerificationGasLimitParams, "sponsorship">
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, index } = parameters
-  // if module address is not provided, the default verification gas limit will be applied
-  if (!moduleAddress) {
+  const { moduleAddress, verificationGasLimit, index } = parameters
+  // if neither module address nor custom verification gas limit is provided,
+  // the default verification gas limit will be applied
+  if (!moduleAddress && !verificationGasLimit) {
     return undefined
   }
+  if (!moduleAddress && verificationGasLimit) {
+    return { verificationGasLimit }
+  }
+  // at this stage moduleAddress is definitely provided
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
+    // on the non-payment chain, the permission is always enabled in the first meaningful userOp
     if (index === 0) {
       // return increased verification gas limit for payment userOp
       // in a non-sponsored superTxn
-      return { verificationGasLimit: 1_000_000n }
+      return { verificationGasLimit: verificationGasLimit || 1_000_000n }
     }
     // for all other userOps, return USE session verification gas limit
     return { verificationGasLimit: 250_000n }
   }
+  if (verificationGasLimit) {
+    return { verificationGasLimit }
+  }
+  // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
 }
 
@@ -1509,23 +1579,31 @@ const resolveVerificationGasLimitForNonPaymentChain = (
  * returns undefined if there's no special gas limit required for a given case
  * 'undefined' means the node will apply the default verification gas limit
  */
-const resolvePaymentUserOpVerificationGasLimit = (
-  parameters: Omit<resolveVerificationGasLimitParams, "index">
+const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
+  moduleAddress?: Address,
+  verificationGasLimit?: bigint
 ): verificationGasLimitPayload | undefined => {
-  const { moduleAddress, sponsorship } = parameters
-  // if module address is not provided, the default verification gas limit will be applied
-  if (!moduleAddress) {
+  // if neither module address nor custom verification gas limit is provided,
+  // the default verification gas limit will be applied
+  if (!moduleAddress && !verificationGasLimit) {
     return undefined
   }
+  if (!moduleAddress && verificationGasLimit) {
+    return { verificationGasLimit }
+  }
+  // at this stage moduleAddress is definitely provided
   if (addressEquals(moduleAddress, SMART_SESSIONS_ADDRESS)) {
-    if (!sponsorship) {
-      // return increased verification gas limit for payment userOp
-      // in a non-sponsored superTxn
-      return { verificationGasLimit: 1_000_000n }
-    }
+    // return increased verification gas limit for payment userOp
+    // in a non-sponsored superTxn
+    return { verificationGasLimit: verificationGasLimit || 1_000_000n }
     // if it is sponsorship, the payment userOp won't even use Smart Sessions Module
     // so doesn't need any custom verification gas limit
+    // also payment userOp never utilizes USE mode of Smart Sessions Module
   }
+  if (verificationGasLimit) {
+    return { verificationGasLimit }
+  }
+  // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
 }
 

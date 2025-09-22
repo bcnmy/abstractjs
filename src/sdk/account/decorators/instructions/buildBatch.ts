@@ -28,6 +28,8 @@ export type BuildBatchParams = BaseInstructionsParams & {
 /**
  * Builds a batch of instructions for a single userOp to be included in a supertransaction
  * UserOps must be on the same chain for the batch to be valid
+ * If a composable call is passed to this method, this call should already be built via
+ * one of the buildComposable methods.
  * @param baseParams - Base parameters for the instruction
  * @param parameters - Parameters for the batch instruction
  * @param parameters.instructions - Instructions to be executed in the batch

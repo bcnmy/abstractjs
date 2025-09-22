@@ -18,6 +18,7 @@ export type UseMeePermissionParams = {
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
   sessionDetails: GrantMeePermissionPayload
+  verificationGasLimit?: bigint
 } & OneOf<
   | {
       feeToken: FeeTokenInfo
@@ -40,7 +41,8 @@ export const useMeePermission = async (
   const {
     sessionDetails: sessionDetailsArray,
     mode: mode_,
-    instructions
+    instructions,
+    verificationGasLimit
   } = parameters
   const meeClient = meeClient_ as MeeClient
 
@@ -53,6 +55,7 @@ export const useMeePermission = async (
     instructions,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
+    verificationGasLimit,
     ...(parameters.sponsorship
       ? {
           sponsorship: parameters.sponsorship,

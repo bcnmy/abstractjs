@@ -1,5 +1,25 @@
 # @biconomy/abstractjs
 
+## 1.1.7
+
+### Patch Changes
+
+- Features included:
+
+  1. Native token runtime values are supported
+  2. Native token runtime cleanups are supported
+  3. Custom verification gas limit for smart sessions are supported
+
+## 1.1.6
+
+### Patch Changes
+
+- Changes included:
+
+  1. Removed param v from the MEEAuthorization interface. So v is not mandatory anymore
+  2. verificationGasLimit field will be applied for all the instructions and not just payment instruction
+  3. Payment userOps will be excluded from the supertransaction status checks
+
 ## 1.1.5
 
 ### Patch Changes

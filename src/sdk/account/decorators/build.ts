@@ -1,6 +1,8 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
+import { isRuntimeComposableValue } from "../../modules/utils/composabilityCalls"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
 } from "./instructions/buildAcrossIntentComposable"
@@ -11,8 +13,10 @@ import {
 import buildBatch, {
   type BuildBatchParameters
 } from "./instructions/buildBatch"
-import buildComposableUtil, {
-  type BuildComposableParameters
+import {
+  type BuildComposableParameters,
+  type BuildNativeTokenTransferComposableParameters,
+  buildComposableUtil
 } from "./instructions/buildComposable"
 import {
   type BuildDefaultParameters,
@@ -49,7 +53,7 @@ export type TokenParams = {
    * The address of the token to use on the relevant chain
    * @example "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
    */
-  tokenAddress: Address
+  tokenAddress: Address | RuntimeValue
   /**
    * The chainId to use
    * @example 1 // Ethereum Mainnet
@@ -113,6 +117,17 @@ export type BuildTransferFromInstruction = {
 export type BuildTransferInstruction = {
   type: "transfer"
   data: BuildTransferParameters
+  efficientMode?: boolean
+}
+
+/**
+ * Build action which is used to build instructions for a value transfer
+ * @property type - Literal "nativeTokenTransfer" to identify the action type
+ * @property data - {@link BuildNativeTokenTransferComposableParameters} The parameters for the value transfer action
+ */
+export type BuildNativeTokenTransferInstruction = {
+  type: "nativeTokenTransfer"
+  data: BuildNativeTokenTransferComposableParameters
   efficientMode?: boolean
 }
 
@@ -193,14 +208,18 @@ export type BuildMultichainInstructionInstruction = {
   efficientMode?: false // non composable currently => no need to compress
 }
 
+export type ComposabilityParams = {
+  composabilityVersion: ComposabilityVersion
+  forceComposableEncoding?: boolean
+  efficientMode?: boolean
+}
+
 export type BaseInstructionTypes =
-  | BuildIntentInstruction
   | BuildTransferFromInstruction
   | BuildTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
-  | BuildMultichainInstructionInstruction
 
 /**
  * Union type of all possible build instruction types
@@ -208,12 +227,15 @@ export type BaseInstructionTypes =
 export type BuildInstructionTypes =
   | BaseInstructionTypes
   | BuildDefaultInstruction
+  | BuildMultichainInstructionInstruction
+  | BuildIntentInstruction
 
 /**
  * Union type of all possible build composable instruction types
  */
 export type BuildComposableInstructionTypes =
   | BaseInstructionTypes
+  | BuildNativeTokenTransferInstruction
   | BuildComposableInstruction
   | BuildComposableRawInstruction
   | BuildAcrossIntentComposableInstruction
@@ -267,6 +289,15 @@ export const build = async (
 ): Promise<Instruction[]> => {
   const { type, data } = parameters
 
+  const containsRuntimeValues = Object.values(data).some((value) =>
+    isRuntimeComposableValue(value)
+  )
+  if (containsRuntimeValues) {
+    throw new Error(
+      "Runtime values are not supported for `build` action. Use `buildComposable` instead."
+    )
+  }
+
   switch (type) {
     case "intent": {
       return buildIntent(baseParams, data)
@@ -299,36 +330,83 @@ export const build = async (
 }
 
 // Exactly same as build decorator, but forces to use composable call.
+// If this is used via mcNexus.buildComposable, then the composabilityVersion is auto-detected for all the required cases.
 export const buildComposable = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildComposableInstructionTypes
+  parameters: BuildComposableInstructionTypes,
+  composabilityVersion?: ComposabilityVersion
 ): Promise<Instruction[]> => {
   const { type, data, efficientMode } = parameters
 
+  // in batch mode only, we do not need to specify the composability version
+  if (type !== "batch" && !composabilityVersion) {
+    throw new Error(
+      `Composability version param is required for composable type: ${type}`
+    )
+  }
+  // so here and below we are sure, that composabilityVersion is defined
+
   switch (type) {
     case "default": {
-      return buildComposableUtil(baseParams, data, efficientMode)
+      return buildComposableUtil(baseParams, data, {
+        composabilityVersion: composabilityVersion!,
+        efficientMode
+      })
     }
     case "rawCalldata": {
-      return buildRawComposable(baseParams, data)
+      return buildRawComposable(baseParams, data, {
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "transferFrom": {
-      return buildTransferFrom(baseParams, data, true, efficientMode)
+      return buildTransferFrom(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "transfer": {
-      return buildTransfer(baseParams, data, true, efficientMode)
+      return buildTransfer(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
+    }
+    case "nativeTokenTransfer": {
+      return buildRawComposable(
+        baseParams,
+        {
+          ...data,
+          calldata: "0x00000000"
+        },
+        {
+          composabilityVersion: composabilityVersion!
+        }
+      )
     }
     case "approve": {
-      return buildApprove(baseParams, data, true, efficientMode)
+      return buildApprove(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "withdrawal": {
-      return buildWithdrawal(baseParams, data, true, efficientMode)
+      return buildWithdrawal(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "batch": {
       return buildBatch(baseParams, data)
     }
     case "acrossIntent": {
-      return buildAcrossIntentComposable(baseParams, data)
+      return buildAcrossIntentComposable(baseParams, data, {
+        composabilityVersion: composabilityVersion!,
+        efficientMode: false, // nothing to group in this case
+        forceComposableEncoding: true // both subactions are composable
+      })
     }
     default: {
       throw new Error(`Unknown build action type: ${type}`)

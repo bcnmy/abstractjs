@@ -7,6 +7,7 @@ import {
   encodeAbiParameters,
   encodeFunctionData,
   parseAbi,
+  parseEther,
   zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
@@ -15,7 +16,6 @@ import {
   TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../../../test/testSetup"
-import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type NetworkConfig,
   getRandomAccountIndex
@@ -55,8 +55,8 @@ describe("mee.upgradeSmartAccount", () => {
     const fusionQuote = await meeClient.getFusionQuote({
       trigger: {
         chainId: chain.id,
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: 1n
+        tokenAddress: zeroAddress,
+        amount: parseEther("0.0005")
       },
       instructions: [
         mcNexus.build({
@@ -73,7 +73,7 @@ describe("mee.upgradeSmartAccount", () => {
         })
       ],
       feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
+        address: zeroAddress,
         chainId: chain.id
       }
     })

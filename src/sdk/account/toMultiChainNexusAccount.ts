@@ -34,6 +34,7 @@ import {
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
 
+import type { ComposabilityVersion } from "../constants"
 import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
@@ -177,6 +178,14 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     parameter?: IsDelegatedParameters
   ) => Promise<IsDelegatedPayload>
   /**
+   * Function to get the composability version for a specific chain
+   * @param chainId - The ID of the chain to query
+   * @returns The composability version of a given multichain account on the specified chain
+   * @example
+   * const composabilityVersion = await mcAccount.getComposabilityVersion(1)
+   */
+  getComposabilityVersion: (chainId: number) => ComposabilityVersion
+  /**
    * Function to undelegate the account
    * @returns The transaction hashes of the undelegate transactions
    * @example
@@ -315,11 +324,27 @@ export async function toMultichainNexusAccount(
   const buildComposable = (
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
-  ): Promise<Instruction[]> =>
-    buildComposableDecorator(
+  ): Promise<Instruction[]> => {
+    let composabilityVersion: ComposabilityVersion | undefined = undefined
+    let chainId: number | undefined = undefined
+
+    const type = params.type
+    if (type === "acrossIntent") {
+      chainId = params.data.originChainId
+    } else if (type !== "batch") {
+      chainId = params.data.chainId
+    }
+
+    if (chainId) {
+      composabilityVersion = getComposabilityVersion(chainId)
+    }
+
+    return buildComposableDecorator(
       { currentInstructions, accountAddress: baseAccount.signer.address },
-      params
+      params,
+      composabilityVersion
     )
+  }
 
   const buildBridgeInstructions = (
     params: Omit<MultichainBridgingParams, "account">
@@ -337,6 +362,18 @@ export async function toMultichainNexusAccount(
   ) =>
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
+  const getComposabilityVersion = (chainId: number) => {
+    const chainConfiguration = chainConfigurations.find(
+      (chainConfiguration) => chainConfiguration.chain.id === chainId
+    )
+    if (!chainConfiguration) {
+      throw new Error(
+        `Chain configuration not found in mc account for chainId: ${chainId} that is used in the instruction params`
+      )
+    }
+    return chainConfiguration.version.composabilityVersion
+  }
+
   const read = <T>(params: MultichainReadParameters) =>
     multichainRead(baseAccount, params) as Promise<MultiChainReadPayload<T>[]>
 
@@ -352,6 +389,7 @@ export async function toMultichainNexusAccount(
     buildBridgeInstructions,
     queryBridge,
     isDelegated,
+    getComposabilityVersion,
     unDelegate,
     waitForTransactionReceipts,
     read,

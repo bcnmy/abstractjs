@@ -9,7 +9,15 @@ export * from "./protocols"
  * Supported MEE versions with descriptions.
  */
 export enum MEEVersion {
-  /** New K1 Mee module introduced that allows ERC-7702-delegated EOAs owning Nexus accounts */
+  /**
+   * Nexus 1.2.1
+   * - Composability 1.1.0
+   * - 7702 accounts initialization with eoa's signature (relayers' support)
+   * - ...
+   **/
+  V2_2_0 = "2.2.0",
+
+  /** New K1 Mee module introduced that allows ERC-7702-delegated EOAs owning Nexus accounts. */
   V2_1_0 = "2.1.0",
 
   /** Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
@@ -25,6 +33,13 @@ export enum MEEVersion {
   /** First release for the MEE contracts suite, based on Nexus 1.0.2
    * Requires installing MEE K1 validator and Composability module explicitly
    */
+  V1_0_0 = "1.0.0"
+}
+
+export enum ComposabilityVersion {
+  /** Added native token runtime injection support. */
+  V1_1_0 = "1.1.0",
+  /** First release for the Composability contracts suite. */
   V1_0_0 = "1.0.0"
 }
 
@@ -44,6 +59,18 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   MEEVersion,
   MEEVersionConfig
 > = {
+  [MEEVersion.V2_2_0]: {
+    // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
+    version: MEEVersion.V2_2_0,
+    accountId: "biconomy.nexus.1.2.1",
+    factoryAddress: "0xDB1D73d8c7e8D50F760083449390b1D4080108dF", // Nexus Account Factory Address
+    bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
+    implementationAddress: "0x0E12B6ED74b95aFEc6dc578Dc0b29292C0A95c90", // Nexus 1.2.1 => with native token runtime injection support
+    validatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE", // K1 MEE Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_1_0
+  },
   [MEEVersion.V2_1_0]: {
     // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
     version: MEEVersion.V2_1_0,
@@ -53,7 +80,8 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
     validatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE", // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress,
-    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1"
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_0_0
   },
   [MEEVersion.V2_0_0]: {
     version: MEEVersion.V2_0_0,
@@ -63,7 +91,8 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
     validatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95", // K1 MEE Validator Address
     defaultValidatorAddress: zeroAddress,
-    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1"
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_0_0
   },
   [MEEVersion.V1_1_0]: {
     version: MEEVersion.V1_1_0,
@@ -79,7 +108,8 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
       attesterThreshold: 0
     },
     composableModuleAddress: "0x000000eff5C221A6bdB12381868307c9Db5eB462",
-    ethForwarderAddress: "0x000000001f1c68bD5bF69aa1cCc1d429700D41Da"
+    ethForwarderAddress: "0x000000001f1c68bD5bF69aa1cCc1d429700D41Da",
+    composabilityVersion: ComposabilityVersion.V1_0_0
   },
   [MEEVersion.V1_0_0]: {
     version: MEEVersion.V1_0_0,
@@ -95,7 +125,8 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
       attesterThreshold: 0
     },
     composableModuleAddress: "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10",
-    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1"
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_0_0
   }
 }
 

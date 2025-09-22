@@ -1,5 +1,6 @@
 import { type Address, encodeFunctionData } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import { ComposabilityVersion } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
@@ -11,12 +12,17 @@ import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import { addressEquals } from "../../utils"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import { isNativeToken } from "../../utils"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
 } from "./buildComposable"
+import { buildRawComposable } from "./buildRawComposable"
 
 /**
  * Parameters for building a transfer instruction
@@ -30,6 +36,7 @@ export type BuildWithdrawalParameters = TokenParams & {
   gasLimit?: bigint
   /**
    * Recipient address. Defaults to the account's signer address.
+   * Is not injectable in case of withdrawals.
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   recipient?: Address
@@ -79,8 +86,7 @@ export type BuildWithdrawalParams = BaseInstructionsParams & {
 export const buildWithdrawal = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildWithdrawalParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], accountAddress } = baseParams
   const {
@@ -90,27 +96,50 @@ export const buildWithdrawal = async (
     gasLimit,
     recipient = accountAddress // EOA or owner account address
   } = parameters
+  const { forceComposableEncoding = false } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
-  const isNativeToken = addressEquals(
-    tokenAddress,
-    "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-  )
+  let withdrawalCall: AbstractCall[] | ComposableCall[]
 
-  let triggerCalls: AbstractCall[] | ComposableCall[]
-
-  if (isNativeToken) {
-    if (isRuntimeComposableValue(amount)) {
-      throw new Error("Runtime balance is not supported for Native tokens")
+  if (isNativeToken(tokenAddress as Address)) {
+    // native token withdrawal
+    if (isRuntimeComposableValue(amount) || forceComposableEncoding) {
+      // composable call
+      if (!composabilityParams?.composabilityVersion) {
+        throw new Error(
+          "Composability version is required to build a call with the runtime injected param"
+        )
+      }
+      const { composabilityVersion } = composabilityParams
+      if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+        throw new Error(
+          "Runtime balance for Native tokens is not supported for Composability v1.0.0"
+        )
+      }
+      // build value transfer composable call using raw composable build function
+      return buildRawComposable(
+        baseParams,
+        {
+          to: recipient,
+          value: amount,
+          chainId,
+          ...(gasLimit ? { gasLimit } : {}),
+          calldata: "0x00000000"
+        },
+        composabilityParams
+      )
     }
-
-    triggerCalls = [
+    // not composable call
+    withdrawalCall = [
       {
-        to: recipient,
+        to: recipient as Address,
         value: amount as bigint,
         ...(gasLimit ? { gasLimit } : {})
-      }
+      } as AbstractCall
     ]
   } else {
+    // ERC20 withdrawal
     const abi = TokenWithPermitAbi
     const functionSig = "transfer"
     const args: readonly [`0x${string}`, bigint | RuntimeValue] = [
@@ -130,6 +159,13 @@ export const buildWithdrawal = async (
 
     // If the composable call is detected ? The call needs to composed with runtime encoding
     if (isComposableCall) {
+      // composable call
+      if (!composabilityParams) {
+        throw new Error(
+          "Composability params are required to build a call with the runtime injected param"
+        )
+      }
+
       const composableCallParams: BuildComposableParameters = {
         to: tokenAddress,
         functionName: functionSig,
@@ -139,22 +175,22 @@ export const buildWithdrawal = async (
         ...(gasLimit ? { gasLimit } : {})
       }
 
-      triggerCalls = await buildComposableCall(
-        baseParams,
+      withdrawalCall = await buildComposableCall(
         composableCallParams,
-        efficientMode
+        composabilityParams
       )
 
       return [
         ...currentInstructions,
         {
-          calls: triggerCalls,
+          calls: withdrawalCall,
           chainId,
           isComposable: true
         }
       ]
     }
-    triggerCalls = [
+    // not composable call
+    withdrawalCall = [
       {
         to: tokenAddress,
         data: encodeFunctionData({
@@ -167,10 +203,12 @@ export const buildWithdrawal = async (
     ] as AbstractCall[]
   }
 
+  // composable calls return early
+  // so if we reach this point, it means that the call is not composable
   return [
     ...currentInstructions,
     {
-      calls: triggerCalls,
+      calls: withdrawalCall,
       chainId
     }
   ]

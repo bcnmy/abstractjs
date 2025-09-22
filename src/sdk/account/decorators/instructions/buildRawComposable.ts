@@ -1,21 +1,23 @@
-import { type Address, type Hex, isAddress } from "viem"
+import type { Address, Hex } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import {
   type ComposableCall,
   type InputParam,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
-import type { BaseInstructionsParams } from "../build"
+import type { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
+import type { BaseInstructionsParams, ComposabilityParams } from "../build"
+import { formatComposableCallWithVersion } from "./buildComposable"
 
 /**
  * Parameters for building a raw composable instruction
  */
 export type BuildRawComposableParameters = {
-  to: Address
+  to: Address | RuntimeValue
   calldata: Hex
   chainId: number
   gasLimit?: bigint
-  value?: bigint
+  value?: bigint | RuntimeValue
 }
 
 /**
@@ -48,42 +50,40 @@ export type BuildRawComposableParameters = {
  */
 export const buildRawComposable = async (
   baseParams: BaseInstructionsParams,
-  parameters: BuildRawComposableParameters
+  parameters: BuildRawComposableParameters,
+  composabilityParameters: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
   const { to, calldata, gasLimit, value, chainId } = parameters
-
-  if (!isAddress(to)) {
-    throw new Error("Invalid target contract address")
-  }
+  const { composabilityVersion } = composabilityParameters
 
   if (calldata.length < 10 || !calldata.startsWith("0x")) {
     throw new Error("Invalid calldata")
   }
 
   const functionSig = calldata.slice(0, 10) as Hex
+  const callDataEncodedArgs = calldata.slice(10) as Hex
 
-  const composableParams: InputParam[] = prepareRawComposableParams(
-    `0x${calldata.slice(10)}` as Hex
-  )
-
-  const composableCalls: ComposableCall[] = []
-
-  const composableCall: ComposableCall = {
-    to,
-    value: value ?? BigInt(0),
-    functionSig,
-    inputParams: composableParams,
-    outputParams: [], // In the current scope, output params are not handled. When more composability functions are added, this will change
-    ...(gasLimit ? { gasLimit } : {})
+  let versionAgnosticComposableParams: InputParam[] = []
+  if (callDataEncodedArgs.length !== 0) {
+    versionAgnosticComposableParams =
+      prepareRawComposableParams(callDataEncodedArgs)
   }
 
-  composableCalls.push(composableCall)
+  const composableCall: ComposableCall = formatComposableCallWithVersion(
+    composabilityVersion!,
+    false, // efficientMode is false for raw composable calls
+    versionAgnosticComposableParams,
+    functionSig,
+    to,
+    value,
+    gasLimit
+  )
 
   return [
     ...currentInstructions,
     {
-      calls: composableCalls,
+      calls: [composableCall],
       chainId,
       isComposable: true
     }
