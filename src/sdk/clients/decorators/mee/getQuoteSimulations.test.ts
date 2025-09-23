@@ -1,24 +1,24 @@
 import {
-  http,
-  type Chain,
-  type LocalAccount,
-  parseUnits,
-  zeroAddress,
-  parseEther,
-  createPublicClient,
-  createWalletClient,
-  Address,
-  OneOf,
-  WalletClient,
-  PublicClient,
-  Transport,
-  Account
-} from "viem"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import {
   Implementation,
   toMetaMaskSmartAccount
 } from "@metamask/delegation-toolkit"
+import {
+  http,
+  type Account,
+  type Address,
+  type Chain,
+  type LocalAccount,
+  type OneOf,
+  type PublicClient,
+  type Transport,
+  type WalletClient,
+  createPublicClient,
+  createWalletClient,
+  parseEther,
+  parseUnits,
+  zeroAddress
+} from "viem"
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   type NetworkConfig,
@@ -29,6 +29,8 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
+import { transferErc20 } from "../../../../test/testUtils"
+import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -42,8 +44,6 @@ import {
   getDefaultMEENetworkUrl,
   getDefaultMeeGasTank
 } from "../../createMeeClient"
-import { getMeeScanLink } from "../../../account"
-import { transferErc20 } from "../../../../test/testUtils"
 import getMmDtkQuote from "./getMmDtkQuote"
 
 describe("mee.getQuote({ simulations })", () => {
@@ -148,7 +148,7 @@ describe("mee.getQuote({ simulations })", () => {
   }
 
   test("Should fail early when there is no enough funds for relayer fees", async () => {
-    let { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -173,7 +173,7 @@ describe("mee.getQuote({ simulations })", () => {
 
   test("Should fail early when there is no enough funds for trigger amount", async () => {
     // generating new account to have zero balance
-    let { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -400,7 +400,7 @@ describe("mee.getQuote({ simulations })", () => {
 
   test("Simulations should pass for undeployed nexus account with non fusion mode", async () => {
     // New fresh undeployed account
-    let { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       fundMcNexus: true,
       tokenType: "permit"
     })
@@ -440,7 +440,7 @@ describe("mee.getQuote({ simulations })", () => {
 
   test("Simulations should pass for undeployed nexus account with permit mode", async () => {
     // New fresh undeployed account
-    let { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       fundEoa: true,
       tokenType: "permit"
     })
@@ -476,7 +476,7 @@ describe("mee.getQuote({ simulations })", () => {
 
   test("Simulations should pass for undeployed nexus account with onchain mode", async () => {
     // New fresh undeployed account
-    let { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       fundEoa: true,
       tokenType: "onchain"
     })
@@ -569,7 +569,7 @@ describe("mee.getQuote({ simulations })", () => {
 
   test("Simulations should pass for undeployed nexus account with sponsorship", async () => {
     // New fresh undeployed account
-    let { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       sponsorship: true
     })
 
