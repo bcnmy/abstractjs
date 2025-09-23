@@ -75,7 +75,12 @@ export const useMeePermission = async (
   )
 
   // Then focus on the other user ops
-  for (const [_, userOpEntry] of signedQuote.userOps.entries()) {
+  for (const [index, userOpEntry] of signedQuote.userOps.entries()) {
+    // If payment is sponsored, skip the first userOp (index 0) as it's the payment userOp
+    if (signedQuote.paymentInfo.sponsored && index === 0) {
+      continue
+    }
+
     // If we've iterated over this chainId before, it will never require enable mode again.
     const alreadyUsed = !!modeMap[userOpEntry.chainId]
 

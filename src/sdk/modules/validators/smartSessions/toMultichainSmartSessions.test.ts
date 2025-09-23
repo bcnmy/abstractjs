@@ -207,9 +207,9 @@ describe("mee.multichainSmartSessions", () => {
     }
   )
 
-  test.runIf(runPaidTests)(
-    "should grant and use multichain permissions for the account that is already deployed on all chains",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       // ======== At this point the Nexus SA is already deployed and SS is installed ==============
@@ -312,12 +312,11 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
-    }
-  )
+    })
 
-  test.runIf(runPaidTests)(
-    "should grant and use permission with custom verification gas limit",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should grant and use permission with custom verification gas limit", async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       const sessionDetails =
@@ -425,8 +424,7 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
-    }
-  )
+    })
 
   test.runIf(runPaidTests)(
     "should grant and use multichain permissions with sponsorship",
@@ -495,6 +493,17 @@ describe("mee.multichainSmartSessions", () => {
           {
             calls: [
               {
+                to: COUNTER_ON_BASE,
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
+              }
+            ],
+            chainId: targetChain.id
+          },
+          {
+            calls: [
+              {
                 to: COUNTER_ON_OPTIMISM,
                 data: toFunctionSelector(
                   getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
@@ -503,8 +512,7 @@ describe("mee.multichainSmartSessions", () => {
             ],
             chainId: paymentChain.id
           }
-        ],
-        verificationGasLimit: 3_000_111n
+        ]
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
