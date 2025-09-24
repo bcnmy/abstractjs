@@ -1,5 +1,5 @@
 import type { Address, Prettify, PublicClient } from "viem"
-import { erc20Abi, parseUnits } from "viem"
+import { erc20Abi, getAbiItem, parseUnits, toFunctionSelector } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
@@ -118,17 +118,22 @@ export const grantMeePermission = async <
       deployment?.version.validatorAddress ||
       defaultVersionConfig.validatorAddress
 
-    const paymentActionPolicy =
-      feeToken && feeToken.chainId === chainId
-        ? {
-            actionTarget: feeToken.address,
-            actionTargetSelector: "0xa9059cbb" as Address, // transfer
-            actionPolicies: [
-              getPolicyForPayment(maxPaymentAmount!, feeToken.address)
-            ]
-          }
-        : undefined
-
+    let paymentActionPolicy: ActionData | undefined = undefined;
+    // if the fee token is involved in the permissions, try adding the payment action policy
+    if (feeToken && feeToken.chainId === chainId) {
+      // if some permission is already defining the policy for the feeToken.transfer, do not add the payment action policy
+      // as they can conflict with each other
+      if (!actions.some((action) => action.actionTargetSelector === toFunctionSelector(getAbiItem({ abi: erc20Abi, name: "transfer" })) && action.actionTarget === feeToken.address)) {
+        paymentActionPolicy = {
+          actionTarget: feeToken.address,
+          actionTargetSelector: "0xa9059cbb" as Address, // transfer
+          actionPolicies: [
+            getPolicyForPayment(maxPaymentAmount!, feeToken.address)
+          ]
+        }
+      }
+    }
+      
     return {
       account: deployment,
       redeemer,

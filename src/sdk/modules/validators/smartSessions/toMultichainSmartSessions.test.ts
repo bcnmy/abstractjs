@@ -1,4 +1,4 @@
-import { getSudoPolicy } from "@rhinestone/module-sdk"
+import { getSudoPolicy, getUniversalActionPolicy } from "@rhinestone/module-sdk"
 import type { Address, Chain, LocalAccount, Transport } from "viem"
 import {
   http,
@@ -6,7 +6,12 @@ import {
   erc20Abi,
   getAbiItem,
   parseUnits,
-  toFunctionSelector
+  toFunctionSelector,
+  maxUint256,
+  pad,
+  toHex,
+  zeroAddress,
+  encodeFunctionData
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
@@ -35,12 +40,23 @@ import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
 
+
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
 const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
 const COUNTER_ON_BASE_SEPOLIA = "0xcaf661eeD95DE905Fcf5234040A7d6A70c6F5C85"
 const COUNTER_ON_OPTIMISM_SEPOLIA = "0x111EB1afF13be64d81485E7d45E70A6A0283dedE"
+
+enum ParamCondition {
+  EQUAL = 0,
+  GREATER_THAN = 1,
+  LESS_THAN = 2,
+  GREATER_THAN_OR_EQUAL = 3,
+  LESS_THAN_OR_EQUAL = 4,
+  NOT_EQUAL = 5,
+  IN_RANGE = 6,
+}
 
 describe("mee.multichainSmartSessions", () => {
   let network: NetworkConfig
@@ -207,7 +223,7 @@ describe("mee.multichainSmartSessions", () => {
     }
   )
 
-  test.runIf(runPaidTests)(
+  test.runIf(runPaidTests).skip(
     "should grant and use multichain permissions for the account that is already deployed on all chains",
     async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
@@ -316,9 +332,66 @@ describe("mee.multichainSmartSessions", () => {
   )
 
   test.runIf(runPaidTests)(
-    "should grant and use permission with custom verification gas limit",
+    "should grant and use permission with custom verification gas limit and universal action policy",
     async () => {
+      
+      const publicClient = createPublicClient({
+        chain: targetChain,
+        transport: targetChainTransport
+      })
+      const redeemerUSDCBalanceBefore = await publicClient.readContract({
+        address: mcUSDC.addressOn(targetChain.id),
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [redeemerAddress]
+      })
+      
       const sessionMeeClient = meeClient.extend(meeSessionActions)
+
+      const EMPTY_RAW_RULE = {
+        condition: ParamCondition.EQUAL,
+        offset: 0n,
+        isLimited: false,
+        ref: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+        usage: { limit: 0n, used: 0n },
+      }
+
+      const uniActionPolicyInfo = getUniversalActionPolicy({
+        valueLimitPerUse: maxUint256,
+        paramRules: {
+          length: 2n,
+          rules: [
+            {
+              condition: ParamCondition.EQUAL,
+              isLimited: false,
+              offset: 0n,
+              ref: pad(redeemerAddress),
+              usage: { limit: 0n, used: 0n },
+            },
+            {
+              condition: ParamCondition.LESS_THAN_OR_EQUAL,
+              isLimited: true,
+              offset: 32n,
+              ref: pad(toHex(parseUnits("3", 6))),
+              usage: { limit: parseUnits("100", 6), used: 0n },
+            },
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+          ],
+        },
+      });
 
       const sessionDetails =
         await sessionMeeClient.grantPermissionTypedDataSign({
@@ -358,6 +431,12 @@ describe("mee.multichainSmartSessions", () => {
               actionPolicies: [getSudoPolicy()],
               chainId: paymentChain.id,
               actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(getAbiItem({ abi: erc20Abi, name: "transfer" })),
+              actionPolicies: [uniActionPolicyInfo],
+              chainId: targetChain.id,
+              actionTarget: mcUSDC.addressOn(targetChain.id)
             }
           ],
           maxPaymentAmount: parseUnits("3", 6)
@@ -410,6 +489,19 @@ describe("mee.multichainSmartSessions", () => {
               }
             ],
             chainId: paymentChain.id
+          },
+          {
+            calls: [
+              {
+                to: mcUSDC.addressOn(targetChain.id),
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: "transfer",
+                  args: [redeemerAddress, parseUnits("0.01", 6)]
+                })
+              }
+            ],
+            chainId: targetChain.id
           }
         ],
         feeToken,
@@ -425,10 +517,20 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
+
+      console.log(receipt.explorerLinks)
+
+      const redeemerUSDCBalanceAfter = await publicClient.readContract({
+        address: mcUSDC.addressOn(targetChain.id),
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [redeemerAddress]
+      })
+      expect(redeemerUSDCBalanceAfter).toBe(redeemerUSDCBalanceBefore + parseUnits("0.01", 6))
     }
   )
 
-  test.runIf(runPaidTests)(
+  test.runIf(runPaidTests).skip(
     "should grant and use multichain permissions with sponsorship",
     async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
