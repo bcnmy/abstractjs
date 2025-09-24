@@ -3,15 +3,15 @@ import type { Address, Chain, LocalAccount, Transport } from "viem"
 import {
   http,
   createPublicClient,
+  encodeFunctionData,
   erc20Abi,
   getAbiItem,
-  parseUnits,
-  toFunctionSelector,
   maxUint256,
   pad,
+  parseUnits,
+  toFunctionSelector,
   toHex,
-  zeroAddress,
-  encodeFunctionData
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
@@ -40,7 +40,6 @@ import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
 
-
 // @ts-ignore
 const { runPaidTests } = inject("settings")
 const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
@@ -55,7 +54,7 @@ enum ParamCondition {
   GREATER_THAN_OR_EQUAL = 3,
   LESS_THAN_OR_EQUAL = 4,
   NOT_EQUAL = 5,
-  IN_RANGE = 6,
+  IN_RANGE = 6
 }
 
 describe("mee.multichainSmartSessions", () => {
@@ -223,9 +222,9 @@ describe("mee.multichainSmartSessions", () => {
     }
   )
 
-  test.runIf(runPaidTests).skip(
-    "should grant and use multichain permissions for the account that is already deployed on all chains",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       // ======== At this point the Nexus SA is already deployed and SS is installed ==============
@@ -328,13 +327,11 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
-    }
-  )
+    })
 
   test.runIf(runPaidTests)(
     "should grant and use permission with custom verification gas limit and universal action policy",
     async () => {
-      
       const publicClient = createPublicClient({
         chain: targetChain,
         transport: targetChainTransport
@@ -345,15 +342,15 @@ describe("mee.multichainSmartSessions", () => {
         functionName: "balanceOf",
         args: [redeemerAddress]
       })
-      
+
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       const EMPTY_RAW_RULE = {
         condition: ParamCondition.EQUAL,
         offset: 0n,
         isLimited: false,
-        ref: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
-        usage: { limit: 0n, used: 0n },
+        ref: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+        usage: { limit: 0n, used: 0n }
       }
 
       const uniActionPolicyInfo = getUniversalActionPolicy({
@@ -366,14 +363,14 @@ describe("mee.multichainSmartSessions", () => {
               isLimited: false,
               offset: 0n,
               ref: pad(redeemerAddress),
-              usage: { limit: 0n, used: 0n },
+              usage: { limit: 0n, used: 0n }
             },
             {
               condition: ParamCondition.LESS_THAN_OR_EQUAL,
               isLimited: true,
               offset: 32n,
               ref: pad(toHex(parseUnits("3", 6))),
-              usage: { limit: parseUnits("100", 6), used: 0n },
+              usage: { limit: parseUnits("100", 6), used: 0n }
             },
             EMPTY_RAW_RULE,
             EMPTY_RAW_RULE,
@@ -388,10 +385,10 @@ describe("mee.multichainSmartSessions", () => {
             EMPTY_RAW_RULE,
             EMPTY_RAW_RULE,
             EMPTY_RAW_RULE,
-            EMPTY_RAW_RULE,
-          ],
-        },
-      });
+            EMPTY_RAW_RULE
+          ]
+        }
+      })
 
       const sessionDetails =
         await sessionMeeClient.grantPermissionTypedDataSign({
@@ -433,7 +430,9 @@ describe("mee.multichainSmartSessions", () => {
               actionTarget: COUNTER_ON_OPTIMISM
             },
             {
-              actionTargetSelector: toFunctionSelector(getAbiItem({ abi: erc20Abi, name: "transfer" })),
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
               actionPolicies: [uniActionPolicyInfo],
               chainId: targetChain.id,
               actionTarget: mcUSDC.addressOn(targetChain.id)
@@ -526,13 +525,15 @@ describe("mee.multichainSmartSessions", () => {
         functionName: "balanceOf",
         args: [redeemerAddress]
       })
-      expect(redeemerUSDCBalanceAfter).toBe(redeemerUSDCBalanceBefore + parseUnits("0.01", 6))
+      expect(redeemerUSDCBalanceAfter).toBe(
+        redeemerUSDCBalanceBefore + parseUnits("0.01", 6)
+      )
     }
   )
 
-  test.runIf(runPaidTests).skip(
-    "should grant and use multichain permissions with sponsorship",
-    async () => {
+  test
+    .runIf(runPaidTests)
+    .skip("should grant and use multichain permissions with sponsorship", async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       const prepareForPermissionsPayload =
@@ -625,6 +626,5 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    }
-  )
+    })
 })

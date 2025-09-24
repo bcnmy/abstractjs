@@ -118,12 +118,20 @@ export const grantMeePermission = async <
       deployment?.version.validatorAddress ||
       defaultVersionConfig.validatorAddress
 
-    let paymentActionPolicy: ActionData | undefined = undefined;
+    let paymentActionPolicy: ActionData | undefined = undefined
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
       // if some permission is already defining the policy for the feeToken.transfer, do not add the payment action policy
       // as they can conflict with each other
-      if (!actions.some((action) => action.actionTargetSelector === toFunctionSelector(getAbiItem({ abi: erc20Abi, name: "transfer" })) && action.actionTarget === feeToken.address)) {
+      if (
+        !actions.some(
+          (action) =>
+            action.actionTargetSelector ===
+              toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ) && action.actionTarget === feeToken.address
+        )
+      ) {
         paymentActionPolicy = {
           actionTarget: feeToken.address,
           actionTargetSelector: "0xa9059cbb" as Address, // transfer
@@ -133,7 +141,7 @@ export const grantMeePermission = async <
         }
       }
     }
-      
+
     return {
       account: deployment,
       redeemer,
