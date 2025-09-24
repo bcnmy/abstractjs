@@ -121,10 +121,9 @@ export const grantMeePermission = async <
     let paymentActionPolicy: ActionData | undefined = undefined
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
-      // if some permission is already defining the policy for the feeToken.transfer, do not add the payment action policy
-      // as they can conflict with each other
+      // if some permission is already defining the policy for the feeToken.transfer, throw an error
       if (
-        !actions.some(
+        actions.some(
           (action) =>
             action.actionTargetSelector ===
               toFunctionSelector(
@@ -132,13 +131,20 @@ export const grantMeePermission = async <
               ) && action.actionTarget === feeToken.address
         )
       ) {
-        paymentActionPolicy = {
-          actionTarget: feeToken.address,
-          actionTargetSelector: "0xa9059cbb" as Address, // transfer
-          actionPolicies: [
-            getPolicyForPayment(maxPaymentAmount!, feeToken.address)
-          ]
-        }
+        throw new Error(`You are defining the policy that prevents using ${feeToken.address} on chain ${chainId} as the fee token. 
+                         Possible solutions:
+                         1. Remove the 'transfer' method of ${feeToken.address} from the actions array.
+                         2. Use a different fee token.
+                         3. Use sponsored mode.`)
+      }
+
+      // else add the payment action policy
+      paymentActionPolicy = {
+        actionTarget: feeToken.address,
+        actionTargetSelector: "0xa9059cbb" as Address, // transfer
+        actionPolicies: [
+          getPolicyForPayment(maxPaymentAmount!, feeToken.address)
+        ]
       }
     }
 

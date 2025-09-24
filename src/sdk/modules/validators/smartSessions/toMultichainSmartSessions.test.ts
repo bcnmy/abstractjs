@@ -3,6 +3,7 @@ import type { Address, Chain, LocalAccount, Transport } from "viem"
 import {
   http,
   createPublicClient,
+  createWalletClient,
   encodeFunctionData,
   erc20Abi,
   getAbiItem,
@@ -114,6 +115,19 @@ describe("mee.multichainSmartSessions", () => {
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
+
+    // send some USDC from eoaAccount to mcNexus on target chain
+    const eoaWalletClient = createWalletClient({
+      chain: targetChain,
+      transport: targetChainTransport,
+      account: eoaAccount
+    })
+    await eoaWalletClient.writeContract({
+      address: mcUSDC.addressOn(targetChain.id),
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [mcNexus.addressOn(targetChain.id, true), parseUnits("0.011", 6)]
+    })
   })
 
   test.runIf(runPaidTests)(
@@ -124,7 +138,7 @@ describe("mee.multichainSmartSessions", () => {
       // if tests fail, increase the amount
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.3", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -222,9 +236,9 @@ describe("mee.multichainSmartSessions", () => {
     }
   )
 
-  test
-    .runIf(runPaidTests)
-    .skip("should grant and use multichain permissions for the account that is already deployed on all chains", async () => {
+  test.runIf(runPaidTests)(
+    "should grant and use multichain permissions for the account that is already deployed on all chains",
+    async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       // ======== At this point the Nexus SA is already deployed and SS is installed ==============
@@ -327,7 +341,8 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
-    })
+    }
+  )
 
   test.runIf(runPaidTests)(
     "should grant and use permission with custom verification gas limit and universal action policy",
@@ -353,7 +368,7 @@ describe("mee.multichainSmartSessions", () => {
         usage: { limit: 0n, used: 0n }
       }
 
-      const uniActionPolicyInfo = getUniversalActionPolicy({
+      const uniActionPolicyInfoUSDC = getUniversalActionPolicy({
         valueLimitPerUse: maxUint256,
         paramRules: {
           length: 2n,
@@ -433,7 +448,7 @@ describe("mee.multichainSmartSessions", () => {
               actionTargetSelector: toFunctionSelector(
                 getAbiItem({ abi: erc20Abi, name: "transfer" })
               ),
-              actionPolicies: [uniActionPolicyInfo],
+              actionPolicies: [uniActionPolicyInfoUSDC],
               chainId: targetChain.id,
               actionTarget: mcUSDC.addressOn(targetChain.id)
             }
@@ -489,6 +504,9 @@ describe("mee.multichainSmartSessions", () => {
             ],
             chainId: paymentChain.id
           },
+          // transfer USDC from from orchestrator to redeemer on target chain
+          // this is to test that the action policy via universal action policy
+          // is created successfully
           {
             calls: [
               {
@@ -517,23 +535,22 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.logs).toBeDefined()
       }
 
-      console.log(receipt.explorerLinks)
-
       const redeemerUSDCBalanceAfter = await publicClient.readContract({
         address: mcUSDC.addressOn(targetChain.id),
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [redeemerAddress]
       })
+
       expect(redeemerUSDCBalanceAfter).toBe(
         redeemerUSDCBalanceBefore + parseUnits("0.01", 6)
       )
     }
   )
 
-  test
-    .runIf(runPaidTests)
-    .skip("should grant and use multichain permissions with sponsorship", async () => {
+  test.runIf(runPaidTests)(
+    "should grant and use multichain permissions with sponsorship",
+    async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       const prepareForPermissionsPayload =
@@ -626,5 +643,6 @@ describe("mee.multichainSmartSessions", () => {
       })
 
       expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    })
+    }
+  )
 })
