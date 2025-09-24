@@ -20,10 +20,11 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
+import type { FeeTokenInfo, Instruction } from "."
 import {
-  getTestChainConfig,
   type NetworkConfig,
   TESTNET_RPC_URLS,
+  getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
 import {
@@ -37,8 +38,8 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import {
   DEFAULT_MEE_VERSION,
-  mcUSDC,
   MEEVersion,
+  mcUSDC,
   testnetMcUSDC
 } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
@@ -50,7 +51,6 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
-import { Instruction, type FeeTokenInfo } from "."
 
 describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", () => {
   let network: NetworkConfig
