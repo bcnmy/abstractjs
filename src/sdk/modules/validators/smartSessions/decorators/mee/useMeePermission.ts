@@ -5,6 +5,7 @@ import type {
 } from "../../../../../clients/createMeeClient"
 import type {
   Instruction,
+  Simulation,
   SponsorshipOptionsParams
 } from "../../../../../clients/decorators/mee"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
@@ -18,6 +19,7 @@ export type UseMeePermissionParams = {
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
   sessionDetails: GrantMeePermissionPayload
+  simulation?: Simulation
   verificationGasLimit?: bigint
 } & OneOf<
   | {
@@ -40,6 +42,7 @@ export const useMeePermission = async (
 ): Promise<UseMeePermissionPayload> => {
   const {
     sessionDetails: sessionDetailsArray,
+    simulation,
     mode: mode_,
     instructions,
     verificationGasLimit
@@ -55,6 +58,7 @@ export const useMeePermission = async (
     instructions,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
+    simulation,
     verificationGasLimit,
     ...(parameters.sponsorship
       ? {

@@ -21,6 +21,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
+  getTestChainConfig,
   type NetworkConfig,
   TESTNET_RPC_URLS,
   toNetwork
@@ -30,12 +31,16 @@ import {
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
 import { transferErc20 } from "../../../../test/testUtils"
-import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../../constants"
+import {
+  DEFAULT_MEE_VERSION,
+  mcUSDC,
+  MEEVersion,
+  testnetMcUSDC
+} from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import {
   type MeeClient,
@@ -45,8 +50,9 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
+import { Instruction, type FeeTokenInfo } from "."
 
-describe("mee.getQuote({ simulations })", () => {
+describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
   let mcNexus: MultichainSmartAccount
@@ -54,6 +60,7 @@ describe("mee.getQuote({ simulations })", () => {
   let chain: Chain
   let walletClient: WalletClient<Transport, Chain, Account>
   let publicClient: PublicClient
+  let feeToken: FeeTokenInfo
 
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
@@ -70,6 +77,11 @@ describe("mee.getQuote({ simulations })", () => {
         }
       ]
     })
+
+    feeToken = {
+      address: testnetMcTestUSDCP.addressOn(chain.id),
+      chainId: chain.id
+    }
 
     meeClient = await createMeeClient({
       account: mcNexus,
@@ -147,7 +159,7 @@ describe("mee.getQuote({ simulations })", () => {
     return { mcNexus, meeClient, eoaAccount }
   }
 
-  test("Should fail early when there is no enough funds for relayer fees", async () => {
+  test("should throw an error if there are insufficient funds to pay relayer fees", async () => {
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
 
     const transferInstruction = await mcNexus.buildComposable({
@@ -163,15 +175,12 @@ describe("mee.getQuote({ simulations })", () => {
     await expect(
       meeClient.getQuote({
         instructions: [...transferInstruction],
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        }
+        feeToken
       })
     ).rejects.toThrow("Insufficient funds for relayer fees")
   })
 
-  test("Should fail early when there is no enough funds for trigger amount", async () => {
+  test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
     // generating new account to have zero balance
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
 
@@ -194,15 +203,12 @@ describe("mee.getQuote({ simulations })", () => {
         },
         instructions: [...transferInstruction],
         simulation: { simulate: true },
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        }
+        feeToken
       })
     ).rejects.toThrow("Insufficient funding amount for funding transaction")
   })
 
-  test("Simulation should fail when wrong token address is being used for simulations", async () => {
+  test("should fail simulation if an invalid token address is provided in token overrides", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -229,17 +235,14 @@ describe("mee.getQuote({ simulations })", () => {
             ]
           }
         },
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        }
+        feeToken
       })
     ).rejects.toThrow(
       "Failed to detect token slot. Please check your token overrides"
     )
   })
 
-  test("Simulations should throw an error with contract address and error selector when the revert error is just execution reverted", async () => {
+  test("should throw an error with contract address and error selector when simulation reverts with a generic execution error", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -266,17 +269,14 @@ describe("mee.getQuote({ simulations })", () => {
             ]
           }
         },
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        }
+        feeToken
       })
     ).rejects.toThrowError(
       "UserOp [1] simulation failed. Revert reason: Execution reverted at contract 0x8976987ebee0806924ae17eed12229cf4789cb1f and reverted with error selector 0xe450d38c"
     )
   })
 
-  test("Simulations should fail when there is not enough ERC20 tokens to transfer in developer defined userOp", async () => {
+  test("should fail simulation if there are not enough ERC20 tokens to transfer in the user operation", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -293,17 +293,14 @@ describe("mee.getQuote({ simulations })", () => {
         simulation: {
           simulate: true
         },
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        }
+        feeToken
       })
     ).rejects.toThrowError(
       "UserOp [1] simulation failed. Revert reason: ERC20: transfer amount exceeds balance"
     )
   })
 
-  test("Simulations should pass when there is not enough ERC20 tokens to transfer in developer defined userOp but ERC20 balance override is available", async () => {
+  test("should pass simulation if ERC20 balance override is provided, even if the account lacks enough tokens", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
       data: {
@@ -329,16 +326,13 @@ describe("mee.getQuote({ simulations })", () => {
           ]
         }
       },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      }
+      feeToken
     })
 
     expect(quote).toBeDefined()
   })
 
-  test("Simulations should fail when there is not enough Native tokens to transfer in developer defined userOp", async () => {
+  test("should fail simulation if there are not enough native tokens to transfer in the user operation", async () => {
     const nativeTokenTransferInstruction = await mcNexus.buildComposable({
       type: "nativeTokenTransfer",
       data: {
@@ -354,17 +348,14 @@ describe("mee.getQuote({ simulations })", () => {
         simulation: {
           simulate: true
         },
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        }
+        feeToken
       })
     ).rejects.toThrowError(
       "UserOp [1] simulation failed. Revert reason: insufficient balance for transfer"
     )
   })
 
-  test("Simulations should pass when there is not enough Native tokens to transfer in developer defined userOp but native balance override is available", async () => {
+  test("should pass simulation if native token balance override is provided, even if the account lacks enough native tokens", async () => {
     const nativeTokenTransferInstruction = await mcNexus.buildComposable({
       type: "nativeTokenTransfer",
       data: {
@@ -389,16 +380,13 @@ describe("mee.getQuote({ simulations })", () => {
           ]
         }
       },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      }
+      feeToken
     })
 
     expect(quote).toBeDefined()
   })
 
-  test("Simulations should pass for undeployed nexus account with non fusion mode", async () => {
+  test("should pass simulation for undeployed nexus account in non-fusion mode with sufficient balance override", async () => {
     // New fresh undeployed account
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       fundMcNexus: true,
@@ -429,16 +417,13 @@ describe("mee.getQuote({ simulations })", () => {
           ]
         }
       },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      }
+      feeToken
     })
 
     expect(quote).toBeDefined()
   })
 
-  test("Simulations should pass for undeployed nexus account with permit mode", async () => {
+  test("should pass simulation for undeployed nexus account in permit mode", async () => {
     // New fresh undeployed account
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       fundEoa: true,
@@ -465,16 +450,13 @@ describe("mee.getQuote({ simulations })", () => {
       simulation: {
         simulate: true
       },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      }
+      feeToken
     })
 
     expect(quote).toBeDefined()
   })
 
-  test("Simulations should pass for undeployed nexus account with onchain mode", async () => {
+  test("should pass simulation for undeployed nexus account in onchain mode", async () => {
     // New fresh undeployed account
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       fundEoa: true,
@@ -510,7 +492,7 @@ describe("mee.getQuote({ simulations })", () => {
     expect(quote).toBeDefined()
   })
 
-  test("Simulations with state overrides should pass for mmdtk mode", async () => {
+  test("should pass simulation for MetaMask Delegation Toolkit (MMDTK) mode with state overrides", async () => {
     const mmDtkAccount = await toMetaMaskSmartAccount({
       client: publicClient,
       implementation: Implementation.Hybrid,
@@ -557,17 +539,14 @@ describe("mee.getQuote({ simulations })", () => {
         }
       },
       instructions: [...tokenTransfer],
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      },
+      feeToken,
       delegatorSmartAccount: mmDtkAccount
     })
 
     expect(quote).toBeDefined()
   })
 
-  test("Simulations should pass for undeployed nexus account with sponsorship", async () => {
+  test("should pass simulation for undeployed nexus account with sponsorship enabled", async () => {
     // New fresh undeployed account
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
       sponsorship: true
@@ -603,6 +582,240 @@ describe("mee.getQuote({ simulations })", () => {
         url: getDefaultMEENetworkUrl(true),
         gasTank: getDefaultMeeGasTank(true)
       }
+    })
+
+    expect(quote).toBeDefined()
+  })
+
+  test("should pass simulation for composability version 1.1.0", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(MEEVersion.V2_2_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      url: "http://localhost:4001/v1"
+    })
+
+    const tokenTransfer = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        recipient: eoaAccount.address,
+        amount: parseUnits("1000", 6),
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      },
+      instructions: [...tokenTransfer],
+      simulation: {
+        simulate: true,
+        overrides: {
+          tokenOverrides: [
+            {
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              chainId: chain.id,
+              balance: parseUnits("1000", 6),
+              accountAddress: mcNexus.addressOn(chain.id, true)
+            }
+          ]
+        }
+      },
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+  })
+})
+
+describe("mee.getQuote({ simulations }) - Multichain Simulation Scenarios", () => {
+  let network: NetworkConfig
+  let eoaAccount: LocalAccount
+
+  let mcNexus: MultichainSmartAccount
+  let feeToken: FeeTokenInfo
+  let meeClient: MeeClient
+
+  let paymentChain: Chain
+  let targetChain: Chain
+  let paymentChainTransport: Transport
+  let targetChainTransport: Transport
+
+  let optimismToBaseAcrossCall: Instruction[]
+
+  beforeAll(async () => {
+    network = await toNetwork("MAINNET_FROM_ENV_VARS")
+    ;[
+      [paymentChain, targetChain],
+      [paymentChainTransport, targetChainTransport]
+    ] = getTestChainConfig(network)
+
+    eoaAccount = network.account!
+
+    feeToken = {
+      address: mcUSDC.addressOn(paymentChain.id),
+      chainId: paymentChain.id
+    }
+
+    mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
+    })
+
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: "http://localhost:4001/v1"
+    })
+
+    const benchmarkInputAmount = parseUnits("2", 6) // USDC 6 decimals
+
+    optimismToBaseAcrossCall = await mcNexus.buildComposable({
+      type: "acrossIntent",
+      data: {
+        depositor: mcNexus.addressOn(paymentChain.id, true),
+        recipient: mcNexus.addressOn(targetChain.id, true),
+        inputToken: mcUSDC.addressOn(paymentChain.id),
+        outputToken: mcUSDC.addressOn(targetChain.id),
+        inputAmountRuntimeParams: {
+          targetAddress: mcNexus.addressOn(paymentChain.id, true),
+          tokenAddress: mcUSDC.addressOn(paymentChain.id),
+          constraints: []
+        },
+        approximateExpectedInputAmount: benchmarkInputAmount,
+        originChainId: paymentChain.id,
+        destinationChainId: targetChain.id,
+        message: "0x",
+        relayerAddress: zeroAddress
+      }
+    })
+  })
+
+  // Optimism chain -> Bridge -> Base chain -> Withdraw -> EOA. simulations without token overrides = Fails
+  test("should fail multichain simulation if token overrides are missing for the destination chain after bridging", async () => {
+    const withdrawalInstruction = await mcNexus.buildComposable({
+      type: "withdrawal",
+      data: {
+        tokenAddress: mcUSDC.addressOn(targetChain.id),
+        amount: parseUnits("1000", 6),
+        chainId: targetChain.id
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        instructions: [...optimismToBaseAcrossCall, ...withdrawalInstruction],
+        simulation: {
+          simulate: true
+          // There is no token overrides, so during simulation the destination chain don't have funds and withdraw will fail
+        },
+        feeToken
+      })
+    ).rejects.toThrowError(
+      "UserOp [2] simulation failed. Revert reason: ERC20: transfer amount exceeds balance"
+    )
+  })
+
+  // Optimism chain -> Bridge -> Base chain -> Withdraw -> EOA. simulations with token overrides
+  test("should pass multichain simulation if token overrides are provided for the destination chain after bridging", async () => {
+    const withdrawalInstruction = await mcNexus.buildComposable({
+      type: "withdrawal",
+      data: {
+        tokenAddress: mcUSDC.addressOn(targetChain.id),
+        amount: parseUnits("1000", 6),
+        chainId: targetChain.id
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [...optimismToBaseAcrossCall, ...withdrawalInstruction],
+      simulation: {
+        simulate: true,
+        overrides: {
+          tokenOverrides: [
+            {
+              tokenAddress: mcUSDC.addressOn(targetChain.id),
+              chainId: targetChain.id,
+              // Token override on destination chain here
+              // Withdraw instruction expects the nexus to have some funds to withdraw after bridging
+              balance: parseUnits("1000", 6),
+              accountAddress: mcNexus.addressOn(targetChain.id, true)
+            }
+          ]
+        }
+      },
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+  })
+
+  // Optimism chain -> Intent bridge (builder) -> Base chain -> Withdraw -> EOA
+  test("should pass multichain simulation for intent bridging with correct token overrides on the destination chain", async () => {
+    const optimismToBaseBridgeCall = await mcNexus.build({
+      type: "intent",
+      data: {
+        depositor: mcNexus.addressOn(paymentChain.id, true),
+        recipient: mcNexus.addressOn(targetChain.id, true),
+        token: {
+          mcToken: mcUSDC,
+          unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+        },
+        amount: parseUnits("0.5", 6),
+        toChainId: targetChain.id
+      }
+    })
+
+    const withdrawalInstruction = await mcNexus.buildComposable({
+      type: "withdrawal",
+      data: {
+        tokenAddress: mcUSDC.addressOn(targetChain.id),
+        amount: parseUnits("0.5", 6),
+        chainId: targetChain.id
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [...optimismToBaseBridgeCall, ...withdrawalInstruction],
+      simulation: {
+        simulate: true,
+        overrides: {
+          tokenOverrides: [
+            {
+              tokenAddress: mcUSDC.addressOn(targetChain.id),
+              chainId: targetChain.id,
+              // Token override on destination chain here
+              // Withdraw instruction expects the nexus to have some funds to withdraw after bridging
+              balance: parseUnits("0.5", 6),
+              accountAddress: mcNexus.addressOn(targetChain.id, true)
+            }
+          ]
+        }
+      },
+      feeToken
     })
 
     expect(quote).toBeDefined()
