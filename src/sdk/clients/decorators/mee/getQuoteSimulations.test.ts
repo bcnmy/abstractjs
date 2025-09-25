@@ -135,6 +135,36 @@ const generateNewMcNexusAccountAndMeeClient = async (
   return { mcNexus, meeClient, eoaAccount: account }
 }
 
+const getInstructions = async (
+  mcNexus: MultichainSmartAccount
+): Promise<Instruction[]> => {
+  const optimismSepoliaTokenTransfer = await mcNexus.buildComposable(
+    {
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+        recipient: mcNexus.signer.address,
+        amount: 0n,
+        chainId: optimismSepolia.id
+      }
+    }
+  )
+
+  const baseSepoliaTokenTransfer = await mcNexus.buildComposable(
+    {
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        recipient: mcNexus.signer.address,
+        amount: 0n,
+        chainId: baseSepolia.id
+      }
+    }
+  )
+
+  return [...optimismSepoliaTokenTransfer, ...baseSepoliaTokenTransfer]
+}
+
 describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -927,43 +957,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     })
   })
 
-  const getInstructions = async (
-    accountAddress: Address
-  ): Promise<Instruction[]> => {
-    const optimismSepoliaTokenTransfer = await buildComposable(
-      { accountAddress },
-      {
-        type: "transfer",
-        data: {
-          tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
-          recipient: eoaAccount.address,
-          amount: 0n,
-          chainId: optimismSepolia.id
-        }
-      },
-      ComposabilityVersion.V1_0_0
-    )
-
-    const baseSepoliaTokenTransfer = await buildComposable(
-      { accountAddress },
-      {
-        type: "transfer",
-        data: {
-          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-          recipient: eoaAccount.address,
-          amount: 0n,
-          chainId: chain.id
-        }
-      },
-      ComposabilityVersion.V1_0_0
-    )
-
-    return [...optimismSepoliaTokenTransfer, ...baseSepoliaTokenTransfer]
-  }
-
   test("Simulated gas estimation and execution: simple mode, account already deployed", async () => {
     const quote = await meeClient.getQuote({
-      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      instructions: [await getInstructions(mcNexus)],
       simulation: {
         simulate: true
       },
@@ -994,7 +990,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     )
 
     const quote = await meeClient.getQuote({
-      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      instructions: [await getInstructions(mcNexus)],
       simulation: {
         simulate: true
       },
@@ -1023,7 +1019,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       simulation: {
         simulate: true
       },
-      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      instructions: [await getInstructions(mcNexus)],
       feeToken: {
         address: testnetMcTestUSDC.addressOn(chain.id),
         chainId: chain.id
@@ -1063,7 +1059,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       simulation: {
         simulate: true
       },
-      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      instructions: [await getInstructions(mcNexus)],
       feeToken: {
         address: testnetMcTestUSDC.addressOn(chain.id),
         chainId: chain.id
@@ -1092,7 +1088,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       simulation: {
         simulate: true
       },
-      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      instructions: [await getInstructions(mcNexus)],
       feeToken
     })
 
@@ -1128,8 +1124,72 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       simulation: {
         simulate: true
       },
-      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      instructions: [await getInstructions(mcNexus)],
       feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: sponsored simple mode, account undeployed", async () => {
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        sponsorship: true,
+      }
+    )
+
+    const quote = await meeClient.getQuote({
+      simulation: {
+        simulate: true,
+      },
+      instructions: [await getInstructions(mcNexus)],
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: sponsored permit mode, account already deployed", async () => {
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      },
+      simulation: {
+        simulate: true
+      },
+      instructions: [await getInstructions(mcNexus)],
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      }
     })
 
     expect(fusionQuote).toBeDefined()
