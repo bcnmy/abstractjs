@@ -19,6 +19,7 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import type { FeeTokenInfo, Instruction } from "."
 import {
@@ -36,6 +37,7 @@ import {
   getRandomAccountIndex,
   transferErc20
 } from "../../../../test/testUtils"
+import { buildComposable } from "../../../account/decorators"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -56,8 +58,6 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
-import { buildComposable } from "../../../account/decorators"
-import { baseSepolia, optimismSepolia } from "viem/chains"
 
 const generateNewMcNexusAccountAndMeeClient = async (
   publicClient: PublicClient,
