@@ -964,6 +964,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
   test("Simulated gas estimation and execution: simple mode, account already deployed", async () => {
     const quote = await meeClient.getQuote({
       instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      simulation: {
+        simulate: true
+      },
       feeToken
     })
 
@@ -992,6 +995,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     const quote = await meeClient.getQuote({
       instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      simulation: {
+        simulate: true
+      },
       feeToken
     })
 
@@ -1014,7 +1020,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
         amount: 1n,
         chainId: chain.id
       },
-      batch: true,
+      simulation: {
+        simulate: true
+      },
       instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
       feeToken: {
         address: testnetMcTestUSDC.addressOn(chain.id),
@@ -1052,7 +1060,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
         amount: 1n,
         chainId: chain.id
       },
-      batch: true,
+      simulation: {
+        simulate: true
+      },
       instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
       feeToken: {
         address: testnetMcTestUSDC.addressOn(chain.id),
@@ -1079,7 +1089,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
         amount: 1n,
         chainId: chain.id
       },
-      batch: true,
+      simulation: {
+        simulate: true
+      },
       instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
       feeToken
     })
@@ -1113,7 +1125,9 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
         amount: 1n,
         chainId: chain.id
       },
-      batch: true,
+      simulation: {
+        simulate: true
+      },
       instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
       feeToken
     })
