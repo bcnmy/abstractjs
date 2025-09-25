@@ -2272,7 +2272,7 @@ describe("mee.getQuote", () => {
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
     expect(receipt).toBeDefined()

@@ -24,6 +24,7 @@ import type { FeeTokenInfo, Instruction } from "."
 import {
   type NetworkConfig,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
@@ -31,12 +32,16 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import { transferErc20 } from "../../../../test/testUtils"
+import {
+  getRandomAccountIndex,
+  transferErc20
+} from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import {
+  ComposabilityVersion,
   DEFAULT_MEE_VERSION,
   MEEVersion,
   mcUSDC,
@@ -51,6 +56,84 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
+import { buildComposable } from "../../../account/decorators"
+import { baseSepolia, optimismSepolia } from "viem/chains"
+
+const generateNewMcNexusAccountAndMeeClient = async (
+  publicClient: PublicClient,
+  walletClient: WalletClient<Transport, Chain, Account>,
+  eoaAccount: LocalAccount,
+  options?: {
+    tokenType?: "onchain" | "permit"
+    newType?: "fresh-pk" | "fresh-index"
+  } & OneOf<
+    | { fundEoa: boolean }
+    | { fundMcNexus: boolean }
+    | { fundCustomAddress: boolean; accountAddress: Address }
+    | { sponsorship: boolean }
+  >
+) => {
+  const account =
+    options?.newType === "fresh-index"
+      ? eoaAccount
+      : privateKeyToAccount(generatePrivateKey())
+
+  const mcNexus = await toMultichainNexusAccount({
+    signer: account,
+    chainConfigurations: [
+      {
+        chain: optimismSepolia,
+        transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
+      {
+        chain: baseSepolia,
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
+    ],
+    ...(options?.newType === "fresh-index"
+      ? { index: BigInt(getRandomAccountIndex(1000, 1000000000)) }
+      : {})
+  })
+
+  const meeClient = await createMeeClient({
+    account: mcNexus,
+    url: "http://localhost:4001/v1",
+    apiKey: options?.sponsorship
+      ? "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      : getDefaultMEENetworkApiKey(true)
+  })
+
+  let fundingAddress: Address | undefined = undefined
+
+  if (options?.fundEoa) {
+    fundingAddress = account.address
+  }
+
+  if (options?.fundMcNexus) {
+    fundingAddress = mcNexus.addressOn(baseSepolia.id, true)
+  }
+
+  if (options?.fundCustomAddress && options?.accountAddress) {
+    fundingAddress = options.accountAddress
+  }
+
+  if (fundingAddress) {
+    await transferErc20({
+      publicClient,
+      walletClient,
+      tokenAddress:
+        options?.tokenType === "onchain"
+          ? testnetMcTestUSDC.addressOn(baseSepolia.id)
+          : testnetMcTestUSDCP.addressOn(baseSepolia.id),
+      recipient: fundingAddress,
+      amount: parseUnits("0.6", 6)
+    })
+  }
+
+  return { mcNexus, meeClient, eoaAccount: account }
+}
 
 describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", () => {
   let network: NetworkConfig
@@ -100,67 +183,12 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     })
   })
 
-  const generateNewMcNexusAccountAndMeeClient = async (
-    options?: { tokenType?: "onchain" | "permit" } & OneOf<
-      | { fundEoa: boolean }
-      | { fundMcNexus: boolean }
-      | { fundCustomAddress: boolean; accountAddress: Address }
-      | { sponsorship: boolean }
-    >
-  ) => {
-    const eoaAccount = privateKeyToAccount(generatePrivateKey())
-
-    const mcNexus = await toMultichainNexusAccount({
-      signer: eoaAccount,
-      chainConfigurations: [
-        {
-          chain: chain,
-          transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
-        }
-      ]
-    })
-
-    const meeClient = await createMeeClient({
-      account: mcNexus,
-      url: "http://localhost:4001/v1",
-      apiKey: options?.sponsorship
-        ? "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
-        : getDefaultMEENetworkApiKey(true)
-    })
-
-    let fundingAddress: Address | undefined = undefined
-
-    if (options?.fundEoa) {
-      fundingAddress = eoaAccount.address
-    }
-
-    if (options?.fundMcNexus) {
-      fundingAddress = mcNexus.addressOn(chain.id, true)
-    }
-
-    if (options?.fundCustomAddress && options?.accountAddress) {
-      fundingAddress = options.accountAddress
-    }
-
-    if (fundingAddress) {
-      await transferErc20({
-        publicClient,
-        walletClient,
-        tokenAddress:
-          options?.tokenType === "onchain"
-            ? testnetMcTestUSDC.addressOn(chain.id)
-            : testnetMcTestUSDCP.addressOn(chain.id),
-        recipient: fundingAddress,
-        amount: parseUnits("0.6", 6)
-      })
-    }
-
-    return { mcNexus, meeClient, eoaAccount }
-  }
-
   test("should throw an error if there are insufficient funds to pay relayer fees", async () => {
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount
+    )
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -182,7 +210,11 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
     // generating new account to have zero balance
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient()
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount
+    )
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -388,10 +420,15 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account in non-fusion mode with sufficient balance override", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
-      fundMcNexus: true,
-      tokenType: "permit"
-    })
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        fundMcNexus: true,
+        tokenType: "permit"
+      }
+    )
 
     const nativeTokenTransferInstruction = await mcNexus.buildComposable({
       type: "nativeTokenTransfer",
@@ -425,10 +462,15 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account in permit mode", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
-      fundEoa: true,
-      tokenType: "permit"
-    })
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        fundEoa: true,
+        tokenType: "permit"
+      }
+    )
 
     const tokenTransfer = await mcNexus.buildComposable({
       type: "transfer",
@@ -458,10 +500,15 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account in onchain mode", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
-      fundEoa: true,
-      tokenType: "onchain"
-    })
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        fundEoa: true,
+        tokenType: "onchain"
+      }
+    )
 
     const tokenTransfer = await mcNexus.buildComposable({
       type: "transfer",
@@ -548,9 +595,14 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account with sponsorship enabled", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient({
-      sponsorship: true
-    })
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        sponsorship: true
+      }
+    )
 
     const tokenTransfer = await mcNexus.buildComposable({
       type: "transfer",
@@ -819,5 +871,262 @@ describe("mee.getQuote({ simulations }) - Multichain Simulation Scenarios", () =
     })
 
     expect(quote).toBeDefined()
+  })
+})
+
+describe("mee.getQuote({ simulations }) - STX Execution with simulation-based gas estimation across account deployment and modes", () => {
+  let network: NetworkConfig
+  let eoaAccount: LocalAccount
+  let mcNexus: MultichainSmartAccount
+  let meeClient: MeeClient
+  let chain: Chain
+  let walletClient: WalletClient<Transport, Chain, Account>
+  let publicClient: PublicClient
+  let feeToken: FeeTokenInfo
+
+  beforeAll(async () => {
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    eoaAccount = network.account!
+    chain = network.chain
+
+    mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
+    })
+
+    feeToken = {
+      address: testnetMcTestUSDCP.addressOn(chain.id),
+      chainId: chain.id
+    }
+
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      url: "http://localhost:4001/v1"
+    })
+
+    publicClient = createPublicClient({
+      chain,
+      transport: http(network.rpcUrl)
+    })
+
+    walletClient = createWalletClient({
+      account: eoaAccount,
+      chain,
+      transport: http(network.rpcUrl)
+    })
+  })
+
+  const getInstructions = async (
+    accountAddress: Address
+  ): Promise<Instruction[]> => {
+    const optimismSepoliaTokenTransfer = await buildComposable(
+      { accountAddress },
+      {
+        type: "transfer",
+        data: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          recipient: eoaAccount.address,
+          amount: 0n,
+          chainId: optimismSepolia.id
+        }
+      },
+      ComposabilityVersion.V1_0_0
+    )
+
+    const baseSepoliaTokenTransfer = await buildComposable(
+      { accountAddress },
+      {
+        type: "transfer",
+        data: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+          recipient: eoaAccount.address,
+          amount: 0n,
+          chainId: chain.id
+        }
+      },
+      ComposabilityVersion.V1_0_0
+    )
+
+    return [...optimismSepoliaTokenTransfer, ...baseSepoliaTokenTransfer]
+  }
+
+  test("Simulated gas estimation and execution: simple mode, account already deployed", async () => {
+    const quote = await meeClient.getQuote({
+      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: simple mode, account undeployed", async () => {
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        fundMcNexus: true,
+        tokenType: "permit"
+      }
+    )
+
+    const quote = await meeClient.getQuote({
+      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: onchain mode, account already deployed", async () => {
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      },
+      batch: true,
+      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      feeToken: {
+        address: testnetMcTestUSDC.addressOn(chain.id),
+        chainId: chain.id
+      }
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: onchain mode, account undeployed", async () => {
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        fundEoa: true,
+        tokenType: "onchain",
+        newType: "fresh-index"
+      }
+    )
+
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      },
+      batch: true,
+      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      feeToken: {
+        address: testnetMcTestUSDC.addressOn(chain.id),
+        chainId: chain.id
+      }
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: permit mode, account already deployed", async () => {
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      },
+      batch: true,
+      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Simulated gas estimation and execution: permit mode, account undeployed", async () => {
+    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
+      publicClient,
+      walletClient,
+      eoaAccount,
+      {
+        fundEoa: true,
+        tokenType: "permit"
+      }
+    )
+
+    const fusionQuote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      },
+      batch: true,
+      instructions: [await getInstructions(mcNexus.addressOn(chain.id, true))],
+      feeToken
+    })
+
+    expect(fusionQuote).toBeDefined()
+
+    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })
