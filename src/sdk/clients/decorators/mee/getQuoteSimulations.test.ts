@@ -138,29 +138,25 @@ const generateNewMcNexusAccountAndMeeClient = async (
 const getInstructions = async (
   mcNexus: MultichainSmartAccount
 ): Promise<Instruction[]> => {
-  const optimismSepoliaTokenTransfer = await mcNexus.buildComposable(
-    {
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
-        recipient: mcNexus.signer.address,
-        amount: 0n,
-        chainId: optimismSepolia.id
-      }
+  const optimismSepoliaTokenTransfer = await mcNexus.buildComposable({
+    type: "transfer",
+    data: {
+      tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+      recipient: mcNexus.signer.address,
+      amount: 0n,
+      chainId: optimismSepolia.id
     }
-  )
+  })
 
-  const baseSepoliaTokenTransfer = await mcNexus.buildComposable(
-    {
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
-        recipient: mcNexus.signer.address,
-        amount: 0n,
-        chainId: baseSepolia.id
-      }
+  const baseSepoliaTokenTransfer = await mcNexus.buildComposable({
+    type: "transfer",
+    data: {
+      tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+      recipient: mcNexus.signer.address,
+      amount: 0n,
+      chainId: baseSepolia.id
     }
-  )
+  })
 
   return [...optimismSepoliaTokenTransfer, ...baseSepoliaTokenTransfer]
 }
@@ -1146,13 +1142,13 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       walletClient,
       eoaAccount,
       {
-        sponsorship: true,
+        sponsorship: true
       }
     )
 
     const quote = await meeClient.getQuote({
       simulation: {
-        simulate: true,
+        simulate: true
       },
       instructions: [await getInstructions(mcNexus)],
       sponsorship: true,
