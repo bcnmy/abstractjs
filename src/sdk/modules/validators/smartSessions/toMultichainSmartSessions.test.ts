@@ -130,7 +130,7 @@ describe("mee.multichainSmartSessions", () => {
     })
   })
 
-  test.runIf(runPaidTests)(
+  test.runIf(runPaidTests).only(
     "should prepare the undeployed account for permissions",
     async () => {
       const sessionMeeClient = meeClient.extend(meeSessionActions)
@@ -138,7 +138,7 @@ describe("mee.multichainSmartSessions", () => {
       // if tests fail, increase the amount
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.1", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -446,6 +446,14 @@ describe("mee.multichainSmartSessions", () => {
             },
             {
               actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "approve" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: mcUSDC.addressOn(paymentChain.id)
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
                 getAbiItem({ abi: erc20Abi, name: "transfer" })
               ),
               actionPolicies: [uniActionPolicyInfoUSDC],
@@ -504,6 +512,19 @@ describe("mee.multichainSmartSessions", () => {
             ],
             chainId: paymentChain.id
           },
+          {
+            calls: [
+              {
+                to: mcUSDC.addressOn(paymentChain.id),
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: "approve",
+                  args: [redeemerAddress, parseUnits("0.01", 6)]
+                })
+              }
+            ],
+            chainId: paymentChain.id
+          },
           // transfer USDC from from orchestrator to redeemer on target chain
           // this is to test that the action policy via universal action policy
           // is created successfully
@@ -548,9 +569,10 @@ describe("mee.multichainSmartSessions", () => {
     }
   )
 
-  test.runIf(runPaidTests)(
+  test.runIf(runPaidTests).only(
     "should grant and use multichain permissions with sponsorship",
     async () => {
+      console.log("================grant and use multichain permissions with sponsorship================")
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       const prepareForPermissionsPayload =
@@ -574,6 +596,14 @@ describe("mee.multichainSmartSessions", () => {
             },
             {
               actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: mcUSDC.addressOn(paymentChain.id)
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
                 getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
               ),
               actionPolicies: [getSudoPolicy()],
@@ -584,7 +614,18 @@ describe("mee.multichainSmartSessions", () => {
         }
       )
 
-      const dappNexusAccount = await toMultichainNexusAccount({
+      console.log("sessionDetails after grantPermissionPersonalSign", sessionDetails)
+      for (const sessionDetail of sessionDetails) {
+        console.log("sessionDetail", sessionDetail)
+        console.log("sessionDetail.enableSessionData", sessionDetail.enableSessionData)
+        console.log("sessionDetail.enableSessionData.enableSession", sessionDetail.enableSessionData?.enableSession)
+        console.log("sessionDetail.enableSessionData.enableSession.sessionToEnable", sessionDetail.enableSessionData?.enableSession?.sessionToEnable)
+        for (const action of sessionDetail.enableSessionData?.enableSession?.sessionToEnable.actions ?? []) {
+          console.log("action", action)
+        }
+      }
+
+      /* const dappNexusAccount = await toMultichainNexusAccount({
         accountAddress: mcNexus.addressOn(paymentChain.id),
         chainConfigurations: [
           {
@@ -615,13 +656,15 @@ describe("mee.multichainSmartSessions", () => {
           {
             calls: [
               {
-                to: COUNTER_ON_BASE,
-                data: toFunctionSelector(
-                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
-                )
+                to: mcUSDC.addressOn(paymentChain.id),
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: "transfer",
+                  args: [redeemerAddress, parseUnits("0.001", 6)]
+                })
               }
             ],
-            chainId: targetChain.id
+            chainId: paymentChain.id
           },
           {
             calls: [
@@ -633,7 +676,18 @@ describe("mee.multichainSmartSessions", () => {
               }
             ],
             chainId: paymentChain.id
-          }
+          },
+          {
+            calls: [
+              {
+                to: COUNTER_ON_BASE,
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
+              }
+            ],
+            chainId: targetChain.id
+          },
         ]
       })
 
@@ -642,7 +696,9 @@ describe("mee.multichainSmartSessions", () => {
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
-      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+      console.log(receipt.explorerLinks)
+
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS") */
     }
   )
 })

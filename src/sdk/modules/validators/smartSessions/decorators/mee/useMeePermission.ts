@@ -46,6 +46,17 @@ export const useMeePermission = async (
   } = parameters
   const meeClient = meeClient_ as MeeClient
 
+  //console.log the sessionDetailsArray entries
+  for (const sessionDetails of sessionDetailsArray) {
+    console.log("sessionDetails", sessionDetails)
+    console.log("sessionDetails.enableSessionData", sessionDetails.enableSessionData)
+    console.log("sessionDetails.enableSessionData.enableSession", sessionDetails.enableSessionData?.enableSession)
+    console.log("sessionDetails.enableSessionData.enableSession.sessionToEnable", sessionDetails.enableSessionData?.enableSession?.sessionToEnable)
+    for (const action of sessionDetails.enableSessionData?.enableSession?.sessionToEnable.actions ?? []) {
+      console.log("action", action)
+    }
+  }
+
   const mode =
     mode_ === "ENABLE_AND_USE"
       ? SmartSessionMode.UNSAFE_ENABLE
@@ -102,6 +113,17 @@ export const useMeePermission = async (
 
     // Mark chain as processed
     processedChains.add(chainId)
+  }
+  console.log("signedQuote after processing modes")
+  for (const userOp of signedQuote.userOps) {
+    console.log("================================================")
+    console.log("userOp", userOp)
+    console.log("session.details", userOp.sessionDetails)
+    console.log("session.details.enableSessionData", userOp.sessionDetails?.enableSessionData)
+    console.log("session.details.enableSessionData.enableSession", userOp.sessionDetails?.enableSessionData?.enableSession)
+    for (const action of userOp.sessionDetails?.enableSessionData?.enableSession?.sessionToEnable.actions ?? []) {
+      console.log("action", action)
+    }
   }
 
   return await meeClient.executeSignedQuote({ signedQuote })

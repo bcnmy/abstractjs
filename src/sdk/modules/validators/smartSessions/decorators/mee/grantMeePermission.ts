@@ -105,12 +105,18 @@ export const grantMeePermission = async <
     maxPaymentAmount = parseUnits("5", decimals)
   }
 
+  // out of all the actions, get the list of unique chainIds
+  const uniqueChainIds = new Set(actions.map((action) => action.chainId))
+
   const grantPermissionParameters = actions.map((action) => {
     const chainId = action.chainId
     const actionTarget = action.actionTarget
     const deployment = account.deployments.find(
       (deployment) => deployment?.client?.chain?.id === chainId
     )
+
+    console.log("processing action", action)
+    console.log("actionTarget", actionTarget)
 
     const defaultVersionConfig: MEEVersionConfig =
       getMEEVersion(DEFAULT_MEE_VERSION)
@@ -160,6 +166,14 @@ export const grantMeePermission = async <
       permitERC4337Paymaster: true
     }
   })
+
+  console.log("================grantPermissionParameters==================")
+  for (const grantPermissionParameter of grantPermissionParameters) {
+    console.log("grantPermissionParameter.actions", grantPermissionParameter.actions)
+    for (const action of grantPermissionParameter.actions) {
+      console.log("action", action)
+    }
+  }
 
   return mode === "PERSONAL_SIGN"
     ? grantPermissionPersonalSign(
