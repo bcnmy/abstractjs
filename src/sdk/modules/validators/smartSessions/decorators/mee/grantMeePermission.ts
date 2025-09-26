@@ -105,18 +105,33 @@ export const grantMeePermission = async <
     maxPaymentAmount = parseUnits("5", decimals)
   }
 
-  // out of all the actions, get the list of unique chainIds
-  const uniqueChainIds = new Set(actions.map((action) => action.chainId))
+  /**
+   * Actions can be defined for multiple chains.
+   * Curernt approach is to build a single session for each unique chainId.
+   * So all the actions for a given chainId will be added to the same session.
+   *
+   * TODO: In future, we may want to add an additional parameter to the
+   * action object, which will define, whether the action can be batched into the same session
+   * or should be added to a separate session.
+   * This will also require changing the algorithm when using the permissions,
+   * since it will involve having several sessions on the same chain =>
+   * so it will require a proper algorithm of choosing which session we are using
+   * w/o requesting dev to provide the sessionId explicitly.
+   */
 
-  const grantPermissionParameters = actions.map((action) => {
-    const chainId = action.chainId
-    const actionTarget = action.actionTarget
+  // out of all the actions, get the array of unique chainIds
+  const uniqueChainIds = Array.from(
+    new Set(actions.map((action) => action.chainId))
+  )
+
+  const grantPermissionParameters = uniqueChainIds.map((chainId) => {
     const deployment = account.deployments.find(
       (deployment) => deployment?.client?.chain?.id === chainId
     )
 
-    console.log("processing action", action)
-    console.log("actionTarget", actionTarget)
+    const actionsForChain = actions.filter(
+      (action) => action.chainId === chainId
+    )
 
     const defaultVersionConfig: MEEVersionConfig =
       getMEEVersion(DEFAULT_MEE_VERSION)
@@ -124,12 +139,13 @@ export const grantMeePermission = async <
       deployment?.version.validatorAddress ||
       defaultVersionConfig.validatorAddress
 
-    let paymentActionPolicy: ActionData | undefined = undefined
+    let paymentAction: (ActionData & { chainId: number }) | undefined =
+      undefined
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
       // if some permission is already defining the policy for the feeToken.transfer, throw an error
       if (
-        actions.some(
+        actionsForChain.some(
           (action) =>
             action.actionTargetSelector ===
               toFunctionSelector(
@@ -145,35 +161,27 @@ export const grantMeePermission = async <
       }
 
       // else add the payment action policy
-      paymentActionPolicy = {
+      paymentAction = {
         actionTarget: feeToken.address,
         actionTargetSelector: "0xa9059cbb" as Address, // transfer
         actionPolicies: [
           getPolicyForPayment(maxPaymentAmount!, feeToken.address)
-        ]
+        ],
+        chainId
       }
     }
 
     return {
       account: deployment,
       redeemer,
-      actions: [
-        ...actions.map((action) => ({ ...action, actionTarget })),
-        ...(paymentActionPolicy ? [paymentActionPolicy] : [])
-      ],
+      actions: paymentAction
+        ? [...actionsForChain, paymentAction]
+        : actionsForChain,
       sessionValidator: meeValidatorAddress,
       sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
       permitERC4337Paymaster: true
     }
   })
-
-  console.log("================grantPermissionParameters==================")
-  for (const grantPermissionParameter of grantPermissionParameters) {
-    console.log("grantPermissionParameter.actions", grantPermissionParameter.actions)
-    for (const action of grantPermissionParameter.actions) {
-      console.log("action", action)
-    }
-  }
 
   return mode === "PERSONAL_SIGN"
     ? grantPermissionPersonalSign(
