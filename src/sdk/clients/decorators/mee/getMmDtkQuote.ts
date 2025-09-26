@@ -36,8 +36,8 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
    */
   delegatorSmartAccount: MetaMaskSmartAccount
 
-  /** For fusion mode, batching will be always true */
-  batch?: true
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
 
   feePayer?: undefined
 }
@@ -69,6 +69,7 @@ export const getMmDtkQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
     verificationGasLimit,
     delegatorSmartAccount,
@@ -91,7 +92,8 @@ export const getMmDtkQuote = async (
       owner: sender,
       spender,
       recipient,
-      account: account_
+      account: account_,
+      batch
     })
 
   const triggerInfo: Trigger = {

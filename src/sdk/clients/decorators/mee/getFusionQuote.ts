@@ -46,8 +46,8 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    */
   cleanUps?: CleanUp[]
 
-  /** For fusion mode, batching will be always true */
-  batch?: true
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
 
   feePayer?: undefined
   /**
@@ -126,14 +126,22 @@ export type PrepareInstructionsParams = {
   spender: Address
   recipient: Address
   account: MultichainSmartAccount
+  batch?: boolean
 }
 
 export const prepareInstructions = async (
   client: BaseMeeClient,
   parameters: PrepareInstructionsParams
 ) => {
-  const { resolvedInstructions, trigger, owner, spender, recipient, account } =
-    parameters
+  const {
+    resolvedInstructions,
+    trigger,
+    owner,
+    spender,
+    recipient,
+    account,
+    batch = true
+  } = parameters
 
   let triggerAmount = 0n
 
@@ -218,10 +226,18 @@ export const prepareInstructions = async (
 
   // If token address is zero address, we don't need to add transferFrom instruction
   if (trigger.tokenAddress === zeroAddress) {
-    const batchedInstructions = await batchInstructions({
-      accountAddress: account.signer.address,
-      instructions: resolvedInstructions
-    })
+    let batchedInstructions: Instruction[] = []
+
+    if (batch) {
+      batchedInstructions = await batchInstructions({
+        accountAddress: account.signer.address,
+        instructions: resolvedInstructions
+      })
+    } else {
+      // If integrators explicitly want unbatched userOps
+      batchedInstructions = resolvedInstructions
+    }
+
     return { triggerGasLimit, triggerAmount, batchedInstructions }
   }
 
@@ -240,10 +256,17 @@ export const prepareInstructions = async (
     ? account.buildComposable(params)
     : account.build(params))
 
-  const batchedInstructions = await batchInstructions({
-    accountAddress: account.signer.address,
-    instructions: [...triggerTransfer, ...resolvedInstructions]
-  })
+  let batchedInstructions: Instruction[] = []
+
+  if (batch) {
+    batchedInstructions = await batchInstructions({
+      accountAddress: account.signer.address,
+      instructions: [...triggerTransfer, ...resolvedInstructions]
+    })
+  } else {
+    // If integrators explicitly want unbatched userOps
+    batchedInstructions = [...triggerTransfer, ...resolvedInstructions]
+  }
 
   return { triggerGasLimit, triggerAmount, batchedInstructions }
 }

@@ -29,8 +29,8 @@ export type GetPermitQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
 
-  /** For fusion mode, batching will be always true */
-  batch?: true
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
 
   feePayer?: undefined
 }
@@ -79,6 +79,7 @@ export const getPermitQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
     ...rest
   } = parameters
@@ -103,7 +104,8 @@ export const getPermitQuote = async (
       owner, // EOA address
       spender, // SCA address who gets the approval for spend initiation
       recipient, // Either the SCA takes amount for itself or transferred for custom recipient
-      account: account_
+      account: account_,
+      batch
     })
 
   const eoa = account_.signer.address

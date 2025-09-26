@@ -28,8 +28,8 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
 
-  /** For fusion mode, batching will be always true */
-  batch?: true
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
 
   feePayer?: undefined
 }
@@ -83,6 +83,7 @@ export const getOnChainQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
     ...rest
   } = parameters
@@ -124,7 +125,8 @@ export const getOnChainQuote = async (
       owner, // EOA address
       spender, // For on chain quotes, the funds are directly deposited. So this param is not mostly used
       recipient, // Either the SCA takes amount for itself or transferred for custom recipient
-      account: account_
+      account: account_,
+      batch
     })
 
   const triggerInfo: Trigger = {
