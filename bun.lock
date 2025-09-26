@@ -14,7 +14,7 @@
         "@ethersproject/wallet": "^5.8.0",
         "@metamask/delegation-toolkit": "^0.11.0",
         "@pimlico/alto": "^0.0.4",
-        "@rhinestone/module-sdk": "0.4.0",
+        "@rhinestone/module-sdk": "0.2.7",
         "@size-limit/esbuild-why": "^11.2.0",
         "@size-limit/preset-small-lib": "^11.2.0",
         "@types/bun": "^1.2.4",
@@ -42,7 +42,7 @@
       },
       "peerDependencies": {
         "@metamask/delegation-toolkit": "^0.11.0",
-        "@rhinestone/module-sdk": "0.4.0",
+        "@rhinestone/module-sdk": "0.2.7",
         "typescript": "^5.8.2",
         "viem": "^2.26.2",
       },
@@ -421,7 +421,7 @@
 
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.0", "", {}, "sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw=="],
 
-    "@rhinestone/module-sdk": ["@rhinestone/module-sdk@0.4.0", "", { "dependencies": { "solady": "^0.0.235", "tslib": "^2.7.0" }, "peerDependencies": { "viem": "^2.0.0" } }, "sha512-MezAYnw+D7tWCVyUMYiA6YutsQT/dL2XPoVhJcfHUh+xccxadubBhU+IKA0MkAyibOWLWZ0yplbgPUKq7MPkFg=="],
+    "@rhinestone/module-sdk": ["@rhinestone/module-sdk@0.2.7", "", { "dependencies": { "solady": "^0.0.235", "tslib": "^2.7.0" }, "peerDependencies": { "viem": "^2.0.0" } }, "sha512-clZVB6erRdkDpaYodFsRVhU+Sj4immytLWK76jL9MsjnBg9vDEEMK3izUpsGax6YLDI0/QTrn0sW0qyhLz8fBQ=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.44.0", "", { "os": "android", "cpu": "arm" }, "sha512-xEiEE5oDW6tK4jXCAyliuntGR+amEMO7HLtdSshVuhFnKTYoeYMyXQK7pLouAJJj5KHdwdn87bfHAR2nSdNAUA=="],
 
