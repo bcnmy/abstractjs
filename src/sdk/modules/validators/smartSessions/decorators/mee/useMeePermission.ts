@@ -70,36 +70,42 @@ export const useMeePermission = async (
 
   const signedQuote = await meeClient.signQuote({ quote })
 
-  const modeMap = signedQuote.userOps.reduce(
-    (acc, userOpEntry) => {
-      acc[String(userOpEntry.chainId)] = false
-      return acc
-    },
-    {} as Record<string, boolean>
-  )
+  // Assign the correct mode for each userOp
+  // This is required to avoid using ENABLE mode for the same chain more than once
+  const processedChains = new Set<string>()
+  const startIndex = signedQuote.paymentInfo.sponsored ? 1 : 0
 
-  // Then focus on the other user ops
-  for (const [_, userOpEntry] of signedQuote.userOps.entries()) {
-    // If we've iterated over this chainId before, it will never require enable mode again.
-    const alreadyUsed = !!modeMap[userOpEntry.chainId]
+  for (const [index, userOpEntry] of signedQuote.userOps.entries()) {
+    // Skip payment userOp if sponsored
+    if (index < startIndex) continue
 
+    const chainId = String(userOpEntry.chainId)
+    const isFirstTimeForChain = !processedChains.has(chainId)
+
+    // Find session details for this chain
     const relevantIndex = sessionDetailsArray.findIndex(
       ({ enableSessionData }) =>
         enableSessionData?.enableSession?.sessionToEnable?.chainId ===
         BigInt(userOpEntry.chainId)
     )
 
-    // Mark the session as used or unused
-    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : mode
+    if (relevantIndex === -1) {
+      throw new Error(
+        `No session details found for chainId ${userOpEntry.chainId}`
+      )
+    }
 
-    // Set the session details for the user op
+    // Determine mode: first time gets original mode (enable and use most likely), subsequent times get USE
+    const dynamicMode = isFirstTimeForChain ? mode : SmartSessionMode.USE
+
+    // Apply mode to session details
     userOpEntry.sessionDetails = {
       ...sessionDetailsArray[relevantIndex],
       mode: dynamicMode
     }
 
-    // Remember that the mode has now been catered for
-    modeMap[userOpEntry.chainId] = true
+    // Mark chain as processed
+    processedChains.add(chainId)
   }
 
   return await meeClient.executeSignedQuote({ signedQuote })

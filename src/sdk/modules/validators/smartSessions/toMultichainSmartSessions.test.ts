@@ -1,12 +1,18 @@
-import { getSudoPolicy } from "@rhinestone/module-sdk"
+import { getSudoPolicy, getUniversalActionPolicy } from "@rhinestone/module-sdk"
 import type { Address, Chain, LocalAccount, Transport } from "viem"
 import {
   http,
   createPublicClient,
+  createWalletClient,
+  encodeFunctionData,
   erc20Abi,
   getAbiItem,
+  maxUint256,
+  pad,
   parseUnits,
-  toFunctionSelector
+  toFunctionSelector,
+  toHex,
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
@@ -41,6 +47,16 @@ const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
 const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
 const COUNTER_ON_BASE_SEPOLIA = "0xcaf661eeD95DE905Fcf5234040A7d6A70c6F5C85"
 const COUNTER_ON_OPTIMISM_SEPOLIA = "0x111EB1afF13be64d81485E7d45E70A6A0283dedE"
+
+enum ParamCondition {
+  EQUAL = 0,
+  GREATER_THAN = 1,
+  LESS_THAN = 2,
+  GREATER_THAN_OR_EQUAL = 3,
+  LESS_THAN_OR_EQUAL = 4,
+  NOT_EQUAL = 5,
+  IN_RANGE = 6
+}
 
 describe("mee.multichainSmartSessions", () => {
   let network: NetworkConfig
@@ -99,6 +115,19 @@ describe("mee.multichainSmartSessions", () => {
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
     smartSessionsValidator = toSmartSessionsModule({ signer: mcNexus.signer })
+
+    // send some USDC from eoaAccount to mcNexus on target chain
+    const eoaWalletClient = createWalletClient({
+      chain: targetChain,
+      transport: targetChainTransport,
+      account: eoaAccount
+    })
+    await eoaWalletClient.writeContract({
+      address: mcUSDC.addressOn(targetChain.id),
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [mcNexus.addressOn(targetChain.id, true), parseUnits("0.011", 6)]
+    })
   })
 
   test.runIf(runPaidTests)(
@@ -109,7 +138,7 @@ describe("mee.multichainSmartSessions", () => {
       // if tests fail, increase the amount
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.3", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -316,9 +345,65 @@ describe("mee.multichainSmartSessions", () => {
   )
 
   test.runIf(runPaidTests)(
-    "should grant and use permission with custom verification gas limit",
+    "should grant and use permission with custom verification gas limit and universal action policy",
     async () => {
+      const publicClient = createPublicClient({
+        chain: targetChain,
+        transport: targetChainTransport
+      })
+      const redeemerUSDCBalanceBefore = await publicClient.readContract({
+        address: mcUSDC.addressOn(targetChain.id),
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [redeemerAddress]
+      })
+
       const sessionMeeClient = meeClient.extend(meeSessionActions)
+
+      const EMPTY_RAW_RULE = {
+        condition: ParamCondition.EQUAL,
+        offset: 0n,
+        isLimited: false,
+        ref: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+        usage: { limit: 0n, used: 0n }
+      }
+
+      const uniActionPolicyInfoUSDC = getUniversalActionPolicy({
+        valueLimitPerUse: maxUint256,
+        paramRules: {
+          length: 2n,
+          rules: [
+            {
+              condition: ParamCondition.EQUAL,
+              isLimited: false,
+              offset: 0n,
+              ref: pad(redeemerAddress),
+              usage: { limit: 0n, used: 0n }
+            },
+            {
+              condition: ParamCondition.LESS_THAN_OR_EQUAL,
+              isLimited: true,
+              offset: 32n,
+              ref: pad(toHex(parseUnits("3", 6))),
+              usage: { limit: parseUnits("100", 6), used: 0n }
+            },
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE,
+            EMPTY_RAW_RULE
+          ]
+        }
+      })
 
       const sessionDetails =
         await sessionMeeClient.grantPermissionTypedDataSign({
@@ -358,6 +443,22 @@ describe("mee.multichainSmartSessions", () => {
               actionPolicies: [getSudoPolicy()],
               chainId: paymentChain.id,
               actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "approve" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: mcUSDC.addressOn(paymentChain.id)
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              actionPolicies: [uniActionPolicyInfoUSDC],
+              chainId: targetChain.id,
+              actionTarget: mcUSDC.addressOn(targetChain.id)
             }
           ],
           maxPaymentAmount: parseUnits("3", 6)
@@ -410,6 +511,35 @@ describe("mee.multichainSmartSessions", () => {
               }
             ],
             chainId: paymentChain.id
+          },
+          {
+            calls: [
+              {
+                to: mcUSDC.addressOn(paymentChain.id),
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: "approve",
+                  args: [redeemerAddress, parseUnits("0.01", 6)]
+                })
+              }
+            ],
+            chainId: paymentChain.id
+          },
+          // transfer USDC from from orchestrator to redeemer on target chain
+          // this is to test that the action policy via universal action policy
+          // is created successfully
+          {
+            calls: [
+              {
+                to: mcUSDC.addressOn(targetChain.id),
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: "transfer",
+                  args: [redeemerAddress, parseUnits("0.01", 6)]
+                })
+              }
+            ],
+            chainId: targetChain.id
           }
         ],
         feeToken,
@@ -425,6 +555,17 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
+
+      const redeemerUSDCBalanceAfter = await publicClient.readContract({
+        address: mcUSDC.addressOn(targetChain.id),
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [redeemerAddress]
+      })
+
+      expect(redeemerUSDCBalanceAfter).toBe(
+        redeemerUSDCBalanceBefore + parseUnits("0.01", 6)
+      )
     }
   )
 
@@ -451,6 +592,22 @@ describe("mee.multichainSmartSessions", () => {
               actionPolicies: [getSudoPolicy()],
               chainId: paymentChain.id,
               actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: CounterAbi, name: "decrementNumber" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: COUNTER_ON_OPTIMISM
+            },
+            {
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              actionPolicies: [getSudoPolicy()],
+              chainId: paymentChain.id,
+              actionTarget: mcUSDC.addressOn(paymentChain.id)
             },
             {
               actionTargetSelector: toFunctionSelector(
@@ -489,9 +646,23 @@ describe("mee.multichainSmartSessions", () => {
 
       const usePermissionPayload = await dappSessionClient.usePermission({
         sponsorship: true,
+        verificationGasLimit: 2_000_000n,
         sessionDetails,
         mode: "ENABLE_AND_USE",
         instructions: [
+          {
+            calls: [
+              {
+                to: mcUSDC.addressOn(paymentChain.id),
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: "transfer",
+                  args: [redeemerAddress, parseUnits("0.001", 6)]
+                })
+              }
+            ],
+            chainId: paymentChain.id
+          },
           {
             calls: [
               {
@@ -502,9 +673,30 @@ describe("mee.multichainSmartSessions", () => {
               }
             ],
             chainId: paymentChain.id
+          },
+          {
+            calls: [
+              {
+                to: COUNTER_ON_OPTIMISM,
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "decrementNumber" })
+                )
+              }
+            ],
+            chainId: paymentChain.id
+          },
+          {
+            calls: [
+              {
+                to: COUNTER_ON_BASE,
+                data: toFunctionSelector(
+                  getAbiItem({ abi: CounterAbi, name: "incrementNumber" })
+                )
+              }
+            ],
+            chainId: targetChain.id
           }
-        ],
-        verificationGasLimit: 3_000_111n
+        ]
       })
 
       const receipt = await meeClient.waitForSupertransactionReceipt({
