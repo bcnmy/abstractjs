@@ -119,7 +119,6 @@ export const grantMeePermission = async <
    * w/o requesting dev to provide the sessionId explicitly.
    */
 
-  // out of all the actions, get the array of unique chainIds
   const uniqueChainIds = Array.from(
     new Set(actions.map((action) => action.chainId))
   )

@@ -572,9 +572,6 @@ describe("mee.multichainSmartSessions", () => {
   test.runIf(runPaidTests)(
     "should grant and use multichain permissions with sponsorship",
     async () => {
-      console.log(
-        "================grant and use multichain permissions with sponsorship================"
-      )
       const sessionMeeClient = meeClient.extend(meeSessionActions)
 
       const prepareForPermissionsPayload =
