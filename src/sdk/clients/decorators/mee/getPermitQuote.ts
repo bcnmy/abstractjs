@@ -128,6 +128,7 @@ export const getPermitQuote = async (
     {
       path: "quote-permit", // Use different endpoint for permit enabled tokens
       eoa,
+      batch,
       instructions: batchedInstructions,
       gasLimit: gasLimit || triggerGasLimit,
       ...(cleanUps ? { cleanUps } : {}),

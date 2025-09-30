@@ -99,6 +99,7 @@ export const getOnChainQuote = async (
     const quote = await getQuote(client, {
       path: "quote",
       eoa: account_.signer.address,
+      batch,
       instructions: batchedInstructions,
       gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       ...(cleanUps ? { cleanUps } : {}),
@@ -152,6 +153,7 @@ export const getOnChainQuote = async (
       path: "quote-permit",
       eoa: account_.signer.address,
       instructions: batchedInstructions,
+      batch,
       gasLimit: gasLimit || triggerGasLimit,
       ...(cleanUps ? { cleanUps } : {}),
       ...rest
