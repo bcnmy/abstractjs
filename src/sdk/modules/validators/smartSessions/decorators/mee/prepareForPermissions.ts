@@ -118,6 +118,7 @@ export const prepareForPermissions = async (
       const quote = await getFusionQuote(client, {
         ...parameters,
         instructions: completeInstructionsList,
+        batch: parameters.batch || true,
         feeToken: parameters.feeToken!,
         trigger: parameters.trigger,
         simulation: parameters.simulation

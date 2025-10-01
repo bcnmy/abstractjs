@@ -16,7 +16,8 @@ import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainCon
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
-  SMART_SESSIONS_ADDRESS
+  SMART_SESSIONS_ADDRESS,
+  SmartSessionMode
 } from "../../../constants"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
@@ -27,6 +28,7 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponseEntry } from "../../../modules/validators/smartSessions/decorators/grantPermission"
+import type { GrantMeePermissionPayload } from "../../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import createHttpClient, { type Url } from "../../createHttpClient"
 import {
   type BaseMeeClient,
@@ -306,6 +308,14 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   batch?: boolean
   /**
+   * Smart sessions permission info - Primarily used to detect smart sessions flow in quote phase and used for simulations as well
+   */
+  sessionDetails?: GrantMeePermissionPayload
+  /**
+   * Smart sessions mode
+   */
+  smartSessionMode?: "ENABLE_AND_USE" | "USE"
+  /**
    * Active module address. Used to fetch the nonce for the active module and resolve verification gas limit
    */
   moduleAddress?: Address
@@ -422,6 +432,8 @@ type QuoteRequest = {
      * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
      **/
     shortEncoding?: boolean
+    /** Optional Session details for detecting the smart session mode in node during quote phase */
+    sessionDetails?: GrantPermissionResponseEntry
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
@@ -464,6 +476,8 @@ export type PaymentInfo = {
   sponsorshipUrl?: Url
   /** Custom gas refund address to get the refunds for the remaining unspent gas. Defaults to Nexus SCA. */
   gasRefundAddress?: Address
+  /** Optional Session details for detecting the smart session mode in node */
+  sessionDetails?: GrantPermissionResponseEntry
 }
 
 /**
@@ -622,8 +636,15 @@ export const getQuote = async (
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
-    feeToken
+    feeToken,
+    sessionDetails,
+    smartSessionMode
   } = parameters
+
+  const mode =
+    smartSessionMode === "ENABLE_AND_USE"
+      ? SmartSessionMode.UNSAFE_ENABLE
+      : SmartSessionMode.USE
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -660,6 +681,7 @@ export const getQuote = async (
   }
 
   const hasProcessedInitData: number[] = []
+  const hasProcessedSessionDetails = new Set<string>()
 
   const initDataTypeByChainId = new Map<number, INIT_DATA_TYPE>()
 
@@ -817,13 +839,11 @@ export const getQuote = async (
     }
   }
 
-  const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
-    client,
-    {
+  const { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed } =
+    await preparePaymentInfo(client, {
       ...parameters,
       initDataTypeByChainId
-    }
-  )
+    })
 
   let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
 
@@ -840,6 +860,9 @@ export const getQuote = async (
 
   if (isInitDataProcessed)
     hasProcessedInitData.push(Number(paymentInfo.chainId))
+
+  if (isSessionDetailsProcessed)
+    hasProcessedSessionDetails.add(paymentInfo.chainId)
 
   const preparedUserOps = await prepareUserOps(
     account_,
@@ -943,6 +966,31 @@ export const getQuote = async (
 
         indexPerChainId.set(chainId, indexPerChainId.get(chainId)! + 1)
 
+        let sessionDetail: GrantPermissionResponseEntry | undefined = undefined
+
+        if (sessionDetails) {
+          // Find session details for this chain
+          const relevantIndex = sessionDetails.findIndex(
+            ({ enableSessionData }) =>
+              enableSessionData?.enableSession?.sessionToEnable?.chainId ===
+              BigInt(chainId)
+          )
+
+          if (relevantIndex === -1) {
+            throw new Error(`No session details found for chainId ${chainId}`)
+          }
+
+          const isFirstTimeForChain = !hasProcessedSessionDetails.has(chainId)
+          const dynamicMode = isFirstTimeForChain ? mode : SmartSessionMode.USE
+
+          sessionDetail = {
+            ...sessionDetails[relevantIndex],
+            mode: dynamicMode
+          }
+
+          hasProcessedSessionDetails.add(chainId)
+        }
+
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
           upperBoundTimestamp: isCleanUpUserOp
@@ -957,7 +1005,8 @@ export const getQuote = async (
           isCleanUpUserOp,
           ...initDataOrUndefined,
           ...resolvedVerificationGasLimit,
-          shortEncoding: shortEncodingSuperTxn || shortEncoding
+          shortEncoding: shortEncodingSuperTxn || shortEncoding,
+          sessionDetails: sessionDetail
         }
       }
     )
@@ -1017,11 +1066,14 @@ const preparePaymentInfo = async (
     sponsorshipOptions,
     shortEncodingSuperTxn,
     moduleAddress,
+    sessionDetails,
+    smartSessionMode = "USE",
     verificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
   let isInitDataProcessed = false
+  let isSessionDetailsProcessed = false
 
   const eoaOrFeePayer = feePayer || eoa
 
@@ -1083,7 +1135,6 @@ const preparePaymentInfo = async (
       )
     }
 
-    // TODO: Check the correctness of this while testing. This is a old logic
     const validFeeToken =
       validPaymentAccount &&
       client.info.supportedGasTokens
@@ -1133,6 +1184,39 @@ const preparePaymentInfo = async (
         verificationGasLimit
       )
 
+    let sessionDetail: GrantPermissionResponseEntry | undefined = undefined
+
+    // Adding session details on quote to enable node to detect smart session flow on quote phase + use this for simulations
+    if (sessionDetails) {
+      // Find session details for this chain
+      const relevantIndex = sessionDetails.findIndex(
+        ({ enableSessionData }) =>
+          enableSessionData?.enableSession?.sessionToEnable?.chainId ===
+          BigInt(feeToken.chainId)
+      )
+
+      if (relevantIndex === -1) {
+        throw new Error(
+          `No session details found for chainId ${feeToken.chainId}`
+        )
+      }
+
+      if (!smartSessionMode) {
+        throw new Error("smartSessionMode is required for smart sessions flow")
+      }
+
+      // Mostly use and enable mode for payment userOp
+      const mode =
+        smartSessionMode === "ENABLE_AND_USE"
+          ? SmartSessionMode.UNSAFE_ENABLE
+          : SmartSessionMode.USE
+
+      sessionDetail = {
+        ...sessionDetails[relevantIndex],
+        mode
+      }
+    }
+
     paymentInfo = {
       sponsored: false,
       sender: validPaymentAccount.address,
@@ -1148,17 +1232,20 @@ const preparePaymentInfo = async (
         : {}),
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       ...initData,
-      shortEncoding: shortEncodingSuperTxn
+      shortEncoding: shortEncodingSuperTxn,
+      sessionDetails: sessionDetail
     }
 
     // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
     // in developer defined userOps, this field must be true
     isInitDataProcessed = true
+
+    isSessionDetailsProcessed = true
   }
 
   if (!paymentInfo) throw new Error("Failed to generate payment info")
 
-  return { paymentInfo, isInitDataProcessed }
+  return { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed }
 }
 
 const prepare7702Auth = async (

@@ -60,6 +60,8 @@ export const useMeePermission = async (
     instructions,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
+    sessionDetails: sessionDetailsArray,
+    smartSessionMode: mode_,
     batch,
     simulation,
     verificationGasLimit,
