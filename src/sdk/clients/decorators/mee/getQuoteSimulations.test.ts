@@ -1397,7 +1397,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     })
   })
 
-  test.only("Simulated gas estimation and execution: Smart sessions, batch calldata, and multiple action execution", async () => {
+  test("Simulated gas estimation and execution: Smart sessions, batch calldata, and multiple action execution", async () => {
     const { sessionDetails, sessionAccount, mcNexus } =
       await prepareForSmartSessionsTest()
 
