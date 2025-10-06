@@ -155,26 +155,28 @@ export const buildApprove = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "APPROVE",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: accountAddress,
+      toAddress: spender,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: approvalCall,
       chainId,
       isComposable: isComposableCall,
-      metadata: metadata || [
-        {
-          type: "APPROVE",
-          tokenAddress: isRuntimeComposableValue(tokenAddress)
-            ? "RUNTIME_VALUE"
-            : (tokenAddress as Address),
-          fromAddress: accountAddress,
-          toAddress: spender,
-          amount: isRuntimeComposableValue(amount)
-            ? "RUNTIME_VALUE"
-            : (amount as bigint),
-          chainId
-        }
-      ]
+      metadata: metadata || defaultMetadata
     }
   ]
 }

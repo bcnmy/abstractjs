@@ -82,19 +82,21 @@ export const buildRawComposable = async (
     gasLimit
   )
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "CUSTOM",
+      description: "Custom composable on-chain action",
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: [composableCall],
       chainId,
       isComposable: true,
-      metadata: metadata || [
-        {
-          type: "CUSTOM",
-          description: "Custom composable on-chain action",
-          chainId
-        }
-      ]
+      metadata: metadata || defaultMetadata
     }
   ]
 }

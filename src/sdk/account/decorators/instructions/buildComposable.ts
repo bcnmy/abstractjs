@@ -307,19 +307,21 @@ export const buildComposableUtil = async (
 
   const calls = await buildComposableCall(parameters, composabilityParams)
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "CUSTOM",
+      description: `${functionNameToLabel(parameters.functionName)} on-chain action`,
+      chainId: parameters.chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: calls,
       chainId: parameters.chainId,
       isComposable: true,
-      metadata: metadata || [
-        {
-          type: "CUSTOM",
-          description: `${functionNameToLabel(parameters.functionName)} on-chain action`,
-          chainId: parameters.chainId
-        }
-      ]
+      metadata: metadata || defaultMetadata
     }
   ]
 }

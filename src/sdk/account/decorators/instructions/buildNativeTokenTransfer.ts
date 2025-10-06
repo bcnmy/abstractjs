@@ -89,7 +89,7 @@ export const buildNativeTokenTransfer = async (
     // Composable call: requires composability version and runtime encoding
     if (!composabilityVersion) {
       throw new Error(
-        "Composability version is required to build native token transfer instruction"
+        "Composability version is required to build a composable native token transfer instruction"
       )
     }
 

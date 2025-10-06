@@ -266,17 +266,18 @@ export const buildBridgeInstructions = async (
         const receivedFromRoute =
           (result.receivedAtDestination * amountToTake) / result.amount
 
+        // If no metadata from plugin ? Custom metadata will be added
+        const customMetadata: InstructionMetadata[] = [
+          {
+            type: "CUSTOM",
+            chainId: result.userOp.chainId,
+            description: "Custom Bridging on-chain action"
+          }
+        ]
+
         const instruction: Instruction = {
           ...result.userOp,
-          metadata: metadata ||
-            result.userOp.metadata || [
-              // If no metadata from plugin ? Custom metadata will be added
-              {
-                type: "CUSTOM",
-                chainId: result.userOp.chainId,
-                description: "Custom Bridging on-chain action"
-              }
-            ]
+          metadata: metadata || result.userOp.metadata || customMetadata
         }
 
         return {

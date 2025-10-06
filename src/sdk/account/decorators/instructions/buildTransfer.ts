@@ -147,26 +147,28 @@ export const buildTransfer = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "TRANSFER",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: accountAddress,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: triggerCalls,
       chainId,
       isComposable: isComposableCall,
-      metadata: metadata || [
-        {
-          type: "TRANSFER",
-          tokenAddress: isRuntimeComposableValue(tokenAddress)
-            ? "RUNTIME_VALUE"
-            : (tokenAddress as Address),
-          fromAddress: accountAddress,
-          toAddress: recipient,
-          amount: isRuntimeComposableValue(amount)
-            ? "RUNTIME_VALUE"
-            : (amount as bigint),
-          chainId
-        }
-      ]
+      metadata: metadata || defaultMetadata
     }
   ]
 }
