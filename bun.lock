@@ -4,7 +4,7 @@
     "": {
       "name": "@biconomy/abstractjs",
       "devDependencies": {
-        "@biconomy/ecosystem": "1.1.5",
+        "@biconomy/ecosystem": "1.1.6",
         "@biomejs/biome": "1.9.4",
         "@changesets/cli": "^2.28.1",
         "@commitlint/cli": "^19.8.1",
@@ -85,7 +85,7 @@
 
     "@babel/types": ["@babel/types@7.27.6", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.27.1" } }, "sha512-ETyHEk2VHHvl9b9jZP5IHPavHYk57EhanlRRuae9XCpb/j5bDCbPPMOBfCWhnl/7EDJz0jEMCi/RhccCE8r1+Q=="],
 
-    "@biconomy/ecosystem": ["@biconomy/ecosystem@1.1.5", "", { "dependencies": { "@pimlico/alto": "0.0.4", "get-port": "^7.1.0", "prool": "^0.0.23" }, "peerDependencies": { "viem": "^2.0.0" } }, "sha512-Lc4lN6m+eKbuuVNOMaeJsvYQbL+g3Yupi+KLhzofGR1thmtDMqrdRpfo7TtH+ZJVvOK6fe9tDOJOsZdtf/wjnw=="],
+    "@biconomy/ecosystem": ["@biconomy/ecosystem@1.1.6", "", { "dependencies": { "@pimlico/alto": "0.0.4", "get-port": "^7.1.0", "prool": "^0.0.23" }, "peerDependencies": { "viem": "^2.0.0" } }, "sha512-WUCQ7vZmQmD4a3m7Or1O7kzmmLkEH/R5GXx2VAkd94t4TEMHbC0sXfCgXSPyzz1KfVBxblK7FHMHjobAP48RdQ=="],
 
     "@biomejs/biome": ["@biomejs/biome@1.9.4", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "1.9.4", "@biomejs/cli-darwin-x64": "1.9.4", "@biomejs/cli-linux-arm64": "1.9.4", "@biomejs/cli-linux-arm64-musl": "1.9.4", "@biomejs/cli-linux-x64": "1.9.4", "@biomejs/cli-linux-x64-musl": "1.9.4", "@biomejs/cli-win32-arm64": "1.9.4", "@biomejs/cli-win32-x64": "1.9.4" }, "bin": { "biome": "bin/biome" } }, "sha512-1rkd7G70+o9KkTn5KLmDYXihGoTaIGO9PIIN2ZB7UJxFrWw04CZHPYiMRjYsaDvVV7hP1dYNRLxSANLaBFGpog=="],
 
