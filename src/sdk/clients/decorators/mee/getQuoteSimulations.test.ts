@@ -3,6 +3,10 @@ import {
   toMetaMaskSmartAccount
 } from "@metamask/delegation-toolkit"
 import {
+  getSpendingLimitsPolicy,
+  getTimeFramePolicy
+} from "@rhinestone/module-sdk"
+import {
   http,
   type Account,
   type Address,
@@ -18,10 +22,10 @@ import {
   getAbiItem,
   parseEther,
   parseUnits,
-  toFunctionSelector,
-  zeroAddress,
   toBytes,
-  toHex
+  toFunctionSelector,
+  toHex,
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -56,9 +60,9 @@ import {
   testnetMcUSDC
 } from "../../../constants"
 import {
+  type ParamRule,
   getMEEVersion,
   meeSessionActions,
-  ParamRule,
   toSmartSessionsModule
 } from "../../../modules"
 import {
@@ -69,10 +73,6 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
-import {
-  getSpendingLimitsPolicy,
-  getTimeFramePolicy
-} from "@rhinestone/module-sdk"
 
 const generateNewMcNexusAccountAndMeeClient = async (
   publicClient: PublicClient,
