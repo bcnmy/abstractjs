@@ -19,7 +19,9 @@ import {
   parseEther,
   parseUnits,
   toFunctionSelector,
-  zeroAddress
+  zeroAddress,
+  toBytes,
+  toHex
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -48,6 +50,7 @@ import {
   DEFAULT_MEE_VERSION,
   MEEVersion,
   getSudoPolicy,
+  getUniversalActionPolicy,
   getUsageLimitPolicy,
   mcUSDC,
   testnetMcUSDC
@@ -55,6 +58,7 @@ import {
 import {
   getMEEVersion,
   meeSessionActions,
+  ParamRule,
   toSmartSessionsModule
 } from "../../../modules"
 import {
@@ -65,6 +69,10 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
+import {
+  getSpendingLimitsPolicy,
+  getTimeFramePolicy
+} from "@rhinestone/module-sdk"
 
 const generateNewMcNexusAccountAndMeeClient = async (
   publicClient: PublicClient,
@@ -107,7 +115,6 @@ const generateNewMcNexusAccountAndMeeClient = async (
 
   const meeClient = await createMeeClient({
     account: mcNexus,
-    url: "http://localhost:4001/v1",
     apiKey: options?.sponsorship
       ? "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       : getDefaultMEENetworkApiKey(true)
@@ -201,8 +208,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     }
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      url: "http://localhost:4001/v1"
+      account: mcNexus
     })
 
     publicClient = createPublicClient({
@@ -452,6 +458,35 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     expect(quote).toBeDefined()
   })
 
+  test("should simulation fail if `batch: false` is provided for fusion mode", async () => {
+    const nativeTokenTransferInstruction = await mcNexus.buildComposable({
+      type: "nativeTokenTransfer",
+      data: {
+        to: eoaAccount.address,
+        value: 0n,
+        chainId: chain.id
+      }
+    })
+
+    await expect(
+      meeClient.getFusionQuote({
+        trigger: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+          amount: 1n,
+          chainId: chain.id
+        },
+        instructions: [...nativeTokenTransferInstruction],
+        batch: false,
+        simulation: {
+          simulate: true
+        },
+        feeToken
+      })
+    ).rejects.toThrowError(
+      "Failed to simulate and estimate gas for userOps. Supertransaction which includes funding instruction should always use batching."
+    )
+  })
+
   test("should pass simulation for undeployed nexus account in non-fusion mode with sufficient balance override", async () => {
     // New fresh undeployed account
     const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
@@ -686,8 +721,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     })
 
     const meeClient = await createMeeClient({
-      account: mcNexus,
-      url: "http://localhost:4001/v1"
+      account: mcNexus
     })
 
     const tokenTransfer = await mcNexus.buildComposable({
@@ -773,8 +807,7 @@ describe("mee.getQuote({ simulations }) - Multichain Simulation Scenarios", () =
     })
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      url: "http://localhost:4001/v1"
+      account: mcNexus
     })
 
     const benchmarkInputAmount = parseUnits("2", 6) // USDC 6 decimals
@@ -945,8 +978,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     }
 
     meeClient = await createMeeClient({
-      account: mcNexus,
-      url: "http://localhost:4001/v1"
+      account: mcNexus
     })
 
     publicClient = createPublicClient({
@@ -970,9 +1002,43 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       {
         fundEoa: true,
         tokenType: "permit",
-        amount: parseUnits("30", 6) // TODO: reduce this after base sepolia gas spikes are reduced
+        amount: parseUnits("10", 6) // TODO: reduce this after base sepolia gas spikes are reduced
       }
     )
+
+    const paramRule: ParamRule = {
+      condition: 1, // EQUAL
+      isLimited: false,
+      offset: 0n,
+      ref: toHex(toBytes("0x", { size: 32 })),
+      usage: { limit: BigInt(0), used: BigInt(0) }
+    }
+
+    const universalActionPolicy = getUniversalActionPolicy({
+      paramRules: {
+        length: 1n,
+        // Weird rhinestone typescript type which forces to have 16 of this like this
+        rules: [
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule,
+          paramRule
+        ]
+      },
+      valueLimitPerUse: parseUnits("100", 6)
+    })
 
     const sessionSigner = privateKeyToAccount(generatePrivateKey())
 
@@ -991,7 +1057,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       trigger: {
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
-        amount: parseUnits("19", 6) // TODO: reduce this after base sepolia gas spikes are reduced
+        amount: parseUnits("5", 6) // TODO: reduce this after base sepolia gas spikes are reduced
       }
     })
 
@@ -1015,7 +1081,18 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
             ),
             actionPolicies: [
               getSudoPolicy(),
-              getUsageLimitPolicy({ limit: parseUnits("100", 6) })
+              getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
+              getSpendingLimitsPolicy([
+                {
+                  token: testnetMcTestUSDC.addressOn(chain.id),
+                  limit: parseUnits("100", 6)
+                }
+              ]),
+              universalActionPolicy,
+              getTimeFramePolicy({
+                validAfter: 0,
+                validUntil: Date.now() + 60 * 60 * 24
+              })
             ]
           },
           {
@@ -1026,11 +1103,22 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
             ),
             actionPolicies: [
               getSudoPolicy(),
-              getUsageLimitPolicy({ limit: parseUnits("100", 6) })
+              getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
+              getSpendingLimitsPolicy([
+                {
+                  token: testnetMcUSDC.addressOn(chain.id),
+                  limit: parseUnits("100", 6)
+                }
+              ]),
+              universalActionPolicy,
+              getTimeFramePolicy({
+                validAfter: 0,
+                validUntil: Date.now() + 60 * 60 * 24
+              })
             ]
           }
         ],
-        maxPaymentAmount: parseUnits("2", 6)
+        maxPaymentAmount: parseUnits("5", 6) // TODO: reduce this after base sepolia gas spikes are reduced
       }
     )
 
@@ -1322,8 +1410,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       await prepareForSmartSessionsTest()
 
     const sessionSignerMeeClient = await createMeeClient({
-      account: sessionAccount,
-      url: "http://localhost:4001/v1"
+      account: sessionAccount
     })
 
     const sessionSignerSessionMeeClient =
@@ -1362,8 +1449,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       await prepareForSmartSessionsTest()
 
     const sessionSignerMeeClient = await createMeeClient({
-      account: sessionAccount,
-      url: "http://localhost:4001/v1"
+      account: sessionAccount
     })
 
     const sessionSignerSessionMeeClient =
@@ -1402,8 +1488,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       await prepareForSmartSessionsTest()
 
     const sessionSignerMeeClient = await createMeeClient({
-      account: sessionAccount,
-      url: "http://localhost:4001/v1"
+      account: sessionAccount
     })
 
     const sessionSignerSessionMeeClient =
@@ -1439,8 +1524,12 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
         address: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id
       },
-      // verificationGasLimit: 3_500_000n,
-      instructions: [...tokenTransferOne, ...tokenTransferTwo]
+      instructions: [
+        ...tokenTransferOne,
+        ...tokenTransferOne,
+        ...tokenTransferTwo,
+        ...tokenTransferTwo
+      ]
     })
 
     await sessionSignerMeeClient.waitForSupertransactionReceipt({
