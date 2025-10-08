@@ -2270,7 +2270,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             chainId: chain.id,
             recipientAddress: eoaAccount.address,
             amount: amountToTransfer,
-            dependsOn: [userOp(1), userOp(2)]
+            dependsOn: [userOp(1)]
           }
         ],
         feeToken: {
