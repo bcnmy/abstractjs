@@ -1097,7 +1097,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       {
         fundEoa: true,
         tokenType: "permit",
-        amount: parseUnits("10", 6) // TODO: reduce this after base sepolia gas spikes are reduced
+        amount: parseUnits("2", 6)
       }
     )
 
@@ -1152,7 +1152,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
       trigger: {
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id,
-        amount: parseUnits("5", 6) // TODO: reduce this after base sepolia gas spikes are reduced
+        amount: parseUnits("1", 6)
       }
     })
 
@@ -1213,7 +1213,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
             ]
           }
         ],
-        maxPaymentAmount: parseUnits("5", 6) // TODO: reduce this after base sepolia gas spikes are reduced
+        maxPaymentAmount: parseUnits("2", 6)
       }
     )
 
