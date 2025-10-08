@@ -22,6 +22,7 @@ import {
   getAbiItem,
   parseEther,
   parseUnits,
+  publicActions,
   toBytes,
   toFunctionSelector,
   toHex,
@@ -753,6 +754,99 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
             }
           ]
         }
+      },
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+  })
+
+  test("should fail simulation for 7702 flow if the authorization or delegation is not enabled", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ],
+      // Overriden with EOA address
+      accountAddress: eoaAccount.address
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const tokenTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: chain.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        instructions: [...tokenTransfer],
+        simulation: {
+          simulate: true
+        },
+        feeToken
+      })
+    ).rejects.toThrowError(
+      "UserOp [0] simulation failed. Revert reason: Execution reverted at contract 0x0000000071727de22e5e9d8baf0edac6f37da032 and reverted with error selector 0x08c379a0"
+    )
+  })
+
+  test("should pass simulation for 7702 authorization flow", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ],
+      accountAddress: eoaAccount.address
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const { version } = mcNexus.deploymentOn(chain.id, true)
+
+    const walletClient = createWalletClient({
+      account: eoaAccount,
+      chain: chain,
+      transport: http(TESTNET_RPC_URLS[chain.id])
+    }).extend(publicActions)
+
+    const auth = await walletClient.signAuthorization({
+      contractAddress: version.implementationAddress
+    })
+
+    const tokenTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: chain.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [...tokenTransfer],
+      delegate: true,
+      authorizations: [auth],
+      simulation: {
+        simulate: true
       },
       feeToken
     })
