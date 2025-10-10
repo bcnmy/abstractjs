@@ -1382,7 +1382,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
               functionName: "balanceOf",
               args: [testMcNexus.addressOn(chain.id, true)],
               threshold: minBalanceRequired,
-              description: "Orchestrator must have at least 0.1 USDC"
+              description: `Orchestrator must have at least ${minBalanceRequired} USDC`
             })
           ]
         }
