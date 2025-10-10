@@ -205,7 +205,7 @@ export const equalTo = (value: AnyData): ConstraintField => {
  * @param constraints - Array of constraint fields to validate and process
  * @returns Array of processed constraints ready for use
  */
-const validateAndProcessConstraints = (
+export const validateAndProcessConstraints = (
   constraints: ConstraintField[]
 ): Constraint[] => {
   const constraintsToAdd: Constraint[] = []

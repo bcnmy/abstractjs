@@ -26,7 +26,10 @@ export {
   toComposableExecutor,
   toComposableFallback,
   toEmptyHook,
-  getMEEVersion
+  getMEEVersion,
+  condition,
+  createConditionInputParam,
+  type ConditionalExecutionCondition
 } from "./modules"
 
 export {
