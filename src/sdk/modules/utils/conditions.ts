@@ -91,7 +91,7 @@ export const createConditionInputParam = (
  * ```typescript
  * import { condition } from '@biconomy/abstractjs'
  *
- * const minBalanceCondition = condition.greaterThan({
+ * const minBalanceCondition = condition.greaterThanOrEqualTo({
  *   targetContract: tokenAddress,
  *   functionAbi: erc20Abi,
  *   functionName: "balanceOf",
@@ -114,7 +114,7 @@ export const condition = {
    * @param params.description - Optional description
    * @returns Configured condition
    */
-  greaterThan: (params: {
+  greaterThanOrEqualTo: (params: {
     targetContract: Address
     functionAbi: Abi
     functionName: string
@@ -143,7 +143,7 @@ export const condition = {
    * @param params.description - Optional description
    * @returns Configured condition
    */
-  lessThan: (params: {
+  lessThanOrEqualTo: (params: {
     targetContract: Address
     functionAbi: Abi
     functionName: string

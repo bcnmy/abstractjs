@@ -13,8 +13,8 @@ describe("Conditional Execution - Unit Tests", () => {
   describe("condition builders", () => {
     const mockContract = "0x1234567890123456789012345678901234567890" as Address
 
-    test("condition.greaterThan should create a condition with GTE constraint", () => {
-      const cond = condition.greaterThan({
+    test("condition.greaterThanOrEqualTo should create a condition with GTE constraint", () => {
+      const cond = condition.greaterThanOrEqualTo({
         targetContract: mockContract,
         functionAbi: erc20Abi,
         functionName: "balanceOf",
@@ -34,8 +34,8 @@ describe("Conditional Execution - Unit Tests", () => {
       expect(cond.description).toBe("Min balance 1000")
     })
 
-    test("condition.lessThan should create a condition with LTE constraint", () => {
-      const cond = condition.lessThan({
+    test("condition.lessThanOrEqualTo should create a condition with LTE constraint", () => {
+      const cond = condition.lessThanOrEqualTo({
         targetContract: mockContract,
         functionAbi: erc20Abi,
         functionName: "balanceOf",
@@ -76,19 +76,31 @@ describe("Conditional Execution - Unit Tests", () => {
   describe("createConditionInputParam", () => {
     const mockContract = "0x1234567890123456789012345678901234567890" as Address
 
-    test("should create InputParam with STATIC_CALL fetcher type", () => {
-      const cond = condition.greaterThan({
+    test("should create InputParam with STATIC_CALL fetcher type and the encoded function call", () => {
+      const conditionParams = {
         targetContract: mockContract,
         functionAbi: erc20Abi,
         functionName: "balanceOf",
         args: [mockContract],
         threshold: 1000n
+      }
+
+      const conditionGt = condition.greaterThanOrEqualTo(conditionParams)
+      const conditionLt = condition.lessThanOrEqualTo(conditionParams)
+      const conditionEq = condition.equalTo({
+        ...conditionParams,
+        expectedValue: 1000n
       })
 
-      const inputParam = createConditionInputParam(cond)
+      const inputParamGt = createConditionInputParam(conditionGt)
+      const inputParamLt = createConditionInputParam(conditionLt)
+      const inputParamEq = createConditionInputParam(conditionEq)
 
-      expect(inputParam.fetcherType).toBe(InputParamFetcherType.STATIC_CALL)
-      expect(inputParam).toMatchInlineSnapshot(`
+      expect(inputParamGt.fetcherType).toBe(InputParamFetcherType.STATIC_CALL)
+      expect(inputParamGt.paramData).toContain(
+        mockContract.slice(2).toLowerCase()
+      ) // should be abi.encodePacked(address, bytes) particularly
+      expect(inputParamGt).toMatchInlineSnapshot(`
         {
           "constraints": [
             {
@@ -100,56 +112,52 @@ describe("Conditional Execution - Unit Tests", () => {
           "paramData": "0x00000000000000000000000012345678901234567890123456789012345678900000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000",
         }
       `)
-    })
 
-    test("should encode target contract and function data correctly", () => {
-      const cond = condition.greaterThan({
-        targetContract: mockContract,
-        functionAbi: erc20Abi,
-        functionName: "balanceOf",
-        args: [mockContract],
-        threshold: 500n
-      })
-
-      const inputParam = createConditionInputParam(cond)
-
-      // paramData should be abi.encodePacked(address, bytes)
-      // It should contain the encoded function call
-      expect(inputParam.paramData).toContain(
+      expect(inputParamLt.fetcherType).toBe(InputParamFetcherType.STATIC_CALL)
+      expect(inputParamLt.paramData).toContain(
         mockContract.slice(2).toLowerCase()
-      )
-    })
-
-    test("should handle different constraint types", () => {
-      const conditions = [
-        condition.greaterThan({
-          targetContract: mockContract,
-          functionAbi: erc20Abi,
-          functionName: "balanceOf",
-          args: [mockContract],
-          threshold: 100n
-        }),
-        condition.lessThan({
-          targetContract: mockContract,
-          functionAbi: erc20Abi,
-          functionName: "balanceOf",
-          args: [mockContract],
-          threshold: 200n
-        }),
-        condition.equalTo({
-          targetContract: mockContract,
-          functionAbi: erc20Abi,
-          functionName: "totalSupply",
-          args: [],
-          expectedValue: 1000000n
-        })
-      ]
-
-      for (const cond of conditions) {
-        const inputParam = createConditionInputParam(cond)
-        expect(inputParam.fetcherType).toBe(InputParamFetcherType.STATIC_CALL)
-        expect(inputParam.constraints.length).toBeGreaterThan(0)
+      ) // should be abi.encodePacked(address, bytes) particularly
+      expect(inputParamLt).toMatchInlineSnapshot(`
+      {
+        "constraints": [
+          {
+            "constraintType": 2,
+            "referenceData": "0x00000000000000000000000000000000000000000000000000000000000003e8",
+          },
+        ],
+        "fetcherType": 1,
+        "paramData": "0x00000000000000000000000012345678901234567890123456789012345678900000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000",
       }
+    `)
+
+      expect(inputParamEq.fetcherType).toBe(InputParamFetcherType.STATIC_CALL)
+      expect(inputParamEq.paramData).toContain(
+        mockContract.slice(2).toLowerCase()
+      ) // should be abi.encodePacked(address, bytes) particularly
+      expect(inputParamEq).toMatchInlineSnapshot(`
+      {
+        "constraints": [
+          {
+            "constraintType": 0,
+            "referenceData": "0x00000000000000000000000000000000000000000000000000000000000003e8",
+          },
+        ],
+        "fetcherType": 1,
+        "paramData": "0x00000000000000000000000012345678901234567890123456789012345678900000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002470a08231000000000000000000000000123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000",
+      }
+    `)
+
+      // reference data should be the same
+      expect(inputParamGt.constraints[0].referenceData).toBe(
+        inputParamLt.constraints[0].referenceData
+      )
+      expect(inputParamGt.constraints[0].referenceData).toBe(
+        inputParamEq.constraints[0].referenceData
+      )
+
+      // paramData should be the same
+      expect(inputParamGt.paramData).toBe(inputParamLt.paramData)
+      expect(inputParamGt.paramData).toBe(inputParamEq.paramData)
     })
   })
 })
