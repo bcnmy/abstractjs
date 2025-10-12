@@ -62,7 +62,7 @@ export const buildRawComposable = async (
   }
 
   const functionSig = calldata.slice(0, 10) as Hex
-  const callDataEncodedArgs = calldata.slice(10) as Hex
+  const callDataEncodedArgs = `0x${calldata.slice(10)}` as Hex
 
   let versionAgnosticComposableParams: InputParam[] = []
   if (callDataEncodedArgs.length !== 0) {

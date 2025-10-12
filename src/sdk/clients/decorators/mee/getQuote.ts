@@ -275,6 +275,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
+  /**
+   * Tags to be used for the transaction
+   */
+  tags?: string[]
 } & OneOf<
     | {
         /**
@@ -377,6 +381,8 @@ type QuoteRequest = {
   }[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
+  /** Tags to be used for the transaction */
+  tags?: string[]
 }
 
 /**
@@ -891,7 +897,11 @@ export const getQuote = async (
       }
     )
   )
-  const quoteRequest: QuoteRequest = { userOps, paymentInfo }
+  const quoteRequest: QuoteRequest = {
+    userOps,
+    paymentInfo,
+    tags: parameters.tags
+  }
 
   let quote = await client.request<GetQuotePayload>({
     path: pathToQuery,
