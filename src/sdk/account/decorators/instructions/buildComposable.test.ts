@@ -1439,23 +1439,19 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       return metaStatus.status
     }
 
-    const expectUsdcpBalance = async (
-      testMcNexus: MultichainSmartAccount,
-      maxBalance: bigint
-    ) => {
+    // make sure min balance required is more than the current token leftover in nexus
+    const getMinRequiredBalance = async (testMcNexus: MultichainSmartAccount) => {
       const balance = await publicClient.readContract({
         address: tokenAddress,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [testMcNexus.addressOn(chain.id, true)]
       })
-      expect(balance).to.toBeLessThan(maxBalance)
-      console.log(`USDCP balance before test: ${balance} < ${maxBalance}, ok`)
+
+      return balance + parseUnits("0.1", 6);
     }
 
     it("should execute right away when condition is already met", async () => {
-      const minBalanceRequired = parseUnits("0.5", 6)
-      const triggerAmount = minBalanceRequired // should met the condition
 
       for (const {
         name,
@@ -1463,7 +1459,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         meeClient: testMeeClient
       } of accountConfigs) {
         console.log(`Testing conditional execution with ${name}`)
-        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = minBalanceRequired // should met the condition
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1505,16 +1502,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
 
     it("should fail if condition is never met", async () => {
-      const minBalanceRequired = parseUnits("0.5", 6)
-      const triggerAmount = 1n // not enough
-
       for (const {
         name,
         mcNexus: testMcNexus,
         meeClient: testMeeClient
       } of accountConfigs) {
         console.log(`Testing conditional execution with ${name}`)
-        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = 1n // not enough
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1550,9 +1545,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
 
     it("should wait for condition met and then execute", async () => {
-      const minBalanceRequired = parseUnits("0.5", 6)
-      const triggerAmount = 1n // not enough initially
-
       for (const {
         name,
         mcNexus: testMcNexus,
@@ -1562,7 +1554,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           `Testing conditional execution waiting for condition with ${name}`
         )
 
-        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = 1n // not enough initially
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1632,8 +1625,6 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     it("should wait for multiple condition met and then execute", async () => {
       const usdctAddr = "0xb394E82FD251De530c9d71CBEe9527A4CF690e57" // usdt bico test
-      const minBalanceRequired = parseUnits("0.5", 6)
-      const triggerAmount = minBalanceRequired // enough
 
       for (const {
         name,
@@ -1644,7 +1635,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           `Testing conditional execution waiting for multiple conditions with ${name}`
         )
 
-        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
+        const minBalanceRequired = parseUnits("0.5", 6)
+        const triggerAmount = 1n // not enough initially
 
         const usdctBalance = await publicClient.readContract({
           address: usdctAddr,
