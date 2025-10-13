@@ -1454,7 +1454,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     }
 
     it("should execute right away when condition is already met", async () => {
-      const minBalanceRequired = parseUnits("0.1", 6)
+      const minBalanceRequired = parseUnits("0.5", 6)
       const triggerAmount = minBalanceRequired // should met the condition
 
       for (const {
@@ -1505,7 +1505,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
 
     it("should fail if condition is never met", async () => {
-      const minBalanceRequired = parseUnits("0.1", 6)
+      const minBalanceRequired = parseUnits("0.5", 6)
       const triggerAmount = 1n // not enough
 
       for (const {
@@ -1550,7 +1550,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
 
     it("should wait for condition met and then execute", async () => {
-      const minBalanceRequired = parseUnits("0.1", 6)
+      const minBalanceRequired = parseUnits("0.5", 6)
       const triggerAmount = 1n // not enough initially
 
       for (const {
@@ -1632,7 +1632,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
     it("should wait for multiple condition met and then execute", async () => {
       const usdctAddr = "0xb394E82FD251De530c9d71CBEe9527A4CF690e57" // usdt bico test
-      const minBalanceRequired = parseUnits("0.1", 6)
+      const minBalanceRequired = parseUnits("0.5", 6)
       const triggerAmount = minBalanceRequired // enough
 
       for (const {
