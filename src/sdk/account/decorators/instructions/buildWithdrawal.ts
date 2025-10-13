@@ -1,5 +1,6 @@
 import { type Address, encodeFunctionData } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
@@ -40,6 +41,8 @@ export type BuildWithdrawalParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   recipient?: Address
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -94,11 +97,27 @@ export const buildWithdrawal = async (
     tokenAddress,
     amount,
     gasLimit,
-    recipient = accountAddress // EOA or owner account address
+    recipient = accountAddress, // EOA or owner account address
+    metadata: metadataOverride
   } = parameters
   const { forceComposableEncoding = false } = composabilityParams ?? {
     forceComposableEncoding: false
   }
+
+  const metadata: InstructionMetadata[] = metadataOverride || [
+    {
+      type: "WITHDRAW",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: accountAddress,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
 
   let withdrawalCall: AbstractCall[] | ComposableCall[]
 
@@ -114,7 +133,7 @@ export const buildWithdrawal = async (
       const { composabilityVersion } = composabilityParams
       if (composabilityVersion === ComposabilityVersion.V1_0_0) {
         throw new Error(
-          "Runtime balance for Native tokens is not supported for Composability v1.0.0"
+          "Runtime values for Native tokens are not supported for Composability v1.0.0"
         )
       }
       // build value transfer composable call using raw composable build function
@@ -185,7 +204,8 @@ export const buildWithdrawal = async (
         {
           calls: withdrawalCall,
           chainId,
-          isComposable: true
+          isComposable: true,
+          metadata
         }
       ]
     }
@@ -209,7 +229,8 @@ export const buildWithdrawal = async (
     ...currentInstructions,
     {
       calls: withdrawalCall,
-      chainId
+      chainId,
+      metadata
     }
   ]
 }

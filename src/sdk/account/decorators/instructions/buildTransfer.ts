@@ -1,10 +1,12 @@
 import { type Address, encodeFunctionData } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  isComposableCallRequired
+  isComposableCallRequired,
+  isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
@@ -35,6 +37,8 @@ export type BuildTransferParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   recipient: Address
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -83,8 +87,9 @@ export const buildTransfer = async (
   parameters: BuildTransferParameters,
   composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, recipient } = parameters
+  const { currentInstructions = [], accountAddress } = baseParams
+  const { chainId, tokenAddress, amount, gasLimit, recipient, metadata } =
+    parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
   }
@@ -142,12 +147,28 @@ export const buildTransfer = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "TRANSFER",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: accountAddress,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: triggerCalls,
       chainId,
-      isComposable: isComposableCall
+      isComposable: isComposableCall,
+      metadata: metadata || defaultMetadata
     }
   ]
 }
