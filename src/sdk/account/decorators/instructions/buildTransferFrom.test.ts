@@ -14,8 +14,8 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildTransferFrom from "./buildTransferFrom"
-import { MEEVersionConfig, MeeVersionsWithChainId } from "../../utils"
 
 describe("mee.buildTransferFrom", () => {
   let network: NetworkConfig

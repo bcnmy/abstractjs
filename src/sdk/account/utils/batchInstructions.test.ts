@@ -10,7 +10,7 @@ import { base, mainnet, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
   MEEVersionConfig,
-  MeeVersionsWithChainId,
+  type MeeVersionsWithChainId,
   type MultichainSmartAccount,
   buildApprove,
   buildTransferFrom,

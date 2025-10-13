@@ -13,8 +13,8 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildDefaultInstructions from "./buildDefaultInstructions"
-import { MEEVersionConfig, MeeVersionsWithChainId } from "../../utils"
 
 describe("mee.buildDefaultInstructions", () => {
   let network: NetworkConfig

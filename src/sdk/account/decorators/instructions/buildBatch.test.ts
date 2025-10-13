@@ -14,10 +14,10 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildApprove from "./buildApprove"
 import buildBatch from "./buildBatch"
 import buildWithdrawal from "./buildWithdrawal"
-import { MEEVersionConfig, MeeVersionsWithChainId } from "../../utils"
 
 describe("mee.buildBatch", () => {
   let network: NetworkConfig

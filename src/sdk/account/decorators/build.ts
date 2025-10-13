@@ -3,6 +3,7 @@ import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
 import { isRuntimeComposableValue } from "../../modules/utils/composabilityCalls"
+import type { MeeVersionsWithChainId } from "../utils"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
 } from "./instructions/buildAcrossIntentComposable"
@@ -46,7 +47,6 @@ import {
 import buildWithdrawal, {
   type BuildWithdrawalParameters
 } from "./instructions/buildWithdrawal"
-import { type MeeVersionsWithChainId } from "../utils"
 
 /**
  * Parameters for a token builders

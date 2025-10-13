@@ -1,7 +1,7 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
-import { type MeeVersionsWithChainId } from "./getVersion"
+import type { MeeVersionsWithChainId } from "./getVersion"
 
 type BatchInstructionsParameters = {
   /**
