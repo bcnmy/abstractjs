@@ -1,5 +1,6 @@
 import type { Address, Hex } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
   type ComposableCall,
   type InputParam,
@@ -18,6 +19,7 @@ export type BuildRawComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint | RuntimeValue
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -54,7 +56,7 @@ export const buildRawComposable = async (
   composabilityParameters: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { to, calldata, gasLimit, value, chainId } = parameters
+  const { to, calldata, gasLimit, value, chainId, metadata } = parameters
   const { composabilityVersion } = composabilityParameters
 
   if (calldata.length < 10 || !calldata.startsWith("0x")) {
@@ -80,12 +82,21 @@ export const buildRawComposable = async (
     gasLimit
   )
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "CUSTOM",
+      description: "Custom composable on-chain action",
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: [composableCall],
       chainId,
-      isComposable: true
+      isComposable: true,
+      metadata: metadata || defaultMetadata
     }
   ]
 }

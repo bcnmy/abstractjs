@@ -1870,7 +1870,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           chainId: chain.id,
           recipientAddress: eoaAccount.address,
           amount: runtimeNativeBalanceOf({
-            targetAddress: orchestratorAddress
+            targetAddress: orchestratorAddress,
+            constraints: [greaterThanOrEqualTo(1n)]
           })
         }
       ],

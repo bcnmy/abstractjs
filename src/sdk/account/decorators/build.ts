@@ -15,7 +15,6 @@ import buildBatch, {
 } from "./instructions/buildBatch"
 import {
   type BuildComposableParameters,
-  type BuildNativeTokenTransferComposableParameters,
   buildComposableUtil
 } from "./instructions/buildComposable"
 import {
@@ -30,6 +29,9 @@ import {
   type BuildMultichainInstructionsParameters,
   buildMultichainInstructions
 } from "./instructions/buildMultichainInstructions"
+import buildNativeTokenTransfer, {
+  type BuildNativeTokenTransferParameters
+} from "./instructions/buildNativeTokenTransfer"
 import buildRawComposable, {
   type BuildRawComposableParameters
 } from "./instructions/buildRawComposable"
@@ -127,7 +129,7 @@ export type BuildTransferInstruction = {
  */
 export type BuildNativeTokenTransferInstruction = {
   type: "nativeTokenTransfer"
-  data: BuildNativeTokenTransferComposableParameters
+  data: BuildNativeTokenTransferParameters
   efficientMode?: boolean
 }
 
@@ -217,6 +219,7 @@ export type ComposabilityParams = {
 export type BaseInstructionTypes =
   | BuildTransferFromInstruction
   | BuildTransferInstruction
+  | BuildNativeTokenTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
@@ -235,7 +238,6 @@ export type BuildInstructionTypes =
  */
 export type BuildComposableInstructionTypes =
   | BaseInstructionTypes
-  | BuildNativeTokenTransferInstruction
   | BuildComposableInstruction
   | BuildComposableRawInstruction
   | BuildAcrossIntentComposableInstruction
@@ -311,6 +313,9 @@ export const build = async (
     case "transfer": {
       return buildTransfer(baseParams, data)
     }
+    case "nativeTokenTransfer": {
+      return buildNativeTokenTransfer(baseParams, data)
+    }
     case "approve": {
       return buildApprove(baseParams, data)
     }
@@ -373,16 +378,11 @@ export const buildComposable = async (
       })
     }
     case "nativeTokenTransfer": {
-      return buildRawComposable(
-        baseParams,
-        {
-          ...data,
-          calldata: "0x00000000"
-        },
-        {
-          composabilityVersion: composabilityVersion!
-        }
-      )
+      return buildNativeTokenTransfer(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "approve": {
       return buildApprove(baseParams, data, {

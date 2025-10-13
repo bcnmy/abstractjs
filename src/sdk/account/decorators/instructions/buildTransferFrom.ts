@@ -1,9 +1,11 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
 import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  isComposableCallRequired
+  isComposableCallRequired,
+  isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
@@ -39,6 +41,8 @@ export type BuildTransferFromParameters = TokenParams & {
    * @example "0x1234567890123456789012345678901234567890"
    */
   recipient: Address
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -90,8 +94,15 @@ export const buildTransferFrom = async (
   composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, sender, recipient } =
-    parameters
+  const {
+    chainId,
+    tokenAddress,
+    amount,
+    gasLimit,
+    sender,
+    recipient,
+    metadata
+  } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
   }
@@ -149,12 +160,28 @@ export const buildTransferFrom = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "TRANSFER",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: sender,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: transferFromCall,
       chainId,
-      isComposable: isComposableCall
+      isComposable: isComposableCall,
+      metadata: metadata || defaultMetadata
     }
   ]
 }

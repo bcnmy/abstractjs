@@ -9,7 +9,9 @@ import {
 } from "viem"
 import { isNativeToken } from "../../../account/utils"
 import type { Instruction } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion } from "../../../constants"
+import { functionNameToLabel } from "../../../modules/utils/Helpers"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
@@ -60,13 +62,7 @@ export type BuildComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint | RuntimeValue
-}
-
-export type BuildNativeTokenTransferComposableParameters = {
-  to: Address | RuntimeValue
-  gasLimit?: bigint
-  value: bigint | RuntimeValue
-  chainId: number
+  metadata?: InstructionMetadata[]
 }
 
 export const buildComposableCall = async (
@@ -318,15 +314,25 @@ export const buildComposableUtil = async (
   composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
+  const { metadata } = parameters
 
   const calls = await buildComposableCall(parameters, composabilityParams)
+
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "CUSTOM",
+      description: `${functionNameToLabel(parameters.functionName)} on-chain action`,
+      chainId: parameters.chainId
+    }
+  ]
 
   return [
     ...currentInstructions,
     {
       calls: calls,
       chainId: parameters.chainId,
-      isComposable: true
+      isComposable: true,
+      metadata: metadata || defaultMetadata
     }
   ]
 }
