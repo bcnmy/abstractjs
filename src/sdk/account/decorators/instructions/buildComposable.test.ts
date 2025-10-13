@@ -1440,7 +1440,9 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     }
 
     // make sure min balance required is more than the current token leftover in nexus
-    const getMinRequiredBalance = async (testMcNexus: MultichainSmartAccount) => {
+    const getMinRequiredBalance = async (
+      testMcNexus: MultichainSmartAccount
+    ) => {
       const balance = await publicClient.readContract({
         address: tokenAddress,
         abi: erc20Abi,
@@ -1448,11 +1450,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         args: [testMcNexus.addressOn(chain.id, true)]
       })
 
-      return balance + parseUnits("0.1", 6);
+      return balance + parseUnits("0.1", 6)
     }
 
     it("should execute right away when condition is already met", async () => {
-
       for (const {
         name,
         mcNexus: testMcNexus,
@@ -1636,7 +1637,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         )
 
         const minBalanceRequired = parseUnits("0.5", 6)
-        const triggerAmount = 1n // not enough initially
+        const triggerAmount = minBalanceRequired // enough
 
         const usdctBalance = await publicClient.readContract({
           address: usdctAddr,
