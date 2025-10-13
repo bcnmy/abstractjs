@@ -92,6 +92,15 @@ export const buildWithdrawal = async (
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], accountAddress, meeVersions } = baseParams
 
+  const {
+    chainId,
+    tokenAddress,
+    amount,
+    gasLimit,
+    recipient = accountAddress, // EOA or owner account address
+    metadata: metadataOverride
+  } = parameters
+
   const [meeVersionInfo] = meeVersions.filter(
     (meeVersion) => meeVersion.chainId === chainId
   )
@@ -102,14 +111,6 @@ export const buildWithdrawal = async (
 
   const meeVersion = meeVersionInfo.version
 
-  const {
-    chainId,
-    tokenAddress,
-    amount,
-    gasLimit,
-    recipient = accountAddress, // EOA or owner account address
-    metadata: metadataOverride
-  } = parameters
   const { forceComposableEncoding = false } = composabilityParams ?? {
     forceComposableEncoding: false
   }
