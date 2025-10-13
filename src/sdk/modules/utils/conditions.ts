@@ -1,10 +1,11 @@
 import {
   type Abi,
   type Address,
+  type ContractFunctionArgs,
+  type ContractFunctionName,
   encodeAbiParameters,
   encodeFunctionData
 } from "viem"
-import type { AnyData } from "./Types"
 import {
   type ConstraintField,
   type InputParam,
@@ -33,10 +34,13 @@ export enum ConditionType {
  * Conditions are evaluated via STATIC_CALL operations before the main function execution.
  * If any condition fails, the entire transaction reverts.
  *
+ * @typeParam TAbi - The contract ABI type
+ * @typeParam TFunctionName - The name of the view/pure function to call
+ *
  * @property targetContract - Contract address to call for condition evaluation
  * @property functionAbi - ABI of the contract containing the condition function
  * @property functionName - Name of the view/pure function to call
- * @property args - Arguments to pass to the condition function
+ * @property args - Arguments to pass to the condition function (type-safe based on ABI)
  * @property constraint - Constraint to apply to the function result (GTE, LTE, EQ)
  * @property description - Optional human-readable description for debugging
  *
@@ -51,11 +55,17 @@ export enum ConditionType {
  *   description: "Minimum USDC balance: 1000"
  * }
  */
-export type ExecutionCondition = {
+export type ExecutionCondition<
+  TAbi extends Abi = Abi,
+  TFunctionName extends ContractFunctionName<
+    TAbi,
+    "pure" | "view"
+  > = ContractFunctionName<TAbi, "pure" | "view">
+> = {
   targetContract: Address
-  functionAbi: Abi
-  functionName: string
-  args: Array<AnyData>
+  functionAbi: TAbi
+  functionName: TFunctionName
+  args: ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>
   constraint: ConstraintField
   description?: string
 }
@@ -99,15 +109,18 @@ export const createConditionInputParam = (
  * Creates a condition with the specified constraint type and value.
  * This is the unified helper function used by all condition builders.
  *
+ * @typeParam TAbi - The contract ABI type
+ * @typeParam TFunctionName - The name of the view/pure function to call
+ *
  * @param params - Condition parameters
  * @param params.targetContract - Contract to call
  * @param params.functionAbi - ABI containing the function
- * @param params.functionName - Function to call
- * @param params.args - Function arguments
+ * @param params.functionName - Function to call (must be view or pure)
+ * @param params.args - Function arguments (type-safe based on ABI)
  * @param params.value - The value to compare against (threshold or expected value)
  * @param params.type - The constraint type (GTE, LTE, or EQ)
  * @param params.description - Optional description
- * @returns Configured condition
+ * @returns Configured condition with type-safe arguments
  *
  * @example
  * ```typescript
@@ -121,15 +134,18 @@ export const createConditionInputParam = (
  * })
  * ```
  */
-export const createCondition = (params: {
+export const createCondition = <
+  TAbi extends Abi,
+  TFunctionName extends ContractFunctionName<TAbi, "pure" | "view">
+>(params: {
   targetContract: Address
-  functionAbi: Abi
-  functionName: string
-  args: Array<AnyData>
+  functionAbi: TAbi
+  functionName: TFunctionName
+  args: ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>
   value: bigint
   type: ConditionType
   description?: string
-}): ExecutionCondition => {
+}): ExecutionCondition<TAbi, TFunctionName> => {
   // Map ConditionType enum to the appropriate constraint function
   const constraintMap = {
     [ConditionType.GTE]: greaterThanOrEqualTo,

@@ -27,8 +27,9 @@ export {
   toComposableFallback,
   toEmptyHook,
   getMEEVersion,
-  condition,
+  createCondition,
   createConditionInputParam,
+  ConditionType,
   type ExecutionCondition
 } from "./modules"
 
