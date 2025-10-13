@@ -73,6 +73,10 @@ export type BuildComposableParameters = {
    * @since v1.2.0
    */
   conditions?: ExecutionCondition[]
+  /**
+   * Optional metadata describing the instruction for display purposes
+   */
+  metadata?: InstructionMetadata[]
 }
 
 export type BuildNativeTokenTransferComposableParameters = {
