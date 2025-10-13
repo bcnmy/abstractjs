@@ -17,6 +17,18 @@ import {
 } from "./composabilityCalls"
 
 /**
+ * Enum for condition constraint types
+ */
+export enum ConditionType {
+  /** Greater than or equal to */
+  GTE = "gte",
+  /** Less than or equal to */
+  LTE = "lte",
+  /** Equal to */
+  EQ = "eq"
+}
+
+/**
  * Defines a condition that must be satisfied for the composable call to execute.
  * Conditions are evaluated via STATIC_CALL operations before the main function execution.
  * If any condition fails, the entire transaction reverts.
@@ -39,7 +51,7 @@ import {
  *   description: "Minimum USDC balance: 1000"
  * }
  */
-export type ConditionalExecutionCondition = {
+export type ExecutionCondition = {
   targetContract: Address
   functionAbi: Abi
   functionName: string
@@ -58,7 +70,7 @@ export type ConditionalExecutionCondition = {
  * @internal
  */
 export const createConditionInputParam = (
-  condition: ConditionalExecutionCondition
+  condition: ExecutionCondition
 ): InputParam => {
   // Encode the static call: (address, bytes)
   const encodedParam = encodeAbiParameters(
@@ -84,107 +96,53 @@ export const createConditionInputParam = (
 }
 
 /**
- * Namespace for condition builder functions.
- * Provides a clean, discoverable API for creating common condition types.
+ * Creates a condition with the specified constraint type and value.
+ * This is the unified helper function used by all condition builders.
+ *
+ * @param params - Condition parameters
+ * @param params.targetContract - Contract to call
+ * @param params.functionAbi - ABI containing the function
+ * @param params.functionName - Function to call
+ * @param params.args - Function arguments
+ * @param params.value - The value to compare against (threshold or expected value)
+ * @param params.type - The constraint type (GTE, LTE, or EQ)
+ * @param params.description - Optional description
+ * @returns Configured condition
  *
  * @example
  * ```typescript
- * import { condition } from '@biconomy/abstractjs'
- *
- * const minBalanceCondition = condition.greaterThanOrEqualTo({
+ * const condition = createCondition({
  *   targetContract: tokenAddress,
  *   functionAbi: erc20Abi,
  *   functionName: "balanceOf",
  *   args: [userAddress],
- *   threshold: 1000n
+ *   value: 1000n,
+ *   type: ConditionType.GTE
  * })
  * ```
  */
-export const condition = {
-  /**
-   * Creates a greater-than-or-equal condition.
-   * The condition passes if: result >= threshold
-   *
-   * @param params - Condition parameters
-   * @param params.targetContract - Contract to call
-   * @param params.functionAbi - ABI containing the function
-   * @param params.functionName - Function to call
-   * @param params.args - Function arguments
-   * @param params.threshold - Minimum value required (inclusive)
-   * @param params.description - Optional description
-   * @returns Configured condition
-   */
-  greaterThanOrEqualTo: (params: {
-    targetContract: Address
-    functionAbi: Abi
-    functionName: string
-    args: Array<AnyData>
-    threshold: bigint
-    description?: string
-  }): ConditionalExecutionCondition => ({
-    targetContract: params.targetContract,
-    functionAbi: params.functionAbi,
-    functionName: params.functionName,
-    args: params.args,
-    constraint: greaterThanOrEqualTo(params.threshold),
-    description: params.description
-  }),
+export const createCondition = (params: {
+  targetContract: Address
+  functionAbi: Abi
+  functionName: string
+  args: Array<AnyData>
+  value: bigint
+  type: ConditionType
+  description?: string
+}): ExecutionCondition => {
+  // Map ConditionType enum to the appropriate constraint function
+  const constraintMap = {
+    [ConditionType.GTE]: greaterThanOrEqualTo,
+    [ConditionType.LTE]: lessThanOrEqualTo,
+    [ConditionType.EQ]: equalTo
+  }
 
-  /**
-   * Creates a less-than-or-equal condition.
-   * The condition passes if: result <= threshold
-   *
-   * @param params - Condition parameters
-   * @param params.targetContract - Contract to call
-   * @param params.functionAbi - ABI containing the function
-   * @param params.functionName - Function to call
-   * @param params.args - Function arguments
-   * @param params.threshold - Maximum value allowed (inclusive)
-   * @param params.description - Optional description
-   * @returns Configured condition
-   */
-  lessThanOrEqualTo: (params: {
-    targetContract: Address
-    functionAbi: Abi
-    functionName: string
-    args: Array<AnyData>
-    threshold: bigint
-    description?: string
-  }): ConditionalExecutionCondition => ({
+  return {
     targetContract: params.targetContract,
     functionAbi: params.functionAbi,
     functionName: params.functionName,
     args: params.args,
-    constraint: lessThanOrEqualTo(params.threshold),
+    constraint: constraintMap[params.type](params.value),
     description: params.description
-  }),
-
-  /**
-   * Creates an equality condition.
-   * The condition passes if: result == expectedValue
-   *
-   * @param params - Condition parameters
-   * @param params.targetContract - Contract to call
-   * @param params.functionAbi - ABI containing the function
-   * @param params.functionName - Function to call
-   * @param params.args - Function arguments
-   * @param params.expectedValue - Expected value for equality check
-   * @param params.description - Optional description
-   * @returns Configured condition
-   */
-  equalTo: (params: {
-    targetContract: Address
-    functionAbi: Abi
-    functionName: string
-    args: Array<AnyData>
-    expectedValue: bigint
-    description?: string
-  }): ConditionalExecutionCondition => ({
-    targetContract: params.targetContract,
-    functionAbi: params.functionAbi,
-    functionName: params.functionName,
-    args: params.args,
-    constraint: equalTo(params.expectedValue),
-    description: params.description
-  })
+  }
 }

@@ -45,9 +45,10 @@ import {
 } from "../../../constants"
 import { ComposabilityVersion } from "../../../constants"
 import {
-  ConditionalExecutionCondition,
+  ConditionType,
+  type ExecutionCondition,
   type RuntimeValue,
-  condition,
+  createCondition,
   getMEEVersion,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf,
@@ -1360,21 +1361,19 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const createWithdrawInstructionWithCondition = async (
       testMcNexus: MultichainSmartAccount,
       minBalanceRequired: bigint,
-      extraConditions: ConditionalExecutionCondition[] = []
+      extraConditions: ExecutionCondition[] = []
     ) => {
-      const defaultCondition = condition.greaterThanOrEqualTo({
-          targetContract: tokenAddress,
-          functionAbi: erc20Abi,
-          functionName: "balanceOf",
-          args: [testMcNexus.addressOn(chain.id, true)],
-          threshold: minBalanceRequired,
-          description: `Orchestrator must have at least ${minBalanceRequired} USDC`
-        })
+      const defaultCondition = createCondition({
+        targetContract: tokenAddress,
+        functionAbi: erc20Abi,
+        functionName: "balanceOf",
+        args: [testMcNexus.addressOn(chain.id, true)],
+        value: minBalanceRequired,
+        type: ConditionType.GTE,
+        description: `Orchestrator must have at least ${minBalanceRequired} USDC`
+      })
 
-      const conditions = [
-        defaultCondition,
-        ...extraConditions
-      ]
+      const conditions = [defaultCondition, ...extraConditions]
 
       return await testMcNexus.buildComposable({
         type: "default",
@@ -1386,11 +1385,11 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             eoaAccount.address,
             runtimeERC20BalanceOf({
               targetAddress: testMcNexus.addressOn(chain.id, true),
-              tokenAddress,
+              tokenAddress
             })
           ],
           chainId: chain.id,
-          conditions,
+          conditions
         }
       })
     }
@@ -1400,7 +1399,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       testMeeClient: MeeClient,
       minBalanceRequired: bigint,
       triggerAmount: bigint,
-      extraConditions?: ConditionalExecutionCondition[]
+      extraConditions?: ExecutionCondition[]
     ) => {
       const withdrawWithCondition =
         await createWithdrawInstructionWithCondition(
@@ -1440,7 +1439,9 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       return metaStatus.status
     }
 
-    const expectZeroUsdcpBalance = async (testMcNexus: MultichainSmartAccount) => {
+    const expectZeroUsdcpBalance = async (
+      testMcNexus: MultichainSmartAccount
+    ) => {
       const balance = await publicClient.readContract({
         address: tokenAddress,
         abi: erc20Abi,
@@ -1466,7 +1467,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           testMcNexus,
           testMeeClient,
           minBalanceRequired,
-          triggerAmount,
+          triggerAmount
         )
 
         console.log("getting fusion quote")
@@ -1628,7 +1629,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
 
     it("should wait for multiple condition met and then execute", async () => {
-      const usdctAddr = '0xb394E82FD251De530c9d71CBEe9527A4CF690e57';   // usdt bico test
+      const usdctAddr = "0xb394E82FD251De530c9d71CBEe9527A4CF690e57" // usdt bico test
       const minBalanceRequired = parseUnits("0.1", 6)
       const triggerAmount = minBalanceRequired // enough
 
@@ -1649,14 +1650,15 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           functionName: "balanceOf",
           args: [testMcNexus.addressOn(chain.id, true)]
         })
-        const minUsdctRequired = usdctBalance + 1n;    // make it not enough
+        const minUsdctRequired = usdctBalance + 1n // make it not enough
         const extraConditions = [
-          condition.greaterThanOrEqualTo({
+          createCondition({
             targetContract: usdctAddr,
             functionAbi: erc20Abi,
             functionName: "balanceOf",
             args: [testMcNexus.addressOn(chain.id, true)],
-            threshold: minUsdctRequired,
+            value: minUsdctRequired,
+            type: ConditionType.GTE,
             description: `Orchestrator must have at least ${minBalanceRequired} USDC Bico Test`
           })
         ]
@@ -1692,10 +1694,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           address: usdctAddr,
           abi: erc20Abi,
           functionName: "transfer",
-          args: [
-            testMcNexus.addressOn(chain.id, true),
-            1n,
-          ]
+          args: [testMcNexus.addressOn(chain.id, true), 1n]
         })
 
         await publicClient.waitForTransactionReceipt({

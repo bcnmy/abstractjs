@@ -21,7 +21,7 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { isRuntimeComposableValue } from "../../../modules/utils/composabilityCalls"
 import {
-  type ConditionalExecutionCondition,
+  type ExecutionCondition,
   createConditionInputParam
 } from "../../../modules/utils/conditions"
 import {
@@ -70,7 +70,7 @@ export type BuildComposableParameters = {
    * Transaction reverts if any condition fails.
    * @since v1.2.0
    */
-  conditions?: ConditionalExecutionCondition[]
+  conditions?: ExecutionCondition[]
 }
 
 export type BuildNativeTokenTransferComposableParameters = {

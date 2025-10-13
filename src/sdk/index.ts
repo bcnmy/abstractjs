@@ -29,7 +29,7 @@ export {
   getMEEVersion,
   condition,
   createConditionInputParam,
-  type ConditionalExecutionCondition
+  type ExecutionCondition
 } from "./modules"
 
 export {

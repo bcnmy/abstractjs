@@ -7,19 +7,24 @@ import {
   greaterThanOrEqualTo,
   lessThanOrEqualTo
 } from "./composabilityCalls"
-import { condition, createConditionInputParam } from "./conditions"
+import {
+  ConditionType,
+  createCondition,
+  createConditionInputParam
+} from "./conditions"
 
 describe("Conditional Execution - Unit Tests", () => {
   describe("condition builders", () => {
     const mockContract = "0x1234567890123456789012345678901234567890" as Address
 
-    test("condition.greaterThanOrEqualTo should create a condition with GTE constraint", () => {
-      const cond = condition.greaterThanOrEqualTo({
+    test("createCondition should create a condition with GTE constraint", () => {
+      const cond = createCondition({
         targetContract: mockContract,
         functionAbi: erc20Abi,
         functionName: "balanceOf",
         args: [mockContract],
-        threshold: 1000n,
+        value: 1000n,
+        type: ConditionType.GTE,
         description: "Min balance 1000"
       })
 
@@ -34,13 +39,14 @@ describe("Conditional Execution - Unit Tests", () => {
       expect(cond.description).toBe("Min balance 1000")
     })
 
-    test("condition.lessThanOrEqualTo should create a condition with LTE constraint", () => {
-      const cond = condition.lessThanOrEqualTo({
+    test("createCondition should create a condition with LTE constraint", () => {
+      const cond = createCondition({
         targetContract: mockContract,
         functionAbi: erc20Abi,
         functionName: "balanceOf",
         args: [mockContract],
-        threshold: 5000n,
+        value: 5000n,
+        type: ConditionType.LTE,
         description: "Max balance 5000"
       })
 
@@ -53,13 +59,14 @@ describe("Conditional Execution - Unit Tests", () => {
       expect(cond.description).toBe("Max balance 5000")
     })
 
-    test("condition.equalTo should create a condition with EQ constraint", () => {
-      const cond = condition.equalTo({
+    test("createCondition should create a condition with EQ constraint", () => {
+      const cond = createCondition({
         targetContract: mockContract,
         functionAbi: erc20Abi,
         functionName: "totalSupply",
         args: [],
-        expectedValue: 1000000n,
+        value: 1000000n,
+        type: ConditionType.EQ,
         description: "Total supply must equal 1000000"
       })
 
@@ -82,14 +89,20 @@ describe("Conditional Execution - Unit Tests", () => {
         functionAbi: erc20Abi,
         functionName: "balanceOf",
         args: [mockContract],
-        threshold: 1000n
+        value: 1000n
       }
 
-      const conditionGt = condition.greaterThanOrEqualTo(conditionParams)
-      const conditionLt = condition.lessThanOrEqualTo(conditionParams)
-      const conditionEq = condition.equalTo({
+      const conditionGt = createCondition({
         ...conditionParams,
-        expectedValue: 1000n
+        type: ConditionType.GTE
+      })
+      const conditionLt = createCondition({
+        ...conditionParams,
+        type: ConditionType.LTE
+      })
+      const conditionEq = createCondition({
+        ...conditionParams,
+        type: ConditionType.EQ
       })
 
       const inputParamGt = createConditionInputParam(conditionGt)
