@@ -45,6 +45,7 @@ import {
 } from "../../../constants"
 import { ComposabilityVersion } from "../../../constants"
 import {
+  ConditionalExecutionCondition,
   type RuntimeValue,
   condition,
   getMEEVersion,
@@ -1358,8 +1359,23 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
   describe("conditional execution", () => {
     const createWithdrawInstructionWithCondition = async (
       testMcNexus: MultichainSmartAccount,
-      minBalanceRequired: bigint
+      minBalanceRequired: bigint,
+      extraConditions: ConditionalExecutionCondition[] = []
     ) => {
+      const defaultCondition = condition.greaterThanOrEqualTo({
+          targetContract: tokenAddress,
+          functionAbi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)],
+          threshold: minBalanceRequired,
+          description: `Orchestrator must have at least ${minBalanceRequired} USDC`
+        })
+
+      const conditions = [
+        defaultCondition,
+        ...extraConditions
+      ]
+
       return await testMcNexus.buildComposable({
         type: "default",
         data: {
@@ -1371,20 +1387,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             runtimeERC20BalanceOf({
               targetAddress: testMcNexus.addressOn(chain.id, true),
               tokenAddress,
-              constraints: [greaterThanOrEqualTo(minBalanceRequired)]
             })
           ],
           chainId: chain.id,
-          conditions: [
-            condition.greaterThanOrEqualTo({
-              targetContract: tokenAddress,
-              functionAbi: erc20Abi,
-              functionName: "balanceOf",
-              args: [testMcNexus.addressOn(chain.id, true)],
-              threshold: minBalanceRequired,
-              description: `Orchestrator must have at least ${minBalanceRequired} USDC`
-            })
-          ]
+          conditions,
         }
       })
     }
@@ -1393,12 +1399,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       testMcNexus: MultichainSmartAccount,
       testMeeClient: MeeClient,
       minBalanceRequired: bigint,
-      triggerAmount: bigint
+      triggerAmount: bigint,
+      extraConditions?: ConditionalExecutionCondition[]
     ) => {
       const withdrawWithCondition =
         await createWithdrawInstructionWithCondition(
           testMcNexus,
-          minBalanceRequired
+          minBalanceRequired,
+          extraConditions
         )
 
       const getFusionQuote = async () => {
@@ -1432,7 +1440,17 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       return metaStatus.status
     }
 
-    it("should execute right away when condition is met", async () => {
+    const expectZeroUsdcpBalance = async (testMcNexus: MultichainSmartAccount) => {
+      const balance = await publicClient.readContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [testMcNexus.addressOn(chain.id, true)]
+      })
+      expect(balance).to.eq(0n)
+    }
+
+    it("should execute right away when condition is already met", async () => {
       const minBalanceRequired = parseUnits("0.1", 6)
       const triggerAmount = minBalanceRequired // should met the condition
 
@@ -1442,12 +1460,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         meeClient: testMeeClient
       } of accountConfigs) {
         console.log(`Testing conditional execution with ${name}`)
+        await expectZeroUsdcpBalance(testMcNexus)
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
           testMeeClient,
           minBalanceRequired,
-          triggerAmount
+          triggerAmount,
         )
 
         console.log("getting fusion quote")
@@ -1492,6 +1511,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         meeClient: testMeeClient
       } of accountConfigs) {
         console.log(`Testing conditional execution with ${name}`)
+        await expectZeroUsdcpBalance(testMcNexus)
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1539,6 +1559,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           `Testing conditional execution waiting for condition with ${name}`
         )
 
+        await expectZeroUsdcpBalance(testMcNexus)
+
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
           testMeeClient,
@@ -1572,6 +1594,107 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           args: [
             testMcNexus.addressOn(chain.id, true),
             minBalanceRequired - triggerAmount
+          ]
+        })
+
+        await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+
+        console.log("waiting for supertransaction receipt")
+        const { transactionStatus, explorerLinks } =
+          await testMeeClient.waitForSupertransactionReceipt({
+            hash,
+            confirmations: TEST_BLOCK_CONFIRMATIONS
+          })
+
+        expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+        console.log(`[${name}] Conditional execution test:`, {
+          explorerLinks,
+          hash
+        })
+
+        const nexusUSDCBalance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+
+        // should withdraw all USDC from nexus
+        expect(nexusUSDCBalance).to.be.eq(0n)
+      }
+    })
+
+    it("should wait for multiple condition met and then execute", async () => {
+      const usdctAddr = '0xb394E82FD251De530c9d71CBEe9527A4CF690e57';   // usdt bico test
+      const minBalanceRequired = parseUnits("0.1", 6)
+      const triggerAmount = minBalanceRequired // enough
+
+      for (const {
+        name,
+        mcNexus: testMcNexus,
+        meeClient: testMeeClient
+      } of accountConfigs) {
+        console.log(
+          `Testing conditional execution waiting for multiple conditions with ${name}`
+        )
+
+        await expectZeroUsdcpBalance(testMcNexus)
+
+        const usdctBalance = await publicClient.readContract({
+          address: usdctAddr,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+        const minUsdctRequired = usdctBalance + 1n;    // make it not enough
+        const extraConditions = [
+          condition.greaterThanOrEqualTo({
+            targetContract: usdctAddr,
+            functionAbi: erc20Abi,
+            functionName: "balanceOf",
+            args: [testMcNexus.addressOn(chain.id, true)],
+            threshold: minUsdctRequired,
+            description: `Orchestrator must have at least ${minBalanceRequired} USDC Bico Test`
+          })
+        ]
+
+        const { getFusionQuote } = await setupConditionalTest(
+          testMcNexus,
+          testMeeClient,
+          minBalanceRequired,
+          triggerAmount,
+          extraConditions
+        )
+
+        console.log("getting fusion quote")
+        const fusionQuote = await getFusionQuote()
+
+        console.log("executing fusion quote")
+        const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
+
+        console.log("waiting for 10 seconds")
+        // after 10 seconds, it should still be pending since usdct condition not met
+        await new Promise((resolve) => setTimeout(resolve, 10_000))
+        const stxStatus = await getStxStatus(testMeeClient, hash)
+        expect(stxStatus).to.be.eq("PENDING")
+
+        console.log("sending USDC Bico Test to nexus to satisfy condition")
+        const walletClient = createWalletClient({
+          chain,
+          account: eoaAccount,
+          transport: http(network.rpcUrl)
+        })
+
+        const txHash = await walletClient.writeContract({
+          address: usdctAddr,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [
+            testMcNexus.addressOn(chain.id, true),
+            1n,
           ]
         })
 
