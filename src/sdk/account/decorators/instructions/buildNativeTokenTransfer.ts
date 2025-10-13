@@ -12,10 +12,10 @@
 import { type Address, zeroAddress } from "viem"
 import type { Instruction } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
-import { ComposabilityVersion } from "../../../constants"
+import { ComposabilityVersion, ForwarderAbi } from "../../../constants"
 import { type RuntimeValue, isRuntimeComposableValue } from "../../../modules"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
-import buildRawComposable from "./buildRawComposable"
+import buildComposable from "./buildComposable"
 
 /**
  * Parameters for building a native token transfer instruction.
@@ -62,7 +62,7 @@ export const buildNativeTokenTransfer = async (
   parameters: BuildNativeTokenTransferParameters,
   composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [], accountAddress } = baseParams
+  const { currentInstructions = [], accountAddress, meeVersions } = baseParams
   const {
     chainId,
     value,
@@ -70,10 +70,19 @@ export const buildNativeTokenTransfer = async (
     to,
     metadata: metadataOverride
   } = parameters
-  const { forceComposableEncoding, composabilityVersion } =
-    composabilityParams ?? {
-      forceComposableEncoding: false
-    }
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
+
+  const [meeVersionInfo] = meeVersions.filter(
+    (meeVersion) => meeVersion.chainId === chainId
+  )
+
+  if (!meeVersionInfo) {
+    throw new Error("MEE version is required to build a native token transfer")
+  }
+
+  const meeVersion = meeVersionInfo.version
 
   // Detect if any parameter is a runtime-composable value
   const isRuntimeValues = [value, to].some((val) =>
@@ -87,7 +96,7 @@ export const buildNativeTokenTransfer = async (
 
   if (isComposableCall) {
     // Composable call: requires composability version and runtime encoding
-    if (!composabilityVersion) {
+    if (!composabilityParams?.composabilityVersion) {
       throw new Error(
         "Composability version is required to build a composable native token transfer instruction"
       )
@@ -95,7 +104,7 @@ export const buildNativeTokenTransfer = async (
 
     if (
       isRuntimeValues &&
-      composabilityVersion === ComposabilityVersion.V1_0_0
+      composabilityParams.composabilityVersion === ComposabilityVersion.V1_0_0
     ) {
       throw new Error(
         "Runtime values for Native tokens are not supported for Composability v1.0.0"
@@ -118,20 +127,20 @@ export const buildNativeTokenTransfer = async (
       }
     ]
 
-    // Use buildRawComposable to create the composable instruction
-    instructions = await buildRawComposable(
+    // Uses buildComposable to build a native token transfer via eth forwarder
+    instructions = await buildComposable(
       baseParams,
       {
-        to,
-        value,
-        chainId,
+        to: meeVersion.ethForwarderAddress,
+        abi: ForwarderAbi,
+        functionName: "forward",
         gasLimit,
-        calldata: "0x00000000", // Zero function sig to transfer ETH from SCA to recipient
+        value,
+        args: [to],
+        chainId,
         metadata: metadataOverride || metadata
       },
-      {
-        composabilityVersion: composabilityVersion
-      }
+      composabilityParams
     )
   } else {
     // Standard (non-composable) native token transfer

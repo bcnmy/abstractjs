@@ -132,6 +132,11 @@ export const prepareInstructions = async (
   const { resolvedInstructions, trigger, owner, spender, recipient, account } =
     parameters
 
+  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   let triggerAmount = 0n
 
   if (trigger.useMaxAvailableFunds) {
@@ -217,6 +222,7 @@ export const prepareInstructions = async (
   if (trigger.tokenAddress === zeroAddress) {
     const batchedInstructions = await batchInstructions({
       accountAddress: account.signer.address,
+      meeVersions,
       instructions: resolvedInstructions
     })
     return { triggerGasLimit, triggerAmount, batchedInstructions }
@@ -239,6 +245,7 @@ export const prepareInstructions = async (
 
   const batchedInstructions = await batchInstructions({
     accountAddress: account.signer.address,
+    meeVersions,
     instructions: [...triggerTransfer, ...resolvedInstructions]
   })
 

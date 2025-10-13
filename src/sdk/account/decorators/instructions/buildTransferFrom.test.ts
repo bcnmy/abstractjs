@@ -15,6 +15,7 @@ import {
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
 import buildTransferFrom from "./buildTransferFrom"
+import { MEEVersionConfig, MeeVersionsWithChainId } from "../../utils"
 
 describe("mee.buildTransferFrom", () => {
   let network: NetworkConfig
@@ -27,6 +28,7 @@ describe("mee.buildTransferFrom", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -53,12 +55,17 @@ describe("mee.buildTransferFrom", () => {
       ]
     })
 
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
+
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should highlight building transferFrom instructions", async () => {
     const instructions: Instruction[] = await buildTransferFrom(
-      { accountAddress: mcNexus.signer.address },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         chainId: targetChain.id,
         tokenAddress: mcUSDC.addressOn(paymentChain.id),

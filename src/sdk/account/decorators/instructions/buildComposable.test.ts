@@ -153,8 +153,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     it.concurrent(
       `should highlight building composable instructions with ${version}`,
       async () => {
+        const meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+          chainId: chain.id,
+          version
+        }))
+
         const instructions: Instruction[] = await buildComposable(
-          { accountAddress: mcNexus.signer.address },
+          { accountAddress: mcNexus.signer.address, meeVersions },
           {
             to: tokenAddress,
             abi: erc20Abi,

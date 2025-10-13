@@ -193,8 +193,14 @@ describe("Instruction metadata test", () => {
     instructions: Instruction[],
     metadataTypes: InstructionMetadataType[]
   ) => {
+    const meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
+
     const batchedInstructions = await batchInstructions({
       accountAddress: mcNexus.addressOn(chain.id, true),
+      meeVersions,
       instructions
     })
 
