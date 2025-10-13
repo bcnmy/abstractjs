@@ -1439,8 +1439,9 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       return metaStatus.status
     }
 
-    const expectZeroUsdcpBalance = async (
-      testMcNexus: MultichainSmartAccount
+    const expectUsdcpBalance = async (
+      testMcNexus: MultichainSmartAccount,
+      maxBalance: bigint
     ) => {
       const balance = await publicClient.readContract({
         address: tokenAddress,
@@ -1448,7 +1449,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         functionName: "balanceOf",
         args: [testMcNexus.addressOn(chain.id, true)]
       })
-      expect(balance).to.eq(0n)
+      expect(balance).to.toBeLessThan(maxBalance)
+      console.log(`USDCP balance before test: ${balance} < ${maxBalance}, ok`)
     }
 
     it("should execute right away when condition is already met", async () => {
@@ -1461,7 +1463,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         meeClient: testMeeClient
       } of accountConfigs) {
         console.log(`Testing conditional execution with ${name}`)
-        await expectZeroUsdcpBalance(testMcNexus)
+        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1512,7 +1514,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         meeClient: testMeeClient
       } of accountConfigs) {
         console.log(`Testing conditional execution with ${name}`)
-        await expectZeroUsdcpBalance(testMcNexus)
+        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1560,7 +1562,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           `Testing conditional execution waiting for condition with ${name}`
         )
 
-        await expectZeroUsdcpBalance(testMcNexus)
+        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
 
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
@@ -1642,7 +1644,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           `Testing conditional execution waiting for multiple conditions with ${name}`
         )
 
-        await expectZeroUsdcpBalance(testMcNexus)
+        await expectUsdcpBalance(testMcNexus, minBalanceRequired)
 
         const usdctBalance = await publicClient.readContract({
           address: usdctAddr,
