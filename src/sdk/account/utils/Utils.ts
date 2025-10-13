@@ -563,6 +563,8 @@ export async function supportsCancun({
     "480": true,
     "4801": true,
     "20993": true,
+    "10143": true,
+    "143": true,
     "88882": false
   }
 
