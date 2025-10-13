@@ -9,6 +9,7 @@ import {
   type PublicClient,
   type TransactionReceipt,
   createPublicClient,
+  createWalletClient,
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
@@ -30,6 +31,7 @@ import {
   type MeeClient,
   createMeeClient
 } from "../../../clients/createMeeClient"
+import type { BaseGetSupertransactionReceiptPayload } from "../../../clients/decorators/mee"
 import {
   type Instruction,
   userOp
@@ -43,7 +45,10 @@ import {
 } from "../../../constants"
 import { ComposabilityVersion } from "../../../constants"
 import {
+  ConditionType,
+  type ExecutionCondition,
   type RuntimeValue,
+  createCondition,
   getMEEVersion,
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf,
@@ -57,7 +62,11 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { getMeeScanLink, getMultichainContract } from "../../utils"
+import {
+  getMeeScanLink,
+  getMultichainContract,
+  parseTransactionStatus
+} from "../../utils"
 import buildComposable from "./buildComposable"
 
 // @ts-ignore
@@ -75,6 +84,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     name: string
     mcNexus: MultichainSmartAccount
     meeClient: MeeClient
+    eoaAccount: LocalAccount
   }[]
   let publicClient: PublicClient
 
@@ -128,12 +138,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       {
         name: "Composability v1.0.0",
         mcNexus,
-        meeClient
+        meeClient,
+        eoaAccount
       },
       {
         name: "Composability v1.1.0",
         mcNexus: mcNexus_compos_v1_1_0,
-        meeClient: meeClient_compos_v1_1_0
+        meeClient: meeClient_compos_v1_1_0,
+        eoaAccount
       }
     ]
 
@@ -1343,6 +1355,372 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       expect(transactionStatus).to.be.eq("MINED_SUCCESS")
       console.log({ explorerLinks, hash })
     }
+  })
+
+  describe("conditional execution", () => {
+    const createWithdrawInstructionWithCondition = async (
+      testMcNexus: MultichainSmartAccount,
+      minBalanceRequired: bigint,
+      extraConditions: ExecutionCondition[] = []
+    ) => {
+      const defaultCondition = createCondition({
+        targetContract: tokenAddress,
+        functionAbi: erc20Abi,
+        functionName: "balanceOf",
+        args: [testMcNexus.addressOn(chain.id, true)],
+        value: minBalanceRequired,
+        type: ConditionType.GTE,
+        description: `Orchestrator must have at least ${minBalanceRequired} USDC`
+      })
+
+      const conditions = [defaultCondition, ...extraConditions]
+
+      return await testMcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: tokenAddress,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: testMcNexus.addressOn(chain.id, true),
+              tokenAddress
+            })
+          ],
+          chainId: chain.id,
+          conditions
+        }
+      })
+    }
+
+    const setupConditionalTest = async (
+      testMcNexus: MultichainSmartAccount,
+      testMeeClient: MeeClient,
+      minBalanceRequired: bigint,
+      triggerAmount: bigint,
+      extraConditions?: ExecutionCondition[]
+    ) => {
+      const withdrawWithCondition =
+        await createWithdrawInstructionWithCondition(
+          testMcNexus,
+          minBalanceRequired,
+          extraConditions
+        )
+
+      const getFusionQuote = async () => {
+        return await testMeeClient.getFusionQuote({
+          trigger: {
+            chainId: chain.id,
+            tokenAddress,
+            amount: triggerAmount
+          },
+          instructions: withdrawWithCondition,
+          feeToken: {
+            chainId: chain.id,
+            address: tokenAddress
+          },
+          upperBoundTimestamp: Math.floor(Date.now() / 1000) + 60
+        })
+      }
+
+      return { withdrawWithCondition, getFusionQuote }
+    }
+
+    const getStxStatus = async (testMeeClient: MeeClient, hash: Hex) => {
+      const explorerResponse =
+        await testMeeClient.request<BaseGetSupertransactionReceiptPayload>({
+          path: `explorer/${hash}`,
+          method: "GET"
+        })
+
+      const userOpsWithoutPayment = explorerResponse.userOps.slice(1)
+      const metaStatus = await parseTransactionStatus(userOpsWithoutPayment)
+      return metaStatus.status
+    }
+
+    // make sure min balance required is more than the current token leftover in nexus
+    const getMinRequiredBalance = async (
+      testMcNexus: MultichainSmartAccount
+    ) => {
+      const balance = await publicClient.readContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [testMcNexus.addressOn(chain.id, true)]
+      })
+
+      return balance + parseUnits("0.1", 6)
+    }
+
+    it("should execute right away when condition is already met", async () => {
+      for (const {
+        name,
+        mcNexus: testMcNexus,
+        meeClient: testMeeClient
+      } of accountConfigs) {
+        console.log(`Testing conditional execution with ${name}`)
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = minBalanceRequired // should met the condition
+
+        const { getFusionQuote } = await setupConditionalTest(
+          testMcNexus,
+          testMeeClient,
+          minBalanceRequired,
+          triggerAmount
+        )
+
+        console.log("getting fusion quote")
+        const fusionQuote = await getFusionQuote()
+
+        console.log("executing fusion quote")
+        const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
+
+        console.log("waiting for supertransaction receipt")
+        const { transactionStatus, explorerLinks } =
+          await testMeeClient.waitForSupertransactionReceipt({
+            hash,
+            confirmations: TEST_BLOCK_CONFIRMATIONS
+          })
+
+        expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+        console.log(`[${name}] Conditional execution test:`, {
+          explorerLinks,
+          hash
+        })
+
+        const nexusUSDCBalance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+
+        console.log({ nexusUSDCBalance })
+        // should transfer all USDC to the recipient
+        expect(nexusUSDCBalance).to.eq(0n)
+      }
+    })
+
+    it("should fail if condition is never met", async () => {
+      for (const {
+        name,
+        mcNexus: testMcNexus,
+        meeClient: testMeeClient
+      } of accountConfigs) {
+        console.log(`Testing conditional execution with ${name}`)
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = 1n // not enough
+
+        const { getFusionQuote } = await setupConditionalTest(
+          testMcNexus,
+          testMeeClient,
+          minBalanceRequired,
+          triggerAmount
+        )
+
+        console.log("getting fusion quote")
+        const fusionQuote = await getFusionQuote()
+
+        console.log("executing fusion quote")
+        const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
+
+        console.log("waiting for supertransaction receipt")
+        await new Promise((resolve) => setTimeout(resolve, 65_000)) // 60s timeout
+        // should fail since condition not met
+        const stxStatus = await getStxStatus(testMeeClient, hash)
+        expect(stxStatus).to.be.eq("FAILED")
+        console.log("transaction reverted as expected:", hash)
+
+        const nexusUSDCBalance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+
+        console.log({ nexusUSDCBalance })
+        // nothing ever get executed
+        expect(nexusUSDCBalance).to.be.eq(0n)
+      }
+    })
+
+    it("should wait for condition met and then execute", async () => {
+      for (const {
+        name,
+        mcNexus: testMcNexus,
+        meeClient: testMeeClient
+      } of accountConfigs) {
+        console.log(
+          `Testing conditional execution waiting for condition with ${name}`
+        )
+
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = 1n // not enough initially
+
+        const { getFusionQuote } = await setupConditionalTest(
+          testMcNexus,
+          testMeeClient,
+          minBalanceRequired,
+          triggerAmount
+        )
+
+        console.log("getting fusion quote")
+        const fusionQuote = await getFusionQuote()
+
+        console.log("executing fusion quote")
+        const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
+
+        console.log("waiting for 10 seconds")
+        // after 10 seconds, it should still be pending since condition not met
+        await new Promise((resolve) => setTimeout(resolve, 10_000))
+        const stxStatus = await getStxStatus(testMeeClient, hash)
+        expect(stxStatus).to.be.eq("PENDING")
+
+        console.log("sending USDC to nexus to satisfy condition")
+        const walletClient = createWalletClient({
+          chain,
+          account: eoaAccount,
+          transport: http(network.rpcUrl)
+        })
+
+        const txHash = await walletClient.writeContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [
+            testMcNexus.addressOn(chain.id, true),
+            minBalanceRequired - triggerAmount
+          ]
+        })
+
+        await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+
+        console.log("waiting for supertransaction receipt")
+        const { transactionStatus, explorerLinks } =
+          await testMeeClient.waitForSupertransactionReceipt({
+            hash,
+            confirmations: TEST_BLOCK_CONFIRMATIONS
+          })
+
+        expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+        console.log(`[${name}] Conditional execution test:`, {
+          explorerLinks,
+          hash
+        })
+
+        const nexusUSDCBalance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+
+        // should withdraw all USDC from nexus
+        expect(nexusUSDCBalance).to.be.eq(0n)
+      }
+    })
+
+    it("should wait for multiple condition met and then execute", async () => {
+      const usdctAddr = "0xb394E82FD251De530c9d71CBEe9527A4CF690e57" // usdt bico test
+
+      for (const {
+        name,
+        mcNexus: testMcNexus,
+        meeClient: testMeeClient
+      } of accountConfigs) {
+        console.log(
+          `Testing conditional execution waiting for multiple conditions with ${name}`
+        )
+
+        const minBalanceRequired = parseUnits("0.5", 6)
+        const triggerAmount = minBalanceRequired // enough
+
+        const usdctBalance = await publicClient.readContract({
+          address: usdctAddr,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+        const minUsdctRequired = usdctBalance + 1n // make it not enough
+        const extraConditions = [
+          createCondition({
+            targetContract: usdctAddr,
+            functionAbi: erc20Abi,
+            functionName: "balanceOf",
+            args: [testMcNexus.addressOn(chain.id, true)],
+            value: minUsdctRequired,
+            type: ConditionType.GTE,
+            description: `Orchestrator must have at least ${minBalanceRequired} USDC Bico Test`
+          })
+        ]
+
+        const { getFusionQuote } = await setupConditionalTest(
+          testMcNexus,
+          testMeeClient,
+          minBalanceRequired,
+          triggerAmount,
+          extraConditions
+        )
+
+        console.log("getting fusion quote")
+        const fusionQuote = await getFusionQuote()
+
+        console.log("executing fusion quote")
+        const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
+
+        console.log("waiting for 10 seconds")
+        // after 10 seconds, it should still be pending since usdct condition not met
+        await new Promise((resolve) => setTimeout(resolve, 10_000))
+        const stxStatus = await getStxStatus(testMeeClient, hash)
+        expect(stxStatus).to.be.eq("PENDING")
+
+        console.log("sending USDC Bico Test to nexus to satisfy condition")
+        const walletClient = createWalletClient({
+          chain,
+          account: eoaAccount,
+          transport: http(network.rpcUrl)
+        })
+
+        const txHash = await walletClient.writeContract({
+          address: usdctAddr,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [testMcNexus.addressOn(chain.id, true), 1n]
+        })
+
+        await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+
+        console.log("waiting for supertransaction receipt")
+        const { transactionStatus, explorerLinks } =
+          await testMeeClient.waitForSupertransactionReceipt({
+            hash,
+            confirmations: TEST_BLOCK_CONFIRMATIONS
+          })
+
+        expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+        console.log(`[${name}] Conditional execution test:`, {
+          explorerLinks,
+          hash
+        })
+
+        const nexusUSDCBalance = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+
+        // should withdraw all USDC from nexus
+        expect(nexusUSDCBalance).to.be.eq(0n)
+      }
+    })
   })
 
   // test the new 'runtimeParamViaCustomStaticCall' helper function and the injectable target at the same time

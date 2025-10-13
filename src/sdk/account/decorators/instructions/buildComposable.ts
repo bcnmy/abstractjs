@@ -23,6 +23,10 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { isRuntimeComposableValue } from "../../../modules/utils/composabilityCalls"
 import {
+  type ExecutionCondition,
+  createConditionInputParam
+} from "../../../modules/utils/conditions"
+import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
@@ -62,6 +66,24 @@ export type BuildComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint | RuntimeValue
+  /**
+   * Optional conditions that must be satisfied before execution.
+   * All conditions are evaluated via STATIC_CALL before the main function.
+   * Transaction reverts if any condition fails.
+   * @since v1.2.0
+   */
+  conditions?: ExecutionCondition[]
+  /**
+   * Optional metadata describing the instruction for display purposes
+   */
+  metadata?: InstructionMetadata[]
+}
+
+export type BuildNativeTokenTransferComposableParameters = {
+  to: Address | RuntimeValue
+  gasLimit?: bigint
+  value: bigint | RuntimeValue
+  chainId: number
   metadata?: InstructionMetadata[]
 }
 
@@ -69,15 +91,16 @@ export const buildComposableCall = async (
   parameters: BuildComposableParameters,
   composabilityParameters: ComposabilityParams
 ): Promise<ComposableCall[]> => {
-  const { to, gasLimit, value, functionName, args, abi } = parameters
+  const { to, gasLimit, value, functionName, args, abi, conditions } =
+    parameters
   const {
     efficientMode = true, // saving gas by default
     composabilityVersion
   } = composabilityParameters
 
   if (!composabilityVersion) {
-    throw new Error(`Composability version is required to build a composable call. 
-      This error may be caused by using a non-composable .build decorator with a composable call. 
+    throw new Error(`Composability version is required to build a composable call.
+      This error may be caused by using a non-composable .build decorator with a composable call.
       Please use buildComposable instead.`)
   }
 
@@ -104,10 +127,18 @@ export const buildComposableCall = async (
   const versionAgnosticComposableInputParams: InputParam[] =
     prepareComposableInputCalldataParams([...functionContext.inputs], args)
 
+  // Append condition InputParams if conditions are specified
+  const allInputParams = conditions?.length
+    ? [
+        ...versionAgnosticComposableInputParams,
+        ...conditions.map(createConditionInputParam)
+      ]
+    : versionAgnosticComposableInputParams
+
   const composableCall = formatComposableCallWithVersion(
     composabilityVersion,
     efficientMode,
-    versionAgnosticComposableInputParams,
+    allInputParams,
     functionContext.functionSig,
     to,
     value,
