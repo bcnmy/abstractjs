@@ -275,21 +275,21 @@ export const prepareSignablePermitQuotePayload = async (
   // Default version will be used as fallback
   const defaultVersion = "1"
 
-  if (version && version_) {
+  if (version?.length >= 0 && version_?.length >= 0) {
     if (version !== version_)
       console.warn(
         "Warning: Mismatch between token version() and eip712Domain().version. This may cause permit signature verification to fail."
       )
   }
 
-  if (name && name_) {
+  if (name?.length >= 0 && name_?.length >= 0) {
     if (name !== name_)
       console.warn(
         "Warning: Mismatch between token name() and eip712Domain().name. This may cause permit signature verification to fail."
       )
   }
 
-  if (!name && !name_) {
+  if (name === undefined && name_ === undefined) {
     throw new Error(
       "Permit signing failed: Token name is missing. Neither name() nor eip712Domain().name is available."
     )
@@ -297,8 +297,8 @@ export const prepareSignablePermitQuotePayload = async (
 
   const signablePermitQuotePayload = {
     domain: {
-      name: name_ || name, // name from eip712Domain is mostly safe and more priority is given
-      version: version_ || version || defaultVersion, // version from eip712Domain is mostly safe and more priority is given
+      name: name_ ?? name, // name from eip712Domain is mostly safe and more priority is given
+      version: version_ ?? version ?? defaultVersion, // version from eip712Domain is mostly safe and more priority is given
       chainId: trigger.chainId,
       verifyingContract: trigger.tokenAddress
     },
@@ -325,8 +325,8 @@ export const prepareSignablePermitQuotePayload = async (
     signablePayload: signablePermitQuotePayload,
     metadata: {
       nonce,
-      name: name_ || name,
-      version: version_ || version || defaultVersion,
+      name: name_ ?? name,
+      version: version_ ?? version ?? defaultVersion,
       domainSeparator,
       owner,
       spender,
