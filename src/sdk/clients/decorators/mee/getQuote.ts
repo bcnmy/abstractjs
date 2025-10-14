@@ -1232,6 +1232,11 @@ const prepareCleanUpUserOps = async (
   cleanUps: CleanUp[],
   moduleAddress?: Address
 ) => {
+  const meeVersions = account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
@@ -1258,7 +1263,11 @@ const prepareCleanUpUserOps = async (
             amount = cleanUp.amount as RuntimeValue
           }
           const [cleanUpNativeTransferInstruction] = await buildComposable(
-            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              accountAddress: account.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               type: "nativeTokenTransfer",
               data: {
@@ -1275,7 +1284,11 @@ const prepareCleanUpUserOps = async (
           const amount = cleanUp.amount as bigint
 
           const [cleanUpNativeTransferInstruction] = await buildComposable(
-            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              accountAddress: account.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               type: "rawCalldata",
               data: {
@@ -1302,7 +1315,11 @@ const prepareCleanUpUserOps = async (
         }
 
         const [cleanUpERC20TransferInstruction] = await buildComposable(
-          { accountAddress: account.signer.address, currentInstructions: [] },
+          {
+            accountAddress: account.signer.address,
+            currentInstructions: [],
+            meeVersions
+          },
           {
             type: "transfer",
             data: {

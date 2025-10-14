@@ -3,6 +3,7 @@ import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
 import { isRuntimeComposableValue } from "../../modules/utils/composabilityCalls"
+import type { MeeVersionsWithChainId } from "../utils"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
 } from "./instructions/buildAcrossIntentComposable"
@@ -72,10 +73,12 @@ export type TokenParams = {
 /**
  * Base parameters for building instructions
  * @property account address - EOA wallet or owner account address
+ * @property meeVersions - List of mee versions for different chains
  * @property currentInstructions - {@link Instruction[]} Optional array of existing instructions to append to
  */
 export type BaseInstructionsParams = {
   accountAddress: Address
+  meeVersions: MeeVersionsWithChainId
   currentInstructions?: Instruction[]
 }
 
@@ -294,6 +297,7 @@ export const build = async (
   const containsRuntimeValues = Object.values(data).some((value) =>
     isRuntimeComposableValue(value)
   )
+
   if (containsRuntimeValues) {
     throw new Error(
       "Runtime values are not supported for `build` action. Use `buildComposable` instead."

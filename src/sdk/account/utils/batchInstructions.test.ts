@@ -9,6 +9,8 @@ import {
 import { base, mainnet, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
+  MEEVersionConfig,
+  type MeeVersionsWithChainId,
   type MultichainSmartAccount,
   buildApprove,
   buildTransferFrom,
@@ -27,60 +29,6 @@ import { mcUSDC } from "../../constants/tokens"
 import { getMEEVersion } from "../../modules"
 import { batchInstructions } from "./batchInstructions"
 
-const createBaseApproval = (account: MultichainSmartAccount, amount: string) =>
-  buildApprove(
-    { accountAddress: account.signer.address },
-    {
-      chainId: base.id,
-      tokenAddress: mcUSDC.addressOn(base.id),
-      spender: account.addressOn(base.id, true),
-      amount: parseEther(amount)
-    }
-  )
-
-const createOptimismApproval = (
-  account: MultichainSmartAccount,
-  amount: string
-) =>
-  buildApprove(
-    { accountAddress: account.signer.address },
-    {
-      chainId: optimism.id,
-      tokenAddress: mcUSDC.addressOn(optimism.id),
-      spender: account.addressOn(optimism.id, true),
-      amount: parseEther(amount)
-    }
-  )
-
-const createMainnetApproval = (
-  account: MultichainSmartAccount,
-  amount: string
-) =>
-  buildApprove(
-    { accountAddress: account.signer.address },
-    {
-      chainId: mainnet.id,
-      tokenAddress: mcUSDC.addressOn(mainnet.id),
-      spender: account.addressOn(mainnet.id, true),
-      amount: parseEther(amount)
-    }
-  )
-
-const createBaseTriggerCall = (
-  account: MultichainSmartAccount,
-  sender: string
-) =>
-  buildTransferFrom(
-    { accountAddress: account.signer.address },
-    {
-      chainId: base.id,
-      tokenAddress: mcUSDC.addressOn(base.id),
-      amount: 100n,
-      recipient: account.addressOn(base.id, true),
-      sender: zeroAddress
-    }
-  )
-
 describe("utils.batchInstructions", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
@@ -90,6 +38,7 @@ describe("utils.batchInstructions", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -120,8 +69,70 @@ describe("utils.batchInstructions", () => {
       ]
     })
 
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
+
     meeClient = await createMeeClient({ account: mcNexus })
   })
+
+  const createBaseApproval = (
+    account: MultichainSmartAccount,
+    amount: string
+  ) =>
+    buildApprove(
+      { accountAddress: account.signer.address, meeVersions },
+      {
+        chainId: base.id,
+        tokenAddress: mcUSDC.addressOn(base.id),
+        spender: account.addressOn(base.id, true),
+        amount: parseEther(amount)
+      }
+    )
+
+  const createOptimismApproval = (
+    account: MultichainSmartAccount,
+    amount: string
+  ) =>
+    buildApprove(
+      { accountAddress: account.signer.address, meeVersions },
+      {
+        chainId: optimism.id,
+        tokenAddress: mcUSDC.addressOn(optimism.id),
+        spender: account.addressOn(optimism.id, true),
+        amount: parseEther(amount)
+      }
+    )
+
+  const createMainnetApproval = (
+    account: MultichainSmartAccount,
+    amount: string
+  ) =>
+    buildApprove(
+      { accountAddress: account.signer.address, meeVersions },
+      {
+        chainId: mainnet.id,
+        tokenAddress: mcUSDC.addressOn(mainnet.id),
+        spender: account.addressOn(mainnet.id, true),
+        amount: parseEther(amount)
+      }
+    )
+
+  const createBaseTriggerCall = (
+    account: MultichainSmartAccount,
+    sender: string
+  ) =>
+    buildTransferFrom(
+      { accountAddress: account.signer.address, meeVersions },
+      {
+        chainId: base.id,
+        tokenAddress: mcUSDC.addressOn(base.id),
+        amount: 100n,
+        recipient: account.addressOn(base.id, true),
+        sender: zeroAddress
+      }
+    )
 
   test("should batch consecutive instructions on the same chain", async () => {
     const instructions = [
@@ -134,6 +145,7 @@ describe("utils.batchInstructions", () => {
 
     const result = await batchInstructions({
       accountAddress: mcNexus.signer.address,
+      meeVersions,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
@@ -152,6 +164,7 @@ describe("utils.batchInstructions", () => {
 
     const result = await batchInstructions({
       accountAddress: mcNexus.signer.address,
+      meeVersions,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
@@ -177,6 +190,7 @@ describe("utils.batchInstructions", () => {
 
     const result = await batchInstructions({
       accountAddress: mcNexus.signer.address,
+      meeVersions,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
@@ -198,6 +212,7 @@ describe("utils.batchInstructions", () => {
 
     const result = await batchInstructions({
       accountAddress: mcNexus.signer.address,
+      meeVersions,
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 

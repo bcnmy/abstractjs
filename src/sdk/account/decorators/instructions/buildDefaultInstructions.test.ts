@@ -13,6 +13,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildDefaultInstructions from "./buildDefaultInstructions"
 
 describe("mee.buildDefaultInstructions", () => {
@@ -26,6 +27,7 @@ describe("mee.buildDefaultInstructions", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -52,12 +54,17 @@ describe("mee.buildDefaultInstructions", () => {
       ]
     })
 
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
+
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should highlight building default instructions", async () => {
     const instructions: Instruction[] = await buildDefaultInstructions(
-      { accountAddress: mcNexus.signer.address },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         chainId: targetChain.id,
         calls: [

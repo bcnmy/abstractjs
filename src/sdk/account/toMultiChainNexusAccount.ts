@@ -302,6 +302,11 @@ export async function toMultichainNexusAccount(
     return deployment?.address
   }
 
+  const meeVersions = deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   const baseAccount = {
     signer: deployments[0].signer, // This signer is resolved
     deployments,
@@ -317,7 +322,11 @@ export async function toMultichainNexusAccount(
     currentInstructions?: Instruction[]
   ): Promise<Instruction[]> =>
     buildDecorator(
-      { currentInstructions, accountAddress: baseAccount.signer.address },
+      {
+        currentInstructions,
+        accountAddress: baseAccount.signer.address,
+        meeVersions
+      },
       params
     )
 
@@ -340,7 +349,11 @@ export async function toMultichainNexusAccount(
     }
 
     return buildComposableDecorator(
-      { currentInstructions, accountAddress: baseAccount.signer.address },
+      {
+        currentInstructions,
+        accountAddress: baseAccount.signer.address,
+        meeVersions
+      },
       params,
       composabilityVersion
     )
