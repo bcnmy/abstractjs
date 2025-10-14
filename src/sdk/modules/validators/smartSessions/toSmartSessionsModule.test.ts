@@ -2,7 +2,6 @@ import {
   COUNTER_ADDRESS,
   type Ecosystem,
   type Infra,
-  getRandomNumber,
   toClients,
   toEcosystem
 } from "@biconomy/ecosystem"
@@ -25,7 +24,7 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import { DEFAULT_MEE_VERSION, getSudoPolicy } from "../../../constants"
+import { DEFAULT_CONFIGURATIONS_BY_MEE_VERSION, DEFAULT_MEE_VERSION, getSudoPolicy } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { getMEEVersion } from "../../utils"
 import { smartSessionActions } from "./decorators"
@@ -52,6 +51,7 @@ describe("modules.toSmartSessionsModule", () => {
   let sessionDetailsTypedDataSign: GrantPermissionResponse
   let publicClient: PublicClient
   let secondChainPublicClient: PublicClient
+  let meeK1ValidatorAddress: Address
 
   beforeAll(async () => {
     ecosystem = await toEcosystem({
@@ -85,6 +85,8 @@ describe("modules.toSmartSessionsModule", () => {
         version: getMEEVersion(DEFAULT_MEE_VERSION)
       }
     })
+
+    meeK1ValidatorAddress = DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[DEFAULT_MEE_VERSION].validatorAddress
 
     const { testClient } = await toClients(infra.network)
     const { testClient: secondTestClient } = await toClients(
@@ -159,6 +161,8 @@ describe("modules.toSmartSessionsModule", () => {
     sessionDetailsTypedDataSign =
       await smartSessionsClient.grantPermissionTypedDataSign([
         {
+          sessionValidator: meeK1ValidatorAddress,
+          sessionValidatorInitData: redeemerAddress,
           redeemer: redeemerAddress,
           actions: [
             {
@@ -172,6 +176,8 @@ describe("modules.toSmartSessionsModule", () => {
           chainId: BigInt(chain.id)
         },
         {
+          sessionValidator: meeK1ValidatorAddress,
+          sessionValidatorInitData: redeemerAddress,
           redeemer: redeemerAddress,
           actions: [
             {
@@ -187,9 +193,10 @@ describe("modules.toSmartSessionsModule", () => {
           account: secondChainNexusAccount
         }
       ])
+   // console.log("sessionDetailsTypedDataSign", sessionDetailsTypedDataSign)
   })
 
-  test("use a permission with typed data sign", async () => {
+  test("use a permission with typed data sign for the first time", async () => {
     const counterBefore = await publicClient.readContract({
       address: COUNTER_ADDRESS,
       abi: parseAbi(["function getNumber() view returns (uint256)"]),
@@ -339,6 +346,8 @@ describe("modules.toSmartSessionsModule", () => {
     const smartSessionsClient = nexusClient.extend(smartSessionActions())
     sessionDetails = await smartSessionsClient.grantPermissionPersonalSign([
       {
+        sessionValidator: meeK1ValidatorAddress,
+        sessionValidatorInitData: redeemerAddress,
         redeemer: redeemerAddress,
         actions: [
           {
@@ -352,6 +361,8 @@ describe("modules.toSmartSessionsModule", () => {
       },
       // decrement the counter as a separate permission
       {
+        sessionValidator: meeK1ValidatorAddress,
+        sessionValidatorInitData: redeemerAddress,
         redeemer: redeemerAddress,
         actions: [
           {
@@ -366,7 +377,7 @@ describe("modules.toSmartSessionsModule", () => {
     ])
   })
 
-  test("use a permission", async () => {
+  test("use a permission with personal sign for the first time", async () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
@@ -445,7 +456,7 @@ describe("modules.toSmartSessionsModule", () => {
     expect(receiptWithIndex.success).toBe(true)
   })
 
-  test("use a permission a second time", async () => {
+  test("use a permission with personal sign a second time", async () => {
     const emulatedAccount = await toNexusAccount({
       accountAddress: nexusAccount.address,
       signer: redeemerAccount,
