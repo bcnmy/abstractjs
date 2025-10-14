@@ -1,5 +1,14 @@
 # @biconomy/abstractjs
 
+## 1.1.12
+
+### Patch Changes
+
+- Patches:
+
+  1. Enhanced the permit tokens flow support for more uncovered exotic tokens
+  2. Fixed the native token transfer issue in withdraw and nativeTokenTransfer builder to cover more cases such as EOA, Delegated EOA, and SCA's
+
 ## 1.1.11
 
 ### Patch Changes
