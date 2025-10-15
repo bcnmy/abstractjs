@@ -47,6 +47,7 @@ import {
   getRandomAccountIndex,
   transferErc20
 } from "../../../../test/testUtils"
+import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -1256,6 +1257,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: simple mode, account undeployed", async () => {
@@ -1287,6 +1290,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: onchain mode, account already deployed", async () => {
@@ -1316,6 +1321,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: onchain mode, account undeployed", async () => {
@@ -1356,6 +1363,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: permit mode, account already deployed", async () => {
@@ -1382,6 +1391,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: permit mode, account undeployed", async () => {
@@ -1434,6 +1445,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: sponsored simple mode, account undeployed", async () => {
@@ -1468,6 +1481,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: sponsored permit mode, account already deployed", async () => {
@@ -1498,6 +1513,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
 
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    console.log({ explorerLinks: receipt.explorerLinks, hash })
   })
 
   test("Simulated gas estimation and execution: Smart sessions, single calldata, and only one action execution", async () => {
@@ -1537,6 +1554,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     await sessionSignerMeeClient.waitForSupertransactionReceipt({
       hash: executionPayload.hash
     })
+
+    console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
   })
 
   test("Simulated gas estimation and execution: Smart sessions, batch calldata, and single action execution", async () => {
@@ -1576,6 +1595,8 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     await sessionSignerMeeClient.waitForSupertransactionReceipt({
       hash: executionPayload.hash
     })
+
+    console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
   })
 
   test("Simulated gas estimation and execution: Smart sessions, batch calldata, and multiple action execution", async () => {
@@ -1630,5 +1651,7 @@ describe("mee.getQuote({ simulations }) - STX Execution with simulation-based ga
     await sessionSignerMeeClient.waitForSupertransactionReceipt({
       hash: executionPayload.hash
     })
+
+    console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
   })
 })
