@@ -1,5 +1,6 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type { InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import type { UnifiedERC20Balance } from "./getUnifiedERC20Balance"
 import type { BridgeQueryResult } from "./queryBridge"
@@ -55,6 +56,7 @@ export type MultichainBridgingParams = {
   bridgingPlugins?: BridgingPlugin[]
   feeData?: FeeData
   mode?: "DEBIT" | "OPTIMISTIC"
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -166,7 +168,8 @@ export const buildBridgeInstructions = async (
     unifiedBalance,
     bridgingPlugins = [toAcrossPlugin()],
     feeData,
-    mode = "DEBIT"
+    mode = "DEBIT",
+    metadata
   } = params
 
   const tokenMapping = {
@@ -263,16 +266,30 @@ export const buildBridgeInstructions = async (
         const receivedFromRoute =
           (result.receivedAtDestination * amountToTake) / result.amount
 
+        // If no metadata from plugin ? Custom metadata will be added
+        const customMetadata: InstructionMetadata[] = [
+          {
+            type: "CUSTOM",
+            chainId: result.userOp.chainId,
+            description: "Custom Bridging on-chain action"
+          }
+        ]
+
+        const instruction: Instruction = {
+          ...result.userOp,
+          metadata: metadata || result.userOp.metadata || customMetadata
+        }
+
         return {
           bridgingInstructions: [
             ...acc.bridgingInstructions,
             {
-              userOp: result.userOp,
+              userOp: instruction,
               receivedAtDestination: receivedFromRoute,
               bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
             }
           ],
-          instructions: [...acc.instructions, result.userOp],
+          instructions: [...acc.instructions, instruction],
           totalBridged: acc.totalBridged + receivedFromRoute,
           remainingNeeded: acc.remainingNeeded - amountToTake
         }

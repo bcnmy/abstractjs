@@ -3,6 +3,7 @@ import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion } from "../../constants"
 import type { RuntimeValue } from "../../modules"
 import { isRuntimeComposableValue } from "../../modules/utils/composabilityCalls"
+import type { MeeVersionsWithChainId } from "../utils"
 import buildAcrossIntentComposable, {
   type BuildAcrossIntentComposableParams
 } from "./instructions/buildAcrossIntentComposable"
@@ -15,7 +16,6 @@ import buildBatch, {
 } from "./instructions/buildBatch"
 import {
   type BuildComposableParameters,
-  type BuildNativeTokenTransferComposableParameters,
   buildComposableUtil
 } from "./instructions/buildComposable"
 import {
@@ -30,6 +30,9 @@ import {
   type BuildMultichainInstructionsParameters,
   buildMultichainInstructions
 } from "./instructions/buildMultichainInstructions"
+import buildNativeTokenTransfer, {
+  type BuildNativeTokenTransferParameters
+} from "./instructions/buildNativeTokenTransfer"
 import buildRawComposable, {
   type BuildRawComposableParameters
 } from "./instructions/buildRawComposable"
@@ -70,10 +73,12 @@ export type TokenParams = {
 /**
  * Base parameters for building instructions
  * @property account address - EOA wallet or owner account address
+ * @property meeVersions - List of mee versions for different chains
  * @property currentInstructions - {@link Instruction[]} Optional array of existing instructions to append to
  */
 export type BaseInstructionsParams = {
   accountAddress: Address
+  meeVersions: MeeVersionsWithChainId
   currentInstructions?: Instruction[]
 }
 
@@ -127,7 +132,7 @@ export type BuildTransferInstruction = {
  */
 export type BuildNativeTokenTransferInstruction = {
   type: "nativeTokenTransfer"
-  data: BuildNativeTokenTransferComposableParameters
+  data: BuildNativeTokenTransferParameters
   efficientMode?: boolean
 }
 
@@ -217,6 +222,7 @@ export type ComposabilityParams = {
 export type BaseInstructionTypes =
   | BuildTransferFromInstruction
   | BuildTransferInstruction
+  | BuildNativeTokenTransferInstruction
   | BuildApproveInstruction
   | BuildWithdrawalInstruction
   | BuildBatchInstruction
@@ -235,7 +241,6 @@ export type BuildInstructionTypes =
  */
 export type BuildComposableInstructionTypes =
   | BaseInstructionTypes
-  | BuildNativeTokenTransferInstruction
   | BuildComposableInstruction
   | BuildComposableRawInstruction
   | BuildAcrossIntentComposableInstruction
@@ -292,6 +297,7 @@ export const build = async (
   const containsRuntimeValues = Object.values(data).some((value) =>
     isRuntimeComposableValue(value)
   )
+
   if (containsRuntimeValues) {
     throw new Error(
       "Runtime values are not supported for `build` action. Use `buildComposable` instead."
@@ -310,6 +316,9 @@ export const build = async (
     }
     case "transfer": {
       return buildTransfer(baseParams, data)
+    }
+    case "nativeTokenTransfer": {
+      return buildNativeTokenTransfer(baseParams, data)
     }
     case "approve": {
       return buildApprove(baseParams, data)
@@ -373,16 +382,11 @@ export const buildComposable = async (
       })
     }
     case "nativeTokenTransfer": {
-      return buildRawComposable(
-        baseParams,
-        {
-          ...data,
-          calldata: "0x00000000"
-        },
-        {
-          composabilityVersion: composabilityVersion!
-        }
-      )
+      return buildNativeTokenTransfer(baseParams, data, {
+        forceComposableEncoding: true,
+        efficientMode,
+        composabilityVersion: composabilityVersion!
+      })
     }
     case "approve": {
       return buildApprove(baseParams, data, {

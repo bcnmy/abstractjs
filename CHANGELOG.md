@@ -1,5 +1,30 @@
 # @biconomy/abstractjs
 
+## 1.1.12
+
+### Patch Changes
+
+- Patches:
+
+  1. Enhanced the permit tokens flow support for more uncovered exotic tokens
+  2. Fixed the native token transfer issue in withdraw and nativeTokenTransfer builder to cover more cases such as EOA, Delegated EOA, and SCA's
+
+## 1.1.11
+
+### Patch Changes
+
+- Features included:
+
+  1. Transaction metadata for instructions to provide rich context about supertransaction.
+  2. Conditional execution to enable developers to add custom conditions to the composable calls.
+  3. Added a support for monad mainnet and testnet chains in SDK
+
+## 1.1.10
+
+### Patch Changes
+
+- fixed the rawCalldata builder encoding issues
+
 ## 1.1.9
 
 ### Patch Changes

@@ -121,7 +121,7 @@ describe("mee.signQuote", () => {
     expect(signedQuote.signature).toBeDefined()
     expect(isHex(signedQuote.signature)).toEqual(true)
 
-    const quoteType = await getQuoteType(walletClient, quote)
+    const quoteType = await getQuoteType(meeClient, quote)
 
     expect(quoteType).toEqual("simple")
 

@@ -39,6 +39,7 @@ import { getMEEVersion } from "../../utils"
 import type { AnyData } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
+import type { GrantMeePermissionPayload } from "./decorators/mee/grantMeePermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
 
 // @ts-ignore
@@ -76,6 +77,8 @@ describe("mee.multichainSmartSessions", () => {
   let smartSessionsValidator: Validator
 
   let feeToken: FeeTokenInfo
+
+  let grantMeePermissionPayload: GrantMeePermissionPayload
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -138,7 +141,7 @@ describe("mee.multichainSmartSessions", () => {
       // if tests fail, increase the amount
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("1", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -341,6 +344,67 @@ describe("mee.multichainSmartSessions", () => {
         expect(receipt_.status).toBe("success")
         expect(receipt_.logs).toBeDefined()
       }
+
+      grantMeePermissionPayload = sessionDetails
+    }
+  )
+
+  test.runIf(runPaidTests)(
+    "should check if the permissions are enabled",
+    async () => {
+      const sessionMeeClient = meeClient.extend(meeSessionActions)
+
+      const expectedEnabledPermissionsOnChains = grantMeePermissionPayload.map(
+        (permission) => {
+          return {
+            permissionId: permission.permissionId,
+            chainId: Number(
+              permission.enableSessionData.enableSession.sessionToEnable.chainId
+            )
+          }
+        }
+      )
+
+      for (const permissionOnChain of expectedEnabledPermissionsOnChains) {
+        const isEnabled = await sessionMeeClient.isPermissionEnabled({
+          permissionId: permissionOnChain.permissionId,
+          chainId: permissionOnChain.chainId
+        })
+        expect(isEnabled).toBe(true)
+      }
+
+      const enabledPermissionsReturn =
+        await sessionMeeClient.checkEnabledPermissions(
+          grantMeePermissionPayload
+        )
+
+      for (const permissionOnChain of expectedEnabledPermissionsOnChains) {
+        expect(
+          enabledPermissionsReturn[permissionOnChain.permissionId][
+            permissionOnChain.chainId
+          ]
+        ).toBe(true)
+      }
+
+      const invalidChainId = expectedEnabledPermissionsOnChains[1].chainId
+      expect(invalidChainId).not.toBe(
+        expectedEnabledPermissionsOnChains[0].chainId
+      )
+      expect(
+        sessionMeeClient.account.deploymentOn(invalidChainId, false)
+      ).toBeDefined()
+      let isEnabled = await sessionMeeClient.isPermissionEnabled({
+        permissionId: expectedEnabledPermissionsOnChains[0].permissionId,
+        chainId: invalidChainId
+      })
+      expect(isEnabled).toBe(false)
+
+      const invalidPermissionId = `0x${(BigInt(expectedEnabledPermissionsOnChains[0].permissionId) + 1n).toString(16).padStart(64, "0")}`
+      isEnabled = await sessionMeeClient.isPermissionEnabled({
+        permissionId: invalidPermissionId as `0x${string}`,
+        chainId: expectedEnabledPermissionsOnChains[0].chainId
+      })
+      expect(isEnabled).toBe(false)
     }
   )
 

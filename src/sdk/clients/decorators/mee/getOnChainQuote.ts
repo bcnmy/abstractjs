@@ -88,11 +88,17 @@ export const getOnChainQuote = async (
     ...rest
   } = parameters
 
+  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   const resolvedInstructions = await resolveInstructions(instructions)
 
   if (trigger.call) {
     const batchedInstructions = await batchInstructions({
       accountAddress: account_.signer.address,
+      meeVersions,
       instructions: resolvedInstructions
     })
 

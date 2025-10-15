@@ -180,6 +180,11 @@ export const isVersionNewer = (
 
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 
+export type MeeVersionsWithChainId = {
+  version: MEEVersionConfig
+  chainId: number
+}[]
+
 export type MEEVersionConfig = {
   /** The version of the Nexus account */
   version: MEEVersion

@@ -1,12 +1,17 @@
 import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
+import type { MeeVersionsWithChainId } from "./getVersion"
 
 type BatchInstructionsParameters = {
   /**
    * The account address to execute the instructions on.
    */
   accountAddress: Address
+  /**
+   * meeVersions - List of mee versions for different chains
+   */
+  meeVersions: MeeVersionsWithChainId
   /**
    * The remaining instructions to be executed.
    */
@@ -26,7 +31,7 @@ type BatchInstructionsParameters = {
 export const batchInstructions = async (
   parameters: BatchInstructionsParameters
 ): Promise<Instruction[]> => {
-  const { accountAddress, instructions } = parameters
+  const { accountAddress, instructions, meeVersions } = parameters
 
   const result: Instruction[] = []
 
@@ -47,7 +52,7 @@ export const batchInstructions = async (
 
     if (batch.length > 1) {
       const [batchedOp] = await buildBatch(
-        { accountAddress },
+        { accountAddress, meeVersions },
         { instructions: batch }
       )
 

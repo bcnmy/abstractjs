@@ -143,6 +143,11 @@ export const prepareInstructions = async (
     batch = true
   } = parameters
 
+  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   let triggerAmount = 0n
 
   if (trigger.useMaxAvailableFunds) {
@@ -231,6 +236,7 @@ export const prepareInstructions = async (
     if (batch) {
       batchedInstructions = await batchInstructions({
         accountAddress: account.signer.address,
+        meeVersions,
         instructions: resolvedInstructions
       })
     } else {
@@ -261,6 +267,7 @@ export const prepareInstructions = async (
   if (batch) {
     batchedInstructions = await batchInstructions({
       accountAddress: account.signer.address,
+      meeVersions,
       instructions: [...triggerTransfer, ...resolvedInstructions]
     })
   } else {

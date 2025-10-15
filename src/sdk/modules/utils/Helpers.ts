@@ -147,3 +147,17 @@ export const isPermitSupported = async (
     return false
   }
 }
+
+export const functionNameToLabel = (functionName: string): string => {
+  return (
+    functionName
+      // Convert camelCase to space: "camelCase" → "camel Case"
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      // Replace common separators (_ - :) with space
+      .replace(/[_\-:]+/g, " ")
+      // Trim whitespace
+      .trim()
+      // Capitalize each word
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  )
+}

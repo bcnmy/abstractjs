@@ -40,6 +40,7 @@ import {
 } from "../../createMeeClient"
 import type { QuoteType } from "./getQuoteType"
 import type { TokenTrigger } from "./signPermitQuote"
+import type { InstructionMetadata } from "./types/instruction-metadata.type"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -105,6 +106,8 @@ export type Instruction = {
   chainId: number
   /** Flag for composable call */
   isComposable?: boolean
+  /** Instruction metadata */
+  metadata?: InstructionMetadata[]
 }
 
 /**
@@ -333,6 +336,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
+  /**
+   * Tags to be used for the transaction
+   */
+  tags?: string[]
 } & OneOf<
     | {
         /**
@@ -402,48 +409,52 @@ export type MeeAuthorization = {
   s: Hex
   yParity: Hex
 }
+
+export type UserOp = {
+  /** Address of the account initiating the operation */
+  sender: string
+  /** Encoded transaction data */
+  callData: string
+  /** Gas limit for the call execution */
+  callGasLimit: string
+  /** Account nonce */
+  nonce: string
+  /** Chain ID where the operation will be executed */
+  chainId: string
+  /** Lower bound timestamp for operation validity */
+  lowerBoundTimestamp?: number
+  /** Upper bound timestamp for operation validity */
+  upperBoundTimestamp?: number
+  /** EIP7702Auth */
+  eip7702Auth?: MeeAuthorization
+  /** Cleanup userop flag - Special user op */
+  isCleanUpUserOp?: boolean
+  /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
+   * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
+   **/
+  shortEncoding?: boolean
+  /** UserOp instructions metadata */
+  metadata?: InstructionMetadata[]
+  /** Optional Session details for detecting the smart session mode in node during quote phase */
+  sessionDetails?: GrantPermissionResponseEntry
+}
+
 /**
  * Internal structure for submitting a quote request to the MEE service
  * @internal
  */
 type QuoteRequest = {
   /** Array of user operations to be executed */
-  userOps: {
-    /** Address of the account initiating the operation */
-    sender: string
-    /** Encoded transaction data */
-    callData: string
-    /** Gas limit for the call execution */
-    callGasLimit: string
-    /** Account nonce */
-    nonce: string
-    /** Chain ID where the operation will be executed */
-    chainId: string
-    /** Lower bound timestamp for operation validity */
-    lowerBoundTimestamp?: number
-    /** Upper bound timestamp for operation validity */
-    upperBoundTimestamp?: number
-    /** EIP7702Auth */
-    eip7702Auth?: MeeAuthorization
-    /** Cleanup userop flag - Special user op */
-    isCleanUpUserOp?: boolean
-    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
-     * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
-     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
-     **/
-    shortEncoding?: boolean
-    /** Optional Session details for detecting the smart session mode in node during quote phase */
-    sessionDetails?: GrantPermissionResponseEntry
-  }[]
+  userOps: UserOp[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
-
   quoteType?: QuoteType
-
   trigger?: TokenTrigger
-
   /** Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations */
   simulation?: Simulation
+  /** Tags to be used for the transaction */
+  tags?: string[]
 }
 
 /**
@@ -554,6 +565,8 @@ export interface MeeFilledUserOpDetails {
    *  fusion signature for a given userOp
    **/
   shortEncoding: boolean
+  /** Instruction metadata */
+  metadata?: InstructionMetadata[]
   /** Userop signature signed by sponsorship service */
   signature?: Hex
 }
@@ -646,15 +659,39 @@ export const getQuote = async (
       ? SmartSessionMode.UNSAFE_ENABLE
       : SmartSessionMode.USE
 
-  const resolvedInstructions = await resolveInstructions(instructions)
+  let resolvedInstructions = await resolveInstructions(instructions)
+
+  // If there is no metadata is configured by the SDK or developer ? Custom metadata will be added always
+  resolvedInstructions = resolvedInstructions.map((instruction) => {
+    if (!instruction.metadata || instruction.metadata.length === 0) {
+      return {
+        ...instruction,
+        metadata: [
+          {
+            type: "CUSTOM",
+            description: "Custom on-chain action",
+            chainId: instruction.chainId
+          }
+        ]
+      }
+    }
+
+    return instruction
+  })
 
   let finalInstructions = resolvedInstructions
+
+  const meeVersions = account_.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
 
   // By default, all the main instructions are batched
   if (batch) {
     finalInstructions = await batchInstructions({
       accountAddress: account_.signer.address,
-      instructions: [...resolvedInstructions]
+      instructions: [...resolvedInstructions],
+      meeVersions
     })
   }
 
@@ -890,7 +927,7 @@ export const getQuote = async (
 
   // complete the userOps including cleanup ones
   const indexPerChainId = new Map<string, number>()
-  const userOps = await Promise.all(
+  const userOps: UserOp[] = await Promise.all(
     preparedUserOps.map(
       async ([
         callData,
@@ -902,7 +939,8 @@ export const getQuote = async (
         chainId,
         isCleanUpUserOp,
         nexusAccount,
-        shortEncoding
+        shortEncoding,
+        metadata
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -1006,7 +1044,8 @@ export const getQuote = async (
           ...initDataOrUndefined,
           ...resolvedVerificationGasLimit,
           shortEncoding: shortEncodingSuperTxn || shortEncoding,
-          sessionDetails: sessionDetail
+          sessionDetails: sessionDetail,
+          metadata
         }
       }
     )
@@ -1017,7 +1056,8 @@ export const getQuote = async (
     userOps,
     paymentInfo,
     simulation,
-    trigger
+    trigger,
+    tags: parameters.tags
   }
 
   let quote = await client.request<GetQuotePayload>({
@@ -1335,7 +1375,8 @@ const prepareUserOps = async (
         instruction.chainId.toString(),
         isCleanUpUserOps,
         deployment,
-        shortEncoding
+        shortEncoding,
+        instruction.metadata
       ])
     })
   )
@@ -1356,6 +1397,11 @@ const prepareCleanUpUserOps = async (
   cleanUps: CleanUp[],
   moduleAddress?: Address
 ) => {
+  const meeVersions = account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
@@ -1382,7 +1428,11 @@ const prepareCleanUpUserOps = async (
             amount = cleanUp.amount as RuntimeValue
           }
           const [cleanUpNativeTransferInstruction] = await buildComposable(
-            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              accountAddress: account.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               type: "nativeTokenTransfer",
               data: {
@@ -1399,7 +1449,11 @@ const prepareCleanUpUserOps = async (
           const amount = cleanUp.amount as bigint
 
           const [cleanUpNativeTransferInstruction] = await buildComposable(
-            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              accountAddress: account.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               type: "rawCalldata",
               data: {
@@ -1426,7 +1480,11 @@ const prepareCleanUpUserOps = async (
         }
 
         const [cleanUpERC20TransferInstruction] = await buildComposable(
-          { accountAddress: account.signer.address, currentInstructions: [] },
+          {
+            accountAddress: account.signer.address,
+            currentInstructions: [],
+            meeVersions
+          },
           {
             type: "transfer",
             data: {
