@@ -1,4 +1,4 @@
-import { type Hex } from "viem"
+import type { Hex } from "viem"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getSupertransactionReceipt, {
@@ -73,7 +73,7 @@ export const waitForSupertransactionReceipt = async (
   // Calculate the overall transaction status
   const userOps = explorerResponse.userOps || []
 
-  for (let userOp of userOps) {
+  for (const userOp of userOps) {
     const meeUserOpHash = userOp.meeUserOpHash.toLowerCase()
     const latestTxHash = userOp.executionData.toLowerCase()
 
