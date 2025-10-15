@@ -33,8 +33,8 @@ export type GetSupertransactionReceiptParams =
     waitForReceipts?: boolean
     /** The number of confirmations to wait for. Defaults to 3. Only used if waitForReceipts is true. */
     confirmations?: number
-    /** Optional callback to listen to txHash replacement for meeUserOps */
-    onTxHashReplaced?: ({
+    /** Optional callback to listen to transaction replacement for meeUserOps */
+    onTransactionReplaced?: ({
       meeUserOpHash,
       txHash
     }: { meeUserOpHash: Hex; txHash: Hex }) => void

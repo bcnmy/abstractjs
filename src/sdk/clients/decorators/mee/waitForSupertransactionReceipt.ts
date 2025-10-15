@@ -75,19 +75,27 @@ export const waitForSupertransactionReceipt = async (
 
   for (const userOp of userOps) {
     const meeUserOpHash = userOp.meeUserOpHash.toLowerCase()
-    const latestTxHash = userOp.executionData.toLowerCase()
 
-    const prevTxHash = txHashMapByMeeUserOpHash.get(meeUserOpHash)
+    if (userOp.executionData) {
+      const latestTxHash = userOp.executionData.toLowerCase()
 
-    // If the previously seen txHash is not same, we sent a callback notification
-    if (prevTxHash && prevTxHash.toLowerCase() !== latestTxHash) {
-      parameters?.onTxHashReplaced?.({
-        meeUserOpHash: meeUserOpHash as Hex,
-        txHash: latestTxHash as Hex
-      })
+      const prevTxHash = txHashMapByMeeUserOpHash.get(meeUserOpHash)
 
-      // Mark the newly seen tx hash
-      txHashMapByMeeUserOpHash.set(meeUserOpHash, latestTxHash)
+      if (prevTxHash) {
+        // If the previously seen txHash is not same with latest one, we sent a callback notification
+        if (prevTxHash.toLowerCase() !== latestTxHash) {
+          parameters?.onTransactionReplaced?.({
+            meeUserOpHash: meeUserOpHash as Hex,
+            txHash: latestTxHash as Hex
+          })
+
+          // Mark the newly seen tx hash
+          txHashMapByMeeUserOpHash.set(meeUserOpHash, latestTxHash)
+        }
+      } else {
+        // Mark the newly seen tx hash
+        txHashMapByMeeUserOpHash.set(meeUserOpHash, latestTxHash)
+      }
     }
   }
 
