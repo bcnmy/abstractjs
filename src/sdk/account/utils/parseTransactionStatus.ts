@@ -1,4 +1,7 @@
-import type { UserOpStatus } from "../../clients/decorators/mee"
+import type {
+  StatusFetchMode,
+  UserOpStatus
+} from "../../clients/decorators/mee"
 import type { MeeFilledUserOpDetails } from "../../clients/decorators/mee/getQuote"
 
 /**
@@ -40,7 +43,8 @@ export const FINAL_STATUSES = ["FAILED", "MINED_SUCCESS", "MINED_FAIL"]
  * @returns The calculated overall transaction status with finality information
  */
 export const parseTransactionStatus = async (
-  userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
+  userOps: (MeeFilledUserOpDetails & UserOpStatus)[],
+  mode: StatusFetchMode = "default"
 ): Promise<TransactionStatusResult> => {
   // Handle empty userOps case
   if (!userOps || userOps.length === 0) {
@@ -55,6 +59,22 @@ export const parseTransactionStatus = async (
   const userOpsWithoutPaymentAndCleanup = userOps.filter(
     (usop) => !usop.isCleanUpUserOp
   )
+
+  // Default mode
+  if (mode === "default") {
+    const isBlockConfirmed = userOpsWithoutPaymentAndCleanup.every(
+      (userOp) => userOp.isConfirmed === true
+    )
+
+    // If the block is not confirmed with sufficient block confirmations ? The userOps is still considered as pending until the confirmations is provided by node
+    if (!isBlockConfirmed) {
+      return {
+        status: "PENDING",
+        isFinalised: false,
+        message: ""
+      }
+    }
+  }
 
   const statusMap = {
     // If there is a cleanup user op failue ? Ignore it
@@ -130,6 +150,7 @@ export const parseTransactionStatus = async (
     statusMap.allFinalised ||
     statusMap.hasFailedOps ||
     statusMap.hasMinedFailOps
+
   return {
     status,
     isFinalised,

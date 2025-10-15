@@ -16,15 +16,28 @@ import type { Url } from "../../createHttpClient"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 
+export type StatusFetchMode = "fast-block" | "default"
+
 /**
  * Parameters for waiting for a supertransaction receipt
  */
 export type GetSupertransactionReceiptParams =
   GetTransactionReceiptParameters & {
+    /**
+     * Fetch mode for supertransaction resceipt
+     * fast-block: Fetches the supertransaction status and resolve it with just 1 block confirmations. Suitable for fast response but not reliable (Reorgs/retry can happen in worst case)
+     * default: Fetches the status with sufficient block confirmations
+     */
+    mode?: StatusFetchMode
     /** Whether to wait for receipts to be mined. Defaults to true. */
     waitForReceipts?: boolean
-    /** The number of confirmations to wait for. Defaults to 2. Only used if waitForReceipts is true. */
+    /** The number of confirmations to wait for. Defaults to 3. Only used if waitForReceipts is true. */
     confirmations?: number
+    /** Optional callback to listen to txHash replacement for meeUserOps */
+    onTxHashReplaced?: ({
+      meeUserOpHash,
+      txHash
+    }: { meeUserOpHash: Hex; txHash: Hex }) => void
     /**
      * Optional smart account to execute the transaction.
      * If not provided, uses the client's default account

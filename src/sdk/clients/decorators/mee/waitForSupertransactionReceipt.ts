@@ -1,3 +1,4 @@
+import { type Hex } from "viem"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getSupertransactionReceipt, {
@@ -6,6 +7,9 @@ import getSupertransactionReceipt, {
 } from "./getSupertransactionReceipt"
 
 export const DEFAULT_POLLING_INTERVAL = 1000
+
+// memory storage for txHash by meeUserOp hash to send notification when txHash changes for meeUserOp
+const txHashMapByMeeUserOpHash: Map<string, string> = new Map()
 
 /**
  * Parameters for waiting for a supertransaction receipt
@@ -68,7 +72,26 @@ export const waitForSupertransactionReceipt = async (
 
   // Calculate the overall transaction status
   const userOps = explorerResponse.userOps || []
-  const statusResult = await parseTransactionStatus(userOps)
+
+  for (let userOp of userOps) {
+    const meeUserOpHash = userOp.meeUserOpHash.toLowerCase()
+    const latestTxHash = userOp.executionData.toLowerCase()
+
+    const prevTxHash = txHashMapByMeeUserOpHash.get(meeUserOpHash)
+
+    // If the previously seen txHash is not same, we sent a callback notification
+    if (prevTxHash && prevTxHash.toLowerCase() !== latestTxHash) {
+      parameters?.onTxHashReplaced?.({
+        meeUserOpHash: meeUserOpHash as Hex,
+        txHash: latestTxHash as Hex
+      })
+
+      // Mark the newly seen tx hash
+      txHashMapByMeeUserOpHash.set(meeUserOpHash, latestTxHash)
+    }
+  }
+
+  const statusResult = await parseTransactionStatus(userOps, parameters.mode)
 
   // Update the response with the calculated status
   explorerResponse.transactionStatus = statusResult.status
