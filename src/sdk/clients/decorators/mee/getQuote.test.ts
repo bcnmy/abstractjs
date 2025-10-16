@@ -5,8 +5,8 @@ import {
   type Transport,
   createWalletClient,
   erc20Abi,
-  publicActions,
-  parseUnits
+  parseUnits,
+  publicActions
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"

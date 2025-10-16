@@ -26,7 +26,7 @@ import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
-import { type NetworkConfig } from "../../../../test/testUtils"
+import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MeeClient,
   createMeeClient
