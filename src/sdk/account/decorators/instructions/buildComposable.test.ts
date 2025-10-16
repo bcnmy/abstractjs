@@ -26,7 +26,7 @@ import { COMPOSABILITY_RUNTIME_TRANSFER_ABI } from "../../../../test/__contracts
 import { FOO_CONTRACT_ABI } from "../../../../test/__contracts/abi/FooContractAbi"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig } from "../../../../test/testUtils"
 import {
   type MeeClient,
   createMeeClient
@@ -36,7 +36,7 @@ import {
   type Instruction,
   userOp
 } from "../../../clients/decorators/mee/getQuote"
-import type { CustomTrigger } from "../../../clients/decorators/mee/signPermitQuote"
+import type { TokenTrigger } from "../../../clients/decorators/mee/signPermitQuote"
 import {
   DEFAULT_MEE_VERSION,
   MEEVersion,
@@ -1759,17 +1759,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
     expect(orchestratorBalanceBefore).to.be.gte(Number(amount)) // orchestrator should have enough native balance already to send it to the target
 
-    const trigger: CustomTrigger = {
+    const trigger: TokenTrigger = {
       chainId: chain.id,
-      call: {
-        to: tokenAddress,
-        value: 0n,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [orchestratorAddress, feeTokenAmount]
-        })
-      }
+      tokenAddress,
+      amount: feeTokenAmount
     }
 
     const runtimeParamViaCustomStaticCallValue =
@@ -1805,12 +1798,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         hash,
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
+
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
 
     const targetEthBalanceAfter = await getBalance(publicClient, {
       address: expectedTarget
     })
+
     expect(targetEthBalanceAfter).to.eq(targetEthBalanceBefore + amount)
   })
 
