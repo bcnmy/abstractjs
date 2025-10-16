@@ -60,31 +60,20 @@ export const parseTransactionStatus = async (
     (usop) => !usop.isCleanUpUserOp
   )
 
-  // Default mode
-  if (mode === "default") {
-    const isBlockConfirmed = userOpsWithoutPaymentAndCleanup.every(
-      (userOp) => userOp.isConfirmed === true
-    )
-
-    // If the block is not confirmed with sufficient block confirmations ? The userOps is still considered as pending until the confirmations is provided by node
-    if (!isBlockConfirmed) {
-      return {
-        status: "PENDING",
-        isFinalised: false,
-        message: ""
-      }
-    }
-  }
-
   const statusMap = {
     // If there is a cleanup user op failue ? Ignore it
     hasFailedOps: userOpsWithoutPaymentAndCleanup.some(
       (userOp) => userOp.executionStatus === "FAILED"
     ),
     // If there is a cleanup user op mining failue ? Ignore it
-    hasMinedFailOps: userOpsWithoutPaymentAndCleanup.some(
-      (userOp) => userOp.executionStatus === "MINED_FAIL"
-    ),
+    hasMinedFailOps: userOpsWithoutPaymentAndCleanup.some((userOp) => {
+      if (mode === "default") {
+        // If the block is not confirmed with sufficient block confirmations ? The userOps is still not considered as mined_fail until the confirmations is provided by node
+        return userOp.executionStatus === "MINED_FAIL" && userOp.isConfirmed
+      }
+
+      return userOp.executionStatus === "MINED_FAIL"
+    }),
     hasPendingOps: userOpsWithoutPaymentAndCleanup.some(
       (userOp) => userOp.executionStatus === "PENDING"
     ),
@@ -92,16 +81,31 @@ export const parseTransactionStatus = async (
       (userOp) => userOp.executionStatus === "MINING"
     ),
     // If there is a cleanup user op failue / mining failure ? Ignore it and mark the sprTx successful.
-    allMinedSuccess: userOpsWithoutPaymentAndCleanup.every(
-      (userOp) => userOp.executionStatus === "MINED_SUCCESS"
-    ),
+    allMinedSuccess: userOpsWithoutPaymentAndCleanup.every((userOp) => {
+      if (mode === "default") {
+        // If the block is not confirmed with sufficient block confirmations ? The userOps is still not considered as mined_success until the confirmations is provided by node
+        return userOp.executionStatus === "MINED_SUCCESS" && userOp.isConfirmed
+      }
+
+      return userOp.executionStatus === "MINED_SUCCESS"
+    }),
     // Check if all userOps have a final state
-    allFinalised: userOpsWithoutPaymentAndCleanup.every(
-      (userOp) =>
+    allFinalised: userOpsWithoutPaymentAndCleanup.every((userOp) => {
+      if (mode === "default") {
+        // If the block is not confirmed with sufficient block confirmations ? The userOps is still not considered as finalized until the confirmations is provided by node
+        return (
+          userOp.executionStatus === "FAILED" ||
+          (userOp.executionStatus === "MINED_FAIL" && userOp.isConfirmed) ||
+          (userOp.executionStatus === "MINED_SUCCESS" && userOp.isConfirmed)
+        )
+      }
+
+      return (
         userOp.executionStatus === "FAILED" ||
         userOp.executionStatus === "MINED_FAIL" ||
         userOp.executionStatus === "MINED_SUCCESS"
-    )
+      )
+    })
   }
   // Calculate status and finality
   let status: UserOpStatus["executionStatus"] = "PENDING" // Default status
