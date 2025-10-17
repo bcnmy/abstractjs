@@ -253,7 +253,9 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         },
         feeToken
       })
-    ).rejects.toThrowError(/^Insufficient funds for relayer fees/)
+    ).rejects.toThrowError(
+      /^Insufficient balance to pay for the gas & orchestration fees/
+    )
   })
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
