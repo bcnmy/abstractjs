@@ -249,11 +249,11 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
       meeClient.getQuote({
         instructions: [...transferInstruction],
         simulation: {
-          simulate: true,
+          simulate: true
         },
         feeToken
       })
-    ).rejects.toThrowError(/^Insufficient funds for relayer fees/);
+    ).rejects.toThrowError(/^Insufficient funds for relayer fees/)
   })
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
