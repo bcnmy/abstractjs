@@ -1,5 +1,18 @@
 # @biconomy/abstractjs
 
+## 1.1.13
+
+### Patch Changes
+
+- Features included:
+
+  1. Supertransaction simulations: Multichain and Single chain simulations for end to end transaction across the chains and protocols
+  2. Gas limit optimization: With the help of simulations, the gas limits are super optimized for the users
+  3. Gas prize optimization: Gas prices are highly optimized to reduce the gas fees for users
+  4. Fast block mode: Fast block mode enables a quick status resolution for supertransaction which highly improves the user experience
+
+  Please read more about these features in the biconomy docs
+
 ## 1.1.12
 
 ### Patch Changes
