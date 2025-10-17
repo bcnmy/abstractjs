@@ -76,6 +76,9 @@ import {
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
 
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
 const generateNewMcNexusAccountAndMeeClient = async (
   publicClient: PublicClient,
   walletClient: WalletClient<Transport, Chain, Account>,
@@ -1036,622 +1039,632 @@ describe("mee.getQuote({ simulations }) - Multichain Simulation Scenarios", () =
   })
 })
 
-describe("mee.getQuote({ simulations }) - STX Execution with simulation-based gas estimation across account deployment and modes", () => {
-  let network: NetworkConfig
-  let eoaAccount: LocalAccount
-  let mcNexus: MultichainSmartAccount
-  let meeClient: MeeClient
-  let chain: Chain
-  let walletClient: WalletClient<Transport, Chain, Account>
-  let publicClient: PublicClient
-  let feeToken: FeeTokenInfo
+describe.runIf(runLifecycleTests)(
+  "mee.getQuote({ simulations }) - STX Execution with simulation-based gas estimation across account deployment and modes",
+  () => {
+    let network: NetworkConfig
+    let eoaAccount: LocalAccount
+    let mcNexus: MultichainSmartAccount
+    let meeClient: MeeClient
+    let chain: Chain
+    let walletClient: WalletClient<Transport, Chain, Account>
+    let publicClient: PublicClient
+    let feeToken: FeeTokenInfo
 
-  beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
-    eoaAccount = network.account!
-    chain = network.chain
+    beforeAll(async () => {
+      network = await toNetwork("TESTNET_FROM_ENV_VARS")
+      eoaAccount = network.account!
+      chain = network.chain
 
-    mcNexus = await toMultichainNexusAccount({
-      signer: eoaAccount,
-      chainConfigurations: [
-        {
-          chain: optimismSepolia,
-          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
-        },
-        {
-          chain: chain,
-          transport: http(network.rpcUrl),
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
-        }
-      ]
-    })
-
-    feeToken = {
-      address: testnetMcTestUSDCP.addressOn(chain.id),
-      chainId: chain.id
-    }
-
-    meeClient = await createMeeClient({
-      account: mcNexus,
-      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
-    })
-
-    publicClient = createPublicClient({
-      chain,
-      transport: http(network.rpcUrl)
-    })
-
-    walletClient = createWalletClient({
-      account: eoaAccount,
-      chain,
-      transport: http(network.rpcUrl)
-    })
-  })
-
-  const prepareForSmartSessionsTest = async () => {
-    // New orchestrator account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundEoa: true,
-        tokenType: "permit",
-        amount: parseUnits("2", 6)
-      }
-    )
-
-    const paramRule: ParamRule = {
-      condition: 1, // EQUAL
-      isLimited: false,
-      offset: 0n,
-      ref: toHex(toBytes("0x", { size: 32 })),
-      usage: { limit: BigInt(0), used: BigInt(0) }
-    }
-
-    const universalActionPolicy = getUniversalActionPolicy({
-      paramRules: {
-        length: 1n,
-        // Weird rhinestone typescript type which forces to have 16 of this like this
-        rules: [
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule,
-          paramRule
-        ]
-      },
-      valueLimitPerUse: parseUnits("100", 6)
-    })
-
-    const sessionSigner = privateKeyToAccount(generatePrivateKey())
-
-    const ssValidator = toSmartSessionsModule({
-      signer: sessionSigner
-    })
-
-    const sessionsMeeClient = meeClient.extend(meeSessionActions)
-
-    const payload = await sessionsMeeClient.prepareForPermissions({
-      smartSessionsValidator: ssValidator,
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      },
-      trigger: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id,
-        amount: parseUnits("1", 6)
-      }
-    })
-
-    if (payload) {
-      await meeClient.waitForSupertransactionReceipt({ hash: payload.hash })
-    }
-
-    const sessionDetails = await sessionsMeeClient.grantPermissionTypedDataSign(
-      {
-        redeemer: sessionSigner.address,
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        },
-        actions: [
-          {
-            chainId: chain.id,
-            actionTarget: testnetMcTestUSDC.addressOn(chain.id),
-            actionTargetSelector: toFunctionSelector(
-              getAbiItem({ abi: erc20Abi, name: "transfer" })
-            ),
-            actionPolicies: [
-              getSudoPolicy(),
-              getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-              getSpendingLimitsPolicy([
-                {
-                  token: testnetMcTestUSDC.addressOn(chain.id),
-                  limit: parseUnits("100", 6)
-                }
-              ]),
-              universalActionPolicy,
-              getTimeFramePolicy({
-                validAfter: 0,
-                validUntil: Date.now() + 60 * 60 * 24
-              })
-            ]
-          },
-          {
-            chainId: chain.id,
-            actionTarget: testnetMcUSDC.addressOn(chain.id),
-            actionTargetSelector: toFunctionSelector(
-              getAbiItem({ abi: erc20Abi, name: "transfer" })
-            ),
-            actionPolicies: [
-              getSudoPolicy(),
-              getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-              getSpendingLimitsPolicy([
-                {
-                  token: testnetMcUSDC.addressOn(chain.id),
-                  limit: parseUnits("100", 6)
-                }
-              ]),
-              universalActionPolicy,
-              getTimeFramePolicy({
-                validAfter: 0,
-                validUntil: Date.now() + 60 * 60 * 24
-              })
-            ]
-          }
-        ],
-        maxPaymentAmount: parseUnits("2", 6)
-      }
-    )
-
-    const userOwnedOrchestratorWithSessionSigner =
-      await toMultichainNexusAccount({
+      mcNexus = await toMultichainNexusAccount({
+        signer: eoaAccount,
         chainConfigurations: [
+          {
+            chain: optimismSepolia,
+            transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          },
           {
             chain: chain,
             transport: http(network.rpcUrl),
             version: getMEEVersion(DEFAULT_MEE_VERSION)
           }
-        ],
-        accountAddress: mcNexus.addressOn(chain.id)!,
+        ]
+      })
+
+      feeToken = {
+        address: testnetMcTestUSDCP.addressOn(chain.id),
+        chainId: chain.id
+      }
+
+      meeClient = await createMeeClient({
+        account: mcNexus,
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+      })
+
+      publicClient = createPublicClient({
+        chain,
+        transport: http(network.rpcUrl)
+      })
+
+      walletClient = createWalletClient({
+        account: eoaAccount,
+        chain,
+        transport: http(network.rpcUrl)
+      })
+    })
+
+    const prepareForSmartSessionsTest = async () => {
+      // New orchestrator account
+      const { mcNexus, meeClient } =
+        await generateNewMcNexusAccountAndMeeClient(
+          publicClient,
+          walletClient,
+          eoaAccount,
+          {
+            fundEoa: true,
+            tokenType: "permit",
+            amount: parseUnits("2", 6)
+          }
+        )
+
+      const paramRule: ParamRule = {
+        condition: 1, // EQUAL
+        isLimited: false,
+        offset: 0n,
+        ref: toHex(toBytes("0x", { size: 32 })),
+        usage: { limit: BigInt(0), used: BigInt(0) }
+      }
+
+      const universalActionPolicy = getUniversalActionPolicy({
+        paramRules: {
+          length: 1n,
+          // Weird rhinestone typescript type which forces to have 16 of this like this
+          rules: [
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule,
+            paramRule
+          ]
+        },
+        valueLimitPerUse: parseUnits("100", 6)
+      })
+
+      const sessionSigner = privateKeyToAccount(generatePrivateKey())
+
+      const ssValidator = toSmartSessionsModule({
         signer: sessionSigner
       })
 
-    return {
-      sessionAccount: userOwnedOrchestratorWithSessionSigner,
-      sessionDetails,
-      mcNexus
-    }
-  }
+      const sessionsMeeClient = meeClient.extend(meeSessionActions)
 
-  test("Simulated gas estimation and execution: simple mode, account already deployed", async () => {
-    const quote = await meeClient.getQuote({
-      instructions: [await getInstructions(mcNexus)],
-      simulation: {
-        simulate: true
-      },
-      feeToken
-    })
+      const payload = await sessionsMeeClient.prepareForPermissions({
+        smartSessionsValidator: ssValidator,
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(chain.id),
+          chainId: chain.id
+        },
+        trigger: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+          chainId: chain.id,
+          amount: parseUnits("1", 6)
+        }
+      })
 
-    expect(quote).toBeDefined()
-
-    const { hash } = await meeClient.executeQuote({ quote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
-
-  test("Simulated gas estimation and execution: simple mode, account undeployed", async () => {
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundMcNexus: true,
-        tokenType: "permit"
+      if (payload) {
+        await meeClient.waitForSupertransactionReceipt({ hash: payload.hash })
       }
-    )
 
-    const quote = await meeClient.getQuote({
-      instructions: [await getInstructions(mcNexus)],
-      simulation: {
-        simulate: true
-      },
-      feeToken
-    })
-
-    expect(quote).toBeDefined()
-
-    const { hash } = await meeClient.executeQuote({ quote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
-
-  test("Simulated gas estimation and execution: onchain mode, account already deployed", async () => {
-    const fusionQuote = await meeClient.getFusionQuote({
-      trigger: {
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
-        amount: 1n,
-        chainId: chain.id
-      },
-      simulation: {
-        simulate: true
-      },
-      instructions: [await getInstructions(mcNexus)],
-      feeToken: {
-        address: testnetMcTestUSDC.addressOn(chain.id),
-        chainId: chain.id
-      }
-    })
-
-    expect(fusionQuote).toBeDefined()
-
-    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
-
-  test("Simulated gas estimation and execution: onchain mode, account undeployed", async () => {
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundEoa: true,
-        tokenType: "onchain",
-        newType: "fresh-index"
-      }
-    )
-
-    const fusionQuote = await meeClient.getFusionQuote({
-      trigger: {
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
-        amount: 1n,
-        chainId: chain.id
-      },
-      simulation: {
-        simulate: true
-      },
-      instructions: [await getInstructions(mcNexus)],
-      feeToken: {
-        address: testnetMcTestUSDC.addressOn(chain.id),
-        chainId: chain.id
-      }
-    })
-
-    expect(fusionQuote).toBeDefined()
-
-    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
-
-  test("Simulated gas estimation and execution: permit mode, account already deployed", async () => {
-    const fusionQuote = await meeClient.getFusionQuote({
-      trigger: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: 1n,
-        chainId: chain.id
-      },
-      simulation: {
-        simulate: true
-      },
-      instructions: [await getInstructions(mcNexus)],
-      feeToken
-    })
-
-    expect(fusionQuote).toBeDefined()
-
-    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
-
-  test("Simulated gas estimation and execution: permit mode, account undeployed", async () => {
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundEoa: true,
-        tokenType: "permit"
-      }
-    )
-
-    const fusionQuote = await meeClient.getFusionQuote({
-      trigger: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: 1n,
-        chainId: chain.id
-      },
-      simulation: {
-        simulate: true,
-        overrides: {
-          tokenOverrides: [
+      const sessionDetails =
+        await sessionsMeeClient.grantPermissionTypedDataSign({
+          redeemer: sessionSigner.address,
+          feeToken: {
+            address: testnetMcTestUSDCP.addressOn(chain.id),
+            chainId: chain.id
+          },
+          actions: [
             {
-              tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
               chainId: chain.id,
-              balance: parseUnits("100000000", 6),
-              accountAddress: mcNexus.addressOn(chain.id, true)
+              actionTarget: testnetMcTestUSDC.addressOn(chain.id),
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              actionPolicies: [
+                getSudoPolicy(),
+                getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
+                getSpendingLimitsPolicy([
+                  {
+                    token: testnetMcTestUSDC.addressOn(chain.id),
+                    limit: parseUnits("100", 6)
+                  }
+                ]),
+                universalActionPolicy,
+                getTimeFramePolicy({
+                  validAfter: 0,
+                  validUntil: Date.now() + 60 * 60 * 24
+                })
+              ]
             },
             {
-              tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
-              chainId: optimismSepolia.id,
-              balance: parseUnits("100000000", 6),
-              accountAddress: mcNexus.addressOn(optimismSepolia.id, true)
+              chainId: chain.id,
+              actionTarget: testnetMcUSDC.addressOn(chain.id),
+              actionTargetSelector: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              actionPolicies: [
+                getSudoPolicy(),
+                getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
+                getSpendingLimitsPolicy([
+                  {
+                    token: testnetMcUSDC.addressOn(chain.id),
+                    limit: parseUnits("100", 6)
+                  }
+                ]),
+                universalActionPolicy,
+                getTimeFramePolicy({
+                  validAfter: 0,
+                  validUntil: Date.now() + 60 * 60 * 24
+                })
+              ]
             }
-          ]
+          ],
+          maxPaymentAmount: parseUnits("2", 6)
+        })
+
+      const userOwnedOrchestratorWithSessionSigner =
+        await toMultichainNexusAccount({
+          chainConfigurations: [
+            {
+              chain: chain,
+              transport: http(network.rpcUrl),
+              version: getMEEVersion(DEFAULT_MEE_VERSION)
+            }
+          ],
+          accountAddress: mcNexus.addressOn(chain.id)!,
+          signer: sessionSigner
+        })
+
+      return {
+        sessionAccount: userOwnedOrchestratorWithSessionSigner,
+        sessionDetails,
+        mcNexus
+      }
+    }
+
+    test("Simulated gas estimation and execution: simple mode, account already deployed", async () => {
+      const quote = await meeClient.getQuote({
+        instructions: [await getInstructions(mcNexus)],
+        simulation: {
+          simulate: true
+        },
+        feeToken
+      })
+
+      expect(quote).toBeDefined()
+
+      const { hash } = await meeClient.executeQuote({ quote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
+    })
+
+    test("Simulated gas estimation and execution: simple mode, account undeployed", async () => {
+      const { mcNexus, meeClient } =
+        await generateNewMcNexusAccountAndMeeClient(
+          publicClient,
+          walletClient,
+          eoaAccount,
+          {
+            fundMcNexus: true,
+            tokenType: "permit"
+          }
+        )
+
+      const quote = await meeClient.getQuote({
+        instructions: [await getInstructions(mcNexus)],
+        simulation: {
+          simulate: true
+        },
+        feeToken
+      })
+
+      expect(quote).toBeDefined()
+
+      const { hash } = await meeClient.executeQuote({ quote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
+    })
+
+    test("Simulated gas estimation and execution: onchain mode, account already deployed", async () => {
+      const fusionQuote = await meeClient.getFusionQuote({
+        trigger: {
+          tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+          amount: 1n,
+          chainId: chain.id
+        },
+        simulation: {
+          simulate: true
+        },
+        instructions: [await getInstructions(mcNexus)],
+        feeToken: {
+          address: testnetMcTestUSDC.addressOn(chain.id),
+          chainId: chain.id
         }
-      },
-      instructions: [await getInstructions(mcNexus)],
-      feeToken
+      })
+
+      expect(fusionQuote).toBeDefined()
+
+      const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
     })
 
-    expect(fusionQuote).toBeDefined()
+    test("Simulated gas estimation and execution: onchain mode, account undeployed", async () => {
+      const { mcNexus, meeClient } =
+        await generateNewMcNexusAccountAndMeeClient(
+          publicClient,
+          walletClient,
+          eoaAccount,
+          {
+            fundEoa: true,
+            tokenType: "onchain",
+            newType: "fresh-index"
+          }
+        )
 
-    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
+      const fusionQuote = await meeClient.getFusionQuote({
+        trigger: {
+          tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+          amount: 1n,
+          chainId: chain.id
+        },
+        simulation: {
+          simulate: true
+        },
+        instructions: [await getInstructions(mcNexus)],
+        feeToken: {
+          address: testnetMcTestUSDC.addressOn(chain.id),
+          chainId: chain.id
+        }
+      })
+
+      expect(fusionQuote).toBeDefined()
+
+      const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
     })
 
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    test("Simulated gas estimation and execution: permit mode, account already deployed", async () => {
+      const fusionQuote = await meeClient.getFusionQuote({
+        trigger: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+          amount: 1n,
+          chainId: chain.id
+        },
+        simulation: {
+          simulate: true
+        },
+        instructions: [await getInstructions(mcNexus)],
+        feeToken
+      })
 
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
+      expect(fusionQuote).toBeDefined()
 
-  test("Simulated gas estimation and execution: sponsored simple mode, account undeployed", async () => {
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        sponsorship: true
-      }
-    )
+      const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
 
-    const quote = await meeClient.getQuote({
-      simulation: {
-        simulate: true
-      },
-      instructions: [await getInstructions(mcNexus)],
-      sponsorship: true,
-      sponsorshipOptions: {
-        url: getDefaultMEENetworkUrl(true),
-        gasTank: getDefaultMeeGasTank(true)
-      }
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
     })
 
-    expect(quote).toBeDefined()
+    test("Simulated gas estimation and execution: permit mode, account undeployed", async () => {
+      const { mcNexus, meeClient } =
+        await generateNewMcNexusAccountAndMeeClient(
+          publicClient,
+          walletClient,
+          eoaAccount,
+          {
+            fundEoa: true,
+            tokenType: "permit"
+          }
+        )
 
-    const { hash } = await meeClient.executeQuote({ quote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
+      const fusionQuote = await meeClient.getFusionQuote({
+        trigger: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+          amount: 1n,
+          chainId: chain.id
+        },
+        simulation: {
+          simulate: true,
+          overrides: {
+            tokenOverrides: [
+              {
+                tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+                chainId: chain.id,
+                balance: parseUnits("100000000", 6),
+                accountAddress: mcNexus.addressOn(chain.id, true)
+              },
+              {
+                tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+                chainId: optimismSepolia.id,
+                balance: parseUnits("100000000", 6),
+                accountAddress: mcNexus.addressOn(optimismSepolia.id, true)
+              }
+            ]
+          }
+        },
+        instructions: [await getInstructions(mcNexus)],
+        feeToken
+      })
+
+      expect(fusionQuote).toBeDefined()
+
+      const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
     })
 
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    test("Simulated gas estimation and execution: sponsored simple mode, account undeployed", async () => {
+      const { mcNexus, meeClient } =
+        await generateNewMcNexusAccountAndMeeClient(
+          publicClient,
+          walletClient,
+          eoaAccount,
+          {
+            sponsorship: true
+          }
+        )
 
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
+      const quote = await meeClient.getQuote({
+        simulation: {
+          simulate: true
+        },
+        instructions: [await getInstructions(mcNexus)],
+        sponsorship: true,
+        sponsorshipOptions: {
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
+        }
+      })
 
-  test("Simulated gas estimation and execution: sponsored permit mode, account already deployed", async () => {
-    const fusionQuote = await meeClient.getFusionQuote({
-      trigger: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: 1n,
-        chainId: chain.id
-      },
-      simulation: {
-        simulate: true
-      },
-      instructions: [await getInstructions(mcNexus)],
-      sponsorship: true,
-      sponsorshipOptions: {
-        url: getDefaultMEENetworkUrl(true),
-        gasTank: getDefaultMeeGasTank(true)
-      }
+      expect(quote).toBeDefined()
+
+      const { hash } = await meeClient.executeQuote({ quote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
     })
 
-    expect(fusionQuote).toBeDefined()
+    test("Simulated gas estimation and execution: sponsored permit mode, account already deployed", async () => {
+      const fusionQuote = await meeClient.getFusionQuote({
+        trigger: {
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+          amount: 1n,
+          chainId: chain.id
+        },
+        simulation: {
+          simulate: true
+        },
+        instructions: [await getInstructions(mcNexus)],
+        sponsorship: true,
+        sponsorshipOptions: {
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
+        }
+      })
 
-    const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
+      expect(fusionQuote).toBeDefined()
+
+      const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
+      const receipt = await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+      console.log({ explorerLinks: receipt.explorerLinks, hash })
     })
 
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    test("Simulated gas estimation and execution: Smart sessions, single calldata, and only one action execution", async () => {
+      const { sessionDetails, sessionAccount, mcNexus } =
+        await prepareForSmartSessionsTest()
 
-    console.log({ explorerLinks: receipt.explorerLinks, hash })
-  })
+      const sessionSignerMeeClient = await createMeeClient({
+        account: sessionAccount
+      })
 
-  test("Simulated gas estimation and execution: Smart sessions, single calldata, and only one action execution", async () => {
-    const { sessionDetails, sessionAccount, mcNexus } =
-      await prepareForSmartSessionsTest()
+      const sessionSignerSessionMeeClient =
+        sessionSignerMeeClient.extend(meeSessionActions)
 
-    const sessionSignerMeeClient = await createMeeClient({
-      account: sessionAccount
+      const tokenTransfer = await mcNexus.build({
+        type: "transfer",
+        data: {
+          tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+          recipient: eoaAccount.address,
+          amount: 0n,
+          chainId: chain.id
+        }
+      })
+
+      const executionPayload =
+        await sessionSignerSessionMeeClient.usePermission({
+          sessionDetails,
+          mode: "ENABLE_AND_USE",
+          simulation: {
+            simulate: true
+          },
+          feeToken: {
+            address: testnetMcTestUSDCP.addressOn(chain.id),
+            chainId: chain.id
+          },
+          instructions: [...tokenTransfer]
+        })
+
+      await sessionSignerMeeClient.waitForSupertransactionReceipt({
+        hash: executionPayload.hash
+      })
+
+      console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
     })
 
-    const sessionSignerSessionMeeClient =
-      sessionSignerMeeClient.extend(meeSessionActions)
+    test("Simulated gas estimation and execution: Smart sessions, batch calldata, and single action execution", async () => {
+      const { sessionDetails, sessionAccount, mcNexus } =
+        await prepareForSmartSessionsTest()
 
-    const tokenTransfer = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
-        recipient: eoaAccount.address,
-        amount: 0n,
-        chainId: chain.id
-      }
+      const sessionSignerMeeClient = await createMeeClient({
+        account: sessionAccount
+      })
+
+      const sessionSignerSessionMeeClient =
+        sessionSignerMeeClient.extend(meeSessionActions)
+
+      const tokenTransfer = await mcNexus.build({
+        type: "transfer",
+        data: {
+          tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+          recipient: eoaAccount.address,
+          amount: 0n,
+          chainId: chain.id
+        }
+      })
+
+      const executionPayload =
+        await sessionSignerSessionMeeClient.usePermission({
+          sessionDetails,
+          mode: "ENABLE_AND_USE",
+          simulation: {
+            simulate: true
+          },
+          feeToken: {
+            address: testnetMcTestUSDCP.addressOn(chain.id),
+            chainId: chain.id
+          },
+          instructions: [...tokenTransfer, ...tokenTransfer]
+        })
+
+      await sessionSignerMeeClient.waitForSupertransactionReceipt({
+        hash: executionPayload.hash
+      })
+
+      console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
     })
 
-    const executionPayload = await sessionSignerSessionMeeClient.usePermission({
-      sessionDetails,
-      mode: "ENABLE_AND_USE",
-      simulation: {
-        simulate: true
-      },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      },
-      instructions: [...tokenTransfer]
+    test("Simulated gas estimation and execution: Smart sessions, batch calldata, and multiple action execution", async () => {
+      const { sessionDetails, sessionAccount, mcNexus } =
+        await prepareForSmartSessionsTest()
+
+      const sessionSignerMeeClient = await createMeeClient({
+        account: sessionAccount
+      })
+
+      const sessionSignerSessionMeeClient =
+        sessionSignerMeeClient.extend(meeSessionActions)
+
+      const tokenTransferOne = await mcNexus.build({
+        type: "transfer",
+        data: {
+          tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+          recipient: eoaAccount.address,
+          amount: 0n,
+          chainId: chain.id
+        }
+      })
+
+      const tokenTransferTwo = await mcNexus.build({
+        type: "transfer",
+        data: {
+          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          recipient: eoaAccount.address,
+          amount: 0n,
+          chainId: chain.id
+        }
+      })
+
+      const executionPayload =
+        await sessionSignerSessionMeeClient.usePermission({
+          sessionDetails,
+          mode: "ENABLE_AND_USE",
+          simulation: {
+            simulate: true
+          },
+          feeToken: {
+            address: testnetMcTestUSDCP.addressOn(chain.id),
+            chainId: chain.id
+          },
+          instructions: [
+            ...tokenTransferOne,
+            ...tokenTransferOne,
+            ...tokenTransferTwo,
+            ...tokenTransferTwo
+          ]
+        })
+
+      await sessionSignerMeeClient.waitForSupertransactionReceipt({
+        hash: executionPayload.hash
+      })
+
+      console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
     })
-
-    await sessionSignerMeeClient.waitForSupertransactionReceipt({
-      hash: executionPayload.hash
-    })
-
-    console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
-  })
-
-  test("Simulated gas estimation and execution: Smart sessions, batch calldata, and single action execution", async () => {
-    const { sessionDetails, sessionAccount, mcNexus } =
-      await prepareForSmartSessionsTest()
-
-    const sessionSignerMeeClient = await createMeeClient({
-      account: sessionAccount
-    })
-
-    const sessionSignerSessionMeeClient =
-      sessionSignerMeeClient.extend(meeSessionActions)
-
-    const tokenTransfer = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
-        recipient: eoaAccount.address,
-        amount: 0n,
-        chainId: chain.id
-      }
-    })
-
-    const executionPayload = await sessionSignerSessionMeeClient.usePermission({
-      sessionDetails,
-      mode: "ENABLE_AND_USE",
-      simulation: {
-        simulate: true
-      },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      },
-      instructions: [...tokenTransfer, ...tokenTransfer]
-    })
-
-    await sessionSignerMeeClient.waitForSupertransactionReceipt({
-      hash: executionPayload.hash
-    })
-
-    console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
-  })
-
-  test("Simulated gas estimation and execution: Smart sessions, batch calldata, and multiple action execution", async () => {
-    const { sessionDetails, sessionAccount, mcNexus } =
-      await prepareForSmartSessionsTest()
-
-    const sessionSignerMeeClient = await createMeeClient({
-      account: sessionAccount
-    })
-
-    const sessionSignerSessionMeeClient =
-      sessionSignerMeeClient.extend(meeSessionActions)
-
-    const tokenTransferOne = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
-        recipient: eoaAccount.address,
-        amount: 0n,
-        chainId: chain.id
-      }
-    })
-
-    const tokenTransferTwo = await mcNexus.build({
-      type: "transfer",
-      data: {
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
-        recipient: eoaAccount.address,
-        amount: 0n,
-        chainId: chain.id
-      }
-    })
-
-    const executionPayload = await sessionSignerSessionMeeClient.usePermission({
-      sessionDetails,
-      mode: "ENABLE_AND_USE",
-      simulation: {
-        simulate: true
-      },
-      feeToken: {
-        address: testnetMcTestUSDCP.addressOn(chain.id),
-        chainId: chain.id
-      },
-      instructions: [
-        ...tokenTransferOne,
-        ...tokenTransferOne,
-        ...tokenTransferTwo,
-        ...tokenTransferTwo
-      ]
-    })
-
-    await sessionSignerMeeClient.waitForSupertransactionReceipt({
-      hash: executionPayload.hash
-    })
-
-    console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
-  })
-})
+  }
+)
