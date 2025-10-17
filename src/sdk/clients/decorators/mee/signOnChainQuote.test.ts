@@ -106,7 +106,10 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       ]
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
+    meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
     tokenAddress = mcUSDC.addressOn(optimism.id)
   })
 
@@ -274,10 +277,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
             }
           })
         ],
-        feeToken: {
-          chainId: network.chain.id,
-          address: token
-        }
+        sponsorship: true
       })
       expect(fusionQuote).toBeDefined()
       expect(fusionQuote.trigger).toBeDefined()
