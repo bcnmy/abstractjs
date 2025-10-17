@@ -240,7 +240,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
       data: {
         recipient: eoaAccount.address,
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: parseUnits("100", 6),
+        amount: 0n,
         chainId: chain.id
       }
     })
@@ -248,9 +248,12 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     await expect(
       meeClient.getQuote({
         instructions: [...transferInstruction],
+        simulation: {
+          simulate: true,
+        },
         feeToken
       })
-    ).rejects.toThrow("Insufficient funds for relayer fees")
+    ).rejects.toThrowError(/^Insufficient funds for relayer fees/);
   })
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
