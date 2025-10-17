@@ -569,6 +569,8 @@ export interface MeeFilledUserOpDetails {
   metadata?: InstructionMetadata[]
   /** Userop signature signed by sponsorship service */
   signature?: Hex
+  /** Userop finality confirmation. Soft confirmation and Hard confirmation is supported */
+  isConfirmed?: boolean
 }
 
 /**

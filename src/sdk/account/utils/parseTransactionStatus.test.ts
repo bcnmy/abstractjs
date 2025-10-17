@@ -53,24 +53,16 @@ const DUMMY_USER_OP: MeeFilledUserOpDetails & UserOpStatus = {
   executionError: ""
 }
 
-const fulfilledReceipt: PromiseSettledResult<TransactionReceipt> = {
-  status: "fulfilled",
-  value: DUMMY_RECEIPT
-}
-
-const rejectedReceipt: PromiseSettledResult<TransactionReceipt> = {
-  status: "rejected",
-  reason: new Error("Rejected")
-}
-
 // Define user ops with different statuses
 const successUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
+  isConfirmed: true,
   executionStatus: "SUCCESS"
 }
 
 const minedSuccessUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
+  isConfirmed: true,
   executionStatus: "MINED_SUCCESS"
 }
 
@@ -92,6 +84,7 @@ const failedUserOp: MeeFilledUserOpDetails & UserOpStatus = {
 
 const minedFailUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
+  isConfirmed: true,
   executionStatus: "MINED_FAIL",
   executionError: "This is a test error for status MINED_FAIL"
 }
