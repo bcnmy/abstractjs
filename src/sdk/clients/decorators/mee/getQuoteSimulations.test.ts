@@ -30,7 +30,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import type { FeeTokenInfo, Instruction } from "."
 import {
   type NetworkConfig,
