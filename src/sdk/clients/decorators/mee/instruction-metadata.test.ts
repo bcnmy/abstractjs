@@ -685,8 +685,8 @@ describe("Instruction metadata test", () => {
     const quote = await meeClient.getQuote({
       instructions: [...bridgeInstructions],
       feeToken: {
-        address: mcUSDC.addressOn(base.id),
-        chainId: base.id
+        address: mcUSDC.addressOn(optimism.id),
+        chainId: optimism.id
       }
     })
 

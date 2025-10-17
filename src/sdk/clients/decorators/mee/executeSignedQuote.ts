@@ -1,5 +1,6 @@
 import type { Hex } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
+import type { TokenTrigger } from "./signPermitQuote"
 import type { SignQuotePayload } from "./signQuote"
 
 /**
@@ -10,7 +11,9 @@ export type ExecuteSignedQuoteParams = {
    * The signed quote payload to execute
    * @see {@link SignQuotePayload}
    */
-  signedQuote: SignQuotePayload
+  signedQuote: SignQuotePayload & {
+    trigger?: TokenTrigger
+  }
 }
 
 /**

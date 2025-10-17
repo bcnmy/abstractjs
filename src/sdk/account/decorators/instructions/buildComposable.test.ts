@@ -36,7 +36,7 @@ import {
   type Instruction,
   userOp
 } from "../../../clients/decorators/mee/getQuote"
-import type { CustomTrigger } from "../../../clients/decorators/mee/signPermitQuote"
+import type { TokenTrigger } from "../../../clients/decorators/mee/signPermitQuote"
 import {
   DEFAULT_MEE_VERSION,
   MEEVersion,
@@ -1759,17 +1759,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
     expect(orchestratorBalanceBefore).to.be.gte(Number(amount)) // orchestrator should have enough native balance already to send it to the target
 
-    const trigger: CustomTrigger = {
+    const trigger: TokenTrigger = {
       chainId: chain.id,
-      call: {
-        to: tokenAddress,
-        value: 0n,
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [orchestratorAddress, feeTokenAmount]
-        })
-      }
+      tokenAddress,
+      amount: feeTokenAmount
     }
 
     const runtimeParamViaCustomStaticCallValue =
@@ -1805,12 +1798,14 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         hash,
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
+
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
     console.log({ explorerLinks, hash })
 
     const targetEthBalanceAfter = await getBalance(publicClient, {
       address: expectedTarget
     })
+
     expect(targetEthBalanceAfter).to.eq(targetEthBalanceBefore + amount)
   })
 
@@ -2654,7 +2649,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             chainId: chain.id,
             recipientAddress: eoaAccount.address,
             amount: amountToTransfer,
-            dependsOn: [userOp(1), userOp(2)]
+            dependsOn: [userOp(1)]
           }
         ],
         feeToken: {

@@ -29,6 +29,9 @@ export type GetPermitQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
 
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
+
   feePayer?: undefined
 }
 
@@ -76,6 +79,7 @@ export const getPermitQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
     ...rest
   } = parameters
@@ -100,19 +104,39 @@ export const getPermitQuote = async (
       owner, // EOA address
       spender, // SCA address who gets the approval for spend initiation
       recipient, // Either the SCA takes amount for itself or transferred for custom recipient
-      account: account_
+      account: account_,
+      batch
     })
 
   const eoa = account_.signer.address
 
-  const quote = await getQuote(client, {
-    path: "quote-permit", // Use different endpoint for permit enabled tokens
-    eoa,
-    instructions: batchedInstructions,
-    gasLimit: gasLimit || triggerGasLimit,
-    ...(cleanUps ? { cleanUps } : {}),
-    ...rest
-  })
+  const triggerInfo: Trigger = {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    gasLimit: triggerGasLimit,
+    amount: triggerAmount, // Amount without fees and fees will be added below
+    ...(trigger.approvalAmount
+      ? { approvalAmount: trigger.approvalAmount }
+      : {}),
+    ...(trigger.recipientAddress
+      ? { recipientAddress: trigger.recipientAddress }
+      : {})
+  }
+
+  const quote = await getQuote(
+    client,
+    {
+      path: "quote-permit", // Use different endpoint for permit enabled tokens
+      eoa,
+      batch,
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || triggerGasLimit,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    },
+    "permit",
+    triggerInfo
+  )
 
   // For useMaxAvailableFunds case, fees will be taken from max available funds.
   // else it will be explicitly defined here
@@ -125,22 +149,11 @@ export const getPermitQuote = async (
     fees = 0n
   }
 
-  const amount = triggerAmount + fees
+  triggerInfo.amount += fees
 
   return {
     quote,
-    trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      gasLimit: triggerGasLimit,
-      amount,
-      ...(trigger.approvalAmount
-        ? { approvalAmount: trigger.approvalAmount }
-        : {}),
-      ...(trigger.recipientAddress
-        ? { recipientAddress: trigger.recipientAddress }
-        : {})
-    }
+    trigger: triggerInfo
   }
 }
 

@@ -5,6 +5,7 @@ import {
   type Transport,
   createWalletClient,
   erc20Abi,
+  parseUnits,
   publicActions
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
@@ -1671,16 +1672,10 @@ describe("mee.getQuote", () => {
   })
 
   test("Should SDK use manually injected 7702 auth with chain id zero for all chains if the nonce are same", async () => {
-    const eoaAccount = privateKeyToAccount(generatePrivateKey())
-
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain: baseSepolia,
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
-    }).extend(publicActions)
+    const newEoaAccount = privateKeyToAccount(generatePrivateKey())
 
     const mcNexus = await toMultichainNexusAccount({
-      signer: eoaAccount,
+      signer: newEoaAccount,
       chainConfigurations: [
         {
           chain: baseSepolia,
@@ -1693,10 +1688,32 @@ describe("mee.getQuote", () => {
           version: getMEEVersion(MEEVersion.V2_1_0)
         }
       ],
-      accountAddress: eoaAccount.address
+      accountAddress: newEoaAccount.address
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(optimismSepolia.id, true)
+
+    const eoaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    await transferErc20({
+      publicClient,
+      walletClient: eoaWalletClient,
+      tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+      recipient: newEoaAccount.address,
+      amount: parseUnits("0.5", 6)
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const walletClient = createWalletClient({
+      account: newEoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
 
     const auth = await walletClient.signAuthorization({
       contractAddress: version.implementationAddress,
@@ -1711,7 +1728,7 @@ describe("mee.getQuote", () => {
     const baseSepoliaTransfer = await mcNexus.build({
       type: "transfer",
       data: {
-        recipient: eoaAccount.address,
+        recipient: newEoaAccount.address,
         chainId: baseSepolia.id,
         amount: 1n,
         tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
@@ -1721,7 +1738,7 @@ describe("mee.getQuote", () => {
     const optimismSepoliaTransfer = await mcNexus.build({
       type: "transfer",
       data: {
-        recipient: eoaAccount.address,
+        recipient: newEoaAccount.address,
         chainId: optimismSepolia.id,
         amount: 1n,
         tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
@@ -1740,6 +1757,8 @@ describe("mee.getQuote", () => {
     })
 
     expect(quote).toBeDefined()
+
+    console.log(quote)
 
     expect(quote.userOps[0].userOp.initCode).to.eq("0x")
     expect(quote.userOps[0].eip7702Auth).toBeDefined()
@@ -2272,7 +2291,7 @@ describe("mee.getQuote", () => {
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
     expect(receipt).toBeDefined()
