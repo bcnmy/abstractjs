@@ -28,6 +28,9 @@ export type GetOnChainQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
 
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
+
   feePayer?: undefined
 }
 
@@ -80,6 +83,7 @@ export const getOnChainQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
     ...rest
   } = parameters
@@ -97,9 +101,11 @@ export const getOnChainQuote = async (
       meeVersions,
       instructions: resolvedInstructions
     })
+
     const quote = await getQuote(client, {
       path: "quote",
       eoa: account_.signer.address,
+      batch,
       instructions: batchedInstructions,
       gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       ...(cleanUps ? { cleanUps } : {}),
@@ -126,21 +132,41 @@ export const getOnChainQuote = async (
       owner, // EOA address
       spender, // For on chain quotes, the funds are directly deposited. So this param is not mostly used
       recipient, // Either the SCA takes amount for itself or transferred for custom recipient
-      account: account_
+      account: account_,
+      batch
     })
+
+  const triggerInfo: Trigger = {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    gasLimit: triggerGasLimit,
+    amount: triggerAmount, // Amount without fees and fees will be added below
+    ...(trigger.approvalAmount
+      ? { approvalAmount: trigger.approvalAmount }
+      : {}),
+    ...(trigger.recipientAddress
+      ? { recipientAddress: trigger.recipientAddress }
+      : {})
+  }
 
   // It uses the same endpoint (path) for onchain and permit quotes, as currently
   // the fusion on-chain txn for erc-20 tokens will always be 'approve' and never 'transfer'
   // so the MEE Node endpoint can be the same for both
   // there is also just a 'quote' endpoint, which applies to non-fusion superTxns
-  const quote = await getQuote(client, {
-    path: "quote-permit",
-    eoa: account_.signer.address,
-    instructions: batchedInstructions,
-    gasLimit: gasLimit || triggerGasLimit,
-    ...(cleanUps ? { cleanUps } : {}),
-    ...rest
-  })
+  const quote = await getQuote(
+    client,
+    {
+      path: "quote-permit",
+      eoa: account_.signer.address,
+      instructions: batchedInstructions,
+      batch,
+      gasLimit: gasLimit || triggerGasLimit,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    },
+    "onchain",
+    triggerInfo
+  )
 
   // For useMaxAvailableFunds case, fees will be taken from max available funds.
   // else it will be explicitly defined here
@@ -153,22 +179,11 @@ export const getOnChainQuote = async (
     fees = 0n
   }
 
-  const amount = triggerAmount + fees
+  triggerInfo.amount += fees
 
   return {
     quote,
-    trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      gasLimit: triggerGasLimit,
-      amount,
-      ...(trigger.approvalAmount
-        ? { approvalAmount: trigger.approvalAmount }
-        : {}),
-      ...(trigger.recipientAddress
-        ? { recipientAddress: trigger.recipientAddress }
-        : {})
-    }
+    trigger: triggerInfo
   }
 }
 

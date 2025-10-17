@@ -9,7 +9,6 @@ import {
 import { base, mainnet, optimism } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  MEEVersionConfig,
   type MeeVersionsWithChainId,
   type MultichainSmartAccount,
   buildApprove,
@@ -134,7 +133,7 @@ describe("utils.batchInstructions", () => {
       }
     )
 
-  test("should batch consecutive instructions on the same chain", async () => {
+  test("should batch instructions on the same chain", async () => {
     const instructions = [
       createBaseApproval(mcNexus, "1.0"),
       createBaseApproval(mcNexus, "2.0")
@@ -173,7 +172,7 @@ describe("utils.batchInstructions", () => {
     expect(result[1].chainId).toBe(optimism.id)
   })
 
-  test("should batch multiple groups of consecutive same-chain instructions", async () => {
+  test("should batch multiple same chain instructions into groups per chain", async () => {
     const instructions = [
       // First base chain group
       createBaseApproval(mcNexus, "1.0"),
@@ -194,10 +193,9 @@ describe("utils.batchInstructions", () => {
       instructions: [...triggerCall, ...resolvedInstructions]
     })
 
-    expect(result).toHaveLength(3) // Should have 3 groups: base batch, optimism, base batch
+    expect(result).toHaveLength(2)
     expect(result[0].chainId).toBe(base.id)
     expect(result[1].chainId).toBe(optimism.id)
-    expect(result[2].chainId).toBe(base.id)
   })
 
   test("should handle single instructions correctly", async () => {

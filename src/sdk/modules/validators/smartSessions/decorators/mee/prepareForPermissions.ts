@@ -130,8 +130,10 @@ export const prepareForPermissions = async (
       const quote = await getFusionQuote(client, {
         ...parameters,
         instructions: completeInstructionsList,
+        batch: parameters.batch || true,
         feeToken: parameters.feeToken!,
-        trigger: parameters.trigger
+        trigger: parameters.trigger,
+        simulation: parameters.simulation
       } as GetFusionQuoteParams)
 
       return await executeFusionQuote(client, {
@@ -145,7 +147,8 @@ export const prepareForPermissions = async (
       ...parameters,
       instructions: completeInstructionsList,
       feeToken: parameters.feeToken!,
-      trigger: parameters.trigger
+      trigger: parameters.trigger,
+      simulation: parameters.simulation
     } as GetQuoteParams)
   }
   return undefined
