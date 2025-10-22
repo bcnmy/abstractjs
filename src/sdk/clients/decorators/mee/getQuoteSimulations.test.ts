@@ -248,9 +248,22 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     await expect(
       meeClient.getQuote({
         instructions: [...transferInstruction],
+        simulation: {
+          simulate: true,
+          overrides: {
+            tokenOverrides: [
+              {
+                tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+                chainId: chain.id,
+                balance: parseUnits("100", 6),
+                accountAddress: mcNexus.addressOn(chain.id, true)
+              }
+            ]
+          }
+        },
         feeToken
       })
-    ).rejects.toThrow("Insufficient funds for relayer fees")
+    ).rejects.toThrow("Insufficient balance to pay for the gas & orchestration fees.")
   })
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
