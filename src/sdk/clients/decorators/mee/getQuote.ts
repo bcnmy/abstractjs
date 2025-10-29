@@ -24,7 +24,6 @@ import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
-  isRuntimeComposableValue,
   runtimeERC20BalanceOf,
   runtimeNativeBalanceOf,
   runtimeNonceOf
