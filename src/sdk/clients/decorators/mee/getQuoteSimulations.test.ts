@@ -29,6 +29,7 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { getStorageAt } from "viem/actions"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import type { FeeTokenInfo, Instruction } from "."
@@ -47,7 +48,7 @@ import {
   getRandomAccountIndex,
   transferErc20
 } from "../../../../test/testUtils"
-import { getMeeScanLink } from "../../../account"
+import { calculateNonceStorageSlot, getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -64,7 +65,9 @@ import {
 import {
   type ParamRule,
   getMEEVersion,
+  greaterThanOrEqualTo,
   meeSessionActions,
+  runtimeERC20BalanceOf,
   toSmartSessionsModule
 } from "../../../modules"
 import {
@@ -240,7 +243,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
       data: {
         recipient: eoaAccount.address,
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: parseUnits("100", 6),
+        amount: 0n,
         chainId: chain.id
       }
     })
@@ -248,9 +251,14 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     await expect(
       meeClient.getQuote({
         instructions: [...transferInstruction],
+        simulation: {
+          simulate: true
+        },
         feeToken
       })
-    ).rejects.toThrow("Insufficient funds for relayer fees")
+    ).rejects.toThrowError(
+      /^Insufficient balance to pay for the gas & orchestration fees/
+    )
   })
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
@@ -1243,12 +1251,73 @@ describe.runIf(runLifecycleTests)(
       }
     }
 
+    test("Simulated gas estimation and execution: test simulating cleanUp tokens for different cases", async () => {
+      const quoteWithNativeTokenCleanUp = await meeClient.getQuote({
+        instructions: [await getInstructions(mcNexus)],
+        simulation: {
+          simulate: true
+        },
+        cleanUps: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: 100000000n
+          }
+        ],
+        feeToken
+      })
+      expect(quoteWithNativeTokenCleanUp).toBeDefined()
+
+      const quoteWithERC20TokenFixedAmountCleanUp = await meeClient.getQuote({
+        instructions: [await getInstructions(mcNexus)],
+        simulation: {
+          simulate: true
+        },
+        cleanUps: [
+          {
+            tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: parseUnits("1", 6)
+          }
+        ],
+        feeToken
+      })
+      expect(quoteWithERC20TokenFixedAmountCleanUp).toBeDefined()
+
+      const quoteWithERC20TokenAutomaticRuntimeAmountCleanUp =
+        await meeClient.getQuote({
+          instructions: [await getInstructions(mcNexus)],
+          simulation: {
+            simulate: true
+          },
+          cleanUps: [
+            {
+              tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+              chainId: chain.id,
+              recipientAddress: eoaAccount.address
+            }
+          ],
+          feeToken
+        })
+      expect(quoteWithERC20TokenAutomaticRuntimeAmountCleanUp).toBeDefined()
+    })
+
     test("Simulated gas estimation and execution: simple mode, account already deployed", async () => {
       const quote = await meeClient.getQuote({
         instructions: [await getInstructions(mcNexus)],
         simulation: {
           simulate: true
         },
+        cleanUps: [
+          {
+            tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address,
+            amount: parseUnits("1", 6)
+          }
+        ],
         feeToken
       })
 
@@ -1283,6 +1352,13 @@ describe.runIf(runLifecycleTests)(
         simulation: {
           simulate: true
         },
+        cleanUps: [
+          {
+            tokenAddress: testnetMcTestUSDC.addressOn(chain.id),
+            chainId: chain.id,
+            recipientAddress: eoaAccount.address
+          }
+        ],
         feeToken
       })
 
