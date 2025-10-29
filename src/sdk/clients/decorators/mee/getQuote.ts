@@ -1,4 +1,4 @@
-import type { Address, Hex, OneOf } from "viem"
+import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { batchInstructions } from "../../../account"
 import {
@@ -9,6 +9,7 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
   addressEquals,
+  calculateNonceStorageSlot,
   isBigInt,
   isNativeToken
 } from "../../../account/utils/Utils"
@@ -23,6 +24,7 @@ import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
+  isRuntimeComposableValue,
   runtimeERC20BalanceOf,
   runtimeNativeBalanceOf,
   runtimeNonceOf
@@ -108,6 +110,8 @@ export type Instruction = {
   isComposable?: boolean
   /** Instruction metadata */
   metadata?: InstructionMetadata[]
+  /** Simulation overrides */
+  simulationOverrides?: Overrides
 }
 
 /**
@@ -240,7 +244,7 @@ export interface CustomOverride {
   /** Chain ID */
   chainId: number
   /** Override value - can be bigint, hex string, address, or regular string */
-  value: bigint | Address | Hex | string
+  value: Hex
 }
 
 export interface Overrides {
@@ -438,6 +442,8 @@ export type UserOp = {
   metadata?: InstructionMetadata[]
   /** Optional Session details for detecting the smart session mode in node during quote phase */
   sessionDetails?: GrantPermissionResponseEntry
+  /** Custom overrides */
+  simulationOverrides?: Overrides
 }
 
 /**
@@ -916,15 +922,14 @@ export const getQuote = async (
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
-
-    const cleanUpUserOps = await prepareCleanUpUserOps(
+    const result = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
       cleanUps,
       moduleAddress
     )
 
-    preparedUserOps.push(...cleanUpUserOps)
+    preparedUserOps.push(...result)
   }
 
   // complete the userOps including cleanup ones
@@ -942,7 +947,8 @@ export const getQuote = async (
         isCleanUpUserOp,
         nexusAccount,
         shortEncoding,
-        metadata
+        metadata,
+        simulationOverrides
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -1047,7 +1053,8 @@ export const getQuote = async (
           ...resolvedVerificationGasLimit,
           shortEncoding: shortEncodingSuperTxn || shortEncoding,
           sessionDetails: sessionDetail,
-          metadata
+          metadata,
+          simulationOverrides
         }
       }
     )
@@ -1378,7 +1385,8 @@ const prepareUserOps = async (
         isCleanUpUserOps,
         deployment,
         shortEncoding,
-        instruction.metadata
+        instruction.metadata,
+        instruction.simulationOverrides
       ])
     })
   )
@@ -1407,9 +1415,18 @@ const prepareCleanUpUserOps = async (
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
-      const { version } = account.deploymentOn(cleanUp.chainId, true)
+
+      const { version, entryPoint } = account.deploymentOn(
+        cleanUp.chainId,
+        true
+      )
       const composabilityVersion = version.composabilityVersion
 
+      // Initialize simulation overrides; Used for simulation overrides of cleanUp userOps
+      const tokenOverrides: TokenOverride[] = []
+      const customOverrides: CustomOverride[] = []
+
+      let simulationTokenOverrideAmount: bigint
       if (isNativeToken(cleanUp.tokenAddress)) {
         if (!isBigInt(cleanUp.amount) || cleanUp.amount === 0n) {
           if (composabilityVersion === ComposabilityVersion.V1_0_0) {
@@ -1447,6 +1464,7 @@ const prepareCleanUpUserOps = async (
             composabilityVersion
           )
           cleanUpInstruction = cleanUpNativeTransferInstruction
+          simulationTokenOverrideAmount = 1n // default to 1 wei if runtime balance is used
         } else {
           const amount = cleanUp.amount as bigint
 
@@ -1468,10 +1486,18 @@ const prepareCleanUpUserOps = async (
             composabilityVersion
           )
           cleanUpInstruction = cleanUpNativeTransferInstruction
+          simulationTokenOverrideAmount = amount
         }
       } else {
         // Else ERC20 cleanup
         let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
+
+        // If the amount is a bigint and greater than 0, then use it for simulation, otherwise default to 1 wei
+        if (isBigInt(amount) && (amount as bigint) > 0n) {
+          simulationTokenOverrideAmount = amount as bigint
+        } else {
+          simulationTokenOverrideAmount = 1n // default to 1 wei if runtime balance is used
+        }
 
         // If there is no amount specified, runtime amount will be used for cleanup by default
         if (amount === 0n) {
@@ -1503,6 +1529,13 @@ const prepareCleanUpUserOps = async (
         cleanUpInstruction = cleanUpERC20TransferInstruction
       }
 
+      tokenOverrides.push({
+        tokenAddress: cleanUp.tokenAddress,
+        accountAddress: account.addressOn(cleanUp.chainId, true),
+        balance: simulationTokenOverrideAmount,
+        chainId: cleanUp.chainId
+      })
+
       const nonceDependencies: RuntimeValue[] = []
 
       if (cleanUp.dependsOn && cleanUp.dependsOn.length > 0) {
@@ -1522,6 +1555,15 @@ const prepareCleanUpUserOps = async (
           })
 
           nonceDependencies.push(nonceOf)
+          customOverrides.push({
+            chainId: cleanUp.chainId,
+            contractAddress: entryPoint.address,
+            storageSlot: calculateNonceStorageSlot(
+              account.addressOn(cleanUp.chainId, true),
+              nonceKey
+            ),
+            value: pad(toHex(nonce + 1n).slice(-16) as Hex)
+          })
         }
       } else {
         if (userOpsNonceInfo.length === 0) {
@@ -1540,6 +1582,15 @@ const prepareCleanUpUserOps = async (
         })
 
         nonceDependencies.push(nonceOf)
+        customOverrides.push({
+          chainId: cleanUp.chainId,
+          contractAddress: entryPoint.address,
+          storageSlot: calculateNonceStorageSlot(
+            account.addressOn(cleanUp.chainId, true),
+            nonceKey
+          ),
+          value: pad(toHex(nonce + 1n).slice(-16) as Hex)
+        })
       }
 
       const nonceDependencyInputParams = nonceDependencies.flatMap(
@@ -1559,7 +1610,13 @@ const prepareCleanUpUserOps = async (
         return call
       })
 
-      return cleanUpInstruction
+      return {
+        ...cleanUpInstruction,
+        simulationOverrides: {
+          tokenOverrides,
+          customOverrides
+        }
+      }
     })
   )
 

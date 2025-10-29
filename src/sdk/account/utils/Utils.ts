@@ -15,6 +15,8 @@ import {
   erc20Abi,
   hexToBytes,
   keccak256,
+  numberToHex,
+  pad,
   parseAbi,
   parseAbiParameters,
   publicActions,
@@ -588,4 +590,33 @@ export async function supportsCancun({
   }
 
   return false
+}
+
+/**
+ * Calculate the storage slot for nonces in EntryPoint V7
+ * Following exact Solidity storage layout rules from docs
+ */
+export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
+  const BASE_SLOT = 1 // nonceSequenceNumber is at slot 1
+
+  // Step 1: Calculate slot for first mapping level
+  // keccak256(abi.encode(address_key, uint256_slot))
+  // Both address and slot are padded to 32 bytes
+  const firstLevelSlot = keccak256(
+    concat([
+      pad(sender, { size: 32 }), // address padded to 32 bytes
+      pad(numberToHex(BASE_SLOT), { size: 32 }) // slot padded to 32 bytes
+    ])
+  )
+
+  // Step 2: Calculate slot for second mapping level
+  // keccak256(abi.encode(uint192_key, bytes32_slot))
+  const finalSlot = keccak256(
+    concat([
+      pad(numberToHex(key), { size: 32 }), // uint192 key padded to 32 bytes
+      firstLevelSlot // already 32 bytes
+    ])
+  )
+
+  return finalSlot
 }
