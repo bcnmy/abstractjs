@@ -242,7 +242,7 @@ export interface CustomOverride {
   storageSlot: Hex
   /** Chain ID */
   chainId: number
-  /** Override value - can be bigint, hex string, address, or regular string */
+  /** Override value - hex string */
   value: Hex
 }
 
@@ -441,7 +441,10 @@ export type UserOp = {
   metadata?: InstructionMetadata[]
   /** Optional Session details for detecting the smart session mode in node during quote phase */
   sessionDetails?: GrantPermissionResponseEntry
-  /** Custom overrides */
+  /** Custom simulation overrides - if provided, will be used for simulation by
+   * overriding global per supertx overrides. Mostly we will use it for simulation of cleanUp userOps.
+   * But in the future, it can be used for other purposes as well,
+   * for setting custom overrides on a per userOp basis. */
   simulationOverrides?: Overrides
 }
 
@@ -1561,7 +1564,7 @@ const prepareCleanUpUserOps = async (
               account.addressOn(cleanUp.chainId, true),
               nonceKey
             ),
-            value: pad(toHex(nonce + 1n).slice(-16) as Hex)
+            value: pad(toHex(nonce + 1n).slice(-16) as Hex) // taking only last 8 bytes (16 hex characters) - which is the nonce value for a given nonce key
           })
         }
       } else {

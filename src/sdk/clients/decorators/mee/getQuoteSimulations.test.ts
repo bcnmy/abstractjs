@@ -243,7 +243,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
       data: {
         recipient: eoaAccount.address,
         tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: parseUnits("100", 6),
+        amount: 0n,
         chainId: chain.id
       }
     })
@@ -252,22 +252,12 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
       meeClient.getQuote({
         instructions: [...transferInstruction],
         simulation: {
-          simulate: true,
-          overrides: {
-            tokenOverrides: [
-              {
-                tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-                chainId: chain.id,
-                balance: parseUnits("100", 6),
-                accountAddress: mcNexus.addressOn(chain.id, true)
-              }
-            ]
-          }
+          simulate: true
         },
         feeToken
       })
-    ).rejects.toThrow(
-      "Insufficient balance to pay for the gas & orchestration fees."
+    ).rejects.toThrowError(
+      /^Insufficient balance to pay for the gas & orchestration fees/
     )
   })
 
