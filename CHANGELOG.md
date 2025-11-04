@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.1.15
+
+### Patch Changes
+
+- New MEE version 2.2.0 stable support has been added with Audited contracts. This should enable runtime native token flows out of the box along with some other improvements
+
 ## 1.1.14
 
 ### Patch Changes
