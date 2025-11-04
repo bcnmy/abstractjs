@@ -4,6 +4,7 @@ import {
   isVersionOlder,
   versionMeetsRequirement
 } from "../../../account/utils/getVersion"
+import { Logger } from "../../../account/utils/logger"
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
@@ -187,7 +188,7 @@ export const signQuote = async (
   const signer = account_.signer
 
   const signedMessages: SignedMessagesByChainId = {}
-  const metadata: Record<string, AnyData> = {}
+  let metadata: Record<string, AnyData> = {}
 
   // 1. get all the unique chain ids from the quote.userOps array
   const uniqueChainIds = [
@@ -230,8 +231,13 @@ export const signQuote = async (
       {} as Record<string, string[]>
     )
     if (Object.keys(eip712DomainGroups).length > 1) {
-      console.warn(
-        "Multiple eip712 {domain.name+domain.version} are present on different chains. This will require more than one signature."
+      Logger.warn(
+        "Multiple EIP-712 domains detected across chains. This will require multiple signatures.",
+        {
+          domainCount: Object.keys(eip712DomainGroups).length,
+          domains: Object.keys(eip712DomainGroups),
+          affectedChains: eip712DomainGroups
+        }
       )
     }
     for (const chainIds of Object.values(eip712DomainGroups)) {
@@ -239,23 +245,26 @@ export const signQuote = async (
         Number(chainIds[0]),
         true
       ).eip712Domain
-      const { signablePayload } = prepareTypedDataSignableQuotePayload(
+      if (!eip712Domain) {
+        throw new Error(`EIP-712 domain not found for chain ${chainIds[0]}`)
+      }
+      const result = prepareTypedDataSignableQuotePayload(
         quote,
         eip712Domain
       )
+      const { signablePayload } = result
+      metadata = result.metadata
       const typedDataSignature = await signer.signTypedData(signablePayload)
       for (const chainId of chainIds) {
-        signedMessages[chainId] = concatHex([
-          DEFAULT_PREFIX,
-          typedDataSignature
-        ])
+        signedMessages[chainId] = typedDataSignature
       }
     }
   }
   // process personal signatures
   if (chainsWithMEE210.length > 0) {
-    const { signablePayload, metadata } =
-      preparePersonalSignableQuotePayload(quote)
+    const result = preparePersonalSignableQuotePayload(quote)
+    const { signablePayload } = result
+    metadata = result.metadata
     const personalSignature = await signer.signMessage(signablePayload)
     for (const chainId of chainsWithMEE210) {
       signedMessages[chainId] = personalSignature
@@ -263,8 +272,12 @@ export const signQuote = async (
   }
   // informational alert for the dev
   if (chainsWithMEE210.length > 0 && chainsWithMEE220.length > 0) {
-    console.warn(
-      "Both MEE < 2.2.0 and MEE >= 2.2.0 chains are present in the 'smart-account' mode quote. This will require more than one signature."
+    Logger.warn(
+      "Mixed MEE versions detected. Using both typed data signatures (MEE >= 2.2.0) and personal signatures (MEE < 2.2.0).",
+      {
+        chainsWithMEE220: chainsWithMEE220,
+        chainsWithMEE210: chainsWithMEE210
+      }
     )
   }
   return formatSignedQuotePayload(quote, metadata, signedMessages)
