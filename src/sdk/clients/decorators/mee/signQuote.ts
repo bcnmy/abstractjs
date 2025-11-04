@@ -195,32 +195,38 @@ export const signQuote = async (
     ...new Set(quote.userOps.map((userOp) => userOp.chainId))
   ]
 
-  // 2. separate the chains with MEE >= 2.2.0 and < 2.2.0
-  const chainsWithMEE220 = uniqueChainIds.filter((chainId) =>
-    versionMeetsRequirement(
-      account_.deploymentOn(Number(chainId), true).version.version,
-      MEEVersion.V2_2_0
-    )
+  // 2. Cache deployments to avoid redundant calls to deploymentOn()
+  const deploymentsByChainId = new Map(
+    uniqueChainIds.map((chainId) => [
+      chainId,
+      account_.deploymentOn(Number(chainId), true)
+    ])
   )
-  const chainsWithMEE210 = uniqueChainIds.filter((chainId) =>
-    isVersionOlder(
-      account_.deploymentOn(Number(chainId), true).version.version,
-      MEEVersion.V2_2_0
-    )
+
+  // 3. Separate the chains with MEE >= 2.2.0 and < 2.2.0 in a single pass
+  const { chainsWithMEE220, chainsWithMEE210 } = uniqueChainIds.reduce(
+    (acc, chainId) => {
+      const deployment = deploymentsByChainId.get(chainId)!
+      const version = deployment.version.version
+      if (versionMeetsRequirement(version, MEEVersion.V2_2_0)) {
+        acc.chainsWithMEE220.push(chainId)
+      } else {
+        acc.chainsWithMEE210.push(chainId)
+      }
+      return acc
+    },
+    { chainsWithMEE220: [] as string[], chainsWithMEE210: [] as string[] }
   )
 
   if (chainsWithMEE220.length > 0) {
-    // 3. process typed data signatures
-    // 3.1. identify the eip712 domain for each chain
-    // 3.2. group the chains by the unique eip712 domain.name and domain.version
-    // 3.3. if there's more than one group, console warn
-    // 3.4. for each group, sign the quote with the typed data signature and add the signature to the signedMessages object for the respective chains
+    // 4. process typed data signatures
+    // 4.1. identify the eip712 domain for each chain
+    // 4.2. group the chains by the unique eip712 domain.name and domain.version
+    // 4.3. if there's more than one group, console warn
+    // 4.4. for each group, sign the quote with the typed data signature and add the signature to the signedMessages object for the respective chains
     const eip712DomainGroups = chainsWithMEE220.reduce(
       (acc, chainId) => {
-        const eip712Domain = account_.deploymentOn(
-          Number(chainId),
-          true
-        ).eip712Domain
+        const eip712Domain = deploymentsByChainId.get(chainId)!.eip712Domain
         const key = `${eip712Domain.domain.name}-${eip712Domain.domain.version}`
         if (!acc[key]) {
           acc[key] = []
@@ -241,34 +247,34 @@ export const signQuote = async (
       )
     }
     for (const chainIds of Object.values(eip712DomainGroups)) {
-      const eip712Domain = account_.deploymentOn(
-        Number(chainIds[0]),
-        true
-      ).eip712Domain
+      const eip712Domain = deploymentsByChainId.get(chainIds[0])!.eip712Domain
       if (!eip712Domain) {
         throw new Error(`EIP-712 domain not found for chain ${chainIds[0]}`)
       }
-      const result = prepareTypedDataSignableQuotePayload(
-        quote,
-        eip712Domain
-      )
+      const result = prepareTypedDataSignableQuotePayload(quote, eip712Domain)
       const { signablePayload } = result
       metadata = result.metadata
       const typedDataSignature = await signer.signTypedData(signablePayload)
-      for (const chainId of chainIds) {
-        signedMessages[chainId] = typedDataSignature
-      }
+      // Use Object.assign to avoid nested loops
+      Object.assign(
+        signedMessages,
+        Object.fromEntries(chainIds.map((id) => [id, typedDataSignature]))
+      )
     }
   }
-  // process personal signatures
+  // 5. process personal signatures
   if (chainsWithMEE210.length > 0) {
     const result = preparePersonalSignableQuotePayload(quote)
     const { signablePayload } = result
     metadata = result.metadata
     const personalSignature = await signer.signMessage(signablePayload)
-    for (const chainId of chainsWithMEE210) {
-      signedMessages[chainId] = personalSignature
-    }
+    // Use Object.assign to avoid nested loops
+    Object.assign(
+      signedMessages,
+      Object.fromEntries(
+        chainsWithMEE210.map((chainId) => [chainId, personalSignature])
+      )
+    )
   }
   // informational alert for the dev
   if (chainsWithMEE210.length > 0 && chainsWithMEE220.length > 0) {

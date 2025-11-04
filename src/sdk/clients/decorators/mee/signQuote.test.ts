@@ -21,7 +21,7 @@ import type { Instruction } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
 import signQuote, {
   formatSignedQuotePayload,
-  prepareSignableQuotePayload
+  preparePersonalSignableQuotePayload
 } from "./signQuote"
 
 describe("mee.signQuote", () => {
@@ -87,8 +87,9 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(signedQuote.signature).toBeDefined()
-    expect(isHex(signedQuote.signature)).toEqual(true)
+    expect(Object.keys(signedQuote.signatures).length).toEqual(1)
+    expect(signedQuote.signatures[chain.id]).toBeDefined()
+    expect(isHex(signedQuote.signatures[chain.id])).toEqual(true)
   })
 
   test("should sign a quote with modular signing functions", async () => {
@@ -118,14 +119,14 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(signedQuote.signature).toBeDefined()
-    expect(isHex(signedQuote.signature)).toEqual(true)
+    expect(signedQuote.signatures[chain.id]).toBeDefined()
+    expect(isHex(signedQuote.signatures[chain.id])).toEqual(true)
 
     const quoteType = await getQuoteType(meeClient, quote)
 
     expect(quoteType).toEqual("simple")
 
-    const { signablePayload, metadata } = prepareSignableQuotePayload(quote)
+    const { signablePayload, metadata } = preparePersonalSignableQuotePayload(quote)
 
     const signedMessage = await walletClient.signMessage({
       account: eoaAccount,
@@ -135,13 +136,13 @@ describe("mee.signQuote", () => {
     const manuallySignedQuote = formatSignedQuotePayload(
       quote,
       metadata,
-      signedMessage
+      { [chain.id]: signedMessage }
     )
 
     expect(manuallySignedQuote).toBeDefined()
-    expect(manuallySignedQuote.signature).toBeDefined()
-    expect(isHex(manuallySignedQuote.signature)).toEqual(true)
+    expect(manuallySignedQuote.signatures[chain.id]).toBeDefined()
+    expect(isHex(manuallySignedQuote.signatures[chain.id])).toEqual(true)
 
-    expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
+    expect(signedQuote.signatures[chain.id]).toEqual(manuallySignedQuote.signatures[chain.id])
   })
 })
