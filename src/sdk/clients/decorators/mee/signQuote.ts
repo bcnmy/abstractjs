@@ -27,10 +27,10 @@ export type SignQuoteParams = {
 }
 
 /**
- * A map of chain ids to signatures
+ * A map of chain ids to signed messages with their MEE versions
  */
 export type SignedMessagesByChainId = {
-  [chainId: string]: Hex
+  [chainId: string]: { signature: Hex; meeVersion: MEEVersion }
 }
 
 /**
@@ -38,8 +38,9 @@ export type SignedMessagesByChainId = {
  */
 export type SignQuotePayload = GetQuotePayload & {
   /**
-   * The signature of the quote
-   * Prefixed with 'DEFAULT_PREFIX' and concatenated with the signed message
+   * The signatures map of the quote, keyed by chain ID
+   * Each signature is prefixed with 'DEFAULT_PREFIX' and concatenated with the signed message
+   * Each entry includes the signature and the MEE version used for that chain
    */
   signatures: SignedMessagesByChainId
 }
@@ -47,8 +48,9 @@ export type SignQuotePayload = GetQuotePayload & {
 const DEFAULT_PREFIX = "0x177eee00"
 
 /**
- * Prepares the payload required for signing a quote.
- * This function extracts the hash from the quote and formats it as a signable message.
+ * Prepares the payload required for signing a quote using personal message signatures.
+ * This function extracts the hash from the quote and formats it as a signable message for personal signature (eth_sign).
+ * Used for MEE versions < 2.2.0.
  * The returned object contains the signable payload and optional metadata (currently empty, but can be extended).
  *
  * @param quote - The quote payload to be signed
@@ -56,7 +58,7 @@ const DEFAULT_PREFIX = "0x177eee00"
  *
  * @example
  * ```typescript
- * const { signablePayload, metadata } = prepareSignableQuotePayload(quotePayload);
+ * const { signablePayload, metadata } = preparePersonalSignableQuotePayload(quotePayload);
  * // signablePayload: { message: { raw: quotePayload.hash } }
  * // metadata: {}
  * ```
@@ -71,19 +73,22 @@ export const preparePersonalSignableQuotePayload = (quote: GetQuotePayload) => {
 }
 
 /**
- * Prepares the signable payload for the typed data signature.
- * It is a eip-712 data structure with the following fields:
+ * Prepares the signable payload for EIP-712 typed data signatures.
+ * Used for MEE versions >= 2.2.0.
+ * It is an EIP-712 data structure with the following fields:
  * - SuperTx(MeeUserOp[] meeUserOps)
  * - MeeUserOp(bytes32 userOpHash,uint256 lowerBoundTimestamp,uint256 upperBoundTimestamp)
  * - userOpHash and timestamps are present in the quote.userOps array for every userOp
  *
  * @param quote - The quote payload to be signed
- * @param eip712Domain - The eip712 domain to be used for the signature
- * @returns The signable payload
+ * @param eip712Domain - The EIP-712 domain to be used for the signature
+ * @returns An object containing the signable payload and metadata
  *
  * @example
  * ```typescript
- * const { signablePayload } = prepareTypedDataSignableQuotePayload(quote, eip712Domain);
+ * const { signablePayload, metadata } = prepareTypedDataSignableQuotePayload(quote, eip712Domain);
+ * // signablePayload: { domain, types, primaryType, message }
+ * // metadata: {}
  * ```
  */
 
@@ -134,13 +139,13 @@ export const prepareTypedDataSignableQuotePayload = (
  *
  * @param quote - The original quote payload
  * @param _metadata - Optional metadata (currently unused)
- * @param signature - The signature to attach to the quote
- * @returns The signed quote payload with the signature field
+ * @param signatures - The signatures map with MEE version per chain
+ * @returns The signed quote payload with the signatures field
  *
  * @example
  * ```typescript
- * const signedQuote = formatSignedQuotePayload(quotePayload, {}, signature);
- * // signedQuote: { ...quotePayload, signature: '0x177eee00<signature>' }
+ * const signedQuote = formatSignedQuotePayload(quotePayload, {}, signatures);
+ * // signedQuote: { ...quotePayload, signatures: { [chainId]: { signature: '0x177eee00<signature>', meeVersion: MEEVersion.V2_2_0 } } }
  * ```
  */
 export const formatSignedQuotePayload = (
@@ -152,9 +157,12 @@ export const formatSignedQuotePayload = (
     ...quote,
     // prepend every signature from signatures object with the DEFAULT_PREFIX
     signatures: Object.fromEntries(
-      Object.entries(signatures).map(([chainId, signature]) => [
+      Object.entries(signatures).map(([chainId, { signature, meeVersion }]) => [
         chainId,
-        concatHex([DEFAULT_PREFIX, signature])
+        {
+          signature: concatHex([DEFAULT_PREFIX, signature]),
+          meeVersion
+        }
       ])
     )
   }
@@ -162,14 +170,17 @@ export const formatSignedQuotePayload = (
 
 /**
  * Signs a quote using the provided account's signer or the client's default account.
- * The signature is required for executing the quote through the MEE service.
+ * Supports multi-chain quotes.
+ * Identifies groups of chains which require different signing methods based on their MEE versions.
+ * For MEE >= 2.2.0, uses EIP-712 typed data signatures; for MEE < 2.2.0, uses personal message signatures.
+ * The signatures are required for executing the quote through the MEE service.
  *
  * @param client - The Mee client instance
  * @param params - Parameters for signing the quote
- * @param params.quote - The quote to sign
+ * @param params.quote - The quote to sign (may contain operations across multiple chains)
  * @param [params.account] - Optional account to use for signing
  *
- * @returns Promise resolving to the quote payload with added signature
+ * @returns Promise resolving to the quote payload with added signatures map, where each entry contains the signature and MEE version per chain
  *
  * @example
  * ```typescript
@@ -177,6 +188,7 @@ export const formatSignedQuotePayload = (
  *   quote: quotePayload,
  *   account: smartAccount // Optional
  * });
+ * // signedQuote.signatures: { [chainId]: { signature: Hex, meeVersion: MEEVersion } }
  * ```
  */
 export const signQuote = async (
@@ -218,8 +230,8 @@ export const signQuote = async (
     { chainsWithMEE220: [] as string[], chainsWithMEE210: [] as string[] }
   )
 
+  // 4. process typed data signatures for chains with MEE >= 2.2.0
   if (chainsWithMEE220.length > 0) {
-    // 4. process typed data signatures
     // 4.1. identify the eip712 domain for each chain
     // 4.2. group the chains by the unique eip712 domain.name and domain.version
     // 4.3. if there's more than one group, console warn
@@ -258,7 +270,18 @@ export const signQuote = async (
       // Use Object.assign to avoid nested loops
       Object.assign(
         signedMessages,
-        Object.fromEntries(chainIds.map((id) => [id, typedDataSignature]))
+        Object.fromEntries(
+          chainIds.map((id) => {
+            const deployment = deploymentsByChainId.get(id)!
+            return [
+              id,
+              {
+                signature: typedDataSignature,
+                meeVersion: deployment.version.version
+              }
+            ]
+          })
+        )
       )
     }
   }
@@ -272,7 +295,16 @@ export const signQuote = async (
     Object.assign(
       signedMessages,
       Object.fromEntries(
-        chainsWithMEE210.map((chainId) => [chainId, personalSignature])
+        chainsWithMEE210.map((chainId) => {
+          const deployment = deploymentsByChainId.get(chainId)!
+          return [
+            chainId,
+            {
+              signature: personalSignature,
+              meeVersion: deployment.version.version
+            }
+          ]
+        })
       )
     )
   }
