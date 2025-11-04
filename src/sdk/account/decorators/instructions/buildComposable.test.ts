@@ -337,7 +337,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         amount: amountToSupply
       }
 
-      // deploy account first 
+      // 1. deploy account first
       const { hash: hashOne } = await testMeeClient.executeFusionQuote({
         fusionQuote: await testMeeClient.getFusionQuote({
           trigger,
@@ -367,7 +367,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       expect(transactionStatusOne).to.be.eq("MINED_SUCCESS")
       console.log({ explorerLinks, hash: hashOne })
 
-      // execute composable stuff on a funded account
+      // 2. execute composable stuff on a funded account
       const transferInstruction = await testMcNexus.buildComposable({
         type: "transfer",
         data: {

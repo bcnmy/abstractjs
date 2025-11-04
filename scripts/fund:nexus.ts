@@ -114,7 +114,9 @@ async function processChain(
   try {
     const chain = getChain(chainId)
     console.log(`\n=== Processing Chain: ${chain.name} (${chainId}) ===`)
-    console.log(`\n=== Account version: ${nexusParams.version.version} with index: ${nexusParams.accountIndex} ===`) 
+    console.log(
+      `\n=== Account version: ${nexusParams.version.version} with index: ${nexusParams.accountIndex} ===`
+    )
 
     // Determine if this is a testnet or mainnet
     const isTestnet = isTestnetChain(chainId)
