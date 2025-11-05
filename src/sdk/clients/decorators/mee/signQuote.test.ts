@@ -90,7 +90,9 @@ describe("mee.signQuote", () => {
     expect(Object.keys(signedQuote.signatures).length).toEqual(1)
     expect(signedQuote.signatures[chain.id]).toBeDefined()
     expect(isHex(signedQuote.signatures[chain.id].signature)).toEqual(true)
-    expect(signedQuote.signatures[chain.id].meeVersion).toEqual(DEFAULT_MEE_VERSION)
+    expect(signedQuote.signatures[chain.id].meeVersion).toEqual(
+      DEFAULT_MEE_VERSION
+    )
   })
 
   test("should sign a quote with modular signing functions", async () => {
@@ -122,7 +124,9 @@ describe("mee.signQuote", () => {
     expect(signedQuote).toBeDefined()
     expect(signedQuote.signatures[chain.id]).toBeDefined()
     expect(isHex(signedQuote.signatures[chain.id].signature)).toEqual(true)
-    expect(signedQuote.signatures[chain.id].meeVersion).toEqual(DEFAULT_MEE_VERSION)
+    expect(signedQuote.signatures[chain.id].meeVersion).toEqual(
+      DEFAULT_MEE_VERSION
+    )
 
     const quoteType = await getQuoteType(meeClient, quote)
     expect(quoteType).toEqual("simple")
@@ -142,7 +146,9 @@ describe("mee.signQuote", () => {
 
     expect(manuallySignedQuote).toBeDefined()
     expect(manuallySignedQuote.signatures[chain.id]).toBeDefined()
-    expect(isHex(manuallySignedQuote.signatures[chain.id].signature)).toEqual(true)
+    expect(isHex(manuallySignedQuote.signatures[chain.id].signature)).toEqual(
+      true
+    )
 
     expect(signedQuote.signatures[chain.id]).toEqual(
       manuallySignedQuote.signatures[chain.id]
@@ -150,5 +156,4 @@ describe("mee.signQuote", () => {
   })
 
   // TODO: add tests for multiple chains with different eip712 domains and mee versions
-
 })
