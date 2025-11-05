@@ -197,12 +197,12 @@ describe("modules.toSmartSessionsModule", () => {
     })
 
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chainConfiguration: {
         chain,
         transport: http(infra.network.rpcUrl),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
       }
     })
 
@@ -251,12 +251,12 @@ describe("modules.toSmartSessionsModule", () => {
     })
 
     const emulatedAccount = await toNexusAccount({
-      accountAddress: secondChainNexusAccount.address,
       signer: redeemerAccount,
       chainConfiguration: {
         chain: secondChain,
         transport: http(secondInfra.network.rpcUrl),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: secondChainNexusAccount.address
       }
     })
 
@@ -298,12 +298,12 @@ describe("modules.toSmartSessionsModule", () => {
 
   test("use a permission with typed data sign a second time", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chainConfiguration: {
         chain,
         transport: http(infra.network.rpcUrl),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
       }
     })
 
@@ -368,12 +368,12 @@ describe("modules.toSmartSessionsModule", () => {
 
   test("use a permission", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chainConfiguration: {
         chain,
         transport: http(infra.network.rpcUrl),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
       }
     })
 
@@ -407,12 +407,12 @@ describe("modules.toSmartSessionsModule", () => {
 
   test("use a second permission on the same chain should work with index", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chainConfiguration: {
         chain,
         transport: http(infra.network.rpcUrl),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
       }
     })
 
@@ -447,12 +447,12 @@ describe("modules.toSmartSessionsModule", () => {
 
   test("use a permission a second time", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
       chainConfiguration: {
         chain,
         transport: http(infra.network.rpcUrl),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
       }
     })
 

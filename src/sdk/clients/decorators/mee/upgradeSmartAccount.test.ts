@@ -195,12 +195,12 @@ describe("mee.upgradeSmartAccount", () => {
         {
           chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_0_0)
+          version: getMEEVersion(MEEVersion.V2_0_0),
+          // Old nexus address is overriden here
+          accountAddress: mcNexus1_0_0Address
         }
       ],
-      index: accountIndex,
-      // Old nexus address is overriden here
-      accountAddress: mcNexus1_0_0Address
+      index: accountIndex
     })
 
     const { getNonceWithKey, version: mcNexus2_0_0Version } =
@@ -244,12 +244,12 @@ describe("mee.upgradeSmartAccount", () => {
         {
           chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          // Old nexus address is overriden here
+          accountAddress: mcNexus1_0_0Address
         }
       ],
-      index: accountIndex,
-      // Old nexus address is overriden here
-      accountAddress: mcNexus1_0_0Address
+      index: accountIndex
     })
 
     const { getNonceWithKey, version: mcNexus2_1_0Version } =
