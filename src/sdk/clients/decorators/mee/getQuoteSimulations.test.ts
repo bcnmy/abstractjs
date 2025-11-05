@@ -29,7 +29,6 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { getStorageAt } from "viem/actions"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import type { FeeTokenInfo, Instruction } from "."

@@ -72,8 +72,18 @@ export const signFusionQuote = async (
     (await getQuoteType(client, parameters.fusionQuote))
 
   switch (signatureType) {
-    case "permit":
-      return signPermitQuote(client, parameters)
+    case "permit": {
+      const { fallbackToOnchainMode, signedPermitQuotePayload } =
+        await signPermitQuote(client, parameters)
+
+      // If there is any issue with permit fuctionality, the quote signing will fallback to onchain mode.
+      // Fallback only happens if RPC issue, problem with permit values such as name, version, domain separator.
+      if (fallbackToOnchainMode) {
+        return signOnChainQuote(client, parameters)
+      }
+
+      return signedPermitQuotePayload
+    }
     case "onchain":
       return signOnChainQuote(client, parameters)
     default:
