@@ -1477,12 +1477,12 @@ const prepareCleanUpUserOps = async (
               meeVersions
             },
             {
-              type: "rawCalldata",
+              type: "nativeTokenTransfer",
               data: {
                 to: cleanUp.recipientAddress,
-                calldata: "0x00000000",
+                value: amount,
                 chainId: cleanUp.chainId,
-                value: amount
+                ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
               }
             },
             composabilityVersion
