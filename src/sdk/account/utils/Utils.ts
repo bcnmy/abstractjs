@@ -667,8 +667,8 @@ export function getMeeVersionsForQuote(
   return Array.from(usedChains, (chainId) => {
     const deployment = account.deploymentOn(chainId, true)
     return {
-      chainId,
-      version: deployment.version
+      version: deployment.version,
+      chainId
     }
   }) as MeeVersionsWithChainId
 }
