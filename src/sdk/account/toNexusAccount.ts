@@ -16,6 +16,7 @@ import {
   type TypedDataDefinition,
   type UnionPartialBy,
   type WalletClient,
+  type GetEip712DomainReturnType,
   concatHex,
   createPublicClient,
   domainSeparator,
@@ -39,6 +40,7 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getEip712Domain } from "viem/actions"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
@@ -295,6 +297,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Nexus version config */
     version: MEEVersionConfig
+
+    /** EIP-712 domain for the account */
+    eip712Domain: GetEip712DomainReturnType
   }
 >
 
@@ -623,6 +628,19 @@ export const toNexusAccount = async (
 
     throw new Error("Failed to get account address")
   }
+
+  /**
+   * @description Use viem helper to obtain and cache the eip712 domain for the account
+   * @returns The eip712 domain for the account
+   */
+    const eip712Domain: GetEip712DomainReturnType = await getEip712Domain(
+      publicClient,
+      {
+        address: await getAddress(),
+        factory: meeConfig.factoryAddress,
+        factoryData
+      }
+    )
 
   /**
    * @description Calculates the hash of a user operation
@@ -1011,6 +1029,7 @@ export const toNexusAccount = async (
       toDelegation,
       unDelegate,
       entryPointAddress: entryPoint07Address,
+      eip712Domain,
       getAddress,
       accountId,
       getInitCode,

@@ -691,17 +691,12 @@ export const getQuote = async (
 
   let finalInstructions = resolvedInstructions
 
-  const meeVersions = account_.deployments.map(({ version, chain }) => ({
-    chainId: chain.id,
-    version
-  }))
-
   // By default, all the main instructions are batched
   if (batch) {
     finalInstructions = await batchInstructions({
       accountAddress: account_.signer.address,
       instructions: [...resolvedInstructions],
-      meeVersions
+      meeVersions: [] // No need to pass meeVersions here, since it is not used for batching
     })
   }
 

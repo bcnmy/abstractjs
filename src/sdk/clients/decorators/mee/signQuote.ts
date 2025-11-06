@@ -4,6 +4,7 @@ import type { BaseMeeClient } from "../../createMeeClient"
 
 import type { AnyData } from "../../../modules"
 import type { GetQuotePayload } from "./getQuote"
+import { hasConsistentVersions } from "../../../account/utils/Utils"
 
 /**
  * Parameters required for signing a quote from the MEE service
@@ -109,6 +110,18 @@ export const signQuote = async (
   params: SignQuoteParams
 ): Promise<SignQuotePayload> => {
   const { account: account_ = client.account, quote } = params
+
+  /*
+  if (!hasConsistentVersions(account_, quote)) {
+    throw new Error(`Multichain account won't be able to consume the same signature across all chains involved in the quote. 
+      Requirements: 
+      1. MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. 
+      2. If all the MEE versions on all chains are greater than or equal to 2.2.0, then 
+        a) MEE versions should be same for all chains within superTxn 
+        or
+        c) at least all the Nexus eip712Domain.version should be same for all chains within superTxn.`);
+  }
+        */
 
   const signer = account_.signer
 

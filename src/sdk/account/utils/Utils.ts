@@ -41,6 +41,9 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
+import { MultichainSmartAccount, versionMeetsRequirement, isVersionOlder } from ".."
+import { MEEVersion } from "../../constants"
+import { GetQuotePayload, MeeFilledUserOpDetails } from "../../clients/decorators/mee/getQuote"
 
 /**
  * Type guard to check if a value is null or undefined.
@@ -314,7 +317,7 @@ export const getAccountMeta = async (
         chainId: decoded?.[3]
       }
     }
-  } catch (error) {}
+  } catch (error) { }
   return {
     name: NEXUS_DOMAIN_NAME,
     version: NEXUS_DOMAIN_VERSION,
@@ -619,4 +622,72 @@ export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
   )
 
   return finalSlot
+}
+
+/**
+ * Checks if the account has consistent MEE versions across deployments for signing the quote.
+ *
+ * Version < 2.2.0 uses personal_sign, version >= 2.2.0 uses EIP-712 signing.
+ * Mixing these two signing methods is not allowed as it would result in incompatible signatures.
+ *
+ * For EIP-712 versions, all deployments must have the same eip712Domain.version
+ * to ensure consistent signature validation.
+ *
+ * @param account - The multichain smart account
+ * @param quote - The quote payload containing user operations
+ * @returns true if versions are consistent, false otherwise
+ */
+export function hasConsistentVersions(account: MultichainSmartAccount, quote: GetQuotePayload): boolean {
+  const versions = account.deployments.map((deployment) => deployment.version)
+
+  // Check if there are any versions < 2.2.0 (personal_sign) and >= 2.2.0 (EIP-712)
+  const hasPersonalSignVersion = versions.some((version) => isVersionOlder(version.version, MEEVersion.V2_2_0))
+  const hasEIP712Version = versions.some((version) => versionMeetsRequirement(version.version, MEEVersion.V2_2_0))
+
+  // Cannot mix personal_sign and EIP-712 signing methods
+  if (hasPersonalSignVersion && hasEIP712Version) {
+    return false
+  }
+
+  // If all versions use EIP-712, ensure eip712Domain.version is consistent
+  if (hasEIP712Version) {
+    // Get chains that are actually used in this quote
+    // Exclude the first userOp (index 0) which is the payment userOp.
+    // We skip it because in sponsored quotes, there may be no deployment on the payment chain,
+    // and we only care about chains where actual operations are executed.
+    const usedChains = new Set(
+      quote.userOps.slice(1).map((userOp) => Number(userOp.chainId))
+    )
+
+    // Collect MEE version strings for used chains
+    const meeVersionStrings = new Set<string>()
+    const eip712DomainVersions = new Set<string>()
+
+    for (const chainId of usedChains) {
+      const deployment = account.deploymentOn(chainId, true)
+      meeVersionStrings.add(deployment.version.version)
+      eip712DomainVersions.add(deployment.eip712Domain.domain.version)
+    }
+
+    // If MEE versions differ, check if eip712Domain versions are at least consistent
+    // (different MEE versions can have the same Nexus eip712Domain.version)
+    if (meeVersionStrings.size > 1) {
+      return eip712DomainVersions.size === 1
+    }
+  }
+  return true
+}
+
+/**
+ * @description Detect the MEE version to be used for signing the quote. 
+ * Attention: It takes MEE version of the deployment on the second userOp's chain.
+ * Reason: In sponsored quotes, there may be no deployment on the payment chain at all,
+ * so we skip the first userOp (index 0) which is the payment userOp.
+ * @param account - The multichain smart account
+ * @param quote - The quote payload containing user operations
+ * @returns The MEE version to be used for signing the quote
+ */
+export function detectMEEVersion(account: MultichainSmartAccount, quote: GetQuotePayload): MEEVersion {
+  const deployment = account.deploymentOn(Number(quote.userOps[1].chainId), true)
+  return deployment.version.version
 }
