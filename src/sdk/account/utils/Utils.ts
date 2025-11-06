@@ -39,7 +39,12 @@ import {
   NEXUS_DOMAIN_TYPEHASH,
   NEXUS_DOMAIN_VERSION
 } from "../../account/utils/Constants"
-import type { Instruction, PaymentInfo, UserOp } from "../../clients/decorators/mee/getQuote"
+import type {
+  Instruction,
+  PaymentInfo,
+  UserOp
+} from "../../clients/decorators/mee/getQuote"
+import type { FeeTokenInfo } from "../../clients/decorators/mee/getQuote"
 import { MEEVersion } from "../../constants"
 import { EIP1271Abi } from "../../constants/abi"
 import {
@@ -48,7 +53,6 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
-import type { FeeTokenInfo } from "../../clients/decorators/mee/getQuote"
 import type { MeeVersionsWithChainId } from "./getVersion"
 
 /**
@@ -323,7 +327,7 @@ export const getAccountMeta = async (
         chainId: decoded?.[3]
       }
     }
-  } catch (error) { }
+  } catch (error) {}
   return {
     name: NEXUS_DOMAIN_NAME,
     version: NEXUS_DOMAIN_VERSION,
@@ -631,7 +635,7 @@ export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
 }
 
 /**
- * Returns the MEE versions of the orchestrator account 
+ * Returns the MEE versions of the orchestrator account
  * on all the chains involved in the quote request.
  *
  * @param account - The multichain smart account
@@ -650,7 +654,6 @@ export function getMeeVersionsForQuote(
   sponsorship: boolean,
   feeToken?: FeeTokenInfo
 ): MeeVersionsWithChainId {
-  
   const usedChains = new Set<number>()
   for (const op of instructions) {
     usedChains.add(Number(op.chainId))
@@ -670,7 +673,7 @@ export function getMeeVersionsForQuote(
     return {
       chainId,
       version: deployment.version
-    } 
+    }
   }) as MeeVersionsWithChainId
 }
 
@@ -697,18 +700,25 @@ export function validateConsistentMeeVersions(
   for (const { version: meeVersionConfig } of meeVersions) {
     const meeVersion = meeVersionConfig.version
     // Check version type as we go
-    const isCurrentVersionPersonalSign = isVersionOlder(meeVersion, MEEVersion.V2_2_0)
-    const isCurrentVersionEIP712 = versionMeetsRequirement(meeVersion, MEEVersion.V2_2_0)
+    const isCurrentVersionPersonalSign = isVersionOlder(
+      meeVersion,
+      MEEVersion.V2_2_0
+    )
+    const isCurrentVersionEIP712 = versionMeetsRequirement(
+      meeVersion,
+      MEEVersion.V2_2_0
+    )
 
     // Update flags
-    hasPersonalSignVersion = hasPersonalSignVersion || isCurrentVersionPersonalSign
+    hasPersonalSignVersion =
+      hasPersonalSignVersion || isCurrentVersionPersonalSign
     hasEIP712Version = hasEIP712Version || isCurrentVersionEIP712
 
     // Early exit: Cannot mix personal_sign and EIP-712 signing methods
     if (hasPersonalSignVersion && hasEIP712Version) {
       throw new Error(
         "MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. " +
-        "Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
+          "Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
       )
     }
 
@@ -720,7 +730,7 @@ export function validateConsistentMeeVersions(
       if (meeVersionStrings.size > 1) {
         throw new Error(
           "All the MEE versions on all chains are greater than or equal to 2.2.0 in your quote request. " +
-          "In this case, MEE versions should be same for all chains within quote request."
+            "In this case, MEE versions should be same for all chains within quote request."
         )
       }
     }

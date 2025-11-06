@@ -1,6 +1,9 @@
 import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { batchInstructions } from "../../../account"
+import {
+  type MeeVersionsWithChainId,
+  batchInstructions
+} from "../../../account"
 import {
   buildComposable,
   formatCallDataInputParamsWithVersion
@@ -10,9 +13,9 @@ import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
   addressEquals,
   calculateNonceStorageSlot,
+  getMeeVersionsForQuote,
   isBigInt,
   isNativeToken,
-  getMeeVersionsForQuote,
   validateConsistentMeeVersions
 } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
@@ -459,7 +462,11 @@ type QuoteRequest = {
   userOps: UserOp[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
+  /** MEE versions for the quote request */
+  meeVersions: MeeVersionsWithChainId
+  /** Quote type  */
   quoteType?: QuoteType
+  /** Trigger (pull action) information for the transaction */
   trigger?: TokenTrigger
   /** Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations */
   simulation?: Simulation
@@ -693,7 +700,12 @@ export const getQuote = async (
 
   let finalInstructions = resolvedInstructions
 
-  const meeVersions = getMeeVersionsForQuote(account_, resolvedInstructions, sponsorship, feeToken);
+  const meeVersions = getMeeVersionsForQuote(
+    account_,
+    resolvedInstructions,
+    sponsorship,
+    feeToken
+  )
 
   // By default, all the main instructions are batched
   if (batch) {
@@ -1064,13 +1076,14 @@ export const getQuote = async (
   // in `simple` mode, we should validate the consistent MEE versions across all chains
   // because simple mode signatures can be incompatible b/w some mee versions
   if (quoteType === "simple") {
-    validateConsistentMeeVersions(meeVersions);
+    validateConsistentMeeVersions(meeVersions)
   }
 
   const quoteRequest: QuoteRequest = {
     quoteType,
     userOps,
     paymentInfo,
+    meeVersions,
     simulation,
     trigger,
     tags: parameters.tags
