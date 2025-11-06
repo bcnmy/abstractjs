@@ -2,8 +2,8 @@ import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import {
   type MeeVersionsWithChainId,
-  batchInstructions
-} from "../../../account"
+} from "../../../account/utils/getVersion"
+import { batchInstructions } from "../../../account/utils/batchInstructions"
 import {
   buildComposable,
   formatCallDataInputParamsWithVersion
@@ -13,7 +13,6 @@ import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
   addressEquals,
   calculateNonceStorageSlot,
-  getMeeVersionsForQuote,
   isBigInt,
   isNativeToken,
   validateConsistentMeeVersions
@@ -1829,6 +1828,49 @@ const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
   }
   // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
+}
+
+/**
+ * Returns the MEE versions of the orchestrator account
+ * on all the chains involved in the quote request.
+ *
+ * @param account - The multichain smart account
+ * @param instructions - The instructions to be executed
+ * @param sponsorship - Whether the quote is sponsored
+ * @param feeToken - The fee token
+ * @returns An array of chain IDs with their corresponding MEE versions as MeeVersionsWithChainId
+ * @example
+ * ```typescript
+ * const meeVersions = getMeeVersionsForQuote(account, instructions, sponsorship, feeToken)
+ * ```
+ */
+export function getMeeVersionsForQuote(
+  account: MultichainSmartAccount,
+  instructions: Instruction[],
+  sponsorship: boolean,
+  feeToken?: FeeTokenInfo
+): MeeVersionsWithChainId {
+  const usedChains = new Set<number>()
+  for (const op of instructions) {
+    usedChains.add(Number(op.chainId))
+  }
+
+  // For sponsored flow, we can ignore payment chain because orchestrator account
+  // used there will be not user's orchestrator account but sponsorship account.
+  // For non-sponsored flow, the user's orchestrator account will be performing'
+  // the payment userOp, so we need to make sure its MEE version is consistent.
+  if (!sponsorship) {
+    // if sponsorship is false, the feeToken is defined: see GetQuoteParams type
+    usedChains.add(Number(feeToken!.chainId))
+  }
+
+  return Array.from(usedChains, (chainId) => {
+    const deployment = account.deploymentOn(chainId, true)
+    return {
+      version: deployment.version,
+      chainId
+    }
+  }) as MeeVersionsWithChainId
 }
 
 // ====================================================
