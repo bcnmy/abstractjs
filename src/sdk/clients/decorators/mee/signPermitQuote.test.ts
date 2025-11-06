@@ -17,6 +17,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
+  MAINNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
   getTestChainConfig,
   toNetwork
@@ -39,7 +40,12 @@ import {
 } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
-import { type MeeClient, createMeeClient } from "../../createMeeClient"
+import {
+  type MeeClient,
+  createMeeClient,
+  getDefaultMEENetworkApiKey,
+  getDefaultMEENetworkUrl
+} from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
@@ -53,6 +59,7 @@ import {
   signPermitQuote
 } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { arbitrum, polygon } from "viem/chains"
 
 // @ts-ignore
 const { runPaidTests, runLifecycleTests } = inject("settings")
@@ -487,6 +494,79 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     expect(signedPermitQuote.signature).toEqual(
       manuallySignedPermitQuote.signature
     )
+  })
+
+  test("Should generate a proper valid domain separator for exoitic tokens with different EIP712 domain types", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: arbitrum,
+          transport: http(MAINNET_RPC_URLS[arbitrum.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: polygon,
+          transport: http(MAINNET_RPC_URLS[polygon.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: getDefaultMEENetworkApiKey(),
+      url: getDefaultMEENetworkUrl()
+    })
+
+    const tokensWithChainId = [
+      {
+        tokenAddress: "0x09199d9A5F4448D0848e4395D065e1ad9c4a1F74" as Address, // Bonk token
+        chainId: arbitrum.id
+      },
+      {
+        tokenAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174" as Address, // Polygon USDC token
+        chainId: polygon.id
+      }
+    ]
+
+    for (let { tokenAddress, chainId } of tokensWithChainId) {
+      const fusionQuote = await getFusionQuote(meeClient, {
+        trigger: {
+          chainId: chainId,
+          tokenAddress: tokenAddress,
+          amount: 1n
+        },
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              calls: [
+                {
+                  to: zeroAddress,
+                  value: 0n
+                }
+              ],
+              chainId: chainId
+            }
+          })
+        ],
+        feeToken: {
+          chainId: chainId,
+          address: tokenAddress
+        }
+      })
+
+      const { fallbackToOnchainMode } = await prepareSignablePermitQuotePayload(
+        fusionQuote,
+        eoaAccount.address,
+        mcNexus.addressOn(chainId, true),
+        mcNexus.deploymentOn(chainId, true).walletClient
+      )
+
+      // This will be undefined if the permit values are proper
+      expect(fallbackToOnchainMode).to.be.eq(undefined)
+    }
   })
 
   test("prepareSignablePermitQuotePayload should indicate fallbackToOnchainMode when the permit values are invalid", async () => {

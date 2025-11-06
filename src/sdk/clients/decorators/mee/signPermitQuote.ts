@@ -153,8 +153,8 @@ const PERMIT_PREFIX = "0x177eee02"
 export const isLegacyEIP712Domain = (
   name: string,
   version: string,
-  chainId: number,
   verifyingContract: Address,
+  salt: Hex,
   domainSeparator: Hex
 ) => {
   // Step 1: Hash the EIP712Domain type string
@@ -181,15 +181,9 @@ export const isLegacyEIP712Domain = (
         { type: "bytes32" }, // nameHash
         { type: "bytes32" }, // versionHash
         { type: "address" }, // verifyingContract
-        { type: "bytes32" } // chainId as bytes32
+        { type: "bytes32" } // salt
       ],
-      [
-        DOMAIN_TYPEHASH,
-        nameHash,
-        versionHash,
-        verifyingContract,
-        toHex(chainId, { size: 32 })
-      ]
+      [DOMAIN_TYPEHASH, nameHash, versionHash, verifyingContract, salt]
     )
   )
 
@@ -224,10 +218,10 @@ export const isDefaultEIP712Domain = (
     encodeAbiParameters(
       [
         { type: "bytes32" },
-        { type: "bytes32" },
-        { type: "bytes32" },
-        { type: "uint256" },
-        { type: "address" }
+        { type: "bytes32" }, // nameHash
+        { type: "bytes32" }, // versionHash
+        { type: "uint256" }, // chainId
+        { type: "address" } // verifyingContract
       ],
       [
         DOMAIN_TYPEHASH,
@@ -242,19 +236,69 @@ export const isDefaultEIP712Domain = (
   return domainSeparator.toLowerCase() === DOMAIN_SEPARATOR.toLowerCase()
 }
 
+export const isDefaultEIP712DomainWithSalt = (
+  name: string,
+  version: string,
+  chainId: number,
+  verifyingContract: Address,
+  salt: Hex,
+  domainSeparator: Hex
+) => {
+  // Step 1: Hash the EIP712Domain type string
+  const DOMAIN_TYPEHASH = keccak256(
+    encodePacked(
+      ["string"],
+      [
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"
+      ]
+    )
+  )
+
+  // Step 2: Hash the name
+  const nameHash = keccak256(encodePacked(["string"], [name]))
+
+  // Step 3: Hash the version
+  const versionHash = keccak256(encodePacked(["string"], [version]))
+
+  // Step 4: Encode and hash all parameters
+  const DOMAIN_SEPARATOR = keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" }, // EIP712_DOMAIN_TYPEHASH
+        { type: "bytes32" }, // nameHash
+        { type: "bytes32" }, // versionHash
+        { type: "uint256" }, // chainId
+        { type: "address" }, // verifyingContract
+        { type: "bytes32" } // salt
+      ],
+      [
+        DOMAIN_TYPEHASH,
+        nameHash,
+        versionHash,
+        BigInt(chainId),
+        verifyingContract,
+        salt
+      ]
+    )
+  )
+
+  return domainSeparator.toLowerCase() === DOMAIN_SEPARATOR.toLowerCase()
+}
+
 export const getEIP712DomainType = (
   name: string,
   version: string,
   chainId: number,
   verifyingContract: Address,
+  salt: Hex,
   domainSeparator: Hex
 ) => {
   try {
     const isValid = isLegacyEIP712Domain(
       name,
       version,
-      chainId,
       verifyingContract,
+      salt,
       domainSeparator
     )
 
@@ -274,6 +318,21 @@ export const getEIP712DomainType = (
 
     if (isValid) {
       return "default"
+    }
+  } catch {}
+
+  try {
+    const isValid = isDefaultEIP712DomainWithSalt(
+      name,
+      version,
+      chainId,
+      verifyingContract,
+      salt,
+      domainSeparator
+    )
+
+    if (isValid) {
+      return "default-with-salt"
     }
   } catch {}
 
@@ -411,7 +470,8 @@ export const prepareSignablePermitQuotePayload = async (
       }
     ) as [bigint, string, string, Hex, EIP712DomainReturn]
 
-    const [, name_, version_] = eip712Domain
+    const [, name_, version_, chainId_, verifyingContract_, salt_] =
+      eip712Domain
 
     // Default version will be used as fallback
     const defaultVersion = "1"
@@ -436,45 +496,67 @@ export const prepareSignablePermitQuotePayload = async (
       )
     }
 
-    const metadata: PermitMetadata = {
-      nonce,
+    // chainId from eip712Domain is mostly safe and more priority is given
+    const permitChainId =
+      chainId_ !== undefined ? Number(chainId_) : trigger.chainId
+
+    const permitValues = {
       name: name_ ?? name, // name from eip712Domain is mostly safe and more priority is given
       version: version_ ?? version ?? defaultVersion, // version from eip712Domain is mostly safe and more priority is given
-      domainSeparator,
-      owner,
-      spender,
-      amount
+      chainId: permitChainId,
+      verifyingContract: verifyingContract_ ?? trigger.tokenAddress, // verifyingContract from eip712Domain is mostly safe and more priority is given
+      salt: salt_ ?? toHex(permitChainId, { size: 32 }), // salt from eip712Domain is mostly safe and more priority is given
+      domainSeparator
     }
 
     const eip712DomainType = getEIP712DomainType(
-      metadata.name,
-      metadata.version,
-      trigger.chainId,
-      trigger.tokenAddress,
-      domainSeparator
+      permitValues.name,
+      permitValues.version,
+      permitValues.chainId,
+      permitValues.verifyingContract,
+      permitValues.salt,
+      permitValues.domainSeparator
     )
 
-    if (eip712DomainType === "invalid") {
-      throw new Error(
-        "Permit signing failed: Domain separator mismatch, please double check the token's permit functionality"
-      )
+    const getDomain = (
+      eip712DomainType: ReturnType<typeof getEIP712DomainType>
+    ) => {
+      switch (eip712DomainType) {
+        case "default": {
+          return {
+            name: permitValues.name,
+            version: permitValues.version,
+            chainId: permitValues.chainId,
+            verifyingContract: permitValues.verifyingContract
+          }
+        }
+        case "default-with-salt": {
+          return {
+            name: permitValues.name,
+            version: permitValues.version,
+            chainId: permitValues.chainId,
+            verifyingContract: permitValues.verifyingContract,
+            salt: permitValues.salt
+          }
+        }
+        case "legacy": {
+          return {
+            name: permitValues.name,
+            version: permitValues.version,
+            verifyingContract: permitValues.verifyingContract,
+            salt: permitValues.salt
+          }
+        }
+        case "invalid":
+        default:
+          throw new Error(
+            "Permit signing failed: Domain separator mismatch, please double check the token's permit functionality"
+          )
+      }
     }
 
     const signablePermitQuotePayload = {
-      domain:
-        eip712DomainType === "legacy"
-          ? {
-              name: metadata.name,
-              version: metadata.version,
-              verifyingContract: trigger.tokenAddress,
-              salt: toHex(trigger.chainId, { size: 32 })
-            }
-          : {
-              name: metadata.name,
-              version: metadata.version,
-              chainId: trigger.chainId,
-              verifyingContract: trigger.tokenAddress
-            },
+      domain: getDomain(eip712DomainType),
       types: {
         Permit: [
           { name: "owner", type: "address" },
@@ -492,6 +574,16 @@ export const prepareSignablePermitQuotePayload = async (
         nonce,
         deadline: BigInt(quote.hash)
       }
+    }
+
+    const metadata: PermitMetadata = {
+      nonce,
+      name: permitValues.name,
+      version: permitValues.version,
+      domainSeparator: permitValues.domainSeparator,
+      owner,
+      spender,
+      amount
     }
 
     return {
