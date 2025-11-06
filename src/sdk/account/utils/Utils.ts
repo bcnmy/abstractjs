@@ -29,7 +29,7 @@ import type { Chain } from "viem/chains"
 import {
   type MultichainSmartAccount,
   isVersionOlder,
-  versionMeetsRequirement
+  versionIsAtLeast
 } from ".."
 import {
   BICONOMY_TOKEN_PAYMASTER,
@@ -699,7 +699,7 @@ export function validateConsistentMeeVersions(
       meeVersion,
       MEEVersion.V2_2_0
     )
-    const isCurrentVersionEIP712 = versionMeetsRequirement(
+    const isCurrentVersionEIP712 = versionIsAtLeast(
       meeVersion,
       MEEVersion.V2_2_0
     )
