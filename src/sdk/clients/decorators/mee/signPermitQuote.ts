@@ -547,7 +547,6 @@ export const prepareSignablePermitQuotePayload = async (
             salt: permitValues.salt
           }
         }
-        case "invalid":
         default:
           throw new Error(
             "Permit signing failed: Domain separator mismatch, please double check the token's permit functionality"

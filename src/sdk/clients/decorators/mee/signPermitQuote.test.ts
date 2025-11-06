@@ -15,6 +15,7 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { arbitrum, polygon } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   MAINNET_RPC_URLS,
@@ -59,7 +60,6 @@ import {
   signPermitQuote
 } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
-import { arbitrum, polygon } from "viem/chains"
 
 // @ts-ignore
 const { runPaidTests, runLifecycleTests } = inject("settings")
@@ -530,7 +530,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       }
     ]
 
-    for (let { tokenAddress, chainId } of tokensWithChainId) {
+    for (const { tokenAddress, chainId } of tokensWithChainId) {
       const fusionQuote = await getFusionQuote(meeClient, {
         trigger: {
           chainId: chainId,
