@@ -4,7 +4,6 @@ import type { BaseMeeClient } from "../../createMeeClient"
 
 import type { AnyData } from "../../../modules"
 import type { GetQuotePayload } from "./getQuote"
-import { hasConsistentVersions } from "../../../account/utils/Utils"
 
 /**
  * Parameters required for signing a quote from the MEE service

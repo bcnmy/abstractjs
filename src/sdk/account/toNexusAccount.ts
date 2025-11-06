@@ -4,6 +4,7 @@ import {
   type Address,
   type Chain,
   type ClientConfig,
+  type GetEip712DomainReturnType,
   type Hex,
   type LocalAccount,
   type OneOf,
@@ -16,7 +17,6 @@ import {
   type TypedDataDefinition,
   type UnionPartialBy,
   type WalletClient,
-  type GetEip712DomainReturnType,
   concatHex,
   createPublicClient,
   domainSeparator,
@@ -633,14 +633,14 @@ export const toNexusAccount = async (
    * @description Use viem helper to obtain and cache the eip712 domain for the account
    * @returns The eip712 domain for the account
    */
-    const eip712Domain: GetEip712DomainReturnType = await getEip712Domain(
-      publicClient,
-      {
-        address: await getAddress(),
-        factory: meeConfig.factoryAddress,
-        factoryData
-      }
-    )
+  const eip712Domain: GetEip712DomainReturnType = await getEip712Domain(
+    publicClient,
+    {
+      address: await getAddress(),
+      factory: meeConfig.factoryAddress,
+      factoryData
+    }
+  )
 
   /**
    * @description Calculates the hash of a user operation

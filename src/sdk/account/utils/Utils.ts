@@ -27,6 +27,11 @@ import {
 import type { Transport } from "viem"
 import type { Chain } from "viem/chains"
 import {
+  type MultichainSmartAccount,
+  isVersionOlder,
+  versionMeetsRequirement
+} from ".."
+import {
   BICONOMY_TOKEN_PAYMASTER,
   MOCK_MULTI_MODULE_ADDRESS,
   MODULE_ENABLE_MODE_TYPE_HASH,
@@ -34,6 +39,10 @@ import {
   NEXUS_DOMAIN_TYPEHASH,
   NEXUS_DOMAIN_VERSION
 } from "../../account/utils/Constants"
+import {
+  type GetQuotePayload
+} from "../../clients/decorators/mee/getQuote"
+import { MEEVersion } from "../../constants"
 import { EIP1271Abi } from "../../constants/abi"
 import {
   type AnyData,
@@ -41,9 +50,6 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
-import { MultichainSmartAccount, versionMeetsRequirement, isVersionOlder } from ".."
-import { MEEVersion } from "../../constants"
-import { GetQuotePayload, MeeFilledUserOpDetails } from "../../clients/decorators/mee/getQuote"
 
 /**
  * Type guard to check if a value is null or undefined.
@@ -317,7 +323,7 @@ export const getAccountMeta = async (
         chainId: decoded?.[3]
       }
     }
-  } catch (error) { }
+  } catch (error) {}
   return {
     name: NEXUS_DOMAIN_NAME,
     version: NEXUS_DOMAIN_VERSION,
@@ -637,12 +643,19 @@ export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
  * @param quote - The quote payload containing user operations
  * @returns true if versions are consistent, false otherwise
  */
-export function hasConsistentVersions(account: MultichainSmartAccount, quote: GetQuotePayload): boolean {
+export function hasConsistentVersions(
+  account: MultichainSmartAccount,
+  quote: GetQuotePayload
+): boolean {
   const versions = account.deployments.map((deployment) => deployment.version)
 
   // Check if there are any versions < 2.2.0 (personal_sign) and >= 2.2.0 (EIP-712)
-  const hasPersonalSignVersion = versions.some((version) => isVersionOlder(version.version, MEEVersion.V2_2_0))
-  const hasEIP712Version = versions.some((version) => versionMeetsRequirement(version.version, MEEVersion.V2_2_0))
+  const hasPersonalSignVersion = versions.some((version) =>
+    isVersionOlder(version.version, MEEVersion.V2_2_0)
+  )
+  const hasEIP712Version = versions.some((version) =>
+    versionMeetsRequirement(version.version, MEEVersion.V2_2_0)
+  )
 
   // Cannot mix personal_sign and EIP-712 signing methods
   if (hasPersonalSignVersion && hasEIP712Version) {
@@ -679,7 +692,7 @@ export function hasConsistentVersions(account: MultichainSmartAccount, quote: Ge
 }
 
 /**
- * @description Detect the MEE version to be used for signing the quote. 
+ * @description Detect the MEE version to be used for signing the quote.
  * Attention: It takes MEE version of the deployment on the second userOp's chain.
  * Reason: In sponsored quotes, there may be no deployment on the payment chain at all,
  * so we skip the first userOp (index 0) which is the payment userOp.
@@ -687,7 +700,13 @@ export function hasConsistentVersions(account: MultichainSmartAccount, quote: Ge
  * @param quote - The quote payload containing user operations
  * @returns The MEE version to be used for signing the quote
  */
-export function detectMEEVersion(account: MultichainSmartAccount, quote: GetQuotePayload): MEEVersion {
-  const deployment = account.deploymentOn(Number(quote.userOps[1].chainId), true)
+export function detectMEEVersion(
+  account: MultichainSmartAccount,
+  quote: GetQuotePayload
+): MEEVersion {
+  const deployment = account.deploymentOn(
+    Number(quote.userOps[1].chainId),
+    true
+  )
   return deployment.version.version
 }
