@@ -11,7 +11,9 @@ import {
   addressEquals,
   calculateNonceStorageSlot,
   isBigInt,
-  isNativeToken
+  isNativeToken,
+  getMeeVersionsForQuote,
+  validateConsistentMeeVersions
 } from "../../../account/utils/Utils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
@@ -691,12 +693,14 @@ export const getQuote = async (
 
   let finalInstructions = resolvedInstructions
 
+  const meeVersions = getMeeVersionsForQuote(account_, resolvedInstructions, sponsorship, feeToken);
+
   // By default, all the main instructions are batched
   if (batch) {
     finalInstructions = await batchInstructions({
       accountAddress: account_.signer.address,
       instructions: [...resolvedInstructions],
-      meeVersions: [] // No need to pass meeVersions here, since it is not used for batching
+      meeVersions // TODO: check if we can just pass empty array here because MeeVerions are not used when batching. Will it improve performance?
     })
   }
 
@@ -1056,6 +1060,12 @@ export const getQuote = async (
       }
     )
   )
+
+  // in `simple` mode, we should validate the consistent MEE versions across all chains
+  // because simple mode signatures can be incompatible b/w some mee versions
+  if (quoteType === "simple") {
+    validateConsistentMeeVersions(meeVersions);
+  }
 
   const quoteRequest: QuoteRequest = {
     quoteType,
