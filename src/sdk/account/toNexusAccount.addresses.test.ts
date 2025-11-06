@@ -78,12 +78,12 @@ describe("nexus.account.addresses", async () => {
       "0xf0479e036343bC66dc49dd374aFAF98402D0Ae5f"
 
     const newNexusAccount = await toNexusAccount({
-      accountAddress: someoneElsesNexusAddress,
       signer: eoaAccount,
       chainConfiguration: {
         chain,
         transport: http(network.rpcUrl),
-        version: getMEEVersion(MEEVersion.V1_0_0)
+        version: getMEEVersion(MEEVersion.V1_0_0),
+        accountAddress: someoneElsesNexusAddress
       }
     })
 

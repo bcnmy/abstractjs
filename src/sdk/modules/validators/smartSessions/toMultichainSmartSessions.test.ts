@@ -284,18 +284,19 @@ describe("mee.multichainSmartSessions", () => {
       // with the redeemer account (which is Session Key) as signer
       // this would be a common pattern for signing userOps with a session key
       const dappNexusAccount = await toMultichainNexusAccount({
-        accountAddress: mcNexus.addressOn(paymentChain.id),
         signer: redeemerAccount,
         chainConfigurations: [
           {
             chain: paymentChain,
             transport: paymentChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(paymentChain.id)
           },
           {
             chain: targetChain,
             transport: targetChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(targetChain.id)
           }
         ]
       })
@@ -529,18 +530,19 @@ describe("mee.multichainSmartSessions", () => {
         })
 
       const dappNexusAccount = await toMultichainNexusAccount({
-        accountAddress: mcNexus.addressOn(paymentChain.id),
         signer: redeemerAccount,
         chainConfigurations: [
           {
             chain: paymentChain,
             transport: paymentChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(paymentChain.id)
           },
           {
             chain: targetChain,
             transport: targetChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(targetChain.id)
           }
         ]
       })
@@ -686,17 +688,18 @@ describe("mee.multichainSmartSessions", () => {
       )
 
       const dappNexusAccount = await toMultichainNexusAccount({
-        accountAddress: mcNexus.addressOn(paymentChain.id),
         chainConfigurations: [
           {
             chain: paymentChain,
             transport: paymentChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(paymentChain.id)
           },
           {
             chain: targetChain,
             transport: targetChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(targetChain.id)
           }
         ],
         signer: redeemerAccount

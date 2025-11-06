@@ -780,11 +780,11 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          // Overriden with EOA address
+          accountAddress: eoaAccount.address
         }
-      ],
-      // Overriden with EOA address
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const meeClient = await createMeeClient({
@@ -821,10 +821,10 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const meeClient = await createMeeClient({
@@ -1237,10 +1237,10 @@ describe.runIf(runLifecycleTests)(
             {
               chain: chain,
               transport: http(network.rpcUrl),
-              version: getMEEVersion(DEFAULT_MEE_VERSION)
+              version: getMEEVersion(DEFAULT_MEE_VERSION),
+              accountAddress: mcNexus.addressOn(chain.id)!
             }
           ],
-          accountAddress: mcNexus.addressOn(chain.id)!,
           signer: sessionSigner
         })
 
