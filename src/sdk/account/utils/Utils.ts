@@ -690,7 +690,6 @@ export function validateConsistentMeeVersions(
 ): void {
   let hasPersonalSignVersion = false
   let hasEIP712Version = false
-  const meeVersionStrings = new Set<string>()
 
   // Track version consistency while iterating (fail-fast approach)
   for (const { version: meeVersionConfig } of meeVersions) {
@@ -716,19 +715,6 @@ export function validateConsistentMeeVersions(
         "MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. " +
           "Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
       )
-    }
-
-    // Only collect version strings if we're using EIP-712
-    if (isCurrentVersionEIP712) {
-      meeVersionStrings.add(meeVersion)
-
-      // Early exit: if we have more than one MEE version fail immediately
-      if (meeVersionStrings.size > 1) {
-        throw new Error(
-          "All the MEE versions on all chains are greater than or equal to 2.2.0 in your quote request. " +
-            "In this case, MEE versions should be same for all chains within quote request."
-        )
-      }
     }
   }
 }
