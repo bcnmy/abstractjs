@@ -463,7 +463,7 @@ type QuoteRequest = {
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
   /** MEE versions for the quote request */
-  meeVersions: MeeVersionsWithChainId
+  meeVersions?: MeeVersionsWithChainId
   /** Quote type  */
   quoteType?: QuoteType
   /** Trigger (pull action) information for the transaction */
