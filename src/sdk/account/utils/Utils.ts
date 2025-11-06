@@ -39,11 +39,7 @@ import {
   NEXUS_DOMAIN_TYPEHASH,
   NEXUS_DOMAIN_VERSION
 } from "../../account/utils/Constants"
-import type {
-  Instruction,
-  PaymentInfo,
-  UserOp
-} from "../../clients/decorators/mee/getQuote"
+import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import type { FeeTokenInfo } from "../../clients/decorators/mee/getQuote"
 import { MEEVersion } from "../../constants"
 import { EIP1271Abi } from "../../constants/abi"
