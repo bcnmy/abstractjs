@@ -1,5 +1,99 @@
 # @biconomy/abstractjs
 
+## 1.1.16
+
+### Patch Changes
+
+#### Features included
+
+  1. Multichain accountAddress overrides for 7702 flow and Nexus upgrades.
+  2. Simulation support for MEE version 2.2.0 for all the fusion modes
+  3. Enhancements for cleanup userOps to cover native token cleanup for various target types such as EOA, SCA, and delegated EOA.
+
+#### Breaking changes:
+
+  1. Gloabl accountAddress overrides are removed. Now all the accountAddress should be overriden per chainConfig basis
+
+  #### Old way:
+  ```
+      const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      accountAddress: randomAddressOne.address,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+        },
+      ]
+    })
+  ```
+
+  #### New way:
+  ```
+      const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: randomAddressOne.address
+        },
+      ]
+    })
+  ```
+
+## 1.1.15
+
+### Patch Changes
+
+- New MEE version 2.2.0 stable support has been added with Audited contracts. This should enable runtime native token flows out of the box along with some other improvements
+
+## 1.1.14
+
+### Patch Changes
+
+- Simulations support added for cleanup instructions
+
+## 1.1.13
+
+### Patch Changes
+
+- Features included:
+
+  1. Supertransaction simulations: Multichain and Single chain simulations for end to end transaction across the chains and protocols
+  2. Gas limit optimization: With the help of simulations, the gas limits are super optimized for the users
+  3. Gas prize optimization: Gas prices are highly optimized to reduce the gas fees for users
+  4. Fast block mode: Fast block mode enables a quick status resolution for supertransaction which highly improves the user experience
+
+  Please read more about these features in the biconomy docs
+
+## 1.1.12
+
+### Patch Changes
+
+- Patches:
+
+  1. Enhanced the permit tokens flow support for more uncovered exotic tokens
+  2. Fixed the native token transfer issue in withdraw and nativeTokenTransfer builder to cover more cases such as EOA, Delegated EOA, and SCA's
+
+## 1.1.11
+
+### Patch Changes
+
+- Features included:
+
+  1. Transaction metadata for instructions to provide rich context about supertransaction.
+  2. Conditional execution to enable developers to add custom conditions to the composable calls.
+  3. Added a support for monad mainnet and testnet chains in SDK
+
+## 1.1.10
+
+### Patch Changes
+
+- fixed the rawCalldata builder encoding issues
+
 ## 1.1.9
 
 ### Patch Changes

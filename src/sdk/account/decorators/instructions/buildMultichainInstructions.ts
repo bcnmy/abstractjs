@@ -5,7 +5,9 @@ import type { BaseInstructionsParams } from "../build"
 
 import type { BaseMultichainSmartAccount } from "../.."
 import { erc7579Calls } from "../../../clients/decorators/erc7579"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
+import { functionNameToLabel } from "../../../modules"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
 import { ownableCalls } from "../../../modules/validators/ownable/decorators"
 import { smartSessionCalls } from "../../../modules/validators/smartSessions"
@@ -31,10 +33,12 @@ export type BuildMultichainInstructionsParameters = {
 } & OneOf<
   | {
       calls: Call[]
+      metadata?: InstructionMetadata[]
     }
   | {
       type: SupportedCall
       parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[SupportedCall]>
+      metadata?: InstructionMetadata[]
     }
 >
 
@@ -47,7 +51,8 @@ export const buildMultichainInstructions = async (
     calls: calls_,
     type,
     parameters: parametersForType,
-    account
+    account,
+    metadata: metadataOverride
   } = parameters
 
   const instructions = await Promise.all(
@@ -57,15 +62,37 @@ export const buildMultichainInstructions = async (
       if (!chainId) {
         throw new Error("Chain ID is not set")
       }
+
+      let metadata: InstructionMetadata[] = []
+
       if (calls_) {
+        metadata = [
+          {
+            type: "CUSTOM",
+            chainId,
+            description: "Custom on-chain action"
+          }
+        ]
         callsPerChain = calls_ as AbstractCall[]
       } else if (type) {
+        metadata = [
+          {
+            type: "CUSTOM",
+            chainId,
+            description: `${functionNameToLabel(type)} on-chain action`
+          }
+        ]
         callsPerChain = (await GLOBAL_COMPOSABLE_CALLS[type](
           account,
           parametersForType as AnyData
         )) as AbstractCall[]
       }
-      return { calls: callsPerChain, chainId }
+
+      return {
+        calls: callsPerChain,
+        chainId,
+        metadata: metadataOverride || metadata
+      }
     })
   )
 

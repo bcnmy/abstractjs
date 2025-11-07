@@ -5,6 +5,7 @@ import {
   type Transport,
   createWalletClient,
   erc20Abi,
+  parseUnits,
   publicActions
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
@@ -772,12 +773,12 @@ describe("mee.getQuote", () => {
       const mcNexus = await toMultichainNexusAccount({
         signer: eoaAccount,
         index: BigInt(getRandomAccountIndex(1000, 1000000000)),
-        accountAddress: eoaAccount.address,
         chainConfigurations: [
           {
             chain: baseSepolia,
             transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: eoaAccount.address
           }
         ]
       })
@@ -1265,15 +1266,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
@@ -1381,15 +1383,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
@@ -1497,15 +1500,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
@@ -1586,15 +1590,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -1671,32 +1676,49 @@ describe("mee.getQuote", () => {
   })
 
   test("Should SDK use manually injected 7702 auth with chain id zero for all chains if the nonce are same", async () => {
-    const eoaAccount = privateKeyToAccount(generatePrivateKey())
-
-    const walletClient = createWalletClient({
-      account: eoaAccount,
-      chain: baseSepolia,
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
-    }).extend(publicActions)
+    const newEoaAccount = privateKeyToAccount(generatePrivateKey())
 
     const mcNexus = await toMultichainNexusAccount({
-      signer: eoaAccount,
+      signer: newEoaAccount,
       chainConfigurations: [
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: newEoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: newEoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(optimismSepolia.id, true)
+
+    const eoaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    await transferErc20({
+      publicClient,
+      walletClient: eoaWalletClient,
+      tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+      recipient: newEoaAccount.address,
+      amount: parseUnits("0.5", 6)
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const walletClient = createWalletClient({
+      account: newEoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
 
     const auth = await walletClient.signAuthorization({
       contractAddress: version.implementationAddress,
@@ -1711,7 +1733,7 @@ describe("mee.getQuote", () => {
     const baseSepoliaTransfer = await mcNexus.build({
       type: "transfer",
       data: {
-        recipient: eoaAccount.address,
+        recipient: newEoaAccount.address,
         chainId: baseSepolia.id,
         amount: 1n,
         tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
@@ -1721,7 +1743,7 @@ describe("mee.getQuote", () => {
     const optimismSepoliaTransfer = await mcNexus.build({
       type: "transfer",
       data: {
-        recipient: eoaAccount.address,
+        recipient: newEoaAccount.address,
         chainId: optimismSepolia.id,
         amount: 1n,
         tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
@@ -1740,6 +1762,8 @@ describe("mee.getQuote", () => {
     })
 
     expect(quote).toBeDefined()
+
+    console.log(quote)
 
     expect(quote.userOps[0].userOp.initCode).to.eq("0x")
     expect(quote.userOps[0].eip7702Auth).toBeDefined()
@@ -1773,15 +1797,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -1845,15 +1870,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -1925,15 +1951,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -2003,10 +2030,10 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -2060,15 +2087,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -2121,15 +2149,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -2189,15 +2218,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     let isDelegated = await mcNexus.isDelegated()
@@ -2272,7 +2302,7 @@ describe("mee.getQuote", () => {
 
     const receipt = await meeClient.waitForSupertransactionReceipt({
       hash,
-      confirmations: 5
+      confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
     expect(receipt).toBeDefined()
@@ -2299,15 +2329,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     let isDelegated = await mcNexus.isDelegated()
@@ -2397,15 +2428,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     let isDelegated = await mcNexus.isDelegated()
@@ -2487,15 +2519,16 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     let isDelegated = await mcNexus.isDelegated()
@@ -2555,6 +2588,36 @@ describe("mee.getQuote", () => {
     isDelegated = await mcNexus.isDelegated()
 
     expect(isDelegated).toBe(true)
+  })
+
+  test("Multichain accountAddress overrides for EIP 7702 Auth", async () => {
+    const randomAddressOne = privateKeyToAccount(generatePrivateKey())
+    const randomAddressTwo = privateKeyToAccount(generatePrivateKey())
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: randomAddressOne.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: randomAddressTwo.address
+        }
+      ]
+    })
+
+    expect(mcNexus.addressOn(baseSepolia.id, true)).to.eq(
+      randomAddressOne.address
+    )
+    expect(mcNexus.addressOn(optimismSepolia.id, true)).to.eq(
+      randomAddressTwo.address
+    )
   })
 
   test("Should include gasRefundAddress in quote payment info if configured in feeToken", async () => {

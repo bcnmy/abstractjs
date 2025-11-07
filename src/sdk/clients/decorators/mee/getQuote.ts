@@ -1,4 +1,4 @@
-import type { Address, Hex, OneOf } from "viem"
+import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import {
   buildComposable,
@@ -8,14 +8,19 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
   addressEquals,
+  calculateNonceStorageSlot,
   isBigInt,
-  isNativeToken
+  isNativeToken,
+  validateConsistentMeeVersions
 } from "../../../account/utils/Utils"
+import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
-  SMART_SESSIONS_ADDRESS
+  SMART_SESSIONS_ADDRESS,
+  SmartSessionMode
 } from "../../../constants"
 import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
 import {
@@ -26,6 +31,7 @@ import {
   runtimeNonceOf
 } from "../../../modules/utils/composabilityCalls"
 import type { GrantPermissionResponseEntry } from "../../../modules/validators/smartSessions/decorators/grantPermission"
+import type { GrantMeePermissionPayload } from "../../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import createHttpClient, { type Url } from "../../createHttpClient"
 import {
   type BaseMeeClient,
@@ -35,6 +41,9 @@ import {
   DEFAULT_PATHFINDER_URL,
   getDefaultMEENetworkUrl
 } from "../../createMeeClient"
+import type { QuoteType } from "./getQuoteType"
+import type { TokenTrigger } from "./signPermitQuote"
+import type { InstructionMetadata } from "./types/instruction-metadata.type"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -100,6 +109,10 @@ export type Instruction = {
   chainId: number
   /** Flag for composable call */
   isComposable?: boolean
+  /** Instruction metadata */
+  metadata?: InstructionMetadata[]
+  /** Simulation overrides */
+  simulationOverrides?: Overrides
 }
 
 /**
@@ -213,6 +226,43 @@ export type SponsorshipOptionsParams = {
   }
 }
 
+export interface TokenOverride {
+  /** Token contract address */
+  tokenAddress: Address
+  /** Account address (EOA or Smart Contract Account) */
+  accountAddress: Address
+  /** Chain ID */
+  chainId: number
+  /** Token balance in wei */
+  balance: bigint
+}
+
+export interface CustomOverride {
+  /** Contract address */
+  contractAddress: Address
+  /** Storage slot in hex format */
+  storageSlot: Hex
+  /** Chain ID */
+  chainId: number
+  /** Override value - hex string */
+  value: Hex
+}
+
+export interface Overrides {
+  /** Token balance overrides */
+  tokenOverrides?: TokenOverride[]
+  /** Custom contract storage overrides */
+  customOverrides?: CustomOverride[]
+}
+
+export interface Simulation {
+  /** Flag to enable/disable simulations  */
+  simulate: boolean
+
+  /** Storage overrides to override token balance and some custom storage slots for simulation */
+  overrides?: Overrides
+}
+
 /**
  * Parameters required for requesting a quote from the MEE service
  */
@@ -254,9 +304,25 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   gasLimit?: bigint
   /**
+   * Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations
+   */
+  simulation?: Simulation
+  /**
    * token cleanup option to pull the funds on failure or dust cleanup
    */
   cleanUps?: CleanUp[]
+  /**
+   * batch flag to enable/disable instruction batching. Defaults to true
+   */
+  batch?: boolean
+  /**
+   * Smart sessions permission info - Primarily used to detect smart sessions flow in quote phase and used for simulations as well
+   */
+  sessionDetails?: GrantMeePermissionPayload
+  /**
+   * Smart sessions mode
+   */
+  smartSessionMode?: "ENABLE_AND_USE" | "USE"
   /**
    * Active module address. Used to fetch the nonce for the active module and resolve verification gas limit
    */
@@ -275,6 +341,10 @@ export type GetQuoteParams = SupertransactionLike & {
    * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
    */
   shortEncodingSuperTxn?: boolean
+  /**
+   * Tags to be used for the transaction
+   */
+  tags?: string[]
 } & OneOf<
     | {
         /**
@@ -344,39 +414,61 @@ export type MeeAuthorization = {
   s: Hex
   yParity: Hex
 }
+
+export type UserOp = {
+  /** Address of the account initiating the operation */
+  sender: string
+  /** Encoded transaction data */
+  callData: string
+  /** Gas limit for the call execution */
+  callGasLimit: string
+  /** Account nonce */
+  nonce: string
+  /** Chain ID where the operation will be executed */
+  chainId: string
+  /** Lower bound timestamp for operation validity */
+  lowerBoundTimestamp?: number
+  /** Upper bound timestamp for operation validity */
+  upperBoundTimestamp?: number
+  /** EIP7702Auth */
+  eip7702Auth?: MeeAuthorization
+  /** Cleanup userop flag - Special user op */
+  isCleanUpUserOp?: boolean
+  /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
+   * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
+   * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
+   **/
+  shortEncoding?: boolean
+  /** UserOp instructions metadata */
+  metadata?: InstructionMetadata[]
+  /** Optional Session details for detecting the smart session mode in node during quote phase */
+  sessionDetails?: GrantPermissionResponseEntry
+  /** Custom simulation overrides - if provided, will be used for simulation by
+   * overriding global per supertx overrides. Mostly we will use it for simulation of cleanUp userOps.
+   * But in the future, it can be used for other purposes as well,
+   * for setting custom overrides on a per userOp basis. */
+  simulationOverrides?: Overrides
+}
+
 /**
  * Internal structure for submitting a quote request to the MEE service
  * @internal
  */
 type QuoteRequest = {
   /** Array of user operations to be executed */
-  userOps: {
-    /** Address of the account initiating the operation */
-    sender: string
-    /** Encoded transaction data */
-    callData: string
-    /** Gas limit for the call execution */
-    callGasLimit: string
-    /** Account nonce */
-    nonce: string
-    /** Chain ID where the operation will be executed */
-    chainId: string
-    /** Lower bound timestamp for operation validity */
-    lowerBoundTimestamp?: number
-    /** Upper bound timestamp for operation validity */
-    upperBoundTimestamp?: number
-    /** EIP7702Auth */
-    eip7702Auth?: MeeAuthorization
-    /** Cleanup userop flag - Special user op */
-    isCleanUpUserOp?: boolean
-    /** Short encoding flag for fusion isValidsignatureWithSender/validateSignatureWithData functions
-     * For more details see https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L32-L58
-     * https://github.com/bcnmy/mee-contracts/blob/main/contracts/lib/fusion/PermitValidatorLib.sol#L134C14-L156
-     **/
-    shortEncoding?: boolean
-  }[]
+  userOps: UserOp[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
+  /** MEE versions for the quote request */
+  meeVersions?: MeeVersionsWithChainId
+  /** Quote type  */
+  quoteType?: QuoteType
+  /** Trigger (pull action) information for the transaction */
+  trigger?: TokenTrigger
+  /** Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations */
+  simulation?: Simulation
+  /** Tags to be used for the transaction */
+  tags?: string[]
 }
 
 /**
@@ -409,6 +501,8 @@ export type PaymentInfo = {
   sponsorshipUrl?: Url
   /** Custom gas refund address to get the refunds for the remaining unspent gas. Defaults to Nexus SCA. */
   gasRefundAddress?: Address
+  /** Optional Session details for detecting the smart session mode in node */
+  sessionDetails?: GrantPermissionResponseEntry
 }
 
 /**
@@ -485,8 +579,12 @@ export interface MeeFilledUserOpDetails {
    *  fusion signature for a given userOp
    **/
   shortEncoding: boolean
+  /** Instruction metadata */
+  metadata?: InstructionMetadata[]
   /** Userop signature signed by sponsorship service */
   signature?: Hex
+  /** Userop finality confirmation. Soft confirmation and Hard confirmation is supported */
+  isConfirmed?: boolean
 }
 
 /**
@@ -503,6 +601,8 @@ export type GetQuotePayload = {
   paymentInfo: FilledPaymentInfo
   /** Array of user operations with their details */
   userOps: MeeFilledUserOpDetails[]
+  /** Quote type - determines the supertransaction mode */
+  quoteType?: QuoteType
 }
 
 export type InitData = { eip7702Auth: MeeAuthorization } | { initCode: Hex }
@@ -542,7 +642,9 @@ export type InitDataOrUndefined = InitData | undefined
  */
 export const getQuote = async (
   client: BaseMeeClient,
-  parameters: GetQuoteParams
+  parameters: GetQuoteParams,
+  quoteType: QuoteType = "simple",
+  trigger?: TokenTrigger
 ): Promise<GetQuotePayload> => {
   const {
     account: account_ = client.account,
@@ -557,14 +659,59 @@ export const getQuote = async (
     authorizations = [],
     multichain7702Auth = false,
     moduleAddress,
+    batch = true,
+    simulation,
     verificationGasLimit,
     shortEncodingSuperTxn = false,
     sponsorship = false,
     sponsorshipOptions,
-    feeToken
+    feeToken,
+    sessionDetails,
+    smartSessionMode
   } = parameters
 
-  const resolvedInstructions = await resolveInstructions(instructions)
+  const mode =
+    smartSessionMode === "ENABLE_AND_USE"
+      ? SmartSessionMode.UNSAFE_ENABLE
+      : SmartSessionMode.USE
+
+  let resolvedInstructions = await resolveInstructions(instructions)
+
+  // If there is no metadata is configured by the SDK or developer ? Custom metadata will be added always
+  resolvedInstructions = resolvedInstructions.map((instruction) => {
+    if (!instruction.metadata || instruction.metadata.length === 0) {
+      return {
+        ...instruction,
+        metadata: [
+          {
+            type: "CUSTOM",
+            description: "Custom on-chain action",
+            chainId: instruction.chainId
+          }
+        ]
+      }
+    }
+
+    return instruction
+  })
+
+  let finalInstructions = resolvedInstructions
+
+  const meeVersions = getMeeVersionsForQuote(
+    account_,
+    resolvedInstructions,
+    sponsorship,
+    feeToken
+  )
+
+  // By default, all the main instructions are batched
+  if (batch) {
+    finalInstructions = await batchInstructions({
+      accountAddress: account_.signer.address,
+      instructions: [...resolvedInstructions],
+      meeVersions // TODO: check if we can just pass empty array here because MeeVerions are not used when batching. Will it improve performance?
+    })
+  }
 
   // if feePayer is provided, we need to use the /quote-permit path
   let pathToQuery = path
@@ -572,7 +719,7 @@ export const getQuote = async (
     pathToQuery = "/quote-permit"
   }
 
-  const validUserOps = resolvedInstructions.every(
+  const validUserOps = finalInstructions.every(
     (userOp) =>
       account_.deploymentOn(userOp.chainId) &&
       client.info.supportedChains
@@ -582,13 +729,14 @@ export const getQuote = async (
 
   if (!validUserOps) {
     throw Error(
-      `User operation chain(s) not supported by the node: ${resolvedInstructions
+      `User operation chain(s) not supported by the node: ${finalInstructions
         .map((x) => x.chainId)
         .join(", ")}`
     )
   }
 
   const hasProcessedInitData: number[] = []
+  const hasProcessedSessionDetails = new Set<string>()
 
   const initDataTypeByChainId = new Map<number, INIT_DATA_TYPE>()
 
@@ -598,7 +746,7 @@ export const getQuote = async (
   if (feeToken) sprtxChainIdsSet.add(feeToken.chainId)
 
   // Chains IDS from instructions are considered
-  for (const inx of resolvedInstructions) {
+  for (const inx of finalInstructions) {
     sprtxChainIdsSet.add(inx.chainId)
   }
 
@@ -746,13 +894,11 @@ export const getQuote = async (
     }
   }
 
-  const { paymentInfo, isInitDataProcessed } = await preparePaymentInfo(
-    client,
-    {
+  const { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed } =
+    await preparePaymentInfo(client, {
       ...parameters,
       initDataTypeByChainId
-    }
-  )
+    })
 
   let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
 
@@ -770,9 +916,12 @@ export const getQuote = async (
   if (isInitDataProcessed)
     hasProcessedInitData.push(Number(paymentInfo.chainId))
 
+  if (isSessionDetailsProcessed)
+    hasProcessedSessionDetails.add(paymentInfo.chainId)
+
   const preparedUserOps = await prepareUserOps(
     account_,
-    resolvedInstructions,
+    finalInstructions,
     false,
     moduleAddress
   )
@@ -783,20 +932,19 @@ export const getQuote = async (
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
-
-    const cleanUpUserOps = await prepareCleanUpUserOps(
+    const result = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
       cleanUps,
       moduleAddress
     )
 
-    preparedUserOps.push(...cleanUpUserOps)
+    preparedUserOps.push(...result)
   }
 
   // complete the userOps including cleanup ones
   const indexPerChainId = new Map<string, number>()
-  const userOps = await Promise.all(
+  const userOps: UserOp[] = await Promise.all(
     preparedUserOps.map(
       async ([
         callData,
@@ -808,7 +956,9 @@ export const getQuote = async (
         chainId,
         isCleanUpUserOp,
         nexusAccount,
-        shortEncoding
+        shortEncoding,
+        metadata,
+        simulationOverrides
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -872,6 +1022,31 @@ export const getQuote = async (
 
         indexPerChainId.set(chainId, indexPerChainId.get(chainId)! + 1)
 
+        let sessionDetail: GrantPermissionResponseEntry | undefined = undefined
+
+        if (sessionDetails) {
+          // Find session details for this chain
+          const relevantIndex = sessionDetails.findIndex(
+            ({ enableSessionData }) =>
+              enableSessionData?.enableSession?.sessionToEnable?.chainId ===
+              BigInt(chainId)
+          )
+
+          if (relevantIndex === -1) {
+            throw new Error(`No session details found for chainId ${chainId}`)
+          }
+
+          const isFirstTimeForChain = !hasProcessedSessionDetails.has(chainId)
+          const dynamicMode = isFirstTimeForChain ? mode : SmartSessionMode.USE
+
+          sessionDetail = {
+            ...sessionDetails[relevantIndex],
+            mode: dynamicMode
+          }
+
+          hasProcessedSessionDetails.add(chainId)
+        }
+
         return {
           lowerBoundTimestamp: lowerBoundTimestamp_,
           upperBoundTimestamp: isCleanUpUserOp
@@ -886,12 +1061,30 @@ export const getQuote = async (
           isCleanUpUserOp,
           ...initDataOrUndefined,
           ...resolvedVerificationGasLimit,
-          shortEncoding: shortEncodingSuperTxn || shortEncoding
+          shortEncoding: shortEncodingSuperTxn || shortEncoding,
+          sessionDetails: sessionDetail,
+          metadata,
+          simulationOverrides
         }
       }
     )
   )
-  const quoteRequest: QuoteRequest = { userOps, paymentInfo }
+
+  // in `simple` mode, we should validate the consistent MEE versions across all chains
+  // because simple mode signatures can be incompatible b/w some mee versions
+  if (quoteType === "simple") {
+    validateConsistentMeeVersions(meeVersions)
+  }
+
+  const quoteRequest: QuoteRequest = {
+    quoteType,
+    userOps,
+    paymentInfo,
+    meeVersions,
+    simulation,
+    trigger,
+    tags: parameters.tags
+  }
 
   let quote = await client.request<GetQuotePayload>({
     path: pathToQuery,
@@ -939,11 +1132,14 @@ const preparePaymentInfo = async (
     sponsorshipOptions,
     shortEncodingSuperTxn,
     moduleAddress,
+    sessionDetails,
+    smartSessionMode = "USE",
     verificationGasLimit
   } = parameters
 
   let paymentInfo: PaymentInfo | undefined = undefined
   let isInitDataProcessed = false
+  let isSessionDetailsProcessed = false
 
   const eoaOrFeePayer = feePayer || eoa
 
@@ -1005,7 +1201,6 @@ const preparePaymentInfo = async (
       )
     }
 
-    // TODO: Check the correctness of this while testing. This is a old logic
     const validFeeToken =
       validPaymentAccount &&
       client.info.supportedGasTokens
@@ -1055,6 +1250,39 @@ const preparePaymentInfo = async (
         verificationGasLimit
       )
 
+    let sessionDetail: GrantPermissionResponseEntry | undefined = undefined
+
+    // Adding session details on quote to enable node to detect smart session flow on quote phase + use this for simulations
+    if (sessionDetails) {
+      // Find session details for this chain
+      const relevantIndex = sessionDetails.findIndex(
+        ({ enableSessionData }) =>
+          enableSessionData?.enableSession?.sessionToEnable?.chainId ===
+          BigInt(feeToken.chainId)
+      )
+
+      if (relevantIndex === -1) {
+        throw new Error(
+          `No session details found for chainId ${feeToken.chainId}`
+        )
+      }
+
+      if (!smartSessionMode) {
+        throw new Error("smartSessionMode is required for smart sessions flow")
+      }
+
+      // Mostly use and enable mode for payment userOp
+      const mode =
+        smartSessionMode === "ENABLE_AND_USE"
+          ? SmartSessionMode.UNSAFE_ENABLE
+          : SmartSessionMode.USE
+
+      sessionDetail = {
+        ...sessionDetails[relevantIndex],
+        mode
+      }
+    }
+
     paymentInfo = {
       sponsored: false,
       sender: validPaymentAccount.address,
@@ -1070,17 +1298,20 @@ const preparePaymentInfo = async (
         : {}),
       ...(eoaOrFeePayer ? { eoa: eoaOrFeePayer } : {}),
       ...initData,
-      shortEncoding: shortEncodingSuperTxn
+      shortEncoding: shortEncodingSuperTxn,
+      sessionDetails: sessionDetail
     }
 
     // Init code / authorization list will added to payment userOp. To prevent adding the init code / authList
     // in developer defined userOps, this field must be true
     isInitDataProcessed = true
+
+    isSessionDetailsProcessed = true
   }
 
   if (!paymentInfo) throw new Error("Failed to generate payment info")
 
-  return { paymentInfo, isInitDataProcessed }
+  return { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed }
 }
 
 const prepare7702Auth = async (
@@ -1170,7 +1401,9 @@ const prepareUserOps = async (
         instruction.chainId.toString(),
         isCleanUpUserOps,
         deployment,
-        shortEncoding
+        shortEncoding,
+        instruction.metadata,
+        instruction.simulationOverrides
       ])
     })
   )
@@ -1191,12 +1424,26 @@ const prepareCleanUpUserOps = async (
   cleanUps: CleanUp[],
   moduleAddress?: Address
 ) => {
+  const meeVersions = account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   const cleanUpInstructions = await Promise.all(
     cleanUps.map(async (cleanUp) => {
       let cleanUpInstruction: Instruction
-      const { version } = account.deploymentOn(cleanUp.chainId, true)
+
+      const { version, entryPoint } = account.deploymentOn(
+        cleanUp.chainId,
+        true
+      )
       const composabilityVersion = version.composabilityVersion
 
+      // Initialize simulation overrides; Used for simulation overrides of cleanUp userOps
+      const tokenOverrides: TokenOverride[] = []
+      const customOverrides: CustomOverride[] = []
+
+      let simulationTokenOverrideAmount: bigint
       if (isNativeToken(cleanUp.tokenAddress)) {
         if (!isBigInt(cleanUp.amount) || cleanUp.amount === 0n) {
           if (composabilityVersion === ComposabilityVersion.V1_0_0) {
@@ -1217,7 +1464,11 @@ const prepareCleanUpUserOps = async (
             amount = cleanUp.amount as RuntimeValue
           }
           const [cleanUpNativeTransferInstruction] = await buildComposable(
-            { accountAddress: account.signer.address, currentInstructions: [] },
+            {
+              accountAddress: account.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               type: "nativeTokenTransfer",
               data: {
@@ -1230,27 +1481,40 @@ const prepareCleanUpUserOps = async (
             composabilityVersion
           )
           cleanUpInstruction = cleanUpNativeTransferInstruction
+          simulationTokenOverrideAmount = 1n // default to 1 wei if runtime balance is used
         } else {
           const amount = cleanUp.amount as bigint
 
           const [cleanUpNativeTransferInstruction] = await buildComposable(
-            { accountAddress: account.signer.address, currentInstructions: [] },
             {
-              type: "rawCalldata",
+              accountAddress: account.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
+            {
+              type: "nativeTokenTransfer",
               data: {
                 to: cleanUp.recipientAddress,
-                calldata: "0x00000000",
+                value: amount,
                 chainId: cleanUp.chainId,
-                value: amount
+                ...(cleanUp.gasLimit ? { gasLimit: cleanUp.gasLimit } : {})
               }
             },
             composabilityVersion
           )
           cleanUpInstruction = cleanUpNativeTransferInstruction
+          simulationTokenOverrideAmount = amount
         }
       } else {
         // Else ERC20 cleanup
         let amount: bigint | RuntimeValue = cleanUp.amount ?? 0n
+
+        // If the amount is a bigint and greater than 0, then use it for simulation, otherwise default to 1 wei
+        if (isBigInt(amount) && (amount as bigint) > 0n) {
+          simulationTokenOverrideAmount = amount as bigint
+        } else {
+          simulationTokenOverrideAmount = 1n // default to 1 wei if runtime balance is used
+        }
 
         // If there is no amount specified, runtime amount will be used for cleanup by default
         if (amount === 0n) {
@@ -1261,7 +1525,11 @@ const prepareCleanUpUserOps = async (
         }
 
         const [cleanUpERC20TransferInstruction] = await buildComposable(
-          { accountAddress: account.signer.address, currentInstructions: [] },
+          {
+            accountAddress: account.signer.address,
+            currentInstructions: [],
+            meeVersions
+          },
           {
             type: "transfer",
             data: {
@@ -1277,6 +1545,13 @@ const prepareCleanUpUserOps = async (
 
         cleanUpInstruction = cleanUpERC20TransferInstruction
       }
+
+      tokenOverrides.push({
+        tokenAddress: cleanUp.tokenAddress,
+        accountAddress: account.addressOn(cleanUp.chainId, true),
+        balance: simulationTokenOverrideAmount,
+        chainId: cleanUp.chainId
+      })
 
       const nonceDependencies: RuntimeValue[] = []
 
@@ -1297,6 +1572,15 @@ const prepareCleanUpUserOps = async (
           })
 
           nonceDependencies.push(nonceOf)
+          customOverrides.push({
+            chainId: cleanUp.chainId,
+            contractAddress: entryPoint.address,
+            storageSlot: calculateNonceStorageSlot(
+              account.addressOn(cleanUp.chainId, true),
+              nonceKey
+            ),
+            value: pad(toHex(nonce + 1n).slice(-16) as Hex) // taking only last 8 bytes (16 hex characters) - which is the nonce value for a given nonce key
+          })
         }
       } else {
         if (userOpsNonceInfo.length === 0) {
@@ -1315,6 +1599,15 @@ const prepareCleanUpUserOps = async (
         })
 
         nonceDependencies.push(nonceOf)
+        customOverrides.push({
+          chainId: cleanUp.chainId,
+          contractAddress: entryPoint.address,
+          storageSlot: calculateNonceStorageSlot(
+            account.addressOn(cleanUp.chainId, true),
+            nonceKey
+          ),
+          value: pad(toHex(nonce + 1n).slice(-16) as Hex)
+        })
       }
 
       const nonceDependencyInputParams = nonceDependencies.flatMap(
@@ -1334,7 +1627,13 @@ const prepareCleanUpUserOps = async (
         return call
       })
 
-      return cleanUpInstruction
+      return {
+        ...cleanUpInstruction,
+        simulationOverrides: {
+          tokenOverrides,
+          customOverrides
+        }
+      }
     })
   )
 
@@ -1527,6 +1826,49 @@ const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
   }
   // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
+}
+
+/**
+ * Returns the MEE versions of the orchestrator account
+ * on all the chains involved in the quote request.
+ *
+ * @param account - The multichain smart account
+ * @param instructions - The instructions to be executed
+ * @param sponsorship - Whether the quote is sponsored
+ * @param feeToken - The fee token
+ * @returns An array of chain IDs with their corresponding MEE versions as MeeVersionsWithChainId
+ * @example
+ * ```typescript
+ * const meeVersions = getMeeVersionsForQuote(account, instructions, sponsorship, feeToken)
+ * ```
+ */
+export function getMeeVersionsForQuote(
+  account: MultichainSmartAccount,
+  instructions: Instruction[],
+  sponsorship: boolean,
+  feeToken?: FeeTokenInfo
+): MeeVersionsWithChainId {
+  const usedChains = new Set<number>()
+  for (const op of instructions) {
+    usedChains.add(Number(op.chainId))
+  }
+
+  // For sponsored flow, we can ignore payment chain because orchestrator account
+  // used there will be not user's orchestrator account but sponsorship account.
+  // For non-sponsored flow, the user's orchestrator account will be performing'
+  // the payment userOp, so we need to make sure its MEE version is consistent.
+  if (!sponsorship) {
+    // if sponsorship is false, the feeToken is defined: see GetQuoteParams type
+    usedChains.add(Number(feeToken!.chainId))
+  }
+
+  return Array.from(usedChains, (chainId) => {
+    const deployment = account.deploymentOn(chainId, true)
+    return {
+      version: deployment.version,
+      chainId
+    }
+  }) as MeeVersionsWithChainId
 }
 
 // ====================================================

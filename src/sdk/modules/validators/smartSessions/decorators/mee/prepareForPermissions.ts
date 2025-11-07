@@ -40,6 +40,11 @@ export const prepareForPermissions = async (
   client: BaseMeeClient,
   parameters: PrepareForPermissionsParams
 ): Promise<PrepareForPermissionsPayload> => {
+  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   // check if we need to install the module on any of the chains
   // it includes the deployment of the account on the chains if needed
   // because knowing the account is not deployed on a chain, means the module has not been installed on that chain
@@ -67,7 +72,7 @@ export const prepareForPermissions = async (
       // it will also include the deployment instruction if needed
       if (!isModuleInstalled_) {
         return build(
-          { accountAddress: client.account.signer.address },
+          { accountAddress: client.account.signer.address, meeVersions },
           {
             type: "default",
             data: {
@@ -76,7 +81,14 @@ export const prepareForPermissions = async (
                 initData: "0x",
                 type: parameters.smartSessionsValidator.type
               })) as AbstractCall[],
-              chainId
+              chainId,
+              metadata: [
+                {
+                  type: "CUSTOM",
+                  description: "Install smart sessions module",
+                  chainId
+                }
+              ]
             }
           }
         )
@@ -118,8 +130,10 @@ export const prepareForPermissions = async (
       const quote = await getFusionQuote(client, {
         ...parameters,
         instructions: completeInstructionsList,
+        batch: parameters.batch || true,
         feeToken: parameters.feeToken!,
-        trigger: parameters.trigger
+        trigger: parameters.trigger,
+        simulation: parameters.simulation
       } as GetFusionQuoteParams)
 
       return await executeFusionQuote(client, {
@@ -133,7 +147,8 @@ export const prepareForPermissions = async (
       ...parameters,
       instructions: completeInstructionsList,
       feeToken: parameters.feeToken!,
-      trigger: parameters.trigger
+      trigger: parameters.trigger,
+      simulation: parameters.simulation
     } as GetQuoteParams)
   }
   return undefined

@@ -188,7 +188,20 @@ export const acrossEncodeBridgingUserOp = async (
 
   const userOp: Instruction = {
     calls: [approveCall, depositCall],
-    chainId: fromChainId
+    chainId: fromChainId,
+    metadata: [
+      {
+        type: "BRIDGE",
+        fromAddress: depositor,
+        toAddress: recipient,
+        fromTokenAddress: inputToken,
+        toTokenAddress: outputToken,
+        amount: bridgingAmount,
+        fromChainId: fromChainId,
+        toChainId: toChainId,
+        protocolNames: ["Across"]
+      }
+    ]
   }
 
   return {

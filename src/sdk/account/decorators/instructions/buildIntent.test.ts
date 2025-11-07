@@ -15,6 +15,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildIntent from "./buildIntent"
 
 describe("mee.buildIntent", () => {
@@ -28,6 +29,7 @@ describe("mee.buildIntent", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -54,6 +56,11 @@ describe("mee.buildIntent", () => {
       ]
     })
 
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
+
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
@@ -61,7 +68,7 @@ describe("mee.buildIntent", () => {
     console.log("mcNexus", mcNexus.addressOn(targetChain.id))
 
     const instructions: Instruction[] = await buildIntent(
-      { accountAddress: mcNexus.signer.address },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         depositor: mcNexus.addressOn(paymentChain.id, true),
         recipient: mcNexus.addressOn(targetChain.id, true),
@@ -95,7 +102,7 @@ describe("mee.buildIntent", () => {
     })
 
     const instructions: Instruction[] = await buildIntent(
-      { accountAddress: newMcNexus.signer.address },
+      { accountAddress: newMcNexus.signer.address, meeVersions },
       {
         depositor: mcNexus.addressOn(targetChain.id, true),
         recipient: mcNexus.addressOn(paymentChain.id, true),

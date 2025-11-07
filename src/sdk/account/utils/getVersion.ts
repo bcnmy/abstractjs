@@ -98,7 +98,7 @@ export const semverCompare = (a: string, b: string): number => {
  * versionMeetsRequirement("1.2.3", "1.2.3")
  * ```
  */
-export const versionMeetsRequirement = (
+export const versionIsAtLeast = (
   currentVersion: string,
   requiredVersion: string
 ): boolean => {
@@ -179,6 +179,11 @@ export const isVersionNewer = (
 }
 
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
+
+export type MeeVersionsWithChainId = {
+  version: MEEVersionConfig
+  chainId: number
+}[]
 
 export type MEEVersionConfig = {
   /** The version of the Nexus account */

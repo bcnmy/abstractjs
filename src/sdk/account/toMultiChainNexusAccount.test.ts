@@ -337,6 +337,19 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
+      test("works with mee version 2.2.0", async () => {
+        const nexusAccount = await toMultichainNexusAccount({
+          signer: newSigner,
+          chainConfigurations: [
+            {
+              chain: baseSepolia,
+              transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+              version: getMEEVersion(MEEVersion.V2_2_0)
+            }
+          ]
+        })
+        await executeTx(nexusAccount)
+      })
     })
   })
 

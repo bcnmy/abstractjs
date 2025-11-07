@@ -141,7 +141,7 @@ describe("mee.multichainSmartSessions", () => {
       // if tests fail, increase the amount
       const transferToNexusTrigger = {
         tokenAddress: mcUSDC.addressOn(paymentChain.id), // The USDC token address on Optimism chain
-        amount: parseUnits("0.5", 6), // so Nexus is able to pay for the next SuperTxns
+        amount: parseUnits("1", 6), // so Nexus is able to pay for the next SuperTxns
         chainId: paymentChain.id // Which chain this trigger executes on
       }
 
@@ -284,18 +284,19 @@ describe("mee.multichainSmartSessions", () => {
       // with the redeemer account (which is Session Key) as signer
       // this would be a common pattern for signing userOps with a session key
       const dappNexusAccount = await toMultichainNexusAccount({
-        accountAddress: mcNexus.addressOn(paymentChain.id),
         signer: redeemerAccount,
         chainConfigurations: [
           {
             chain: paymentChain,
             transport: paymentChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(paymentChain.id)
           },
           {
             chain: targetChain,
             transport: targetChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(targetChain.id)
           }
         ]
       })
@@ -529,18 +530,19 @@ describe("mee.multichainSmartSessions", () => {
         })
 
       const dappNexusAccount = await toMultichainNexusAccount({
-        accountAddress: mcNexus.addressOn(paymentChain.id),
         signer: redeemerAccount,
         chainConfigurations: [
           {
             chain: paymentChain,
             transport: paymentChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(paymentChain.id)
           },
           {
             chain: targetChain,
             transport: targetChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(targetChain.id)
           }
         ]
       })
@@ -686,17 +688,18 @@ describe("mee.multichainSmartSessions", () => {
       )
 
       const dappNexusAccount = await toMultichainNexusAccount({
-        accountAddress: mcNexus.addressOn(paymentChain.id),
         chainConfigurations: [
           {
             chain: paymentChain,
             transport: paymentChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(paymentChain.id)
           },
           {
             chain: targetChain,
             transport: targetChainTransport,
-            version: getMEEVersion(DEFAULT_MEE_VERSION)
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: mcNexus.addressOn(targetChain.id)
           }
         ],
         signer: redeemerAccount

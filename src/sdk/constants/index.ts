@@ -60,19 +60,17 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   MEEVersionConfig
 > = {
   [MEEVersion.V2_2_0]: {
-    // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
     version: MEEVersion.V2_2_0,
-    accountId: "biconomy.nexus.1.2.1",
-    factoryAddress: "0xDB1D73d8c7e8D50F760083449390b1D4080108dF", // Nexus Account Factory Address
-    bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
-    implementationAddress: "0x0E12B6ED74b95aFEc6dc578Dc0b29292C0A95c90", // Nexus 1.2.1 => with native token runtime injection support
-    validatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE", // K1 MEE Validator Address
+    accountId: "biconomy.nexus.1.3.0",
+    factoryAddress: "0x0000009FD552C6c8D9F2F139b254Ec9b0C132360", // Nexus Account Factory Address
+    bootStrapAddress: "0x000000dD827476e7Ba18C12d0a754124Fe84d6f6",
+    implementationAddress: "0x00000099da5B22B6d0D64f966f7138e0c70FAf57", // Nexus 1.3.0
+    validatorAddress: "0x00000002987de8E966e1202534f018B028384eaC", // MEE K1 Validator Address
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
     composabilityVersion: ComposabilityVersion.V1_1_0
   },
   [MEEVersion.V2_1_0]: {
-    // https://docs.biconomy.io/contracts-and-audits/#nexus-with-latest-mee-k1-validator
     version: MEEVersion.V2_1_0,
     accountId: "biconomy.nexus.1.2.0",
     factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837", // Nexus Account Factory Address
