@@ -26,10 +26,7 @@ import {
 } from "viem"
 import type { Transport } from "viem"
 import type { Chain } from "viem/chains"
-import {
-  isVersionOlder,
-  versionIsAtLeast
-} from "./getVersion"
+import { isVersionOlder, versionIsAtLeast } from "./getVersion"
 import {
   BICONOMY_TOKEN_PAYMASTER,
   MOCK_MULTI_MODULE_ADDRESS,

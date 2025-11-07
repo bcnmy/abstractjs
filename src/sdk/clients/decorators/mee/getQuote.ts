@@ -1,8 +1,6 @@
 import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import {
-  type MeeVersionsWithChainId,
-} from "../../../account/utils/getVersion"
+import { type MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
 import {
   buildComposable,
