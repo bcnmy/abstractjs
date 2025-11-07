@@ -1,6 +1,5 @@
 import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { batchInstructions } from "../../../account"
 import {
   buildComposable,
   formatCallDataInputParamsWithVersion
@@ -11,9 +10,12 @@ import {
   addressEquals,
   calculateNonceStorageSlot,
   isBigInt,
-  isNativeToken
+  isNativeToken,
+  validateConsistentMeeVersions
 } from "../../../account/utils/Utils"
+import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
@@ -457,7 +459,11 @@ type QuoteRequest = {
   userOps: UserOp[]
   /** Payment details for the transaction */
   paymentInfo: PaymentInfo
+  /** MEE versions for the quote request */
+  meeVersions?: MeeVersionsWithChainId
+  /** Quote type  */
   quoteType?: QuoteType
+  /** Trigger (pull action) information for the transaction */
   trigger?: TokenTrigger
   /** Simulation configuration to enable simulation and configure overrides for single chain or cross chain simulations */
   simulation?: Simulation
@@ -691,17 +697,19 @@ export const getQuote = async (
 
   let finalInstructions = resolvedInstructions
 
-  const meeVersions = account_.deployments.map(({ version, chain }) => ({
-    chainId: chain.id,
-    version
-  }))
+  const meeVersions = getMeeVersionsForQuote(
+    account_,
+    resolvedInstructions,
+    sponsorship,
+    feeToken
+  )
 
   // By default, all the main instructions are batched
   if (batch) {
     finalInstructions = await batchInstructions({
       accountAddress: account_.signer.address,
       instructions: [...resolvedInstructions],
-      meeVersions
+      meeVersions // TODO: check if we can just pass empty array here because MeeVerions are not used when batching. Will it improve performance?
     })
   }
 
@@ -1062,10 +1070,17 @@ export const getQuote = async (
     )
   )
 
+  // in `simple` mode, we should validate the consistent MEE versions across all chains
+  // because simple mode signatures can be incompatible b/w some mee versions
+  if (quoteType === "simple") {
+    validateConsistentMeeVersions(meeVersions)
+  }
+
   const quoteRequest: QuoteRequest = {
     quoteType,
     userOps,
     paymentInfo,
+    meeVersions,
     simulation,
     trigger,
     tags: parameters.tags
@@ -1811,6 +1826,49 @@ const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
   }
   // if module is provided but no custom verification gas limit is provided, return undefined == default verification gas limit
   return undefined
+}
+
+/**
+ * Returns the MEE versions of the orchestrator account
+ * on all the chains involved in the quote request.
+ *
+ * @param account - The multichain smart account
+ * @param instructions - The instructions to be executed
+ * @param sponsorship - Whether the quote is sponsored
+ * @param feeToken - The fee token
+ * @returns An array of chain IDs with their corresponding MEE versions as MeeVersionsWithChainId
+ * @example
+ * ```typescript
+ * const meeVersions = getMeeVersionsForQuote(account, instructions, sponsorship, feeToken)
+ * ```
+ */
+export function getMeeVersionsForQuote(
+  account: MultichainSmartAccount,
+  instructions: Instruction[],
+  sponsorship: boolean,
+  feeToken?: FeeTokenInfo
+): MeeVersionsWithChainId {
+  const usedChains = new Set<number>()
+  for (const op of instructions) {
+    usedChains.add(Number(op.chainId))
+  }
+
+  // For sponsored flow, we can ignore payment chain because orchestrator account
+  // used there will be not user's orchestrator account but sponsorship account.
+  // For non-sponsored flow, the user's orchestrator account will be performing'
+  // the payment userOp, so we need to make sure its MEE version is consistent.
+  if (!sponsorship) {
+    // if sponsorship is false, the feeToken is defined: see GetQuoteParams type
+    usedChains.add(Number(feeToken!.chainId))
+  }
+
+  return Array.from(usedChains, (chainId) => {
+    const deployment = account.deploymentOn(chainId, true)
+    return {
+      version: deployment.version,
+      chainId
+    }
+  }) as MeeVersionsWithChainId
 }
 
 // ====================================================

@@ -34,6 +34,7 @@ import {
   NEXUS_DOMAIN_TYPEHASH,
   NEXUS_DOMAIN_VERSION
 } from "../../account/utils/Constants"
+import { MEEVersion } from "../../constants"
 import { EIP1271Abi } from "../../constants/abi"
 import {
   type AnyData,
@@ -41,6 +42,8 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
+import { isVersionOlder, versionIsAtLeast } from "./getVersion"
+import type { MeeVersionsWithChainId } from "./getVersion"
 
 /**
  * Type guard to check if a value is null or undefined.
@@ -619,4 +622,50 @@ export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
   )
 
   return finalSlot
+}
+
+/**
+ * Checks if the account has consistent MEE versions across deployments for signing the quote.
+ *
+ * Version < 2.2.0 uses personal_sign, version >= 2.2.0 uses EIP-712 signing.
+ * Mixing these two signing methods is not allowed as it would result in incompatible signatures.
+ *
+ * For EIP-712 versions (>= 2.2.0), all MEE versions must be the same to ensure consistent
+ * signature validation across chains.
+ *
+ * @param meeVersions - Array of chain IDs with their corresponding MEE versions
+ * @throws Error if versions are inconsistent or mixing signing methods
+ */
+export function validateConsistentMeeVersions(
+  meeVersions: MeeVersionsWithChainId
+): void {
+  let hasPersonalSignVersion = false
+  let hasEIP712Version = false
+
+  // Track version consistency while iterating (fail-fast approach)
+  for (const { version: meeVersionConfig } of meeVersions) {
+    const meeVersion = meeVersionConfig.version
+    // Check version type as we go
+    const isCurrentVersionPersonalSign = isVersionOlder(
+      meeVersion,
+      MEEVersion.V2_2_0
+    )
+    const isCurrentVersionEIP712 = versionIsAtLeast(
+      meeVersion,
+      MEEVersion.V2_2_0
+    )
+
+    // Update flags
+    hasPersonalSignVersion =
+      hasPersonalSignVersion || isCurrentVersionPersonalSign
+    hasEIP712Version = hasEIP712Version || isCurrentVersionEIP712
+
+    // Early exit: Cannot mix personal_sign and EIP-712 signing methods
+    if (hasPersonalSignVersion && hasEIP712Version) {
+      throw new Error(
+        "MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. " +
+          "Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
+      )
+    }
+  }
 }
