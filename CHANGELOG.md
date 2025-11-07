@@ -1,5 +1,49 @@
 # @biconomy/abstractjs
 
+## 1.1.16
+
+### Patch Changes
+
+#### Features included
+
+  1. Multichain accountAddress overrides for 7702 flow and Nexus upgrades.
+  2. Simulation support for MEE version 2.2.0 for all the fusion modes
+  3. Enhancements for cleanup userOps to cover native token cleanup for various target types such as EOA, SCA, and delegated EOA.
+
+#### Breaking changes:
+
+  1. Gloabl accountAddress overrides are removed. Now all the accountAddress should be overriden per chainConfig basis
+
+  #### Old way:
+  ```
+      const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      accountAddress: randomAddressOne.address,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+        },
+      ]
+    })
+  ```
+
+  #### New way:
+  ```
+      const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: randomAddressOne.address
+        },
+      ]
+    })
+  ```
+
 ## 1.1.15
 
 ### Patch Changes
