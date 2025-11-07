@@ -26,7 +26,6 @@ import {
 } from "viem"
 import type { Transport } from "viem"
 import type { Chain } from "viem/chains"
-import { isVersionOlder, versionIsAtLeast } from "./getVersion"
 import {
   BICONOMY_TOKEN_PAYMASTER,
   MOCK_MULTI_MODULE_ADDRESS,
@@ -43,6 +42,7 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
+import { isVersionOlder, versionIsAtLeast } from "./getVersion"
 import type { MeeVersionsWithChainId } from "./getVersion"
 
 /**

@@ -47,6 +47,7 @@ import {
   getRandomAccountIndex,
   transferErc20
 } from "../../../../test/testUtils"
+import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -75,7 +76,6 @@ import {
   getDefaultMeeGasTank
 } from "../../createMeeClient"
 import getMmDtkQuote from "./getMmDtkQuote"
-import { getMeeScanLink } from "../../../account"
 
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")

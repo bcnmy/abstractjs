@@ -1,7 +1,5 @@
 import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { type MeeVersionsWithChainId } from "../../../account/utils/getVersion"
-import { batchInstructions } from "../../../account/utils/batchInstructions"
 import {
   buildComposable,
   formatCallDataInputParamsWithVersion
@@ -15,7 +13,9 @@ import {
   isNativeToken,
   validateConsistentMeeVersions
 } from "../../../account/utils/Utils"
+import { batchInstructions } from "../../../account/utils/batchInstructions"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account/utils/getMultichainContract"
+import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
