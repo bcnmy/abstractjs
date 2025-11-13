@@ -6,9 +6,9 @@ import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
 import { getSupportedFeeToken } from "./getSupportedFeeToken"
 import {
-  prepareSignablePermitQuotePayload,
   type TokenTrigger,
-  type Trigger
+  type Trigger,
+  prepareSignablePermitQuotePayload
 } from "./signPermitQuote"
 
 export type QuoteType = "simple" | "onchain" | "permit" | "mm-dtk"
