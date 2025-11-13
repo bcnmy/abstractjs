@@ -572,7 +572,7 @@ export async function supportsCancun({
     "143": true,
     "88882": false,
     "531050204": true,
-    "5010405": true,
+    "5010405": true
   }
 
   if (cancunSupportedChains[chain.id.toString()]) {

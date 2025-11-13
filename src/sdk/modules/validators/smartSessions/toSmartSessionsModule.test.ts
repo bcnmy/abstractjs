@@ -24,7 +24,11 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import { DEFAULT_CONFIGURATIONS_BY_MEE_VERSION, DEFAULT_MEE_VERSION, getSudoPolicy } from "../../../constants"
+import {
+  DEFAULT_CONFIGURATIONS_BY_MEE_VERSION,
+  DEFAULT_MEE_VERSION,
+  getSudoPolicy
+} from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { getMEEVersion } from "../../utils"
 import { smartSessionActions } from "./decorators"
@@ -86,7 +90,9 @@ describe("modules.toSmartSessionsModule", () => {
       }
     })
 
-    meeK1ValidatorAddress = DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[DEFAULT_MEE_VERSION].validatorAddress
+    meeK1ValidatorAddress =
+      DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[DEFAULT_MEE_VERSION]
+        .validatorAddress
 
     const { testClient } = await toClients(infra.network)
     const { testClient: secondTestClient } = await toClients(
@@ -193,7 +199,7 @@ describe("modules.toSmartSessionsModule", () => {
           account: secondChainNexusAccount
         }
       ])
-   // console.log("sessionDetailsTypedDataSign", sessionDetailsTypedDataSign)
+    // console.log("sessionDetailsTypedDataSign", sessionDetailsTypedDataSign)
   })
 
   test("use a permission with typed data sign for the first time", async () => {
