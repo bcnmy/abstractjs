@@ -5,7 +5,11 @@ import type { GetOnChainQuotePayload } from "./getOnChainQuote"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { GetQuoteParams, GetQuotePayload } from "./getQuote"
 import { getSupportedFeeToken } from "./getSupportedFeeToken"
-import type { TokenTrigger, Trigger } from "./signPermitQuote"
+import {
+  prepareSignablePermitQuotePayload,
+  type TokenTrigger,
+  type Trigger
+} from "./signPermitQuote"
 
 export type QuoteType = "simple" | "onchain" | "permit" | "mm-dtk"
 
@@ -55,20 +59,48 @@ const isPermitQuote = async (
   if ("call" in trigger) {
     return false
   }
-  // after this point, trigger can only be of type TokenTrigger
-  const permitEnabled = await isPermitTokenInfo(
-    client,
-    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
-  )
 
-  // If permit is enabled, it is a permit quote
-  return permitEnabled
+  const { walletClient, address: spender } = client.account.deploymentOn(
+    trigger.chainId,
+    true
+  )
+  const owner = client.account.signer.address
+
+  // This is a dummy quote payload to get the permit token fallback to onchain mode state.
+  const dummyQuotePayload = {
+    ...payload,
+    quote: {
+      hash: "0xffff" // Dummy sprtxHash
+    }
+  } as GetPermitQuotePayload
+
+  // after this point, trigger can only be of type TokenTrigger
+  try {
+    const [permitEnabled, { fallbackToOnchainMode }] = await Promise.all([
+      isPermitTokenInfo(
+        client,
+        trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
+      ),
+      prepareSignablePermitQuotePayload(
+        dummyQuotePayload,
+        owner,
+        spender,
+        walletClient
+      )
+    ])
+
+    // If fallbackToOnchainMode is true, then permit flow has some issues and we avoid using permit mode.
+    if (fallbackToOnchainMode) return false
+
+    // If permit is enabled, it is a permit quote
+    return permitEnabled
+  } catch {
+    // If there is any error in detecting the permit support, the flow will fallback to onchain mode
+    return false
+  }
 }
 
-const isOnChainQuote = async (
-  client: BaseMeeClient,
-  payload: AnyData
-): Promise<boolean> => {
+const isOnChainQuote = async (payload: AnyData): Promise<boolean> => {
   const isTriggerAvailable = "trigger" in payload
 
   // If trigger is not available, it is not considered as on chain quote
@@ -81,13 +113,9 @@ const isOnChainQuote = async (
     return true
   }
 
-  const permitEnabled = await isPermitTokenInfo(
-    client,
-    trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
-  )
-
-  // If permit is enabled, it is not an on chain quote
-  return !permitEnabled
+  // Permit check is done before this function call. If this function is called, it means permit is skipped and it can be executed via onchain mode
+  // Even if the permit flow fallbacks to onchain mode ? This will be always true.
+  return true
 }
 
 // NOTE: MM DTK is not supported for now - It is experimental and need to support once it is mainstream
@@ -107,7 +135,7 @@ export const getQuoteType = async (
   if (await isPermitQuote(client, quoteParams)) {
     return "permit"
   }
-  if (await isOnChainQuote(client, quoteParams)) {
+  if (await isOnChainQuote(quoteParams)) {
     return "onchain"
   }
   throw new Error("Invalid quote, can't determine quote type")
