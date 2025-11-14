@@ -1,5 +1,8 @@
 import type { Address } from "viem"
-import type { Instruction } from "../../../clients/decorators/mee"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { BaseMultichainSmartAccount } from "../../toMultiChainNexusAccount"
 import type { MultichainToken } from "../../utils/Types"
@@ -29,7 +32,7 @@ export type BuildIntentParameters = {
   toChainId: number
   mode?: "DEBIT" | "OPTIMISTIC"
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for building bridge intent instructions
@@ -89,7 +92,9 @@ export const buildIntent = async (
     depositor,
     recipient,
     mode,
-    metadata
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = parameters
 
   const { instructions } = await buildBridgeInstructions({
@@ -99,7 +104,9 @@ export const buildIntent = async (
     toChainId,
     unifiedBalance,
     mode,
-    metadata
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   })
 
   return [...currentInstructions, ...instructions]

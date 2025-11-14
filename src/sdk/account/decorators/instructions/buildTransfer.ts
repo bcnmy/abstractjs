@@ -1,5 +1,9 @@
 import { type Address, encodeFunctionData } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
@@ -39,7 +43,7 @@ export type BuildTransferParameters = TokenParams & {
   recipient: Address
   /** Custom metadata override for instruction */
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for the buildTransfer function
@@ -88,8 +92,16 @@ export const buildTransfer = async (
   composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [], accountAddress } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, recipient, metadata } =
-    parameters
+  const {
+    chainId,
+    tokenAddress,
+    amount,
+    gasLimit,
+    recipient,
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
+  } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
   }
@@ -168,7 +180,9 @@ export const buildTransfer = async (
       calls: triggerCalls,
       chainId,
       isComposable: isComposableCall,
-      metadata: metadata || defaultMetadata
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     }
   ]
 }

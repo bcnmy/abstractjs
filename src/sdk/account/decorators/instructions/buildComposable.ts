@@ -8,7 +8,10 @@ import {
   isAddress
 } from "viem"
 import { isNativeToken } from "../../../account/utils"
-import type { Instruction } from "../../../clients/decorators/mee"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion } from "../../../constants"
 import { functionNameToLabel } from "../../../modules/utils/Helpers"
@@ -77,7 +80,7 @@ export type BuildComposableParameters = {
    * Optional metadata describing the instruction for display purposes
    */
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 export type BuildNativeTokenTransferComposableParameters = {
   to: Address | RuntimeValue
@@ -345,7 +348,7 @@ export const buildComposableUtil = async (
   composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { metadata } = parameters
+  const { metadata, lowerBoundTimestamp, upperBoundTimestamp } = parameters
 
   const calls = await buildComposableCall(parameters, composabilityParams)
 
@@ -363,7 +366,9 @@ export const buildComposableUtil = async (
       calls: calls,
       chainId: parameters.chainId,
       isComposable: true,
-      metadata: metadata || defaultMetadata
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     }
   ]
 }

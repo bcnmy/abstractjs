@@ -1,5 +1,8 @@
 import type { Address, Hex } from "viem"
-import type { Instruction } from "../../../clients/decorators/mee"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
   type ComposableCall,
@@ -20,7 +23,7 @@ export type BuildRawComposableParameters = {
   gasLimit?: bigint
   value?: bigint | RuntimeValue
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Builds an instruction for raw composable transaction. This is a generic function which creates the raw composable instructions
@@ -56,7 +59,16 @@ export const buildRawComposable = async (
   composabilityParameters: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { to, calldata, gasLimit, value, chainId, metadata } = parameters
+  const {
+    to,
+    calldata,
+    gasLimit,
+    value,
+    chainId,
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
+  } = parameters
   const { composabilityVersion } = composabilityParameters
 
   if (calldata.length < 10 || !calldata.startsWith("0x")) {
@@ -96,7 +108,9 @@ export const buildRawComposable = async (
       calls: [composableCall],
       chainId,
       isComposable: true,
-      metadata: metadata || defaultMetadata
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     }
   ]
 }

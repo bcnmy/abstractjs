@@ -95,6 +95,19 @@ export type FeeTokenInfo = {
   gasRefundAddress?: Address
 }
 
+export interface InstructionLevelTimeBounds {
+  /**
+   * Lower bound execution timestamp to be applied for specific instruction. This will override the default and global timebound configurations
+   * If multiple instructions are batched together as single userOp which has multiple timebounds, the bigger timebound window will be used
+   */
+  lowerBoundTimestamp?: number
+  /**
+   * Upper bound execution timestamp to be applied for specific instruction. This will override the default and global timebound configurations
+   * If multiple instructions are batched together as single userOp which has multiple timebounds, the bigger timebound window will be used
+   */
+  upperBoundTimestamp?: number
+}
+
 /**
  * Information about the instructions to be executed in the transaction
  * @internal
@@ -113,8 +126,7 @@ export type Instruction = {
   metadata?: InstructionMetadata[]
   /** Simulation overrides */
   simulationOverrides?: Overrides
-}
-
+} & InstructionLevelTimeBounds
 /**
  * Represents a supertransaction, which is a collection of instructions
  * to be executed in a single transaction across multiple chains
@@ -292,11 +304,11 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   eoa?: Address
   /**
-   * Lower bound execution timestamp to be applied to all user operations
+   * Lower bound execution timestamp to be applied to all user operations. This is a global configuration for timebound
    */
   lowerBoundTimestamp?: number
   /**
-   * Upper bound execution timestamp to be applied to all user operations
+   * Upper bound execution timestamp to be applied to all user operations. This is a global configuration for timebound
    */
   upperBoundTimestamp?: number
   /**
@@ -958,7 +970,9 @@ export const getQuote = async (
         nexusAccount,
         shortEncoding,
         metadata,
-        simulationOverrides
+        simulationOverrides,
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -1048,11 +1062,13 @@ export const getQuote = async (
         }
 
         return {
-          lowerBoundTimestamp: lowerBoundTimestamp_,
+          // Instruction level timebound will be considered first
+          lowerBoundTimestamp: lowerBoundTimestamp || lowerBoundTimestamp_,
           upperBoundTimestamp: isCleanUpUserOp
             ? upperBoundTimestamp_ +
               CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION
-            : upperBoundTimestamp_,
+            : // Instruction level timebound will be considered first
+              upperBoundTimestamp || upperBoundTimestamp_,
           sender,
           callData,
           callGasLimit,
@@ -1403,7 +1419,9 @@ const prepareUserOps = async (
         deployment,
         shortEncoding,
         instruction.metadata,
-        instruction.simulationOverrides
+        instruction.simulationOverrides,
+        instruction.lowerBoundTimestamp,
+        instruction.upperBoundTimestamp
       ])
     })
   )
