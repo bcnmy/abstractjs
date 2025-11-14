@@ -243,17 +243,23 @@ describe("utils.batchInstructions", () => {
         lowerBoundTimestamp,
         upperBoundTimestamp
       ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp + 60,
+        upperBoundTimestamp + 60
+      ),
       createOptimismApproval(
         mcNexus,
         "1.0",
-        lowerBoundTimestamp,
-        upperBoundTimestamp
+        lowerBoundTimestamp + 70,
+        upperBoundTimestamp + 70
       ),
       createMainnetApproval(
         mcNexus,
         "1.0",
-        lowerBoundTimestamp,
-        upperBoundTimestamp
+        lowerBoundTimestamp + 80,
+        upperBoundTimestamp + 80
       )
     ]
 
@@ -267,17 +273,24 @@ describe("utils.batchInstructions", () => {
     )
 
     expect(resolvedInstructions[1].lowerBoundTimestamp).to.eq(
-      lowerBoundTimestamp
+      lowerBoundTimestamp + 60
     )
     expect(resolvedInstructions[1].upperBoundTimestamp).to.eq(
-      upperBoundTimestamp
+      upperBoundTimestamp + 60
     )
 
     expect(resolvedInstructions[2].lowerBoundTimestamp).to.eq(
-      lowerBoundTimestamp
+      lowerBoundTimestamp + 70
     )
     expect(resolvedInstructions[2].upperBoundTimestamp).to.eq(
-      upperBoundTimestamp
+      upperBoundTimestamp + 70
+    )
+
+    expect(resolvedInstructions[3].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp + 80
+    )
+    expect(resolvedInstructions[3].upperBoundTimestamp).to.eq(
+      upperBoundTimestamp + 80
     )
   })
 
