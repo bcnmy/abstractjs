@@ -1,4 +1,4 @@
-import { type OneOf } from "viem"
+import type { OneOf } from "viem"
 import { build } from "../../../../../account/decorators/build"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
