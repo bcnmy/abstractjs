@@ -1,3 +1,4 @@
+import { type OneOf } from "viem"
 import { build } from "../../../../../account/decorators/build"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
@@ -6,6 +7,7 @@ import type {
   AbstractCall,
   ExecuteSignedQuotePayload,
   FeeTokenInfo,
+  SponsorshipOptionsParams,
   Trigger
 } from "../../../../../clients/decorators/mee"
 import { execute } from "../../../../../clients/decorators/mee/execute"
@@ -27,9 +29,25 @@ export type PrepareForPermissionsParams = Omit<
 > & {
   smartSessionsValidator: Validator
   additionalInstructions?: InstructionLike[]
-  feeToken?: FeeTokenInfo
   trigger?: Trigger
-}
+} & OneOf<
+    | {
+        /**
+         * Token to be used for paying transaction fees
+         */
+        feeToken: FeeTokenInfo
+      }
+    | {
+        /**
+         * sponsorship flag to enable the sponsored super transactions.
+         */
+        sponsorship: true
+        /**
+         * Sponsorship options for overrides
+         */
+        sponsorshipOptions?: SponsorshipOptionsParams
+      }
+  >
 
 /**
  * Returns undefined if there was no need to prepare the superTx
@@ -99,25 +117,15 @@ export const prepareForPermissions = async (
 
   const hasInstallInstructions = installInstructions.some(Boolean)
 
-  // if there are install instructions or additional instructions,
-  // or trigger is provided,
-  // we are going to create a superTx that prepares accounts
-  // for usage with smart sessions (deploy, install module, fund etc)
-  // that means we need to know the feeToken
-  // then we'll use one of the MEE flows: fusion or standard
   if (
     hasInstallInstructions ||
     parameters.additionalInstructions ||
     parameters.trigger
   ) {
-    // require that feeToken is provided
-    if (!parameters.feeToken) {
-      throw new Error("Fee token is required")
-    }
-
     const cleanedInstallInstructions = installInstructions.filter(
       Boolean
     ) as InstructionLike[]
+
     const completeInstructionsList = parameters.additionalInstructions
       ? [...cleanedInstallInstructions, ...parameters.additionalInstructions]
       : cleanedInstallInstructions
@@ -131,7 +139,6 @@ export const prepareForPermissions = async (
         ...parameters,
         instructions: completeInstructionsList,
         batch: parameters.batch || true,
-        feeToken: parameters.feeToken!,
         trigger: parameters.trigger,
         simulation: parameters.simulation
       } as GetFusionQuoteParams)
@@ -146,8 +153,6 @@ export const prepareForPermissions = async (
     return await execute(client, {
       ...parameters,
       instructions: completeInstructionsList,
-      feeToken: parameters.feeToken!,
-      trigger: parameters.trigger,
       simulation: parameters.simulation
     } as GetQuoteParams)
   }
