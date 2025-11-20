@@ -135,6 +135,8 @@ export type ChainConfiguration = {
   transport: ClientConfig["transport"]
   /** MEE version config */
   version: MEEVersionConfig
+  /** Optional account address override */
+  accountAddress?: Address
   /**
    * Flag to enable/disable MEE Version check. Defaults to true.
    * Only set this as false if you're very sure about MEE version support on specific chains otherwise SDK will
@@ -158,8 +160,6 @@ export type ToNexusSmartAccountParameters = {
   chainConfiguration: ChainConfiguration
   /** Optional index for the account */
   index?: bigint | undefined
-  /** Optional account address override */
-  accountAddress?: Address
   /** Optional validator modules configuration */
   validators?: Array<Validator>
   /** Optional executor modules configuration */
@@ -474,7 +474,8 @@ export const toNexusAccount = async (
       chain,
       version: meeConfig,
       transport: transportConfig,
-      versionCheck = true
+      versionCheck = true,
+      accountAddress: accountAddress_
     },
     index = 0n,
     validators: customValidators,
@@ -482,7 +483,6 @@ export const toNexusAccount = async (
     hook: customHook,
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
-    accountAddress: accountAddress_,
     initData: customInitData
   } = parameters
 

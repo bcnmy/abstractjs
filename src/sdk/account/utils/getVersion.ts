@@ -98,7 +98,7 @@ export const semverCompare = (a: string, b: string): number => {
  * versionMeetsRequirement("1.2.3", "1.2.3")
  * ```
  */
-export const versionMeetsRequirement = (
+export const versionIsAtLeast = (
   currentVersion: string,
   requiredVersion: string
 ): boolean => {

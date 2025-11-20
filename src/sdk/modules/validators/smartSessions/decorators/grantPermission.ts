@@ -4,7 +4,6 @@ import {
   type ChainSession,
   type ERC7739Data,
   GLOBAL_CONSTANTS,
-  OWNABLE_VALIDATOR_ADDRESS,
   type PolicyData,
   type Session,
   SmartSessionMode,
@@ -351,7 +350,7 @@ const prepareForGrantingPermission = async <
     }
 
     const session: Session = {
-      sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
+      sessionValidator: GLOBAL_CONSTANTS.OWNABLE_VALIDATOR_ADDRESS,
       permitERC4337Paymaster: false,
       sessionValidatorInitData: encodeValidationData({
         threshold: 1,

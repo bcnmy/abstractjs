@@ -60,7 +60,14 @@ describe("mee.buildApprove", () => {
 
   it("should build an approval instruction", async () => {
     const instructions: Instruction[] = await buildApprove(
-      { accountAddress: mcNexus.signer.address, currentInstructions: [] },
+      {
+        accountAddress: mcNexus.signer.address,
+        currentInstructions: [],
+        meeVersions: mcNexus.deployments.map((dep) => ({
+          version: dep.version,
+          chainId: dep.chain.id
+        }))
+      },
       {
         chainId: targetChain.id,
         tokenAddress,

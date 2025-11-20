@@ -378,12 +378,12 @@ describe("mee.createMeeClient.delegated", async () => {
   beforeAll(async () => {
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
-      accountAddress: eoaAccount.address,
       chainConfigurations: [
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(DEFAULT_MEE_VERSION),
+          accountAddress: eoaAccount.address
         }
       ]
     })

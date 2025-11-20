@@ -29,7 +29,6 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { getStorageAt } from "viem/actions"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import type { FeeTokenInfo, Instruction } from "."
@@ -48,7 +47,7 @@ import {
   getRandomAccountIndex,
   transferErc20
 } from "../../../../test/testUtils"
-import { calculateNonceStorageSlot, getMeeScanLink } from "../../../account"
+import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -65,9 +64,8 @@ import {
 import {
   type ParamRule,
   getMEEVersion,
-  greaterThanOrEqualTo,
   meeSessionActions,
-  runtimeERC20BalanceOf,
+  runtimeNativeBalanceOf,
   toSmartSessionsModule
 } from "../../../modules"
 import {
@@ -721,7 +719,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     expect(quote).toBeDefined()
   })
 
-  test("should pass simulation for composability version 1.1.0", async () => {
+  test("should pass simulation for composability version 1.1.0 with runtime native token balance", async () => {
     const mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
       chainConfigurations: [
@@ -737,31 +735,32 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
       account: mcNexus
     })
 
-    const tokenTransfer = await mcNexus.buildComposable({
-      type: "transfer",
+    const nativeTokenTransfer = await mcNexus.buildComposable({
+      type: "nativeTokenTransfer",
       data: {
-        tokenAddress: testnetMcUSDC.addressOn(chain.id),
-        recipient: eoaAccount.address,
-        amount: parseUnits("1000", 6),
+        to: eoaAccount.address,
+        value: runtimeNativeBalanceOf({
+          targetAddress: mcNexus.addressOn(chain.id, true)
+        }),
         chainId: chain.id
       }
     })
 
     const quote = await meeClient.getFusionQuote({
       trigger: {
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        tokenAddress: zeroAddress,
         amount: 1n,
         chainId: chain.id
       },
-      instructions: [...tokenTransfer],
+      instructions: [...nativeTokenTransfer],
       simulation: {
         simulate: true,
         overrides: {
           tokenOverrides: [
             {
-              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              tokenAddress: zeroAddress,
               chainId: chain.id,
-              balance: parseUnits("1000", 6),
+              balance: parseEther("1"),
               accountAddress: mcNexus.addressOn(chain.id, true)
             }
           ]
@@ -780,11 +779,11 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          // Overriden with EOA address
+          accountAddress: eoaAccount.address
         }
-      ],
-      // Overriden with EOA address
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const meeClient = await createMeeClient({
@@ -821,10 +820,10 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
         }
-      ],
-      accountAddress: eoaAccount.address
+      ]
     })
 
     const meeClient = await createMeeClient({
@@ -1237,10 +1236,10 @@ describe.runIf(runLifecycleTests)(
             {
               chain: chain,
               transport: http(network.rpcUrl),
-              version: getMEEVersion(DEFAULT_MEE_VERSION)
+              version: getMEEVersion(DEFAULT_MEE_VERSION),
+              accountAddress: mcNexus.addressOn(chain.id)!
             }
           ],
-          accountAddress: mcNexus.addressOn(chain.id)!,
           signer: sessionSigner
         })
 
