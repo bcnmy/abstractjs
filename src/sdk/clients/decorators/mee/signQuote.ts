@@ -131,13 +131,13 @@ export const prepareTypedDataSignableQuotePayload = (
  *
  * @param quote - The original quote payload
  * @param _metadata - Optional metadata (currently unused)
- * @param signatures - The signatures map with MEE version per chain
- * @returns The signed quote payload with the signatures field
+ * @param signature - The signature to be attached to the quote
+ * @returns The signed quote payload with the signature field
  *
  * @example
  * ```typescript
- * const signedQuote = formatSignedQuotePayload(quotePayload, {}, signatures);
- * // signedQuote: { ...quotePayload, signatures: { [chainId]: { signature: '0x177eee00<signature>', meeVersion: MEEVersion.V2_2_0 } } }
+ * const signedQuote = formatSignedQuotePayload(quotePayload, {}, signature);
+ * // signedQuote: { ...quotePayload, signature: '0x177eee00<signature>' }
  * ```
  */
 export const formatSignedQuotePayload = (
@@ -154,9 +154,10 @@ export const formatSignedQuotePayload = (
 
 /**
  * Signs a quote using the provided account's signer or the client's default account.
- * Supports multi-chain quotes.
- * Identifies groups of chains which require different signing methods based on their MEE versions.
- * For MEE >= 2.2.0, uses EIP-712 typed data signatures; for MEE < 2.2.0, uses personal message signatures.
+ * Signs depending on the MEE version in the quote.
+ * For MEE >= 2.2.1, uses EIP-712 typed data signatures.
+ * For MEE < 2.2.1, uses personal message signatures.
+ * 
  * The signatures are required for executing the quote through the MEE service.
  *
  * @param client - The Mee client instance
@@ -164,7 +165,7 @@ export const formatSignedQuotePayload = (
  * @param params.quote - The quote to sign (may contain operations across multiple chains)
  * @param [params.account] - Optional account to use for signing
  *
- * @returns Promise resolving to the quote payload with added signatures map, where each entry contains the signature and MEE version per chain
+ * @returns Promise resolving to the quote payload with added signature
  *
  * @example
  * ```typescript
@@ -172,7 +173,7 @@ export const formatSignedQuotePayload = (
  *   quote: quotePayload,
  *   account: smartAccount // Optional
  * });
- * // signedQuote.signatures: { [chainId]: { signature: Hex, meeVersion: MEEVersion } }
+ * // signedQuote.signature: Hex
  * ```
  */
 export const signQuote = async (

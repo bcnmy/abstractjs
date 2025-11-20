@@ -6,7 +6,7 @@ import {
   createWalletClient,
   isHex
 } from "viem"
-import { baseSepolia, optimismSepolia } from "viem/chains"
+import { optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
