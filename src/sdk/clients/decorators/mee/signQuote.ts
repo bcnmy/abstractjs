@@ -1,10 +1,6 @@
 import { type GetEip712DomainReturnType, type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
-import {
-  isVersionOlder,
-  versionMeetsRequirement
-} from "../../../account/utils/getVersion"
-import { Logger } from "../../../account/utils/logger"
+import { versionIsAtLeast } from "../../../account/utils/getVersion"
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
@@ -27,22 +23,15 @@ export type SignQuoteParams = {
 }
 
 /**
- * A map of chain ids to signed messages with their MEE versions
- */
-export type SignedMessagesByChainId = {
-  [chainId: string]: { signature: Hex; meeVersion: MEEVersion }
-}
-
-/**
  * Response payload containing the signed quote data
  */
 export type SignQuotePayload = GetQuotePayload & {
   /**
-   * The signatures map of the quote, keyed by chain ID
-   * Each signature is prefixed with 'DEFAULT_PREFIX' and concatenated with the signed message
-   * Each entry includes the signature and the MEE version used for that chain
+   * The signature of the quote, prefixed with 'DEFAULT_PREFIX'
+   * Since on the getQuote phase, we validate the consistent MEE versions across all chains,
+   * we can use a single signature for the quote.
    */
-  signatures: SignedMessagesByChainId
+  signature: Hex
 }
 
 const DEFAULT_PREFIX = "0x177eee00"
@@ -74,11 +63,14 @@ export const preparePersonalSignableQuotePayload = (quote: GetQuotePayload) => {
 
 /**
  * Prepares the signable payload for EIP-712 typed data signatures.
- * Used for MEE versions >= 2.2.0.
+ * Used for MEE versions >= 2.2.1.
  * It is an EIP-712 data structure with the following fields:
  * - SuperTx(MeeUserOp[] meeUserOps)
  * - MeeUserOp(bytes32 userOpHash,uint256 lowerBoundTimestamp,uint256 upperBoundTimestamp)
  * - userOpHash and timestamps are present in the quote.userOps array for every userOp
+ *
+ * Note: Custom SuperTx data structs with mixed types are not supported yet.
+ * Only SuperTx(MeeUserOp[] meeUserOps)
  *
  * @param quote - The quote payload to be signed
  * @param eip712Domain - The EIP-712 domain to be used for the signature
@@ -98,8 +90,8 @@ export const prepareTypedDataSignableQuotePayload = (
 ) => {
   const signablePayload = {
     domain: {
-      name: eip712Domain.domain.name, // Protocol name
-      version: eip712Domain.domain.version // Protocol version
+      name: eip712Domain.domain.name // name
+      // version: eip712Domain.domain.version // version, not used for the domain separator here
       // chainId and verifyingContract are not used for the domain separator here
       // since they are included in the userOpHash for every userOp
       // chainId:,
@@ -151,20 +143,12 @@ export const prepareTypedDataSignableQuotePayload = (
 export const formatSignedQuotePayload = (
   quote: GetQuotePayload,
   _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
-  signatures: SignedMessagesByChainId
+  signature: Hex
 ): SignQuotePayload => {
   return {
     ...quote,
     // prepend every signature from signatures object with the DEFAULT_PREFIX
-    signatures: Object.fromEntries(
-      Object.entries(signatures).map(([chainId, { signature, meeVersion }]) => [
-        chainId,
-        {
-          signature: concatHex([DEFAULT_PREFIX, signature]),
-          meeVersion
-        }
-      ])
-    )
+    signature: concatHex([DEFAULT_PREFIX, signature])
   }
 }
 
@@ -196,129 +180,32 @@ export const signQuote = async (
   params: SignQuoteParams
 ): Promise<SignQuotePayload> => {
   const { account: account_ = client.account, quote } = params
-
   const signer = account_.signer
 
-  const signedMessages: SignedMessagesByChainId = {}
-  let metadata: Record<string, AnyData> = {}
+  // Since on the getQuote phase, we validate the consistent MEE versions across all chains,
+  // we can detect the sig type based on the MEE version of the first chain in the quote
+  // we use index 1, because index 0 can be payment userOp which in case of sponsorship
+  // is not relevant for detecting the MEE version
+  const chainId = quote.userOps[1].chainId
+  const meeVersion = account_.getMeeVersion(Number(chainId))
 
-  // 1. get all the unique chain ids from the quote.userOps array
-  const uniqueChainIds = [
-    ...new Set(quote.userOps.map((userOp) => userOp.chainId))
-  ]
-
-  // 2. Cache deployments to avoid redundant calls to deploymentOn()
-  const deploymentsByChainId = new Map(
-    uniqueChainIds.map((chainId) => [
-      chainId,
-      account_.deploymentOn(Number(chainId), true)
-    ])
-  )
-
-  // 3. Separate the chains with MEE >= 2.2.0 and < 2.2.0 in a single pass
-  const { chainsWithMEE220, chainsWithMEE210 } = uniqueChainIds.reduce(
-    (acc, chainId) => {
-      const deployment = deploymentsByChainId.get(chainId)!
-      const version = deployment.version.version
-      if (versionMeetsRequirement(version, MEEVersion.V2_2_0)) {
-        acc.chainsWithMEE220.push(chainId)
-      } else {
-        acc.chainsWithMEE210.push(chainId)
-      }
-      return acc
-    },
-    { chainsWithMEE220: [] as string[], chainsWithMEE210: [] as string[] }
-  )
-
-  // 4. process typed data signatures for chains with MEE >= 2.2.0
-  if (chainsWithMEE220.length > 0) {
-    // 4.1. identify the eip712 domain for each chain
-    // 4.2. group the chains by the unique eip712 domain.name and domain.version
-    // 4.3. if there's more than one group, console warn
-    // 4.4. for each group, sign the quote with the typed data signature and add the signature to the signedMessages object for the respective chains
-    const eip712DomainGroups = chainsWithMEE220.reduce(
-      (acc, chainId) => {
-        const eip712Domain = deploymentsByChainId.get(chainId)!.eip712Domain
-        const key = `${eip712Domain.domain.name}-${eip712Domain.domain.version}`
-        if (!acc[key]) {
-          acc[key] = []
-        }
-        acc[key].push(chainId)
-        return acc
-      },
-      {} as Record<string, string[]>
-    )
-    if (Object.keys(eip712DomainGroups).length > 1) {
-      Logger.warn(
-        "Multiple EIP-712 domains detected across chains. This will require multiple signatures.",
-        {
-          domainCount: Object.keys(eip712DomainGroups).length,
-          domains: Object.keys(eip712DomainGroups),
-          affectedChains: eip712DomainGroups
-        }
+  if (versionIsAtLeast(meeVersion, MEEVersion.V2_2_1)) {
+    const deployment = account_.deploymentOn(Number(chainId), true)
+    const eip712Domain = deployment.eip712Domain
+    if (!eip712Domain) {
+      throw new Error(
+        `EIP-712 domain data not found for the multichain account on chain ${chainId}`
       )
     }
-    for (const chainIds of Object.values(eip712DomainGroups)) {
-      const eip712Domain = deploymentsByChainId.get(chainIds[0])!.eip712Domain
-      if (!eip712Domain) {
-        throw new Error(`EIP-712 domain not found for chain ${chainIds[0]}`)
-      }
-      const result = prepareTypedDataSignableQuotePayload(quote, eip712Domain)
-      const { signablePayload } = result
-      metadata = result.metadata
-      const typedDataSignature = await signer.signTypedData(signablePayload)
-      // Use Object.assign to avoid nested loops
-      Object.assign(
-        signedMessages,
-        Object.fromEntries(
-          chainIds.map((id) => {
-            const deployment = deploymentsByChainId.get(id)!
-            return [
-              id,
-              {
-                signature: typedDataSignature,
-                meeVersion: deployment.version.version
-              }
-            ]
-          })
-        )
-      )
-    }
+    const result = prepareTypedDataSignableQuotePayload(quote, eip712Domain)
+    const { signablePayload, metadata } = result
+    const typedDataSignature = await signer.signTypedData(signablePayload)
+    return formatSignedQuotePayload(quote, metadata, typedDataSignature)
   }
-  // 5. process personal signatures
-  if (chainsWithMEE210.length > 0) {
-    const result = preparePersonalSignableQuotePayload(quote)
-    const { signablePayload } = result
-    metadata = result.metadata
-    const personalSignature = await signer.signMessage(signablePayload)
-    // Use Object.assign to avoid nested loops
-    Object.assign(
-      signedMessages,
-      Object.fromEntries(
-        chainsWithMEE210.map((chainId) => {
-          const deployment = deploymentsByChainId.get(chainId)!
-          return [
-            chainId,
-            {
-              signature: personalSignature,
-              meeVersion: deployment.version.version
-            }
-          ]
-        })
-      )
-    )
-  }
-  // informational alert for the dev
-  if (chainsWithMEE210.length > 0 && chainsWithMEE220.length > 0) {
-    Logger.warn(
-      "Mixed MEE versions detected. Using both typed data signatures (MEE >= 2.2.0) and personal signatures (MEE < 2.2.0).",
-      {
-        chainsWithMEE220: chainsWithMEE220,
-        chainsWithMEE210: chainsWithMEE210
-      }
-    )
-  }
-  return formatSignedQuotePayload(quote, metadata, signedMessages)
+  const result = preparePersonalSignableQuotePayload(quote)
+  const { signablePayload, metadata } = result
+  const personalSignature = await signer.signMessage(signablePayload)
+  return formatSignedQuotePayload(quote, metadata, personalSignature)
 }
 
 export default signQuote

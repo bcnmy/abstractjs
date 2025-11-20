@@ -6,22 +6,24 @@ import {
   createWalletClient,
   isHex
 } from "viem"
+import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import { toNetwork } from "../../../../test/testSetup"
+import { TESTNET_RPC_URLS, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { Instruction } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
 import signQuote, {
   formatSignedQuotePayload,
-  preparePersonalSignableQuotePayload
+  preparePersonalSignableQuotePayload,
+  prepareTypedDataSignableQuotePayload
 } from "./signQuote"
 
 describe("mee.signQuote", () => {
@@ -50,9 +52,16 @@ describe("mee.signQuote", () => {
           chain: chain,
           transport: http(network.rpcUrl),
           version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
+
+    expect(chain.id).not.toEqual(optimismSepolia.id)
 
     meeClient = await createMeeClient({
       account: mcNexus,
@@ -87,15 +96,10 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(Object.keys(signedQuote.signatures).length).toEqual(1)
-    expect(signedQuote.signatures[chain.id]).toBeDefined()
-    expect(isHex(signedQuote.signatures[chain.id].signature)).toEqual(true)
-    expect(signedQuote.signatures[chain.id].meeVersion).toEqual(
-      DEFAULT_MEE_VERSION
-    )
+    expect(isHex(signedQuote.signature)).toEqual(true)
   })
 
-  test("should sign a quote with modular signing functions", async () => {
+  test("should sign a quote with modular signing functions for MEE < 2.2.1", async () => {
     const instructions: Instruction[] = [
       {
         calls: [
@@ -122,11 +126,7 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(signedQuote.signatures[chain.id]).toBeDefined()
-    expect(isHex(signedQuote.signatures[chain.id].signature)).toEqual(true)
-    expect(signedQuote.signatures[chain.id].meeVersion).toEqual(
-      DEFAULT_MEE_VERSION
-    )
+    expect(isHex(signedQuote.signature)).toEqual(true)
 
     const quoteType = await getQuoteType(meeClient, quote)
     expect(quoteType).toEqual("simple")
@@ -140,19 +140,76 @@ describe("mee.signQuote", () => {
       ...signablePayload
     })
 
-    const manuallySignedQuote = formatSignedQuotePayload(quote, metadata, {
-      [chain.id]: { signature: signedMessage, meeVersion: DEFAULT_MEE_VERSION }
-    })
+    const manuallySignedQuote = formatSignedQuotePayload(
+      quote,
+      metadata,
+      signedMessage
+    )
 
     expect(manuallySignedQuote).toBeDefined()
-    expect(manuallySignedQuote.signatures[chain.id]).toBeDefined()
-    expect(isHex(manuallySignedQuote.signatures[chain.id].signature)).toEqual(
-      true
+    expect(isHex(manuallySignedQuote.signature)).toEqual(true)
+
+    expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
+  })
+
+  test("should sign a quote with modular signing functions for MEE >= 2.2.1", async () => {
+    const instructions: Instruction[] = [
+      {
+        calls: [
+          {
+            to: "0x0000000000000000000000000000000000000000",
+            gasLimit: 50000n,
+            value: 0n
+          }
+        ],
+        chainId: optimismSepolia.id
+      }
+    ]
+
+    expect(instructions).toBeDefined()
+
+    const quote = await meeClient.getQuote({
+      instructions: instructions,
+      feeToken: {
+        chainId: optimismSepolia.id,
+        address: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const signedQuote = await signQuote(meeClient, { quote })
+
+    expect(signedQuote).toBeDefined()
+    expect(isHex(signedQuote.signature)).toEqual(true)
+
+    const quoteType = await getQuoteType(meeClient, quote)
+    expect(quoteType).toEqual("simple")
+
+    // Manual signing with typed data
+    const deployment = mcNexus.deploymentOn(optimismSepolia.id, true)
+    const eip712Domain = deployment.eip712Domain
+
+    console.log("eip712Domain", eip712Domain)
+
+    expect(eip712Domain).toBeDefined()
+
+    const { signablePayload, metadata } = prepareTypedDataSignableQuotePayload(
+      quote,
+      eip712Domain!
     )
 
-    expect(signedQuote.signatures[chain.id]).toEqual(
-      manuallySignedQuote.signatures[chain.id]
+    const signedTypedData =
+      await deployment.signer.signTypedData(signablePayload)
+
+    const manuallySignedQuote = formatSignedQuotePayload(
+      quote,
+      metadata,
+      signedTypedData
     )
+
+    expect(manuallySignedQuote).toBeDefined()
+    expect(isHex(manuallySignedQuote.signature)).toEqual(true)
+
+    expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
   })
 
   // TODO: add tests for multiple chains with different eip712 domains and mee versions

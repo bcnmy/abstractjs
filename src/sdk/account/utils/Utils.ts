@@ -650,11 +650,11 @@ export function validateConsistentMeeVersions(
     // Check version type as we go
     const isCurrentVersionPersonalSign = isVersionOlder(
       meeVersion,
-      MEEVersion.V2_2_0
+      MEEVersion.V2_2_1
     )
     const isCurrentVersionEIP712 = versionIsAtLeast(
       meeVersion,
-      MEEVersion.V2_2_0
+      MEEVersion.V2_2_1
     )
 
     // Update flags
