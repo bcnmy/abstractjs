@@ -173,6 +173,7 @@ export const formatSignedQuotePayload = (
  * Signs depending on the MEE version in the quote.
  * For MEE >= 2.2.1, uses EIP-712 typed data signatures.
  * For MEE < 2.2.1, uses personal message signatures.
+ * This is for the `smart-account` mode only.
  *
  * The signatures are required for executing the quote through the MEE service.
  *

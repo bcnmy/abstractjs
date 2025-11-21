@@ -1,8 +1,8 @@
 import type { Hex, OneOf } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
+import type { SignFusionQuotePayload } from "./signFusionQuote"
 import type { TokenTrigger } from "./signPermitQuote"
 import type { SignQuotePayload } from "./signQuote"
-import type { SignFusionQuotePayload } from "./signFusionQuote"
 
 /**
  * Parameters for executing a signed quote

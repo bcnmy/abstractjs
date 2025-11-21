@@ -15,6 +15,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { versionIsAtLeast } from "../../../account/utils/getVersion"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
@@ -25,7 +26,6 @@ import signQuote, {
   preparePersonalSignableQuotePayload,
   prepareTypedDataSignableQuotePayload
 } from "./signQuote"
-import { versionIsAtLeast } from "../../../account/utils/getVersion"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig
