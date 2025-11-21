@@ -25,6 +25,7 @@ import signQuote, {
   preparePersonalSignableQuotePayload,
   prepareTypedDataSignableQuotePayload
 } from "./signQuote"
+import { versionIsAtLeast } from "../../../account/utils/getVersion"
 
 describe("mee.signQuote", () => {
   let network: NetworkConfig
@@ -96,7 +97,8 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(isHex(signedQuote.signature)).toEqual(true)
+    expect(isHex(signedQuote.signatureData.signature)).toEqual(true)
+    expect(signedQuote.signatureData.meeVersion).toEqual(DEFAULT_MEE_VERSION)
   })
 
   test("should sign a quote with modular signing functions for MEE < 2.2.1", async () => {
@@ -126,7 +128,8 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(isHex(signedQuote.signature)).toEqual(true)
+    expect(isHex(signedQuote.signatureData.signature)).toEqual(true)
+    expect(signedQuote.signatureData.meeVersion).toEqual(DEFAULT_MEE_VERSION)
 
     const quoteType = await getQuoteType(meeClient, quote)
     expect(quoteType).toEqual("simple")
@@ -140,16 +143,20 @@ describe("mee.signQuote", () => {
       ...signablePayload
     })
 
-    const manuallySignedQuote = formatSignedQuotePayload(
-      quote,
-      metadata,
-      signedMessage
-    )
+    const manuallySignedQuote = formatSignedQuotePayload(quote, metadata, {
+      signature: signedMessage,
+      meeVersion: DEFAULT_MEE_VERSION
+    })
 
     expect(manuallySignedQuote).toBeDefined()
-    expect(isHex(manuallySignedQuote.signature)).toEqual(true)
+    expect(isHex(manuallySignedQuote.signatureData.signature)).toEqual(true)
+    expect(manuallySignedQuote.signatureData.meeVersion).toEqual(
+      DEFAULT_MEE_VERSION
+    )
 
-    expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
+    expect(signedQuote.signatureData.signature).toEqual(
+      manuallySignedQuote.signatureData.signature
+    )
   })
 
   test("should sign a quote with modular signing functions for MEE >= 2.2.1", async () => {
@@ -179,7 +186,10 @@ describe("mee.signQuote", () => {
     const signedQuote = await signQuote(meeClient, { quote })
 
     expect(signedQuote).toBeDefined()
-    expect(isHex(signedQuote.signature)).toEqual(true)
+    expect(isHex(signedQuote.signatureData.signature)).toEqual(true)
+    expect(
+      versionIsAtLeast(signedQuote.signatureData.meeVersion, MEEVersion.V2_2_1)
+    ).toBe(true)
 
     const quoteType = await getQuoteType(meeClient, quote)
     expect(quoteType).toEqual("simple")
@@ -200,17 +210,16 @@ describe("mee.signQuote", () => {
     const signedTypedData =
       await deployment.signer.signTypedData(signablePayload)
 
-    const manuallySignedQuote = formatSignedQuotePayload(
-      quote,
-      metadata,
-      signedTypedData
-    )
+    const manuallySignedQuote = formatSignedQuotePayload(quote, metadata, {
+      signature: signedTypedData,
+      meeVersion: MEEVersion.V2_2_1
+    })
 
     expect(manuallySignedQuote).toBeDefined()
-    expect(isHex(manuallySignedQuote.signature)).toEqual(true)
+    expect(isHex(manuallySignedQuote.signatureData.signature)).toEqual(true)
 
-    expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
+    expect(signedQuote.signatureData.signature).toEqual(
+      manuallySignedQuote.signatureData.signature
+    )
   })
-
-  // TODO: add tests for multiple chains with different eip712 domains and mee versions
 })
