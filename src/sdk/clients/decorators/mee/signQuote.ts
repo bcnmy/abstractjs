@@ -22,19 +22,6 @@ export type SignQuoteParams = {
   account?: MultichainSmartAccount
 }
 
-export type SignatureData = {
-  /**
-   * The signature of the quote, prefixed with 'DEFAULT_PREFIX'
-   * Since on the getQuote phase, we validate the consistent MEE versions across all chains,
-   * we can use a single signature for the quote.
-   */
-  signature: Hex
-  /**
-   * The MEE version of the quote
-   */
-  meeVersion: MEEVersion
-}
-
 /**
  * Response payload containing the signed quote data
  */
@@ -44,7 +31,11 @@ export type SignQuotePayload = GetQuotePayload & {
    * Since on the getQuote phase, we validate the consistent MEE versions across all chains,
    * we can use a single signature for the quote.
    */
-  signatureData: SignatureData
+  signature: Hex
+  /**
+   * The MEE version of the quote
+   */
+  meeVersion?: MEEVersion
 }
 
 const DEFAULT_PREFIX = "0x177eee00"
@@ -145,6 +136,7 @@ export const prepareTypedDataSignableQuotePayload = (
  * @param quote - The original quote payload
  * @param _metadata - Optional metadata (currently unused)
  * @param signature - The signature to be attached to the quote
+ * @param meeVersion - The MEE version of the quote
  * @returns The signed quote payload with the signature field
  *
  * @example
@@ -156,15 +148,13 @@ export const prepareTypedDataSignableQuotePayload = (
 export const formatSignedQuotePayload = (
   quote: GetQuotePayload,
   _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
-  signatureData: SignatureData
+  signature: Hex,
+  meeVersion: MEEVersion
 ): SignQuotePayload => {
   return {
     ...quote,
-    // prepend every signature from signatures object with the DEFAULT_PREFIX
-    signatureData: {
-      signature: concatHex([DEFAULT_PREFIX, signatureData.signature]),
-      meeVersion: signatureData.meeVersion
-    }
+    signature: concatHex([DEFAULT_PREFIX, signature]),
+    meeVersion: meeVersion
   }
 }
 
@@ -218,18 +208,22 @@ export const signQuote = async (
     const result = prepareTypedDataSignableQuotePayload(quote, eip712Domain)
     const { signablePayload, metadata } = result
     const typedDataSignature = await signer.signTypedData(signablePayload)
-    return formatSignedQuotePayload(quote, metadata, {
-      signature: typedDataSignature,
-      meeVersion: meeVersion
-    })
+    return formatSignedQuotePayload(
+      quote,
+      metadata,
+      typedDataSignature,
+      meeVersion
+    )
   }
   const result = preparePersonalSignableQuotePayload(quote)
   const { signablePayload, metadata } = result
   const personalSignature = await signer.signMessage(signablePayload)
-  return formatSignedQuotePayload(quote, metadata, {
-    signature: personalSignature,
-    meeVersion: meeVersion
-  })
+  return formatSignedQuotePayload(
+    quote,
+    metadata,
+    personalSignature,
+    meeVersion
+  )
 }
 
 export default signQuote
