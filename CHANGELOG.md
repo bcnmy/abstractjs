@@ -1,5 +1,18 @@
 # @biconomy/abstractjs
 
+## 1.1.18
+
+### Patch Changes
+
+- Features included:
+
+  1. Permit flow enhancements: Automatic permit flaw detection and fallback to onchain mode
+  2. Permit flow enhancements: Different EIP 712 domain types support for different exotic permit based tokens
+  3. Smart sessions sponsorship support for prepare permission flow
+  4. Instruction level timebound support to customize the instruction execution time and its expiry as needed.
+
+  Check the documentation for more information on these changes
+
 ## 1.1.17
 
 ### Patch Changes
