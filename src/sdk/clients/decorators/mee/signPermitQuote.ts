@@ -590,7 +590,7 @@ export const prepareSignablePermitQuotePayload = async (
       metadata
     }
   } catch (error) {
-    const errorMessage = (error as Error).message || "Permit siging failed"
+    const errorMessage = (error as Error).message || "Permit signing failed"
     console.warn(errorMessage)
     console.info("Permit signing failed, fallback to onchain mode")
 
