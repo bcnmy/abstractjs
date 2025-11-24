@@ -1,5 +1,9 @@
 import { type Address, encodeFunctionData } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion, ForwarderAbi } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
@@ -42,7 +46,7 @@ export type BuildWithdrawalParameters = TokenParams & {
   recipient?: Address
   /** Custom metadata override for instruction */
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for the buildWithdrawal function
@@ -98,7 +102,9 @@ export const buildWithdrawal = async (
     amount,
     gasLimit,
     recipient = accountAddress, // EOA or owner account address
-    metadata: metadataOverride
+    metadata: metadataOverride,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = parameters
 
   const [meeVersionInfo] = meeVersions.filter(
@@ -160,7 +166,9 @@ export const buildWithdrawal = async (
           gasLimit,
           args: [recipient],
           chainId,
-          metadata: metadataOverride || metadata
+          metadata: metadataOverride || metadata,
+          lowerBoundTimestamp,
+          upperBoundTimestamp
         },
         composabilityParams
       )
@@ -222,7 +230,9 @@ export const buildWithdrawal = async (
           calls: withdrawalCall,
           chainId,
           isComposable: true,
-          metadata
+          metadata,
+          lowerBoundTimestamp,
+          upperBoundTimestamp
         }
       ]
     }
@@ -247,7 +257,9 @@ export const buildWithdrawal = async (
     {
       calls: withdrawalCall,
       chainId,
-      metadata
+      metadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     }
   ]
 }

@@ -51,12 +51,12 @@ export const batchInstructions = async (
     const batch = batchesByChainId.get(chainId) || []
 
     if (batch.length > 1) {
-      const [batchedOp] = await buildBatch(
+      const [batchedInx] = await buildBatch(
         { accountAddress, meeVersions },
         { instructions: batch }
       )
 
-      result.push(batchedOp)
+      result.push(batchedInx)
     } else {
       result.push(...batch)
     }

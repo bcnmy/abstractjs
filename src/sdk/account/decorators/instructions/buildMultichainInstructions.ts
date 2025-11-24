@@ -1,5 +1,9 @@
 import type { OneOf } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { Call } from "../../utils/Types"
 import type { BaseInstructionsParams } from "../build"
 
@@ -40,7 +44,8 @@ export type BuildMultichainInstructionsParameters = {
       parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[SupportedCall]>
       metadata?: InstructionMetadata[]
     }
->
+> &
+  InstructionLevelTimeBounds
 
 export const buildMultichainInstructions = async (
   baseParams: BaseInstructionsParams,
@@ -52,7 +57,9 @@ export const buildMultichainInstructions = async (
     type,
     parameters: parametersForType,
     account,
-    metadata: metadataOverride
+    metadata: metadataOverride,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = parameters
 
   const instructions = await Promise.all(
@@ -91,7 +98,9 @@ export const buildMultichainInstructions = async (
       return {
         calls: callsPerChain,
         chainId,
-        metadata: metadataOverride || metadata
+        metadata: metadataOverride || metadata,
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       }
     })
   )

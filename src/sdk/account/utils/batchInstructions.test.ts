@@ -78,7 +78,9 @@ describe("utils.batchInstructions", () => {
 
   const createBaseApproval = (
     account: MultichainSmartAccount,
-    amount: string
+    amount: string,
+    lowerBoundTimestamp?: number,
+    upperBoundTimestamp?: number
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -86,13 +88,17 @@ describe("utils.batchInstructions", () => {
         chainId: base.id,
         tokenAddress: mcUSDC.addressOn(base.id),
         spender: account.addressOn(base.id, true),
-        amount: parseEther(amount)
+        amount: parseEther(amount),
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       }
     )
 
   const createOptimismApproval = (
     account: MultichainSmartAccount,
-    amount: string
+    amount: string,
+    lowerBoundTimestamp?: number,
+    upperBoundTimestamp?: number
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -100,13 +106,17 @@ describe("utils.batchInstructions", () => {
         chainId: optimism.id,
         tokenAddress: mcUSDC.addressOn(optimism.id),
         spender: account.addressOn(optimism.id, true),
-        amount: parseEther(amount)
+        amount: parseEther(amount),
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       }
     )
 
   const createMainnetApproval = (
     account: MultichainSmartAccount,
-    amount: string
+    amount: string,
+    lowerBoundTimestamp?: number,
+    upperBoundTimestamp?: number
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -114,7 +124,9 @@ describe("utils.batchInstructions", () => {
         chainId: mainnet.id,
         tokenAddress: mcUSDC.addressOn(mainnet.id),
         spender: account.addressOn(mainnet.id, true),
-        amount: parseEther(amount)
+        amount: parseEther(amount),
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       }
     )
 
@@ -218,5 +230,151 @@ describe("utils.batchInstructions", () => {
     expect(result[0].chainId).toBe(base.id)
     expect(result[1].chainId).toBe(optimism.id)
     expect(result[2].chainId).toBe(mainnet.id)
+  })
+
+  test("Should use instruction level timestamps", async () => {
+    const lowerBoundTimestamp = Math.floor(Date.now() / 1000)
+    const upperBoundTimestamp = lowerBoundTimestamp + 300 // 5 mins
+
+    const instructions = [
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp + 60,
+        upperBoundTimestamp + 60
+      ),
+      createOptimismApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp + 70,
+        upperBoundTimestamp + 70
+      ),
+      createMainnetApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp + 80,
+        upperBoundTimestamp + 80
+      )
+    ]
+
+    const resolvedInstructions = await resolveInstructions(instructions)
+
+    expect(resolvedInstructions[0].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp
+    )
+    expect(resolvedInstructions[0].upperBoundTimestamp).to.eq(
+      upperBoundTimestamp
+    )
+
+    expect(resolvedInstructions[1].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp + 60
+    )
+    expect(resolvedInstructions[1].upperBoundTimestamp).to.eq(
+      upperBoundTimestamp + 60
+    )
+
+    expect(resolvedInstructions[2].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp + 70
+    )
+    expect(resolvedInstructions[2].upperBoundTimestamp).to.eq(
+      upperBoundTimestamp + 70
+    )
+
+    expect(resolvedInstructions[3].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp + 80
+    )
+    expect(resolvedInstructions[3].upperBoundTimestamp).to.eq(
+      upperBoundTimestamp + 80
+    )
+  })
+
+  test("Should use highest instruction level timestamps of batched instruction", async () => {
+    const lowerBoundTimestamp = Math.floor(Date.now() / 1000)
+    const upperBoundTimestamp = lowerBoundTimestamp + 300 // 5 mins
+
+    const highestUpperBoundTimestamp = upperBoundTimestamp + 300 // total 10 mins
+
+    const instructions = [
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        highestUpperBoundTimestamp
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp
+      )
+    ]
+
+    const resolvedInstructions = await resolveInstructions(instructions)
+
+    const batchedInstructions = await batchInstructions({
+      accountAddress: mcNexus.signer.address,
+      meeVersions,
+      instructions: resolvedInstructions
+    })
+
+    expect(batchedInstructions[0].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp
+    )
+    expect(batchedInstructions[0].upperBoundTimestamp).to.eq(
+      highestUpperBoundTimestamp
+    )
+  })
+
+  test("Should use the last timestamps if there are multiple same duration timestamps", async () => {
+    const lowerBoundTimestamp = Math.floor(Date.now() / 1000)
+    const upperBoundTimestamp = lowerBoundTimestamp + 300 // 5 mins
+
+    const instructions = [
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp + 120,
+        upperBoundTimestamp + 120
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp + 180,
+        upperBoundTimestamp + 180
+      )
+    ]
+
+    const resolvedInstructions = await resolveInstructions(instructions)
+
+    const batchedInstructions = await batchInstructions({
+      accountAddress: mcNexus.signer.address,
+      meeVersions,
+      instructions: resolvedInstructions
+    })
+
+    expect(batchedInstructions[0].lowerBoundTimestamp).to.eq(
+      lowerBoundTimestamp + 180
+    )
+    expect(batchedInstructions[0].upperBoundTimestamp).to.eq(
+      upperBoundTimestamp + 180
+    )
   })
 })

@@ -57,6 +57,35 @@ export const buildBatch = async (
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
+  let maxTimeWindow = 0
+  let finalLowerBoundTimestamp = 0
+  let finalUpperBoundTimestamp = 0
+
+  for (const {
+    lowerBoundTimestamp,
+    upperBoundTimestamp
+  } of resolvedInstructions) {
+    if (
+      lowerBoundTimestamp !== undefined &&
+      upperBoundTimestamp !== undefined
+    ) {
+      if (upperBoundTimestamp <= lowerBoundTimestamp) {
+        throw new Error("Invalid lowerbound and upperbound timestamps.")
+      }
+
+      const timeWindow = upperBoundTimestamp - lowerBoundTimestamp
+
+      // The last defined max execution window will be considered
+      const isMax = timeWindow >= maxTimeWindow
+
+      if (isMax) {
+        maxTimeWindow = timeWindow
+        finalLowerBoundTimestamp = lowerBoundTimestamp
+        finalUpperBoundTimestamp = upperBoundTimestamp
+      }
+    }
+  }
+
   if (
     resolvedInstructions.some(
       ({ chainId }) =>
@@ -94,7 +123,13 @@ export const buildBatch = async (
         : (calls as AbstractCall[]),
       chainId: resolvedInstructions[0].chainId, // Batch instructions must be on the same chain
       isComposable,
-      metadata
+      metadata,
+      ...(finalLowerBoundTimestamp !== 0
+        ? { lowerBoundTimestamp: finalLowerBoundTimestamp }
+        : {}),
+      ...(finalUpperBoundTimestamp !== 0
+        ? { upperBoundTimestamp: finalUpperBoundTimestamp }
+        : {})
     }
   ]
 }

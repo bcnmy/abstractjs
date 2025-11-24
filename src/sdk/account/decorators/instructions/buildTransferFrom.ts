@@ -1,5 +1,9 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
@@ -43,7 +47,7 @@ export type BuildTransferFromParameters = TokenParams & {
   recipient: Address
   /** Custom metadata override for instruction */
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for the buildTransferFrom function
@@ -101,7 +105,9 @@ export const buildTransferFrom = async (
     gasLimit,
     sender,
     recipient,
-    metadata
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -181,7 +187,9 @@ export const buildTransferFrom = async (
       calls: transferFromCall,
       chainId,
       isComposable: isComposableCall,
-      metadata: metadata || defaultMetadata
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     }
   ]
 }
