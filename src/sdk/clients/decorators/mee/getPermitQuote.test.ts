@@ -383,7 +383,7 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
 
     if (fallbackToOnchainMode) {
       // This always fails here. This is being coded like this to avoid type issues
-      expect(fallbackToOnchainMode).to.be.eq(false)
+      expect(fallbackToOnchainMode).toBe(false)
       return
     }
 
