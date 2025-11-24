@@ -378,7 +378,15 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
     // The final amount should be the total balance
     expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
 
-    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
+      await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+
+    if (fallbackToOnchainMode) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(fallbackToOnchainMode).toBe(false)
+      return
+    }
+
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
     const receipt = await waitForSupertransactionReceipt(meeClient, {
@@ -419,7 +427,15 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
       feeToken
     })
 
-    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
+      await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+
+    if (fallbackToOnchainMode) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(fallbackToOnchainMode).to.be.eq(false)
+      return
+    }
+
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
     const receipt = await waitForSupertransactionReceipt(meeClient, { hash })

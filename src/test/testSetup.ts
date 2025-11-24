@@ -1,6 +1,7 @@
 import { http, type Prettify, type Transport } from "viem"
 import {
   type Chain,
+  arbitrum,
   base,
   baseSepolia,
   chiliz,
@@ -23,7 +24,9 @@ export const MAINNET_RPC_URLS: Record<number, string> = {
   [mainnet.id]: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
   [optimism.id]: `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
   [base.id]: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-  [chiliz.id]: "https://rpc.ankr.com/chiliz" // Public RPC
+  [chiliz.id]: "https://rpc.ankr.com/chiliz", // Public RPC
+  [polygon.id]: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+  [arbitrum.id]: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
 }
 
 export const TESTNET_RPC_URLS: Record<number, string> = {

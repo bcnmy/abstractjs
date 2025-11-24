@@ -3,7 +3,8 @@ import {
   type Chain,
   type LocalAccount,
   type WalletClient,
-  createWalletClient
+  createWalletClient,
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import type { GetFusionQuoteParams, GetQuoteParams } from "."
@@ -233,5 +234,32 @@ describe("mee.getQuoteType", () => {
       const isPermit = await isPermitTokenInfo(meeClient, trigger)
       expect(isPermit).to.be.false
     })
+  })
+
+  test("Should get a fallback onchain mode quote type for invalid permit quote payload", async () => {
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n,
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getFusionQuote({
+      trigger: {
+        tokenAddress: zeroAddress,
+        chainId: chain.id,
+        amount: 1n
+      },
+      instructions: [...transferInstruction],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcTestUSDCP.addressOn(chain.id)
+      }
+    })
+
+    expect(await getQuoteType(meeClient, quote)).to.eq("onchain")
   })
 })
