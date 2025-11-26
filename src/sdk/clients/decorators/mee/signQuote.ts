@@ -35,7 +35,7 @@ export type SignQuotePayload = GetQuotePayload & {
   /**
    * The MEE version of the quote
    */
-  meeVersion?: MEEVersion
+  meeVersion: MEEVersion
 }
 
 const DEFAULT_PREFIX = "0x177eee00"
