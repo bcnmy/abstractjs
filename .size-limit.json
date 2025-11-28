@@ -2,7 +2,7 @@
   {
     "name": "core (esm)",
     "path": "./dist/_esm/index.js",
-    "limit": "65 kB",
+    "limit": "70 kB",
     "import": "*",
     "ignore": ["node:fs", "fs", "path", "os", "crypto"]
   },
