@@ -1,10 +1,13 @@
 import { type GetEip712DomainReturnType, type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
-import { versionIsAtLeast } from "../../../account/utils/getVersion"
+import {
+  type MeeVersionsWithChainId,
+  versionIsAtLeast
+} from "../../../account/utils/getVersion"
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
-import type { GetQuotePayload } from "./getQuote"
+import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 
 /**
  * Parameters required for signing a quote from the MEE service
@@ -33,9 +36,9 @@ export type SignQuotePayload = GetQuotePayload & {
    */
   signature: Hex
   /**
-   * The MEE version of the quote
+   * The MEE versions of the quote
    */
-  meeVersion: MEEVersion
+  meeVersions?: MeeVersionsWithChainId
 }
 
 const DEFAULT_PREFIX = "0x177eee00"
@@ -149,12 +152,12 @@ export const formatSignedQuotePayload = (
   quote: GetQuotePayload,
   _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
   signature: Hex,
-  meeVersion: MEEVersion
+  meeVersions: MeeVersionsWithChainId
 ): SignQuotePayload => {
   return {
     ...quote,
     signature: concatHex([DEFAULT_PREFIX, signature]),
-    meeVersion: meeVersion
+    meeVersions: meeVersions
   }
 }
 
@@ -190,14 +193,21 @@ export const signQuote = async (
   const { account: account_ = client.account, quote } = params
   const signer = account_.signer
 
-  // Since on the getQuote phase, we validate the consistent MEE versions across all chains,
-  // we can detect the sig type based on the MEE version of the first chain in the quote
-  // we use index 1, because index 0 can be payment userOp which in case of sponsorship
-  // is not relevant for detecting the MEE version
-  const chainId = quote.userOps[1].chainId
-  const meeVersion = account_.getMeeVersion(Number(chainId))
+  const startIndex = quote.paymentInfo.sponsored ? 1 : 0
+  const chainId = quote.userOps[startIndex].chainId
 
-  if (versionIsAtLeast(meeVersion, MEEVersion.V2_2_1)) {
+  // detect all the mee versions for the chains involved in the quote request
+  // pass userOps starting with startIndex
+  const meeVersions = getMeeVersionsForQuote(
+    account_,
+    quote.userOps.slice(startIndex)
+  )
+
+  // for MEE >= 2.2.1, use EIP-712 typed data signatures
+  if (versionIsAtLeast(meeVersions[0].version.version, MEEVersion.V2_2_1)) {
+    // get the eip712 domain
+    // since we only use the name from the 712 domain (see prepareTypedDataSignableQuotePayload)
+    // we can use the same eip712 domain for all the chains involved in the quote request
     const deployment = account_.deploymentOn(Number(chainId), true)
     const eip712Domain = deployment.eip712Domain
     if (!eip712Domain) {
@@ -212,9 +222,11 @@ export const signQuote = async (
       quote,
       metadata,
       typedDataSignature,
-      meeVersion
+      meeVersions
     )
   }
+
+  // for MEE < 2.2.1, use personal message signatures
   const result = preparePersonalSignableQuotePayload(quote)
   const { signablePayload, metadata } = result
   const personalSignature = await signer.signMessage(signablePayload)
@@ -222,8 +234,33 @@ export const signQuote = async (
     quote,
     metadata,
     personalSignature,
-    meeVersion
+    meeVersions
   )
+}
+
+/**
+ *
+ * @param account - The multichain orchestrator smart account
+ * @param userOps - The user operations to get the MEE versions for. they do not include payment userOp if stx is sponsored
+ * @returns The MEE versions for the user operations
+ */
+const getMeeVersionsForQuote = (
+  account: MultichainSmartAccount,
+  userOps: MeeFilledUserOpDetails[]
+): MeeVersionsWithChainId => {
+  const usedChains = new Set<number>()
+
+  for (const op of userOps) {
+    usedChains.add(Number(op.chainId))
+  }
+
+  return Array.from(usedChains, (chainId) => {
+    const deployment = account.deploymentOn(chainId, true)
+    return {
+      version: deployment.version,
+      chainId
+    }
+  }) as MeeVersionsWithChainId
 }
 
 export default signQuote

@@ -1,4 +1,4 @@
-import { MEEVersion } from "../../../constants"
+import type { MEEVersion } from "../../../constants"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { getQuoteType } from "./getQuoteType"
 import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"

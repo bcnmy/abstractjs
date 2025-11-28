@@ -98,7 +98,11 @@ describe("mee.signQuote", () => {
 
     expect(signedQuote).toBeDefined()
     expect(isHex(signedQuote.signature)).toEqual(true)
-    expect(signedQuote.meeVersion).toEqual(DEFAULT_MEE_VERSION)
+    expect(signedQuote.meeVersions).toBeDefined()
+    expect(signedQuote.meeVersions!.length).toEqual(1)
+    expect(signedQuote.meeVersions![0].version.version).toEqual(
+      DEFAULT_MEE_VERSION
+    )
   })
 
   test("should sign a quote with modular signing functions for MEE < 2.2.1", async () => {
@@ -129,7 +133,11 @@ describe("mee.signQuote", () => {
 
     expect(signedQuote).toBeDefined()
     expect(isHex(signedQuote.signature)).toEqual(true)
-    expect(signedQuote.meeVersion).toEqual(DEFAULT_MEE_VERSION)
+    expect(signedQuote.meeVersions).toBeDefined()
+    expect(signedQuote.meeVersions!.length).toEqual(1)
+    expect(signedQuote.meeVersions![0].version.version).toEqual(
+      DEFAULT_MEE_VERSION
+    )
 
     const quoteType = await getQuoteType(meeClient, quote)
     expect(quoteType).toEqual("simple")
@@ -143,16 +151,27 @@ describe("mee.signQuote", () => {
       ...signablePayload
     })
 
+    // manually compose MeeVersionsWithChainId array
+    const expectedMeeVersions = [
+      {
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        chainId: chain.id
+      }
+    ]
     const manuallySignedQuote = formatSignedQuotePayload(
       quote,
       metadata,
       signedMessage,
-      DEFAULT_MEE_VERSION
+      expectedMeeVersions
     )
 
     expect(manuallySignedQuote).toBeDefined()
     expect(isHex(manuallySignedQuote.signature)).toEqual(true)
-    expect(manuallySignedQuote.meeVersion).toEqual(DEFAULT_MEE_VERSION)
+    expect(manuallySignedQuote.meeVersions).toBeDefined()
+    expect(manuallySignedQuote.meeVersions!.length).toEqual(1)
+    expect(manuallySignedQuote.meeVersions![0].version.version).toEqual(
+      DEFAULT_MEE_VERSION
+    )
 
     expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
   })
@@ -185,9 +204,14 @@ describe("mee.signQuote", () => {
 
     expect(signedQuote).toBeDefined()
     expect(isHex(signedQuote.signature)).toEqual(true)
-    expect(versionIsAtLeast(signedQuote.meeVersion!, MEEVersion.V2_2_1)).toBe(
-      true
-    )
+    expect(signedQuote.meeVersions).toBeDefined()
+    expect(signedQuote.meeVersions!.length).toEqual(1)
+    expect(
+      versionIsAtLeast(
+        signedQuote.meeVersions![0].version.version,
+        MEEVersion.V2_2_1
+      )
+    ).toBe(true)
 
     const quoteType = await getQuoteType(meeClient, quote)
     expect(quoteType).toEqual("simple")
@@ -208,16 +232,27 @@ describe("mee.signQuote", () => {
     const signedTypedData =
       await deployment.signer.signTypedData(signablePayload)
 
+    // manually compose MeeVersionsWithChainId array
+    const expectedMeeVersions = [
+      {
+        version: getMEEVersion(MEEVersion.V2_2_1),
+        chainId: optimismSepolia.id
+      }
+    ]
     const manuallySignedQuote = formatSignedQuotePayload(
       quote,
       metadata,
       signedTypedData,
-      MEEVersion.V2_2_1
+      expectedMeeVersions
     )
 
     expect(manuallySignedQuote).toBeDefined()
     expect(isHex(manuallySignedQuote.signature)).toEqual(true)
-    expect(manuallySignedQuote.meeVersion).toEqual(MEEVersion.V2_2_1)
+    expect(manuallySignedQuote.meeVersions).toBeDefined()
+    expect(manuallySignedQuote.meeVersions!.length).toEqual(1)
+    expect(manuallySignedQuote.meeVersions![0].version.version).toEqual(
+      MEEVersion.V2_2_1
+    )
 
     expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
   })
