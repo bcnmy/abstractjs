@@ -174,7 +174,8 @@ export const buildBridgeInstructions = async (
     mode = "DEBIT",
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = params
 
   const tokenMapping = {
@@ -284,7 +285,8 @@ export const buildBridgeInstructions = async (
           ...result.userOp,
           metadata: metadata || result.userOp.metadata || customMetadata,
           lowerBoundTimestamp,
-          upperBoundTimestamp
+          upperBoundTimestamp,
+          executionSimulationRetryDelay
         }
 
         return {

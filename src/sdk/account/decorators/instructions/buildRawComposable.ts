@@ -67,7 +67,8 @@ export const buildRawComposable = async (
     chainId,
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
   const { composabilityVersion } = composabilityParameters
 
@@ -110,7 +111,8 @@ export const buildRawComposable = async (
       isComposable: true,
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     }
   ]
 }

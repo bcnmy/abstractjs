@@ -2657,4 +2657,176 @@ describe("mee.getQuote", () => {
 
     expect(quote.paymentInfo.gasRefundAddress).toEqual(eoaAccount.address)
   })
+
+  test("Global executionSimulationRetryDelay should be applied for quote", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 2000
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        },
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ],
+      batch: false,
+      executionSimulationRetryDelay: customExecutionSimulationRetryDelay,
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    // For payment userOps, the custom retry should not be applied so payment can be done as soon as possible always
+    expect(quote.userOps[0].executionSimulationRetryDelay).to.be.eq(undefined)
+
+    for (let { executionSimulationRetryDelay } of quote.userOps.slice(1)) {
+      expect(executionSimulationRetryDelay).to.be.eq(
+        customExecutionSimulationRetryDelay
+      )
+    }
+  })
+
+  test("Instruction level executionSimulationRetryDelay should be applied for quote", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 2000
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id,
+          executionSimulationRetryDelay: customExecutionSimulationRetryDelay
+        },
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id,
+          executionSimulationRetryDelay:
+            customExecutionSimulationRetryDelay + 1000
+        }
+      ],
+      batch: false,
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    // For payment userOps, the custom retry should not be applied so payment can be done as soon as possible always
+    expect(quote.userOps[0].executionSimulationRetryDelay).to.be.eq(undefined)
+
+    expect(quote.userOps[1].executionSimulationRetryDelay).to.be.eq(
+      customExecutionSimulationRetryDelay
+    )
+    expect(quote.userOps[2].executionSimulationRetryDelay).to.be.eq(
+      customExecutionSimulationRetryDelay + 1000
+    )
+  })
+
+  test("Should execute quote with custom instruction level executionSimulationRetryDelay", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 12000 // 10 seconds
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id,
+          executionSimulationRetryDelay: customExecutionSimulationRetryDelay
+        }
+      ],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+
+    expect(hash).toBeDefined()
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
 })

@@ -348,7 +348,12 @@ export const buildComposableUtil = async (
   composabilityParams: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { metadata, lowerBoundTimestamp, upperBoundTimestamp } = parameters
+  const {
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
+  } = parameters
 
   const calls = await buildComposableCall(parameters, composabilityParams)
 
@@ -368,7 +373,8 @@ export const buildComposableUtil = async (
       isComposable: true,
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     }
   ]
 }

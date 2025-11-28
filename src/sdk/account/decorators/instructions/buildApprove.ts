@@ -108,7 +108,8 @@ export const buildApprove = async (
     spender,
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -190,7 +191,8 @@ export const buildApprove = async (
       isComposable: isComposableCall,
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     }
   ]
 }
