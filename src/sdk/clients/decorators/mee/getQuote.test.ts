@@ -2710,7 +2710,7 @@ describe("mee.getQuote", () => {
     // For payment userOps, the custom retry should not be applied so payment can be done as soon as possible always
     expect(quote.userOps[0].executionSimulationRetryDelay).to.be.eq(undefined)
 
-    for (let { executionSimulationRetryDelay } of quote.userOps.slice(1)) {
+    for (const { executionSimulationRetryDelay } of quote.userOps.slice(1)) {
       expect(executionSimulationRetryDelay).to.be.eq(
         customExecutionSimulationRetryDelay
       )
