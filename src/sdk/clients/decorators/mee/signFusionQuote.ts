@@ -1,4 +1,4 @@
-import type { MEEVersion } from "../../../constants"
+import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { getQuoteType } from "./getQuoteType"
 import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"
@@ -11,6 +11,7 @@ import {
   type SignPermitQuotePayload,
   signPermitQuote
 } from "./signPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
 
 /**
  * Union type for parameters that can be used with signFusionQuote
@@ -27,7 +28,7 @@ export type SignFusionQuotePayload = (
   | SignOnChainQuotePayload
   | SignPermitQuotePayload
 ) & {
-  meeVersion: MEEVersion
+  meeVersions: MeeVersionsWithChainId
 }
 
 /**
@@ -66,13 +67,16 @@ export const signFusionQuote = async (
   client: BaseMeeClient,
   parameters: SignFusionQuoteParameters
 ): Promise<SignFusionQuotePayload> => {
-  const chainId = parameters.fusionQuote.quote.userOps[1].chainId
-  const meeVersion = client.account.getMeeVersion(Number(chainId))
+  const startIndex = parameters.fusionQuote.quote.paymentInfo.sponsored ? 1 : 0
+  const meeVersions = getMeeVersionsForQuote(
+    client.account,
+    parameters.fusionQuote.quote.userOps.slice(startIndex)
+  )
 
   if ("delegatorSmartAccount" in parameters) {
     return {
       ...(await signMMDtkQuote(client, parameters as SignMmDtkQuoteParams)),
-      meeVersion
+      meeVersions
     }
   }
   // if it is not mm-dtk, then it is permit or on-chain
@@ -84,12 +88,12 @@ export const signFusionQuote = async (
     case "permit":
       return {
         ...(await signPermitQuote(client, parameters)),
-        meeVersion
+        meeVersions
       }
     case "onchain":
       return {
         ...(await signOnChainQuote(client, parameters)),
-        meeVersion
+        meeVersions
       }
     default:
       throw new Error("Invalid quote type for fusion quote")

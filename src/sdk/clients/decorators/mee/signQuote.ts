@@ -244,7 +244,7 @@ export const signQuote = async (
  * @param userOps - The user operations to get the MEE versions for. they do not include payment userOp if stx is sponsored
  * @returns The MEE versions for the user operations
  */
-const getMeeVersionsForQuote = (
+export const getMeeVersionsForQuote = (
   account: MultichainSmartAccount,
   userOps: MeeFilledUserOpDetails[]
 ): MeeVersionsWithChainId => {
