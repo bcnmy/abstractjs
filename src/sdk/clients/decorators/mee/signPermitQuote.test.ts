@@ -15,8 +15,10 @@ import {
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { arbitrum, polygon } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
+  MAINNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
   getTestChainConfig,
   toNetwork
@@ -39,15 +41,19 @@ import {
 } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
-import { type MeeClient, createMeeClient } from "../../createMeeClient"
+import {
+  type MeeClient,
+  createMeeClient,
+  getDefaultMEENetworkApiKey,
+  getDefaultMEENetworkUrl
+} from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
-import getSupportedFeeToken, {
-  type GetSupportedFeeTokenPayload
-} from "./getSupportedFeeToken"
+import signOnChainQuote from "./signOnChainQuote"
 import {
+  type TokenTrigger,
   type Trigger,
   formatSignedPermitQuotePayload,
   prepareSignablePermitQuotePayload,
@@ -158,7 +164,17 @@ describe("mee.signPermitQuote", () => {
       feeToken
     })
 
-    const signedPermitQuote = await signPermitQuote(meeClient, { fusionQuote })
+    const {
+      fallbackToOnchainMode,
+      signedPermitQuotePayload: signedPermitQuote
+    } = await signPermitQuote(meeClient, { fusionQuote })
+
+    if (fallbackToOnchainMode) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(fallbackToOnchainMode).to.be.eq(false)
+      return
+    }
+
     expect(signedPermitQuote).toBeDefined()
   })
 
@@ -207,7 +223,15 @@ describe("mee.signPermitQuote", () => {
       }
 
       console.timeEnd("signPermitQuote:getQuote")
-      const signedQuote = await signPermitQuote(meeClient, { fusionQuote })
+      const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
+        await signPermitQuote(meeClient, { fusionQuote })
+
+      if (fallbackToOnchainMode) {
+        // This always fails here. This is being coded like this to avoid type issues
+        expect(fallbackToOnchainMode).to.be.eq(false)
+        return
+      }
+
       const { hash } = await executeSignedQuote(meeClient, { signedQuote })
       console.timeEnd("signPermitQuote:getHash")
       const receipt = await waitForSupertransactionReceipt(meeClient, {
@@ -415,25 +439,42 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       }
     })
 
-    const signedPermitQuote = await signPermitQuote(meeClient, { fusionQuote })
+    const {
+      fallbackToOnchainMode,
+      signedPermitQuotePayload: signedPermitQuote
+    } = await signPermitQuote(meeClient, { fusionQuote })
+
+    if (fallbackToOnchainMode) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(fallbackToOnchainMode).to.be.eq(false)
+      return
+    }
+
     expect(signedPermitQuote).toBeDefined()
     expect(signedPermitQuote.signature).toBeDefined()
-    expect(isHex(signedPermitQuote.signature)).toEqual(true)
 
-    const supportedFeeTokenInfo: GetSupportedFeeTokenPayload | undefined =
-      undefined
+    expect(isHex(signedPermitQuote.signature)).toEqual(true)
 
     const quoteType = await getQuoteType(meeClient, fusionQuote)
 
     expect(quoteType).toEqual("permit")
 
-    const { signablePayload, metadata } =
-      await prepareSignablePermitQuotePayload(
-        fusionQuote,
-        eoaAccount.address,
-        mcNexus.addressOn(chain.id, true),
-        walletClient
-      )
+    const {
+      fallbackToOnchainMode: isFallbackNeeded,
+      signablePayload,
+      metadata
+    } = await prepareSignablePermitQuotePayload(
+      fusionQuote,
+      eoaAccount.address,
+      mcNexus.addressOn(chain.id, true),
+      walletClient
+    )
+
+    if (isFallbackNeeded) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(isFallbackNeeded).to.be.eq(false)
+      return
+    }
 
     const signature = await walletClient.signTypedData({
       ...signablePayload,
@@ -453,5 +494,190 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     expect(signedPermitQuote.signature).toEqual(
       manuallySignedPermitQuote.signature
     )
+  })
+
+  test("Should generate a proper valid domain separator for exoitic tokens with different EIP712 domain types", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: arbitrum,
+          transport: http(MAINNET_RPC_URLS[arbitrum.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: polygon,
+          transport: http(MAINNET_RPC_URLS[polygon.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: getDefaultMEENetworkApiKey(),
+      url: getDefaultMEENetworkUrl()
+    })
+
+    const tokensWithChainId = [
+      {
+        tokenAddress: "0x09199d9A5F4448D0848e4395D065e1ad9c4a1F74" as Address, // Bonk token
+        chainId: arbitrum.id
+      },
+      {
+        tokenAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174" as Address, // Polygon USDC token
+        chainId: polygon.id
+      }
+    ]
+
+    for (const { tokenAddress, chainId } of tokensWithChainId) {
+      const fusionQuote = await getFusionQuote(meeClient, {
+        trigger: {
+          chainId: chainId,
+          tokenAddress: tokenAddress,
+          amount: 1n
+        },
+        instructions: [
+          mcNexus.build({
+            type: "default",
+            data: {
+              calls: [
+                {
+                  to: zeroAddress,
+                  value: 0n
+                }
+              ],
+              chainId: chainId
+            }
+          })
+        ],
+        feeToken: {
+          chainId: chainId,
+          address: tokenAddress
+        }
+      })
+
+      const { fallbackToOnchainMode } = await prepareSignablePermitQuotePayload(
+        fusionQuote,
+        eoaAccount.address,
+        mcNexus.addressOn(chainId, true),
+        mcNexus.deploymentOn(chainId, true).walletClient
+      )
+
+      // This will be undefined if the permit values are proper
+      expect(fallbackToOnchainMode).to.be.eq(undefined)
+    }
+  })
+
+  test("prepareSignablePermitQuotePayload should indicate fallbackToOnchainMode when the permit values are invalid", async () => {
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger: {
+        chainId: chain.id,
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n
+      },
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        })
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcTestUSDCP.addressOn(chain.id)
+      }
+    })
+
+    const modifiedFusionQuote = {
+      ...fusionQuote,
+      trigger: {
+        ...(fusionQuote.trigger as TokenTrigger),
+        tokenAddress: zeroAddress // Forcefully adding a non permit supported address to trigger fallback flow
+      }
+    }
+
+    const { fallbackToOnchainMode, signedPermitQuotePayload } =
+      await signPermitQuote(meeClient, { fusionQuote: modifiedFusionQuote })
+
+    expect(fallbackToOnchainMode).to.be.eq(true)
+    expect(signedPermitQuotePayload).to.be.eq(undefined)
+  })
+
+  test("Permit should fallback to on-chain mode when the permit values are invalid", async () => {
+    const fusionQuote = await getFusionQuote(meeClient, {
+      trigger: {
+        chainId: chain.id,
+        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
+        amount: 1n
+      },
+      instructions: [
+        mcNexus.build({
+          type: "default",
+          data: {
+            calls: [
+              {
+                to: zeroAddress,
+                value: 0n
+              }
+            ],
+            chainId: chain.id
+          }
+        })
+      ],
+      feeToken: {
+        chainId: chain.id,
+        address: testnetMcTestUSDCP.addressOn(chain.id)
+      }
+    })
+
+    const modifiedFusionQuote = {
+      ...fusionQuote,
+      trigger: {
+        ...(fusionQuote.trigger as TokenTrigger),
+        tokenAddress: zeroAddress // Forcefully adding a non permit supported address to trigger fallback flow
+      }
+    }
+
+    const { fallbackToOnchainMode, signedPermitQuotePayload } =
+      await signPermitQuote(meeClient, { fusionQuote: modifiedFusionQuote })
+
+    expect(fallbackToOnchainMode).to.be.eq(true)
+    expect(signedPermitQuotePayload).to.be.eq(undefined)
+
+    let trigger: TokenTrigger | undefined = undefined
+
+    // If there is no call ? It is always TokenTrigger
+    if (fusionQuote.trigger && !fusionQuote.trigger.call) {
+      trigger = fusionQuote.trigger
+    }
+
+    const signedQuote = await signOnChainQuote(meeClient, { fusionQuote })
+
+    // Execute the quote
+    const { hash } = await executeSignedQuote(meeClient, {
+      signedQuote: {
+        ...signedQuote,
+        trigger
+      }
+    })
+
+    // Wait for the transaction to complete
+    const executeReceipt = await meeClient.waitForSupertransactionReceipt({
+      hash
+    })
+
+    expect(executeReceipt.transactionStatus).toBe("MINED_SUCCESS")
+    console.log({
+      explorerLinks: executeReceipt.explorerLinks,
+      hash: executeReceipt.hash
+    })
   })
 })

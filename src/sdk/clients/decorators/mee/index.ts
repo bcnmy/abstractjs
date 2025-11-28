@@ -1,3 +1,4 @@
+import type { OneOf } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
 import execute from "./execute"
 import {
@@ -184,11 +185,16 @@ export type MeeActions = {
   /**
    * Sign a permit quote for ERC20Permit-enabled tokens
    * @param params - Parameters for signing the permit quote
-   * @returns Promise resolving to signed permit data
+   * @returns Promise resolving to signed permit data or fallbackToOnchainMode flag
    */
   signPermitQuote: (
     params: SignPermitQuoteParams
-  ) => Promise<SignPermitQuotePayload>
+  ) => Promise<
+    OneOf<
+      | { signedPermitQuotePayload: SignPermitQuotePayload }
+      | { fallbackToOnchainMode: true }
+    >
+  >
 
   /**
    * Get a permit quote for ERC20Permit-enabled tokens

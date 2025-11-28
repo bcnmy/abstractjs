@@ -1,5 +1,8 @@
 import type { Address } from "viem"
-import type { Instruction } from "../../clients/decorators/mee/getQuote"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../clients/decorators/mee/getQuote"
 import type { InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import type { UnifiedERC20Balance } from "./getUnifiedERC20Balance"
@@ -57,7 +60,7 @@ export type MultichainBridgingParams = {
   feeData?: FeeData
   mode?: "DEBIT" | "OPTIMISTIC"
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Result of a bridging plugin operation
@@ -169,7 +172,9 @@ export const buildBridgeInstructions = async (
     bridgingPlugins = [toAcrossPlugin()],
     feeData,
     mode = "DEBIT",
-    metadata
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = params
 
   const tokenMapping = {
@@ -277,7 +282,9 @@ export const buildBridgeInstructions = async (
 
         const instruction: Instruction = {
           ...result.userOp,
-          metadata: metadata || result.userOp.metadata || customMetadata
+          metadata: metadata || result.userOp.metadata || customMetadata,
+          lowerBoundTimestamp,
+          upperBoundTimestamp
         }
 
         return {

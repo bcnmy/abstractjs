@@ -8,7 +8,10 @@ import {
   parseAbi,
   zeroAddress
 } from "viem"
-import type { Instruction } from "../../../clients/decorators/mee"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
   type RuntimeBalanceOfParams,
@@ -86,7 +89,7 @@ export type BuildAcrossIntentComposableParams = {
   gasLimit?: bigint
   fees?: SuggestedFeesReturnType
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Builds an instruction for across
@@ -110,7 +113,9 @@ export const buildAcrossIntentComposable = async (
     gasLimit,
     pool = acrossSpokePool[originChainId],
     fees: fees_,
-    metadata
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = parameters
 
   // sanity checks
@@ -137,7 +142,9 @@ export const buildAcrossIntentComposable = async (
       chainId: originChainId,
       tokenAddress: inputToken,
       amount: runtimeERC20BalanceOf(inputAmountRuntimeParams), // use without changes
-      recipient: acrossIntentWrapperOnOrigin
+      recipient: acrossIntentWrapperOnOrigin,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     },
     composabilityParams
   )
@@ -224,7 +231,9 @@ export const buildAcrossIntentComposable = async (
       ],
       chainId: originChainId,
       gasLimit,
-      metadata: metadata || bridgeMetadata
+      metadata: metadata || bridgeMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp
     },
     composabilityParams
   )

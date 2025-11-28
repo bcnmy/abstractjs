@@ -10,7 +10,10 @@
  */
 
 import { type Address, zeroAddress } from "viem"
-import type { Instruction } from "../../../clients/decorators/mee"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds
+} from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion, ForwarderAbi } from "../../../constants"
 import { type RuntimeValue, isRuntimeComposableValue } from "../../../modules"
@@ -32,7 +35,7 @@ export type BuildNativeTokenTransferParameters = {
   value: bigint | RuntimeValue
   chainId: number
   metadata?: InstructionMetadata[]
-}
+} & InstructionLevelTimeBounds
 
 /**
  * Builds an instruction for transferring native tokens (e.g., ETH) from the account to a recipient.
@@ -68,7 +71,9 @@ export const buildNativeTokenTransfer = async (
     value,
     gasLimit,
     to,
-    metadata: metadataOverride
+    metadata: metadataOverride,
+    lowerBoundTimestamp,
+    upperBoundTimestamp
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -138,7 +143,9 @@ export const buildNativeTokenTransfer = async (
         value,
         args: [to],
         chainId,
-        metadata: metadataOverride || metadata
+        metadata: metadataOverride || metadata,
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       },
       composabilityParams
     )
@@ -166,7 +173,9 @@ export const buildNativeTokenTransfer = async (
         ],
         metadata: metadataOverride || metadata,
         isComposable: false,
-        chainId
+        chainId,
+        lowerBoundTimestamp,
+        upperBoundTimestamp
       }
     ]
   }

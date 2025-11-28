@@ -7,7 +7,10 @@ import {
   type WalletClient,
   concatHex,
   encodeAbiParameters,
-  parseSignature
+  encodePacked,
+  keccak256,
+  parseSignature,
+  toHex
 } from "viem"
 import { multicall } from "viem/actions"
 import type { EIP712DomainReturn } from "../../../account"
@@ -44,10 +47,15 @@ export interface PermitMetadata {
  * Contains the EIP-712 signable payload and associated metadata
  * needed for formatting and encoding the final permit signature.
  */
-export interface SignablePermitQuotePayload {
-  signablePayload: SignablePermitPayload
-  metadata: PermitMetadata
-}
+export type SignablePermitQuotePayload = OneOf<
+  | {
+      fallbackToOnchainMode: true
+    }
+  | {
+      signablePayload: SignablePermitPayload
+      metadata: PermitMetadata
+    }
+>
 
 /**
  * Custom trigger for arbitrary calls
@@ -142,6 +150,195 @@ export type SignPermitQuotePayload = GetQuotePayload & {
 
 const PERMIT_PREFIX = "0x177eee02"
 
+export const isLegacyEIP712Domain = (
+  name: string,
+  version: string,
+  verifyingContract: Address,
+  salt: Hex,
+  domainSeparator: Hex
+) => {
+  // Step 1: Hash the EIP712Domain type string
+  const DOMAIN_TYPEHASH = keccak256(
+    encodePacked(
+      ["string"],
+      [
+        "EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"
+      ]
+    )
+  )
+
+  // Step 2: Hash the name
+  const nameHash = keccak256(encodePacked(["string"], [name]))
+
+  // Step 3: Hash the version
+  const versionHash = keccak256(encodePacked(["string"], [version]))
+
+  // Step 4: Encode and hash all parameters
+  const DOMAIN_SEPARATOR = keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" }, // EIP712_DOMAIN_TYPEHASH
+        { type: "bytes32" }, // nameHash
+        { type: "bytes32" }, // versionHash
+        { type: "address" }, // verifyingContract
+        { type: "bytes32" } // salt
+      ],
+      [DOMAIN_TYPEHASH, nameHash, versionHash, verifyingContract, salt]
+    )
+  )
+
+  return domainSeparator.toLowerCase() === DOMAIN_SEPARATOR.toLowerCase()
+}
+
+export const isDefaultEIP712Domain = (
+  name: string,
+  version: string,
+  chainId: number,
+  verifyingContract: Address,
+  domainSeparator: Hex
+) => {
+  // Step 1: Hash the EIP712Domain type string
+  const DOMAIN_TYPEHASH = keccak256(
+    encodePacked(
+      ["string"],
+      [
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+      ]
+    )
+  )
+
+  // Step 2: Hash the name
+  const nameHash = keccak256(encodePacked(["string"], [name]))
+
+  // Step 3: Hash the version
+  const versionHash = keccak256(encodePacked(["string"], [version]))
+
+  // Step 4: Encode and hash all parameters
+  const DOMAIN_SEPARATOR = keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" },
+        { type: "bytes32" }, // nameHash
+        { type: "bytes32" }, // versionHash
+        { type: "uint256" }, // chainId
+        { type: "address" } // verifyingContract
+      ],
+      [
+        DOMAIN_TYPEHASH,
+        nameHash,
+        versionHash,
+        BigInt(chainId),
+        verifyingContract
+      ]
+    )
+  )
+
+  return domainSeparator.toLowerCase() === DOMAIN_SEPARATOR.toLowerCase()
+}
+
+export const isDefaultEIP712DomainWithSalt = (
+  name: string,
+  version: string,
+  chainId: number,
+  verifyingContract: Address,
+  salt: Hex,
+  domainSeparator: Hex
+) => {
+  // Step 1: Hash the EIP712Domain type string
+  const DOMAIN_TYPEHASH = keccak256(
+    encodePacked(
+      ["string"],
+      [
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)"
+      ]
+    )
+  )
+
+  // Step 2: Hash the name
+  const nameHash = keccak256(encodePacked(["string"], [name]))
+
+  // Step 3: Hash the version
+  const versionHash = keccak256(encodePacked(["string"], [version]))
+
+  // Step 4: Encode and hash all parameters
+  const DOMAIN_SEPARATOR = keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" }, // EIP712_DOMAIN_TYPEHASH
+        { type: "bytes32" }, // nameHash
+        { type: "bytes32" }, // versionHash
+        { type: "uint256" }, // chainId
+        { type: "address" }, // verifyingContract
+        { type: "bytes32" } // salt
+      ],
+      [
+        DOMAIN_TYPEHASH,
+        nameHash,
+        versionHash,
+        BigInt(chainId),
+        verifyingContract,
+        salt
+      ]
+    )
+  )
+
+  return domainSeparator.toLowerCase() === DOMAIN_SEPARATOR.toLowerCase()
+}
+
+export const getEIP712DomainType = (
+  name: string,
+  version: string,
+  chainId: number,
+  verifyingContract: Address,
+  salt: Hex,
+  domainSeparator: Hex
+) => {
+  try {
+    const isValid = isLegacyEIP712Domain(
+      name,
+      version,
+      verifyingContract,
+      salt,
+      domainSeparator
+    )
+
+    if (isValid) {
+      return "legacy"
+    }
+  } catch {}
+
+  try {
+    const isValid = isDefaultEIP712Domain(
+      name,
+      version,
+      chainId,
+      verifyingContract,
+      domainSeparator
+    )
+
+    if (isValid) {
+      return "default"
+    }
+  } catch {}
+
+  try {
+    const isValid = isDefaultEIP712DomainWithSalt(
+      name,
+      version,
+      chainId,
+      verifyingContract,
+      salt,
+      domainSeparator
+    )
+
+    if (isValid) {
+      return "default-with-salt"
+    }
+  } catch {}
+
+  return "invalid"
+}
+
 /**
  * Prepares the payload required for signing a permit quote.
  * This function validates the trigger, fetches necessary token data (nonce, name, version, domain separator),
@@ -195,143 +392,209 @@ export const prepareSignablePermitQuotePayload = async (
 
   const amount = trigger.approvalAmount ?? trigger.amount
 
-  // Fetch required token data for EIP-712 domain and permit using multicall
-  const values = await multicall(publicClient, {
-    contracts: [
-      {
-        address: trigger.tokenAddress,
-        abi: TokenWithPermitAbi,
-        functionName: "nonces",
-        args: [owner]
-      },
-      {
-        address: trigger.tokenAddress,
-        abi: TokenWithPermitAbi,
-        functionName: "name"
-      },
-      {
-        address: trigger.tokenAddress,
-        abi: TokenWithPermitAbi,
-        functionName: "version"
-      },
-      {
-        address: trigger.tokenAddress,
-        abi: TokenWithPermitAbi,
-        functionName: "DOMAIN_SEPARATOR"
-      },
-      {
-        address: trigger.tokenAddress,
-        abi: TokenWithPermitAbi,
-        functionName: "eip712Domain"
+  // If there is any error while prepare permit signature, the flow will fallback to onchain mode.
+  // The fallbacks will happen for these errors such as, invalid permit values, domain separator mismatch, RPC issues and etc...
+  try {
+    // Fetch required token data for EIP-712 domain and permit using multicall
+    const values = await multicall(publicClient, {
+      contracts: [
+        {
+          address: trigger.tokenAddress,
+          abi: TokenWithPermitAbi,
+          functionName: "nonces",
+          args: [owner]
+        },
+        {
+          address: trigger.tokenAddress,
+          abi: TokenWithPermitAbi,
+          functionName: "name"
+        },
+        {
+          address: trigger.tokenAddress,
+          abi: TokenWithPermitAbi,
+          functionName: "version"
+        },
+        {
+          address: trigger.tokenAddress,
+          abi: TokenWithPermitAbi,
+          functionName: "DOMAIN_SEPARATOR"
+        },
+        {
+          address: trigger.tokenAddress,
+          abi: TokenWithPermitAbi,
+          functionName: "eip712Domain"
+        }
+      ]
+    })
+
+    const [nonce, name, version, domainSeparator, eip712Domain] = values.map(
+      (value, i) => {
+        const key = [
+          "nonce",
+          "name",
+          "version",
+          "domainSeparator",
+          "eip712Domain"
+        ][i]
+        if (value.status === "success") {
+          return value.result
+        }
+        if (value.status === "failure") {
+          if (key === "nonce") {
+            // Tokens must implement the nonces function, otherwise we throw a error here
+            throw new Error(
+              "Permit signing failed: Token does not implement nonces(). This function is required for EIP-2612 compliance."
+            )
+          }
+
+          if (key === "domainSeparator") {
+            // Tokens must implement the domainSeparator function, otherwise we throw a error here
+            throw new Error(
+              "Permit signing failed: Token does not implement DOMAIN_SEPARATOR(). This function is required for EIP-712 domain separation."
+            )
+          }
+
+          if (key === "name" || key === "version") {
+            // Some tokens do not implement name and version; defaults to undefined
+            return undefined
+          }
+
+          if (key === "eip712Domain") {
+            // Some tokens do not implement eip712Domain; default to []
+            return []
+          }
+        }
+
+        // Fallback return value instead of throwing error
+        return undefined
       }
-    ]
-  })
+    ) as [bigint, string, string, Hex, EIP712DomainReturn]
 
-  const [nonce, name, version, domainSeparator, eip712Domain] = values.map(
-    (value, i) => {
-      const key = [
-        "nonce",
-        "name",
-        "version",
-        "domainSeparator",
-        "eip712Domain"
-      ][i]
-      if (value.status === "success") {
-        return value.result
-      }
-      if (value.status === "failure") {
-        if (key === "nonce") {
-          // Tokens must implement the nonces function, otherwise we throw a error here
-          throw new Error(
-            "Permit signing failed: Token does not implement nonces(). This function is required for EIP-2612 compliance."
-          )
-        }
+    const [, name_, version_, chainId_, verifyingContract_, salt_] =
+      eip712Domain
 
-        if (key === "domainSeparator") {
-          // Tokens must implement the domainSeparator function, otherwise we throw a error here
-          throw new Error(
-            "Permit signing failed: Token does not implement DOMAIN_SEPARATOR(). This function is required for EIP-712 domain separation."
-          )
-        }
+    // Default version will be used as fallback
+    const defaultVersion = "1"
 
-        if (key === "name" || key === "version") {
-          // Some tokens do not implement name and version; defaults to undefined
-          return undefined
-        }
-
-        if (key === "eip712Domain") {
-          // Some tokens do not implement eip712Domain; default to []
-          return []
-        }
-      }
-
-      // Fallback return value instead of throwing error
-      return undefined
+    if (version?.length >= 0 && version_?.length >= 0) {
+      if (version !== version_)
+        console.warn(
+          "Warning: Mismatch between token version() and eip712Domain().version. This may cause permit signature verification to fail."
+        )
     }
-  ) as [bigint, string, string, Hex, EIP712DomainReturn]
 
-  const [, name_, version_] = eip712Domain
+    if (name?.length >= 0 && name_?.length >= 0) {
+      if (name !== name_)
+        console.warn(
+          "Warning: Mismatch between token name() and eip712Domain().name. This may cause permit signature verification to fail."
+        )
+    }
 
-  // Default version will be used as fallback
-  const defaultVersion = "1"
-
-  if (version?.length >= 0 && version_?.length >= 0) {
-    if (version !== version_)
-      console.warn(
-        "Warning: Mismatch between token version() and eip712Domain().version. This may cause permit signature verification to fail."
+    if (name === undefined && name_ === undefined) {
+      throw new Error(
+        "Permit signing failed: Token name is missing. Neither name() nor eip712Domain().name is available."
       )
-  }
+    }
 
-  if (name?.length >= 0 && name_?.length >= 0) {
-    if (name !== name_)
-      console.warn(
-        "Warning: Mismatch between token name() and eip712Domain().name. This may cause permit signature verification to fail."
-      )
-  }
+    // chainId from eip712Domain is mostly safe and more priority is given
+    const permitChainId =
+      chainId_ !== undefined ? Number(chainId_) : trigger.chainId
 
-  if (name === undefined && name_ === undefined) {
-    throw new Error(
-      "Permit signing failed: Token name is missing. Neither name() nor eip712Domain().name is available."
-    )
-  }
-
-  const signablePermitQuotePayload = {
-    domain: {
+    const permitValues = {
       name: name_ ?? name, // name from eip712Domain is mostly safe and more priority is given
       version: version_ ?? version ?? defaultVersion, // version from eip712Domain is mostly safe and more priority is given
-      chainId: trigger.chainId,
-      verifyingContract: trigger.tokenAddress
-    },
-    types: {
-      Permit: [
-        { name: "owner", type: "address" },
-        { name: "spender", type: "address" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" }
-      ]
-    },
-    primaryType: "Permit",
-    message: {
-      owner: owner,
-      spender: spender,
-      value: amount,
-      nonce,
-      deadline: BigInt(quote.hash)
+      chainId: permitChainId,
+      verifyingContract: verifyingContract_ ?? trigger.tokenAddress, // verifyingContract from eip712Domain is mostly safe and more priority is given
+      salt: salt_ ?? toHex(permitChainId, { size: 32 }), // salt from eip712Domain is mostly safe and more priority is given
+      domainSeparator
     }
-  }
 
-  return {
-    signablePayload: signablePermitQuotePayload,
-    metadata: {
+    const eip712DomainType = getEIP712DomainType(
+      permitValues.name,
+      permitValues.version,
+      permitValues.chainId,
+      permitValues.verifyingContract,
+      permitValues.salt,
+      permitValues.domainSeparator
+    )
+
+    const getDomain = (
+      eip712DomainType: ReturnType<typeof getEIP712DomainType>
+    ) => {
+      switch (eip712DomainType) {
+        case "default": {
+          return {
+            name: permitValues.name,
+            version: permitValues.version,
+            chainId: permitValues.chainId,
+            verifyingContract: permitValues.verifyingContract
+          }
+        }
+        case "default-with-salt": {
+          return {
+            name: permitValues.name,
+            version: permitValues.version,
+            chainId: permitValues.chainId,
+            verifyingContract: permitValues.verifyingContract,
+            salt: permitValues.salt
+          }
+        }
+        case "legacy": {
+          return {
+            name: permitValues.name,
+            version: permitValues.version,
+            verifyingContract: permitValues.verifyingContract,
+            salt: permitValues.salt
+          }
+        }
+        default:
+          throw new Error(
+            "Permit signing failed: Domain separator mismatch, please double check the token's permit functionality"
+          )
+      }
+    }
+
+    const signablePermitQuotePayload = {
+      domain: getDomain(eip712DomainType),
+      types: {
+        Permit: [
+          { name: "owner", type: "address" },
+          { name: "spender", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "nonce", type: "uint256" },
+          { name: "deadline", type: "uint256" }
+        ]
+      },
+      primaryType: "Permit",
+      message: {
+        owner: owner,
+        spender: spender,
+        value: amount,
+        nonce,
+        deadline: BigInt(quote.hash)
+      }
+    }
+
+    const metadata: PermitMetadata = {
       nonce,
-      name: name_ ?? name,
-      version: version_ ?? version ?? defaultVersion,
-      domainSeparator,
+      name: permitValues.name,
+      version: permitValues.version,
+      domainSeparator: permitValues.domainSeparator,
       owner,
       spender,
       amount
     }
+
+    return {
+      signablePayload: signablePermitQuotePayload,
+      metadata
+    }
+  } catch (error) {
+    const errorMessage = (error as Error).message || "Permit signing failed"
+    console.warn(errorMessage)
+    console.info("Permit signing failed, fallback to onchain mode")
+
+    return { fallbackToOnchainMode: true }
   }
 }
 
@@ -408,7 +671,7 @@ export const formatSignedPermitQuotePayload = (
  *
  * @example
  * ```typescript
- * const signedPermitQuote = await signPermitQuote(meeClient, {
+ * const { fallbackToOnchainMode, signedPermitQuotePayload } = await signPermitQuote(meeClient, {
  *   fusionQuote: {
  *     quote: quotePayload,
  *     trigger: {
@@ -424,7 +687,12 @@ export const formatSignedPermitQuotePayload = (
 export const signPermitQuote = async (
   client: BaseMeeClient,
   parameters: SignPermitQuoteParams
-): Promise<SignPermitQuotePayload> => {
+): Promise<
+  OneOf<
+    | { signedPermitQuotePayload: SignPermitQuotePayload }
+    | { fallbackToOnchainMode: true }
+  >
+> => {
   const {
     companionAccount: account_ = client.account,
     fusionQuote: { trigger }
@@ -439,23 +707,30 @@ export const signPermitQuote = async (
 
   const owner = signer.address
 
-  const { signablePayload, metadata } = await prepareSignablePermitQuotePayload(
-    parameters.fusionQuote,
-    owner,
-    spender,
-    walletClient
-  )
+  const { fallbackToOnchainMode, signablePayload, metadata } =
+    await prepareSignablePermitQuotePayload(
+      parameters.fusionQuote,
+      owner,
+      spender,
+      walletClient
+    )
+
+  if (fallbackToOnchainMode) {
+    return { fallbackToOnchainMode }
+  }
 
   const signature = await walletClient.signTypedData({
     ...signablePayload,
     account: walletClient.account!
   })
 
-  return formatSignedPermitQuotePayload(
+  const signedPermitQuotePayload = formatSignedPermitQuotePayload(
     parameters.fusionQuote,
     metadata,
     signature
   )
+
+  return { signedPermitQuotePayload }
 }
 
 export default signPermitQuote
