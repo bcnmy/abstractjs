@@ -220,8 +220,6 @@ describe("mee.signQuote", () => {
     const deployment = mcNexus.deploymentOn(optimismSepolia.id, true)
     const eip712Domain = deployment.eip712Domain
 
-    console.log("eip712Domain", eip712Domain)
-
     expect(eip712Domain).toBeDefined()
 
     const { signablePayload, metadata } = prepareTypedDataSignableQuotePayload(
@@ -256,4 +254,5 @@ describe("mee.signQuote", () => {
 
     expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
   })
+
 })
