@@ -344,7 +344,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V2_2_0)
+              version: getMEEVersion(MEEVersion.V2_2_1)
             }
           ]
         })

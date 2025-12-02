@@ -121,7 +121,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         {
           chain: chain,
           transport: http(network.rpcUrl),
-          version: getMEEVersion(MEEVersion.V2_2_0)
+          version: getMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })

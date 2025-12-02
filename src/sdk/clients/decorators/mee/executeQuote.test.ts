@@ -25,6 +25,7 @@ import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
+import { getQuoteType } from "./getQuoteType"
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -176,7 +177,62 @@ describe("mee.executeQuote", () => {
   // should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)
   test.runIf(runPaidTests)(
     "should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)",
-    async () => {}
+    async () => {
+      const mcNexusV2_2_1 = await toMultichainNexusAccount({
+        signer: eoaAccount,
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(MEEVersion.V2_2_1)
+          }
+        ]
+      })
+
+      const meeClientV2_2_1 = await createMeeClient({
+        account: mcNexusV2_2_1
+      })
+
+      console.log("mcNexusV2_2_1 address on baseSepolia:", await mcNexusV2_2_1.deploymentOn(baseSepolia.id, true).getAddress())
+
+      const quote = await meeClientV2_2_1.getQuote({
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 0n
+              }
+            ],
+            chainId: baseSepolia.id
+          }
+        ],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+          chainId: baseSepolia.id
+        },
+      })
+
+      expect(quote).toBeDefined()
+      expect(quote.hash).toBeDefined()
+      const quoteType = await getQuoteType(meeClientV2_2_1, quote)
+      expect(quoteType).toBe("simple")
+
+      console.log("quote hash:", quote.hash)
+
+      const { hash } = await meeClientV2_2_1.executeQuote({ quote })
+
+      console.log("execute quote hash:", hash)
+      expect(hash).toBeDefined()
+
+      const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    }
   )
 
   // should execute sponsored quote with with MEE >= 2.2.1
