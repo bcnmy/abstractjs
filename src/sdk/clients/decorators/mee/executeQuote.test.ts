@@ -1,20 +1,33 @@
-import type { Chain, Hex, LocalAccount, Transport } from "viem"
-import { beforeAll, describe, expect, test, vi } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../../test/testSetup"
+import {
+  http,
+  type Chain,
+  type Hex,
+  type LocalAccount,
+  type Transport
+} from "viem"
+import { baseSepolia } from "viem/chains"
+import { beforeAll, describe, expect, inject, test, vi } from "vitest"
+import {
+  TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
+  getTestChainConfig,
+  toNetwork
+} from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import executeQuote from "./executeQuote"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 
-vi.mock("./executeQuote")
+// @ts-ignore
+const { runPaidTests } = inject("settings")
 
 describe("mee.executeQuote", () => {
   let network: NetworkConfig
@@ -61,42 +74,114 @@ describe("mee.executeQuote", () => {
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  test("should execute a quote using vi mocks", async () => {
-    const instructions: Instruction[] = [
-      {
-        calls: [
-          {
-            to: "0x0000000000000000000000000000000000000000",
-            gasLimit: 50000n,
-            value: 0n
-          }
-        ],
-        chainId: targetChain.id
+  describe("mocked", () => {
+    test("should execute a quote using vi mocks", async () => {
+      const mockExecuteQuoteResponse: ExecuteSignedQuotePayload = {
+        hash: "0x123" as Hex
       }
-    ]
 
-    expect(instructions).toBeDefined()
+      // Use vi.doMock (not hoisted) so it doesn't affect other tests
+      vi.doMock("./executeQuote", () => ({
+        default: vi.fn().mockResolvedValue(mockExecuteQuoteResponse)
+      }))
 
-    // Mock the execute function
-    const mockExecuteQuoteResponse: ExecuteSignedQuotePayload = {
-      hash: "0x123" as Hex
-    }
-    // Mock implementation for this specific test
-    vi.mocked(executeQuote).mockResolvedValue(mockExecuteQuoteResponse)
+      // Import after mocking
+      const { default: executeQuote } = await import("./executeQuote")
 
-    const quote = await getQuote(meeClient, {
-      instructions: instructions,
-      feeToken
+      const instructions: Instruction[] = [
+        {
+          calls: [
+            {
+              to: "0x0000000000000000000000000000000000000000",
+              gasLimit: 50000n,
+              value: 0n
+            }
+          ],
+          chainId: targetChain.id
+        }
+      ]
+
+      expect(instructions).toBeDefined()
+
+      const quote = await getQuote(meeClient, {
+        instructions: instructions,
+        feeToken
+      })
+
+      const executedQuote = await executeQuote(meeClient, { quote })
+
+      expect(executedQuote).toEqual(mockExecuteQuoteResponse)
+
+      // Clean up: reset modules so the mock doesn't affect other tests
+      vi.doUnmock("./executeQuote")
+      vi.resetModules()
     })
-
-    const executedQuote = await executeQuote(meeClient, { quote })
-
-    expect(executedQuote).toEqual(mockExecuteQuoteResponse)
   })
 
-  // should execute quote with 'smart-account' mode with MEE = 2.1.0 (personal sign)
+  test.runIf(runPaidTests)(
+    "should execute quote with 'smart-account' mode with personal sign (MEE = 2.1.0)",
+    async () => {
+      const executeQuote = (await import("./executeQuote")).default
 
-  // should execute quote with 'smart-account' mode with MEE = 2.2.1 (typed data sign)
+      const mcNexusV2_1_0 = await toMultichainNexusAccount({
+        signer: eoaAccount,
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(MEEVersion.V2_1_0)
+          }
+        ]
+      })
 
-  // should execute sponsored quote with with MEE = 2.2.1
+      const meeClientV2_1_0 = await createMeeClient({
+        account: mcNexusV2_1_0
+      })
+
+      const quote = await meeClientV2_1_0.getQuote({
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 0n
+              }
+            ],
+            chainId: baseSepolia.id
+          }
+        ],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+          chainId: baseSepolia.id
+        }
+      })
+
+      expect(quote).toBeDefined()
+      expect(quote.hash).toBeDefined()
+
+      const { hash } = await meeClientV2_1_0.executeQuote({ quote })
+
+      expect(hash).toBeDefined()
+
+      const receipt = await meeClientV2_1_0.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+
+      expect(receipt).toBeDefined()
+      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    }
+  )
+
+  // should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)
+  test.runIf(runPaidTests)(
+    "should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)",
+    async () => {}
+  )
+
+  // should execute sponsored quote with with MEE >= 2.2.1
+  test.runIf(runPaidTests)(
+    "should execute sponsored quote with with MEE >= 2.2.1",
+    async () => {}
+  )
 })
