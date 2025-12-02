@@ -209,7 +209,7 @@ export const signQuote = async (
     // since we only use the name from the 712 domain (see prepareTypedDataSignableQuotePayload)
     // we can use the same eip712 domain for all the chains involved in the quote request
     const deployment = account_.deploymentOn(Number(chainId), true)
-    const eip712Domain = deployment.eip712Domain
+    const eip712Domain = await deployment.getEip712Domain()
     if (!eip712Domain) {
       throw new Error(
         `EIP-712 domain data not found for the multichain account on chain ${chainId}`

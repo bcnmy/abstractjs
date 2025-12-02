@@ -94,11 +94,9 @@ describe("mee.executeQuote", () => {
     expect(executedQuote).toEqual(mockExecuteQuoteResponse)
   })
 
-
   // should execute quote with 'smart-account' mode with MEE = 2.1.0 (personal sign)
-  
-  // should execute quote with 'smart-account' mode with MEE = 2.2.1 (typed data sign) 
 
-  // should execute sponsored quote with with MEE = 2.2.1 
+  // should execute quote with 'smart-account' mode with MEE = 2.2.1 (typed data sign)
 
+  // should execute sponsored quote with with MEE = 2.2.1
 })

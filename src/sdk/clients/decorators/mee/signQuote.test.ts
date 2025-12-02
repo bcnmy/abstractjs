@@ -218,7 +218,7 @@ describe("mee.signQuote", () => {
 
     // Manual signing with typed data
     const deployment = mcNexus.deploymentOn(optimismSepolia.id, true)
-    const eip712Domain = deployment.eip712Domain
+    const eip712Domain = await deployment.getEip712Domain()
 
     expect(eip712Domain).toBeDefined()
 
@@ -254,5 +254,4 @@ describe("mee.signQuote", () => {
 
     expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
   })
-
 })

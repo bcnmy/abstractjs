@@ -40,7 +40,7 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
-import { getEip712Domain } from "viem/actions"
+import { getEip712Domain as getEip712DomainViemAction } from "viem/actions"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
@@ -94,6 +94,7 @@ import {
 } from "./utils/getVersion"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+import { _ } from "vitest/dist/chunks/reporters.d.BFLkQcL6.js"
 
 export type GetInitDataParams = {
   accountIndex: bigint
@@ -299,7 +300,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
     version: MEEVersionConfig
 
     /** EIP-712 domain for the account */
-    eip712Domain: GetEip712DomainReturnType
+    getEip712Domain: () => Promise<GetEip712DomainReturnType>
   }
 >
 
@@ -599,6 +600,7 @@ export const toNexusAccount = async (
   const getInitCode = () => concatHex([meeConfig.factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
+  let _eip712Domain: GetEip712DomainReturnType
 
   const accountId: NexusAccountId = (await publicClient.readContract({
     address: meeConfig.implementationAddress,
@@ -633,14 +635,16 @@ export const toNexusAccount = async (
   /**
    * Use viem helper to obtain and cache the eip712 domain for the account
    */
-  const eip712Domain: GetEip712DomainReturnType = await getEip712Domain(
-    publicClient,
-    {
+  const getEip712Domain = async (): Promise<GetEip712DomainReturnType> => {
+    if (!isNullOrUndefined(_eip712Domain)) return _eip712Domain
+    const eip712Domain = await getEip712DomainViemAction(publicClient, {
       address: await getAddress(),
       factory: meeConfig.factoryAddress,
       factoryData
-    }
-  )
+    })
+    _eip712Domain = eip712Domain
+    return eip712Domain
+  }
 
   /**
    * @description Calculates the hash of a user operation
@@ -1031,7 +1035,7 @@ export const toNexusAccount = async (
       entryPointAddress: entryPoint07Address,
       getAddress,
       accountId,
-      eip712Domain,
+      getEip712Domain,
       getInitCode,
       getNonceWithKey,
       encodeExecute,
