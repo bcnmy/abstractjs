@@ -193,7 +193,10 @@ describe("mee.executeQuote", () => {
         account: mcNexusV2_2_1
       })
 
-      console.log("mcNexusV2_2_1 address on baseSepolia:", await mcNexusV2_2_1.deploymentOn(baseSepolia.id, true).getAddress())
+      console.log(
+        "mcNexusV2_2_1 address on baseSepolia:",
+        await mcNexusV2_2_1.deploymentOn(baseSepolia.id, true).getAddress()
+      )
 
       const quote = await meeClientV2_2_1.getQuote({
         instructions: [
@@ -210,7 +213,7 @@ describe("mee.executeQuote", () => {
         feeToken: {
           address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
           chainId: baseSepolia.id
-        },
+        }
       })
 
       expect(quote).toBeDefined()
