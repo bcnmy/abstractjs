@@ -5,7 +5,7 @@ import {
   type LocalAccount,
   type Transport
 } from "viem"
-import { baseSepolia } from "viem/chains"
+import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import {
   TESTNET_RPC_URLS,
@@ -185,6 +185,11 @@ describe("mee.executeQuote", () => {
             chain: baseSepolia,
             transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
             version: getMEEVersion(MEEVersion.V2_2_1)
+          },
+          {
+            chain: optimismSepolia,
+            transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+            version: getMEEVersion(MEEVersion.V2_2_1)
           }
         ]
       })
@@ -192,11 +197,6 @@ describe("mee.executeQuote", () => {
       const meeClientV2_2_1 = await createMeeClient({
         account: mcNexusV2_2_1
       })
-
-      console.log(
-        "mcNexusV2_2_1 address on baseSepolia:",
-        await mcNexusV2_2_1.deploymentOn(baseSepolia.id, true).getAddress()
-      )
 
       const quote = await meeClientV2_2_1.getQuote({
         instructions: [
@@ -208,6 +208,15 @@ describe("mee.executeQuote", () => {
               }
             ],
             chainId: baseSepolia.id
+          },
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 0n
+              }
+            ],
+            chainId: optimismSepolia.id
           }
         ],
         feeToken: {
@@ -221,11 +230,7 @@ describe("mee.executeQuote", () => {
       const quoteType = await getQuoteType(meeClientV2_2_1, quote)
       expect(quoteType).toBe("simple")
 
-      console.log("quote hash:", quote.hash)
-
       const { hash } = await meeClientV2_2_1.executeQuote({ quote })
-
-      console.log("execute quote hash:", hash)
       expect(hash).toBeDefined()
 
       const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
