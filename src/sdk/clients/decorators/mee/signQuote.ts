@@ -1,4 +1,9 @@
-import { type GetEip712DomainReturnType, type Hex, concatHex, hashTypedData } from "viem"
+import {
+  type GetEip712DomainReturnType,
+  type Hex,
+  concatHex,
+  hashTypedData
+} from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import {
   type MeeVersionsWithChainId,

@@ -5,7 +5,8 @@ import {
   type Transport,
   isAddress,
   isHex,
-  zeroAddress
+  zeroAddress,
+  Hex
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { base, baseSepolia, chiliz, optimism } from "viem/chains"
@@ -27,6 +28,8 @@ import {
   toMultichainNexusAccount
 } from "./toMultiChainNexusAccount"
 import { toNexusAccount } from "./toNexusAccount"
+
+import { hashTypedData } from "viem"
 
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig
@@ -328,7 +331,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
-      
+
       test("works with mee version 2.1.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
@@ -341,6 +344,57 @@ describe("mee.toMultiChainNexusAccount", async () => {
           ]
         })
         await executeTx(nexusAccount)
+      })
+
+      test("produce hash for eip712 typed data sign", async () => {
+        const name = "Nexus"
+
+        const userOp1 = {
+          userOpHash: "0xb487febac9f1d06d0f5510f23ba4b5c52faabfe58ba771cbd62ec551be34e795" as Hex,
+          lowerBoundTimestamp: BigInt(0),
+          upperBoundTimestamp: BigInt(111)
+        }
+        const userOp2 = {
+          userOpHash: "0xa525b841e423641448ae79b8eb0f60e42baf0cb497278c251dfe49da7dc1da48" as Hex,
+          lowerBoundTimestamp: BigInt(0),
+          upperBoundTimestamp: BigInt(111)
+        }
+
+        const userOps = [userOp1, userOp2]
+
+        const signablePayload = {
+          domain: {
+            name: name // name
+            // version: eip712Domain.domain.version // version, not used for the domain separator here
+            // chainId and verifyingContract are not used for the domain separator here
+            // since they are included in the userOpHash for every userOp
+            // chainId:,
+            // verifyingContract:
+          },
+      
+          types: {
+            MeeUserOp: [
+              { name: "userOpHash", type: "bytes32" },
+              { name: "lowerBoundTimestamp", type: "uint256" },
+              { name: "upperBoundTimestamp", type: "uint256" }
+            ],
+            SuperTx: [{ name: "meeUserOps", type: "MeeUserOp[]" }]
+          },
+      
+          primaryType: "SuperTx" as const,
+      
+          message: {
+            meeUserOps: userOps.map((userOp) => ({
+              userOpHash: userOp.userOpHash,
+              lowerBoundTimestamp: userOp.lowerBoundTimestamp,
+              upperBoundTimestamp: userOp.upperBoundTimestamp
+            }))
+          }
+        }
+
+
+        const hash = hashTypedData(signablePayload)
+        console.log("hash for eip712 typed data sign", hash)
       })
 
       test("works with mee version 2.2.1", async () => {
