@@ -282,7 +282,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
 
         console.log("mee userOp hash", quote.userOps[0].meeUserOpHash)
         console.log("hash", quote.hash)
-        
+
         const { hash } = await meeClient.executeQuote({
           quote
         })
@@ -328,6 +328,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
+      
       test("works with mee version 2.1.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
@@ -341,6 +342,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
+
       test("works with mee version 2.2.1", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
