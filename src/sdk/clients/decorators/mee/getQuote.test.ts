@@ -232,26 +232,27 @@ describe("mee.getQuote", () => {
       account: mcNexus
     })
 
-    await expect(meeClient.getQuote({
-      instructions: [
-        {
-          calls: [
-            {
-              to: eoaAccount.address,
-              value: 1n
-            }
-          ],
-          chainId: baseSepolia.id
-        },
-        {
-          calls: [
-            {
-              to: eoaAccount.address,
-              value: 1n
-            }
-          ],
-          chainId: optimismSepolia.id
-        }
+    await expect(
+      meeClient.getQuote({
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: baseSepolia.id
+          },
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: optimismSepolia.id
+          }
         ],
         feeToken: {
           address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
