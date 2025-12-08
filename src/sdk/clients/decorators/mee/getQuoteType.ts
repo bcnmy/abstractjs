@@ -78,11 +78,6 @@ const isPermitQuote = async (
     }
   } as GetPermitQuotePayload
 
- const permitEnabled = await isPermitTokenInfo(
-  client,
-  trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
-)
-
   // after this point, trigger can only be of type TokenTrigger
   try {
     const [permitEnabled, { fallbackToOnchainMode }] = await Promise.all([
