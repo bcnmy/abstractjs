@@ -286,4 +286,3 @@ describe("mee.executeQuote", () => {
 })
 
 // TODO: add test for sponsored permit mode with MEE >= 2.2.1
-

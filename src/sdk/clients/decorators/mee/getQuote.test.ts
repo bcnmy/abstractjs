@@ -661,7 +661,7 @@ describe("mee.getQuote", () => {
   })
 
   test.runIf(runPaidTests)(
-    "Should execute quote for sponsored super transaction (Testnet)",
+    "Should execute quote for sponsored super transaction on Testnet",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
         signer: eoaAccount,
@@ -713,7 +713,7 @@ describe("mee.getQuote", () => {
   )
 
   test.runIf(runPaidTests)(
-    "Should execute quote for sponsored super transaction (Mainnet)",
+    "Should execute quote for sponsored super transaction on Mainnet",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
         signer: eoaAccount,

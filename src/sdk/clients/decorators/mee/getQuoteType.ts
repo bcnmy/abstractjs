@@ -69,10 +69,19 @@ const isPermitQuote = async (
   // This is a dummy quote payload to get the permit token fallback to onchain mode state.
   const dummyQuotePayload = {
     ...payload,
+    trigger: {
+      ...trigger,
+      amount: trigger.amount ?? 1n // quote payload should have an amount to prepare signable permit quote payload
+    },
     quote: {
       hash: "0xffff" // Dummy sprtxHash
     }
   } as GetPermitQuotePayload
+
+ const permitEnabled = await isPermitTokenInfo(
+  client,
+  trigger as TokenTrigger // trigger can only be of type TokenTrigger at this point
+)
 
   // after this point, trigger can only be of type TokenTrigger
   try {

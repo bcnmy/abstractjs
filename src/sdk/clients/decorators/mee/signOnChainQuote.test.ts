@@ -494,6 +494,9 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
           })
         ]
       })
+
+      console.log(fusionQuote.quote.quoteType)
+
       // Execute the quote
       const { hash } = await meeClient.executeFusionQuote({
         fusionQuote

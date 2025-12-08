@@ -110,7 +110,9 @@ export const getOnChainQuote = async (
       gasLimit: gasLimit || DEFAULT_GAS_LIMIT,
       ...(cleanUps ? { cleanUps } : {}),
       ...rest
-    })
+    },
+    "onchain"
+  )
 
     return {
       quote,
