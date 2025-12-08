@@ -225,6 +225,7 @@ export const signQuote = async (
     const typedDataSignature = await signer.signTypedData(signablePayload)
 
     const eip712HashToSign = hashTypedData(signablePayload)
+    console.log("eip712HashToSign", eip712HashToSign)
 
     return formatSignedQuotePayload(
       quote,

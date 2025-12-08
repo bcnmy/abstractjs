@@ -22,7 +22,12 @@ import {
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
-import { type MeeClient, createMeeClient, getDefaultMEENetworkUrl, getDefaultMeeGasTank } from "../../createMeeClient"
+import {
+  type MeeClient,
+  createMeeClient,
+  getDefaultMEENetworkUrl,
+  getDefaultMeeGasTank
+} from "../../createMeeClient"
 import type { ExecuteSignedQuotePayload } from "./executeSignedQuote"
 import { type FeeTokenInfo, type Instruction, getQuote } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
@@ -92,7 +97,10 @@ describe("mee.executeQuote", () => {
       ]
     })
 
-    meeClientV2_2_1 = await createMeeClient({ account: mcNexusV2_2_1, apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf" })
+    meeClientV2_2_1 = await createMeeClient({
+      account: mcNexusV2_2_1,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
   })
 
   describe("mocked", () => {
@@ -139,148 +147,150 @@ describe("mee.executeQuote", () => {
     })
   })
 
-  test(
-    "should execute quote with 'smart-account' mode with personal sign (MEE = 2.1.0)",
-    async () => {
-      const executeQuote = (await import("./executeQuote")).default
+  test("should execute quote with 'smart-account' mode with personal sign (MEE = 2.1.0)", async () => {
+    const executeQuote = (await import("./executeQuote")).default
 
-      const mcNexusV2_1_0 = await toMultichainNexusAccount({
-        signer: eoaAccount,
-        chainConfigurations: [
-          {
-            chain: baseSepolia,
-            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-            version: getMEEVersion(MEEVersion.V2_1_0)
-          }
-        ]
-      })
+    const mcNexusV2_1_0 = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
 
-      const meeClientV2_1_0 = await createMeeClient({
-        account: mcNexusV2_1_0
-      })
+    const meeClientV2_1_0 = await createMeeClient({
+      account: mcNexusV2_1_0
+    })
 
-      const quote = await meeClientV2_1_0.getQuote({
-        instructions: [
-          {
-            calls: [
-              {
-                to: eoaAccount.address,
-                value: 0n
-              }
-            ],
-            chainId: baseSepolia.id
-          }
-        ],
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+    const quote = await meeClientV2_1_0.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 0n
+            }
+          ],
           chainId: baseSepolia.id
         }
-      })
+      ],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
 
-      expect(quote).toBeDefined()
-      expect(quote.hash).toBeDefined()
+    expect(quote).toBeDefined()
+    expect(quote.hash).toBeDefined()
 
-      const { hash } = await meeClientV2_1_0.executeQuote({ quote })
+    const { hash } = await meeClientV2_1_0.executeQuote({ quote })
 
-      expect(hash).toBeDefined()
+    expect(hash).toBeDefined()
 
-      const receipt = await meeClientV2_1_0.waitForSupertransactionReceipt({
-        hash,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
-      })
+    const receipt = await meeClientV2_1_0.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
 
-      expect(receipt).toBeDefined()
-      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    }
-  )
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
 
   // should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)
-  test(
-    "should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)",
-    async () => {
-      const quote = await meeClientV2_2_1.getQuote({
-        instructions: [
-          {
-            calls: [
-              {
-                to: eoaAccount.address,
-                value: 0n
-              }
-            ],
-            chainId: baseSepolia.id
-          },
-          {
-            calls: [
-              {
-                to: eoaAccount.address,
-                value: 0n
-              }
-            ],
-            chainId: optimismSepolia.id
-          }
-        ],
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+  test("should execute quote with 'smart-account' mode with typed data sign (MEE >= 2.2.1)", async () => {
+    const quote = await meeClientV2_2_1.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 0n
+            }
+          ],
           chainId: baseSepolia.id
-        }
-      })
-
-      expect(quote).toBeDefined()
-      expect(quote.hash).toBeDefined()
-      const quoteType = await getQuoteType(meeClientV2_2_1, quote)
-      expect(quoteType).toBe("simple")
-
-      const { hash } = await meeClientV2_2_1.executeQuote({ quote })
-      expect(hash).toBeDefined()
-
-      const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
-        hash,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
-      })
-
-      expect(receipt).toBeDefined()
-      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    }
-  )
-
-  // should execute sponsored quote with with MEE >= 2.2.1
-  test(
-    "should execute sponsored quote with with MEE >= 2.2.1",
-    async () => {
-
-      const quote = await meeClientV2_2_1.getQuote({
-        sponsorship: true,
-        sponsorshipOptions: {
-          url: getDefaultMEENetworkUrl(true),
-          gasTank: getDefaultMeeGasTank(true)
         },
-        instructions: [
-          {
-            calls: [{ to: eoaAccount.address, value: 0n }],
-            chainId: baseSepolia.id
-          },
-          {
-            calls: [{ to: eoaAccount.address, value: 0n }],
-            chainId: optimismSepolia.id
-          }
-        ]
-      })
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 0n
+            }
+          ],
+          chainId: optimismSepolia.id
+        }
+      ],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
 
-      expect(quote).toBeDefined()
-      expect(quote.hash).toBeDefined()
-      const quoteType = await getQuoteType(meeClientV2_2_1, quote)
-      expect(quoteType).toBe("simple")
+    expect(quote).toBeDefined()
+    expect(quote.hash).toBeDefined()
+    const quoteType = await getQuoteType(meeClientV2_2_1, quote)
+    expect(quoteType).toBe("simple")
 
-      const { hash } = await meeClientV2_2_1.executeQuote({ quote })
-      expect(hash).toBeDefined()
+    const { hash } = await meeClientV2_2_1.executeQuote({ quote })
+    expect(hash).toBeDefined()
 
-      const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
-        hash,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
-      })
+    const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
 
-      expect(receipt).toBeDefined()
-      expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    }
-  )
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  // should execute sponsored simple modequote with with MEE >= 2.2.1
+  test("should execute simple mode sponsored quote with with MEE >= 2.2.1", async () => {
+    const quote = await meeClientV2_2_1.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      instructions: [
+        {
+          calls: [{ to: eoaAccount.address, value: 0n }],
+          chainId: baseSepolia.id
+        },
+        {
+          calls: [{ to: eoaAccount.address, value: 0n }],
+          chainId: optimismSepolia.id
+        }
+      ]
+    })
+
+    expect(quote).toBeDefined()
+    expect(quote.hash).toBeDefined()
+    const quoteType = await getQuoteType(meeClientV2_2_1, quote)
+    expect(quoteType).toBe("simple")
+
+    const { hash } = await meeClientV2_2_1.executeQuote({ quote })
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
 })
+
+// TODO: add test for sponsored permit mode with MEE >= 2.2.1
+
+
+/*
+
+3
+671a36783d20758b4ecb234de622fad1fa3a4242a325aa37771dda75f16132eb
+2df42e0a2463cbfa449097cbff25bc1df7f079fced6c6468e0465e14428f84e3
+d78767f7b8d93d1edb517e057e357d0885f4ad01dc60a9318926f86e50fccced
+
+*/
