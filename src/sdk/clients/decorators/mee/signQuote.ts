@@ -1,9 +1,4 @@
-import {
-  type GetEip712DomainReturnType,
-  type Hex,
-  concatHex,
-  hashTypedData
-} from "viem"
+import { type GetEip712DomainReturnType, type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import {
   type MeeVersionsWithChainId,
@@ -223,9 +218,6 @@ export const signQuote = async (
     const result = prepareTypedDataSignableQuotePayload(quote, eip712Domain)
     const { signablePayload, metadata } = result
     const typedDataSignature = await signer.signTypedData(signablePayload)
-
-    const eip712HashToSign = hashTypedData(signablePayload)
-    console.log("eip712HashToSign", eip712HashToSign)
 
     return formatSignedQuotePayload(
       quote,
