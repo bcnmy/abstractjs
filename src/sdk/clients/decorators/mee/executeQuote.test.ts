@@ -233,6 +233,8 @@ describe("mee.executeQuote", () => {
     const quoteType = await getQuoteType(meeClientV2_2_1, quote)
     expect(quoteType).toBe("simple")
 
+    console.log(quote.quoteType)
+
     const { hash } = await meeClientV2_2_1.executeQuote({ quote })
     expect(hash).toBeDefined()
 
@@ -284,7 +286,6 @@ describe("mee.executeQuote", () => {
 })
 
 // TODO: add test for sponsored permit mode with MEE >= 2.2.1
-
 
 /*
 
