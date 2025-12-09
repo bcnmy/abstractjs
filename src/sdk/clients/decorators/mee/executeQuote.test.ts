@@ -283,6 +283,39 @@ describe("mee.executeQuote", () => {
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
+
+  // should execute permit mode sponsored quote with with MEE >= 2.2.1
+  test("should execute permit mode sponsored quote with with MEE >= 2.2.1", async () => {
+    const quote = await meeClientV2_2_1.getPermitQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      trigger: {
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        amount: 1n,
+        chainId: baseSepolia.id
+      },
+      instructions: [
+        {
+          calls: [{ to: eoaAccount.address, value: 0n }],
+          chainId: baseSepolia.id
+        },
+        {
+          calls: [{ to: eoaAccount.address, value: 0n }],
+          chainId: optimismSepolia.id
+        }
+      ]
+    })
+
+    expect(quote).toBeDefined()
+    expect(quote.quote.hash).toBeDefined()
+    const quoteType = await getQuoteType(meeClientV2_2_1, quote)
+    expect(quoteType).toBe("permit")
+
+    const { hash } = await meeClientV2_2_1.executeQuote({ quote: quote.quote })
+    expect(hash).toBeDefined()
+  })
 })
 
-// TODO: add test for sponsored permit mode with MEE >= 2.2.1
