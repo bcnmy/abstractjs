@@ -318,4 +318,3 @@ describe("mee.executeQuote", () => {
     expect(hash).toBeDefined()
   })
 })
-

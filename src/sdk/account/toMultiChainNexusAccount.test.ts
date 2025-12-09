@@ -1,7 +1,6 @@
 import {
   http,
   type Chain,
-  type Hex,
   type LocalAccount,
   type Transport,
   isAddress,
@@ -28,8 +27,6 @@ import {
   toMultichainNexusAccount
 } from "./toMultiChainNexusAccount"
 import { toNexusAccount } from "./toNexusAccount"
-
-import { hashTypedData } from "viem"
 
 describe("mee.toMultiChainNexusAccount", async () => {
   let network: NetworkConfig

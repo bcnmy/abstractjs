@@ -41,7 +41,6 @@ import {
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import { getEip712Domain as getEip712DomainViemAction } from "viem/actions"
-import { _ } from "vitest/dist/chunks/reporters.d.BFLkQcL6.js"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
