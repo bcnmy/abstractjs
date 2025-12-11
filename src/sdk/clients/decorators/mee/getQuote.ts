@@ -709,7 +709,7 @@ export const getQuote = async (
 
   let finalInstructions = resolvedInstructions
 
-  const meeVersions = getMeeVersionsForQuote(
+  const meeVersions = getMeeVersionsForQuoteRequest(
     account_,
     resolvedInstructions,
     sponsorship,
@@ -1860,7 +1860,7 @@ const resolvePaymentUserOpVerificationGasLimitNonSponsored = (
  * const meeVersions = getMeeVersionsForQuote(account, instructions, sponsorship, feeToken)
  * ```
  */
-export function getMeeVersionsForQuote(
+export function getMeeVersionsForQuoteRequest(
   account: MultichainSmartAccount,
   instructions: Instruction[],
   sponsorship: boolean,

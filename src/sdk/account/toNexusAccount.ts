@@ -4,6 +4,7 @@ import {
   type Address,
   type Chain,
   type ClientConfig,
+  type GetEip712DomainReturnType,
   type Hex,
   type LocalAccount,
   type OneOf,
@@ -39,6 +40,7 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getEip712Domain as getEip712DomainViemAction } from "viem/actions"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
 import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
@@ -295,6 +297,9 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Nexus version config */
     version: MEEVersionConfig
+
+    /** EIP-712 domain for the account */
+    getEip712Domain: () => Promise<GetEip712DomainReturnType>
   }
 >
 
@@ -594,6 +599,8 @@ export const toNexusAccount = async (
   const getInitCode = () => concatHex([meeConfig.factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
+  let _eip712Domain: GetEip712DomainReturnType
+
   const accountId: NexusAccountId = (await publicClient.readContract({
     address: meeConfig.implementationAddress,
     abi: parseAbi(["function accountId() public view returns (string)"]),
@@ -622,6 +629,20 @@ export const toNexusAccount = async (
     }
 
     throw new Error("Failed to get account address")
+  }
+
+  /**
+   * Use viem helper to obtain and cache the eip712 domain for the account
+   */
+  const getEip712Domain = async (): Promise<GetEip712DomainReturnType> => {
+    if (!isNullOrUndefined(_eip712Domain)) return _eip712Domain
+    const eip712Domain = await getEip712DomainViemAction(publicClient, {
+      address: await getAddress(),
+      factory: meeConfig.factoryAddress,
+      factoryData
+    })
+    _eip712Domain = eip712Domain
+    return eip712Domain
   }
 
   /**
@@ -1013,6 +1034,7 @@ export const toNexusAccount = async (
       entryPointAddress: entryPoint07Address,
       getAddress,
       accountId,
+      getEip712Domain,
       getInitCode,
       getNonceWithKey,
       encodeExecute,

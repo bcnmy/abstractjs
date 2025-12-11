@@ -211,6 +211,59 @@ describe("mee.getQuote", () => {
     expect(quote.paymentInfo.callGasLimit).toBe(customGasLimit.toString())
   })
 
+  test("should revert for 'smart-account' mode if multichain account has inconsistent mee versions", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_2_1)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    await expect(
+      meeClient.getQuote({
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: baseSepolia.id
+          },
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: optimismSepolia.id
+          }
+        ],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+          chainId: baseSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
+    )
+  })
+
   test("Cleanup userOp should have extra time window", async () => {
     const transfer = mcNexus.build({
       type: "transfer",
@@ -608,7 +661,7 @@ describe("mee.getQuote", () => {
   })
 
   test.runIf(runPaidTests)(
-    "Should execute quote for sponsored super transaction (Testnet)",
+    "Should execute quote for sponsored super transaction on Testnet",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
         signer: eoaAccount,
@@ -660,7 +713,7 @@ describe("mee.getQuote", () => {
   )
 
   test.runIf(runPaidTests)(
-    "Should execute quote for sponsored super transaction (Mainnet)",
+    "Should execute quote for sponsored super transaction on Mainnet",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
         signer: eoaAccount,
