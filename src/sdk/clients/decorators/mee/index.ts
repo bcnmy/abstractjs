@@ -29,6 +29,10 @@ import getPermitQuote, {
   type GetPermitQuotePayload
 } from "./getPermitQuote"
 import { type GetQuoteParams, type GetQuotePayload, getQuote } from "./getQuote"
+import getSafeQuote, {
+  type GetSafeQuoteParams,
+  type GetSafeQuotePayload
+} from "./getSafeQuote"
 import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
   type GetSupertransactionReceiptPayload
@@ -54,6 +58,10 @@ import signQuote, {
   type SignQuotePayload,
   type SignQuoteParams
 } from "./signQuote"
+import signSafeQuote, {
+  type SignSafeQuoteParams,
+  type SignSafeQuotePayload
+} from "./signSafeQuote"
 import waitForSupertransactionReceipt, {
   type WaitForSupertransactionReceiptParams,
   type WaitForSupertransactionReceiptPayload
@@ -265,6 +273,20 @@ export type MeeActions = {
   getSupertransactionReceipt: (
     params: GetSupertransactionReceiptParams
   ) => Promise<GetSupertransactionReceiptPayload>
+
+  /**
+   * Get a Safe Smart Account quote for using Gnosis Safe as master account
+   * @param params - Parameters for generating the Safe quote
+   * @returns Promise resolving to Safe quote data
+   */
+  getSafeQuote: (params: GetSafeQuoteParams) => Promise<GetSafeQuotePayload>
+
+  /**
+   * Sign a Safe Smart Account quote
+   * @param params - Parameters for signing the Safe quote
+   * @returns Promise resolving to signed Safe quote data
+   */
+  signSafeQuote: (params: SignSafeQuoteParams) => Promise<SignSafeQuotePayload>
 }
 
 /**
@@ -301,7 +323,11 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
     executeFusionQuote: (params: SignFusionQuoteParameters) =>
       executeFusionQuote(meeClient, params),
     getSupertransactionReceipt: (params: GetSupertransactionReceiptParams) =>
-      getSupertransactionReceipt(meeClient, params)
+      getSupertransactionReceipt(meeClient, params),
+    getSafeQuote: (params: GetSafeQuoteParams) =>
+      getSafeQuote(meeClient, params),
+    signSafeQuote: (params: SignSafeQuoteParams) =>
+      signSafeQuote(meeClient, params)
   }
 }
 
@@ -326,3 +352,5 @@ export * from "./getQuoteType"
 export * from "./getGasToken"
 export * from "./getMmDtkQuote"
 export * from "./getSupportedFeeToken"
+export * from "./getSafeQuote"
+export * from "./signSafeQuote"

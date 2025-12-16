@@ -11,6 +11,11 @@ import {
   type SignPermitQuotePayload,
   signPermitQuote
 } from "./signPermitQuote"
+import {
+  type SignSafeQuoteParams,
+  type SignSafeQuotePayload,
+  signSafeQuote
+} from "./signSafeQuote"
 import { getMeeVersionsForQuote } from "./signQuote"
 
 /**
@@ -20,6 +25,7 @@ export type SignFusionQuoteParameters =
   | SignPermitQuoteParams
   | SignOnChainQuoteParams
   | SignMmDtkQuoteParams
+  | SignSafeQuoteParams
 
 /**
  * Union type for the payload returned by signFusionQuote
@@ -27,6 +33,7 @@ export type SignFusionQuoteParameters =
 export type SignFusionQuotePayload = (
   | SignOnChainQuotePayload
   | SignPermitQuotePayload
+  | SignSafeQuotePayload
 ) & {
   meeVersions: MeeVersionsWithChainId
 }
@@ -79,7 +86,16 @@ export const signFusionQuote = async (
       meeVersions
     }
   }
-  // if it is not mm-dtk, then it is permit or on-chain
+
+  // if safe account is provided, use safe-sa fusion mode
+  if ("safeAccount" in parameters && "safeWalletClient" in parameters) {
+    return {
+      ...(await signSafeQuote(client, parameters as SignSafeQuoteParams)),
+      meeVersions
+    }
+  }
+
+  // if it is not mm-dtk or safe, then it is permit or on-chain
   const signatureType =
     parameters.fusionQuote.quote.quoteType ||
     (await getQuoteType(client, parameters.fusionQuote))

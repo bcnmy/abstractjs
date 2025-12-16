@@ -11,7 +11,7 @@ import {
   prepareSignablePermitQuotePayload
 } from "./signPermitQuote"
 
-export type QuoteType = "simple" | "onchain" | "permit" | "mm-dtk"
+export type QuoteType = "simple" | "onchain" | "permit" | "mm-dtk" | "safe-sa"
 
 export const isPermitTokenInfo = async (
   client: BaseMeeClient,
