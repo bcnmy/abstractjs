@@ -1,15 +1,25 @@
-import type {
-  Address,
-  Hex,
-  OneOf,
-  Prettify,
-  SignableMessage,
-  TypedDataDefinition,
-  TypedDataDomain,
-  WalletClient
+import {
+  type Address,
+  type Hex,
+  type OneOf,
+  type Prettify,
+  type SignableMessage,
+  type TypedDataDefinition,
+  type TypedDataDomain,
+  type WalletClient,
+  parseAbi,
+  publicActions
 } from "viem"
 import { DUMMY_SIGNATURE } from ".."
 import type { Signer } from "../../account"
+
+/**
+ * ERC-7739 support detection constants
+ * @see https://eips.ethereum.org/EIPS/eip-7739#support-detection
+ */
+const ERC7739_DETECTION_HASH: Hex =
+  "0x7739773977397739773977397739773977397739773977397739773977397739"
+const ERC7739_MAGIC_PREFIX = "0x77390" // bytes4(0x7739000x) where x is version
 
 export type GenericValidatorConfig<
   T extends ValidatorRequiredConfig = ValidatorRequiredConfig
@@ -112,12 +122,20 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
   let _erc7739VersionSupported: number | undefined = erc7739VersionSupported_
 
   const erc7739VersionSupported = async (): Promise<number> => {
-    if (!_erc7739VersionSupported) {
-      // const returnData =
-      // TODO:  add actual call to the module to get the version supported
-      _erc7739VersionSupported = 0
+    if (_erc7739VersionSupported === undefined) {
+      // If walletClient is available, detect ERC-7739 version from contract
+      if (walletClient) {
+        _erc7739VersionSupported = await detectErc7739Version(
+          walletClient,
+          module
+        )
+      } else {
+        // No walletClient available, can not detect ERC-7739 support
+        // assume no ERC-7739 support
+        _erc7739VersionSupported = 0
+      }
     }
-    return _erc7739VersionSupported!
+    return _erc7739VersionSupported
   }
 
   const signMessage = async (message: SignableMessage): Promise<Hex> => {
@@ -172,5 +190,42 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     signMessageErc7739,
     signTypedDataErc7739,
     ...rest
+  }
+}
+
+/**
+ * Detects ERC-7739 version support by calling isValidSignature on the module contract
+ * @param walletClient - The wallet client to use for the read call
+ * @param moduleAddress - The address of the module contract
+ * @returns The ERC-7739 version number (0 if not supported)
+ */
+const detectErc7739Version = async (
+  walletClient: WalletClient,
+  moduleAddress: Address
+): Promise<number> => {
+  try {
+    const client = walletClient.extend(publicActions)
+    const result = await client.readContract({
+      address: moduleAddress,
+      abi: parseAbi([
+        "function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4)"
+      ]),
+      functionName: "isValidSignature",
+      args: [ERC7739_DETECTION_HASH, "0x"]
+    })
+
+    // Check if result matches magic prefix 0x77390xxx
+    if (
+      typeof result === "string" &&
+      result.toLowerCase().startsWith(ERC7739_MAGIC_PREFIX)
+    ) {
+      // Extract version from last digit (e.g., 0x77390001 -> version 1)
+      const versionHex = result.slice(-1)
+      return Number.parseInt(versionHex, 16)
+    }
+    return 0
+  } catch {
+    // If the call fails, module doesn't support ERC-7739
+    return 0
   }
 }

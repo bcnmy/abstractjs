@@ -46,6 +46,7 @@ import {
 import { DEFAULT_MEE_VERSION } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
 import { getMEEVersion } from "../modules"
+import { toOwnableModule } from "../modules/validators/ownable"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
   addressEquals,
@@ -460,7 +461,60 @@ describe("nexus.account", async () => {
     expect(nexusResponse).toEqual("0x1626ba7e")
   })
 
-  // TODO: add test to sign with vanilla 1271 when module does not support 7739
+  test("should sign with vanilla 1271 when module does not support 7739", async () => {
+    // Create an Ownable module (which doesn't support ERC-7739)
+    const ownableModule = toOwnableModule({
+      signer: eoaAccount,
+      threshold: 1,
+      owners: [eoaAccount.address]
+    })
+
+    // Verify the module doesn't support ERC-7739
+    expect(await ownableModule.erc7739VersionSupported()).toBe(0)
+
+    // Install the Ownable module on the existing nexus account
+    const userOpHash = await nexusClient.installModule({
+      module: {
+        type: "validator",
+        address: ownableModule.module,
+        initData: ownableModule.initData
+      }
+    })
+
+    // Wait for the module installation to complete
+    const receipt = await nexusClient.waitForUserOperationReceipt({
+      hash: userOpHash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+    expect(receipt.success).toBe(true)
+
+    // Set the Ownable module as the active module
+    nexusAccount.setModule(ownableModule)
+
+    // Verify the active module is now the Ownable module
+    expect(nexusAccount.getModule().module).toBe(ownableModule.module)
+    expect(await nexusAccount.getModule().erc7739VersionSupported()).toBe(0)
+
+    // Sign a message with the non-7739 module
+    const message = "hello vanilla 1271"
+    const signature = await nexusAccount.signMessage({ message })
+
+    // Verify signature length: should be 20 bytes (module address) + 65 bytes (ECDSA signature) = 85 bytes = 170 hex chars + "0x" prefix
+    // In hex: "0x" + 40 chars (address) + 130 chars (signature) = 172 chars total
+    expect(signature.length).toBe(172)
+
+    // Verify the signature is valid via isValidSignature on the contract
+    const contractResponse = await testClient.readContract({
+      address: nexusAccountAddress,
+      abi: parseAbi([
+        "function isValidSignature(bytes32,bytes) external view returns (bytes4)"
+      ]),
+      functionName: "isValidSignature",
+      args: [hashMessage(message), signature]
+    })
+
+    expect(contractResponse).toBe(eip1271MagicValue)
+  })
 
   test("check that ethers makeNonceKey creates the same key as the SDK", async () => {
     function makeNonceKey(
