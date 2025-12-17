@@ -125,42 +125,14 @@ describe("nexus.account", async () => {
       index: 102n // undeployed
     })
 
-    const message = "0x1234"
-
+    const message = "hello world"
     const undeployedAccountAddress = await undeployedAccount.getAddress()
     expect(await undeployedAccount.isDeployed()).toBe(false)
-    const data = hashMessage(message)
 
-    // Calculate the domain separator
-    const domainSeparator = keccak256(
-      encodeAbiParameters(
-        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
-        [
-          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
-          keccak256(toBytes(NEXUS_DOMAIN_NAME)),
-          keccak256(toBytes(NEXUS_DOMAIN_VERSION)),
-          BigInt(chain.id),
-          undeployedAccountAddress
-        ]
-      )
-    )
+    // Sign the message using ERC-7739 PersonalSign flow (handled automatically by the SDK)
+    const signature = await undeployedAccount.signMessage({ message })
 
-    // Calculate the parent struct hash
-    const parentStructHash = keccak256(
-      encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
-        keccak256(toBytes("PersonalSign(bytes prefixed)")),
-        data
-      ])
-    )
-
-    // Calculate the final hash
-    const resultHash: Hex = keccak256(
-      concat(["0x1901", domainSeparator, parentStructHash])
-    )
-    const signature = await undeployedAccount.signMessage({
-      message: { raw: toBytes(resultHash) }
-    })
-
+    // Verify the signature using viem's verifyMessage (supports EIP-6492 for undeployed accounts)
     const viemResponse = await testClient.verifyMessage({
       address: undeployedAccountAddress,
       message,
@@ -171,52 +143,26 @@ describe("nexus.account", async () => {
   })
 
   test("should check isValidSignature PersonalSign is valid", async () => {
-    const meta = await getAccountMeta(testClient, nexusAccountAddress)
-    const data = hashMessage("0x1234")
+    const message = "hello world"
 
-    // Calculate the domain separator
-    const domainSeparator = keccak256(
-      encodeAbiParameters(
-        parseAbiParameters("bytes32, bytes32, bytes32, uint256, address"),
-        [
-          keccak256(toBytes(NEXUS_DOMAIN_TYPEHASH)),
-          keccak256(toBytes(meta.name)),
-          keccak256(toBytes(meta.version)),
-          BigInt(chain.id),
-          nexusAccountAddress
-        ]
-      )
-    )
+    // Sign the message using ERC-7739 PersonalSign flow (handled automatically by the SDK)
+    const signature = await nexusAccount.signMessage({ message })
 
-    const parentStructHash = keccak256(
-      encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
-        keccak256(toBytes("PersonalSign(bytes prefixed)")),
-        hashMessage(data)
-      ])
-    )
-
-    // Calculate the final hash
-    const resultHash: Hex = keccak256(
-      concat(["0x1901", domainSeparator, parentStructHash])
-    )
-
-    const signature = await nexusAccount.signMessage({
-      message: { raw: toBytes(resultHash) }
+    // Verify using viem's verifyMessage
+    const viemResponse = await testClient.verifyMessage({
+      address: nexusAccountAddress,
+      message,
+      signature
     })
 
+    // Verify by calling isValidSignature directly on the contract
     const contractResponse = await testClient.readContract({
       address: nexusAccountAddress,
       abi: parseAbi([
         "function isValidSignature(bytes32,bytes) external view returns (bytes4)"
       ]),
       functionName: "isValidSignature",
-      args: [hashMessage(data), signature]
-    })
-
-    const viemResponse = await testClient.verifyMessage({
-      address: nexusAccountAddress,
-      message: data,
-      signature
+      args: [hashMessage(message), signature]
     })
 
     expect(contractResponse).toBe(eip1271MagicValue)
@@ -415,21 +361,17 @@ describe("nexus.account", async () => {
       verifyingContract: TOKEN_WITH_PERMIT as Address,
       version: "1"
     }
-    const primaryType = "Contents"
+    const primaryType = "Permit"
     const types = {
-      Contents: [
-        {
-          name: "stuff",
-          type: "bytes32"
-        }
+      Permit: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" }
       ]
     }
 
-    const permitTypehash = keccak256(
-      toBytes(
-        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-      )
-    )
     const nonce = (await testClient.readContract({
       address: TOKEN_WITH_PERMIT as Address,
       abi: TokenWithPermitAbi,
@@ -440,28 +382,12 @@ describe("nexus.account", async () => {
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600) // 1 hour from now
 
     const message = {
-      stuff: keccak256(
-        encodeAbiParameters(
-          parseAbiParameters(
-            "bytes32, address, address, uint256, uint256, uint256"
-          ),
-          [
-            permitTypehash,
-            nexusAccountAddress,
-            nexusAccountAddress,
-            parseEther("2"),
-            nonce,
-            deadline
-          ]
-        )
-      )
+      owner: nexusAccountAddress,
+      spender: nexusAccountAddress,
+      value: parseEther("2"),
+      nonce,
+      deadline
     }
-
-    const appDomainSeparator = domainSeparator({ domain: appDomain })
-
-    const contentsHash = keccak256(
-      concat(["0x1901", appDomainSeparator, message.stuff])
-    )
 
     const finalSignature = await nexusClient.signTypedData({
       domain: appDomain,
@@ -469,6 +395,31 @@ describe("nexus.account", async () => {
       types,
       message
     })
+
+    // For ERC-7739, the contentsHash is the standard EIP-712 hash of the typed data
+    const appDomainSeparator = domainSeparator({ domain: appDomain })
+    const permitStructHash = keccak256(
+      encodeAbiParameters(
+        parseAbiParameters(
+          "bytes32, address, address, uint256, uint256, uint256"
+        ),
+        [
+          keccak256(
+            toBytes(
+              "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+            )
+          ),
+          nexusAccountAddress,
+          nexusAccountAddress,
+          parseEther("2"),
+          nonce,
+          deadline
+        ]
+      )
+    )
+    const contentsHash = keccak256(
+      concat(["0x1901", appDomainSeparator, permitStructHash])
+    )
 
     const nexusResponse = await testClient.readContract({
       address: nexusAccountAddress,

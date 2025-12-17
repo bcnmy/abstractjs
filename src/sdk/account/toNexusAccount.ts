@@ -19,16 +19,10 @@ import {
   type WalletClient,
   concatHex,
   createPublicClient,
-  domainSeparator,
   encodeAbiParameters,
   encodeFunctionData,
   encodePacked,
-  keccak256,
   parseAbi,
-  parseAbiParameters,
-  toBytes,
-  toHex,
-  validateTypedData,
   zeroAddress
 } from "viem"
 import {
@@ -69,23 +63,14 @@ import {
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
 import { toInitData } from "./utils"
-import {
-  EXECUTE_BATCH,
-  EXECUTE_SINGLE,
-  PARENT_TYPEHASH
-} from "./utils/Constants"
+import { EXECUTE_BATCH, EXECUTE_SINGLE } from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
 import {
   type EthersWallet,
-  type TypedDataWith712,
   addressEquals,
-  eip712WrapHash,
-  getAccountDomainStructFields,
-  getTypesForEIP712Domain,
   isNullOrUndefined,
-  supportsCancun,
-  typeToString
+  supportsCancun
 } from "./utils/Utils"
 import {
   type MEEVersionConfig,
@@ -830,101 +815,52 @@ export const toNexusAccount = async (
   }
 
   /**
-   * @description Signs typed data
+   * @description Signs typed data. Uses ERC-7739 TypedDataSign flow for modules that support it.
    * @param parameters - The typed data parameters
-   * @returns The signature
+   * @returns The signature with module address prepended (Nexus-specific format)
    */
   async function signTypedData<
     const typedData extends TypedData | Record<string, unknown>,
     primaryType extends keyof typedData | "EIP712Domain" = keyof typedData
   >(parameters: TypedDataDefinition<typedData, primaryType>): Promise<Hex> {
-    const { message, primaryType, types: _types, domain } = parameters
+    // Cast to base TypedDataDefinition for module interface compatibility
+    const typedDataParams = parameters as TypedDataDefinition
 
-    if (!domain) throw new Error("Missing domain")
-    if (!message) throw new Error("Missing message")
-
-    const types = {
-      EIP712Domain: getTypesForEIP712Domain({ domain }),
-      ..._types
-    }
-
-    // @ts-ignore: Comes from nexus parent typehash
-    const messageStuff: Hex = message.stuff
-
-    // @ts-ignore
-    validateTypedData({
-      domain,
-      message,
-      primaryType,
-      types
-    })
-
-    const appDomainSeparator = domainSeparator({ domain })
-    const accountDomainStructFields = await getAccountDomainStructFields(
-      publicClient,
-      await getAddress()
-    )
-
-    const parentStructHash = keccak256(
-      encodePacked(
-        ["bytes", "bytes"],
-        [
-          encodeAbiParameters(parseAbiParameters(["bytes32, bytes32"]), [
-            keccak256(toBytes(PARENT_TYPEHASH)),
-            messageStuff
-          ]),
-          accountDomainStructFields
-        ]
-      )
-    )
-
-    const wrappedTypedHash = eip712WrapHash(
-      parentStructHash,
-      appDomainSeparator
-    )
-
-    let signature =
+    // Use ERC-7739 signing if supported, otherwise fall back to standard signing
+    const signature =
       (await module.erc7739VersionSupported()) === 0
-        ? await module.signMessage({ raw: toBytes(wrappedTypedHash) })
-        : await module.signMessageErc7739({ raw: toBytes(wrappedTypedHash) })
+        ? await module.signTypedData(typedDataParams)
+        : await module.signTypedDataErc7739(
+            typedDataParams,
+            (await getEip712Domain()).domain
+          )
 
-    const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
-
-    const signatureData = concatHex([
-      signature,
-      appDomainSeparator,
-      messageStuff,
-      toHex(contentsType),
-      toHex(contentsType.length, { size: 2 })
-    ])
-
-    signature = encodePacked(
-      ["address", "bytes"],
-      [module.module, signatureData]
-    )
-
-    return signature
+    // Prepend module address to signature (Nexus-specific wrapper)
+    return encodePacked(["address", "bytes"], [module.module, signature])
   }
 
   /**
-   * @description Signs a message
+   * @description Signs a message. Uses ERC-7739 PersonalSign flow for modules that support it.
    * @param params - The parameters for signing
    * @param params.message - The message to sign
-   * @returns The signature
+   * @returns The signature with module address prepended (Nexus-specific format)
    */
   const signMessage = async (parameters: {
     message: SignableMessage
   }): Promise<Hex> => {
     const { message } = parameters
+
+    // Use ERC-7739 signing if supported, otherwise fall back to standard signing
     const signature =
       (await module.erc7739VersionSupported()) === 0
         ? await module.signMessage(message)
-        : await module.signMessageErc7739(message)
-    const signatureWithModuleAddress = encodePacked(
-      ["address", "bytes"],
-      [module.module, signature]
-    )
-    return signatureWithModuleAddress
+        : await module.signMessageErc7739(
+            message,
+            (await getEip712Domain()).domain
+          )
+
+    // Prepend module address to signature (Nexus-specific wrapper)
+    return encodePacked(["address", "bytes"], [module.module, signature])
   }
 
   /**

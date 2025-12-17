@@ -5,6 +5,7 @@ import type {
   Prettify,
   SignableMessage,
   TypedDataDefinition,
+  TypedDataDomain,
   WalletClient
 } from "viem"
 import { DUMMY_SIGNATURE } from ".."
@@ -61,14 +62,23 @@ export type ValidatorActions = {
    *
    * Signs a message as per EIP-7739 PersonalSign flow.
    * @param message - The message to sign.
+   * @param verifierDomain - The EIP-712 domain of the verifier (smart account) for ERC-7739.
    * @returns A promise that resolves to a hexadecimal string representing the signature.
    */
-  signMessageErc7739: (message: SignableMessage) => Promise<Hex>
+  signMessageErc7739: (
+    message: SignableMessage,
+    verifierDomain: TypedDataDomain
+  ) => Promise<Hex>
   /**
    * Signs typed data as per EIP-7739 TypedDataSign flow
+   * @param typedData - The typed data to sign.
+   * @param verifierDomain - The EIP-712 domain of the verifier (smart account) for ERC-7739.
    * @returns A promise that resolves to a hexadecimal string representing the signature.
    **/
-  signTypedDataErc7739: (typedData: TypedDataDefinition) => Promise<Hex>
+  signTypedDataErc7739: (
+    typedData: TypedDataDefinition,
+    verifierDomain: TypedDataDomain
+  ) => Promise<Hex>
 }
 
 export type Validator = Prettify<
@@ -132,11 +142,17 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     })
   }
 
-  const signMessageErc7739 = () => {
+  const signMessageErc7739 = (
+    _message: SignableMessage,
+    _verifierDomain: TypedDataDomain
+  ) => {
     throw new Error("Erc7739 PersonalSign flow is not supported by this module")
   }
 
-  const signTypedDataErc7739 = () => {
+  const signTypedDataErc7739 = (
+    _typedData: TypedDataDefinition,
+    _verifierDomain: TypedDataDomain
+  ): Promise<Hex> => {
     throw new Error(
       "Erc7739 TypedDataSign flow is not supported by this module"
     )

@@ -2,8 +2,10 @@ import {
   type Hex,
   type SignableMessage,
   type TypedDataDefinition,
+  type TypedDataDomain,
   type WalletClient,
-  concatHex
+  concatHex,
+  validateTypedData
 } from "viem"
 import { erc7739Actions } from "viem/experimental"
 import { DUMMY_SIGNATURE } from "../smartSessions"
@@ -44,14 +46,56 @@ export const toMeeK1Module = (
 
   const walletClient7739 = parameters.walletClient.extend(erc7739Actions())
 
-  const signMessageErc7739 = async (message: SignableMessage): Promise<Hex> => {
-    return "0x00"
+  /**
+   * Signs a message using ERC-7739 PersonalSign flow
+   * @param message - The message to sign
+   * @param verifierDomain - The EIP-712 domain of the verifier (smart account)
+   * @returns The ERC-7739 wrapped signature
+   */
+  const signMessageErc7739 = async (
+    message: SignableMessage,
+    verifierDomain: TypedDataDomain
+  ): Promise<Hex> => {
+    return await walletClient7739.signMessage({
+      account: parameters.walletClient.account!,
+      message,
+      verifierDomain: verifierDomain as Required<
+        Pick<
+          TypedDataDomain,
+          "chainId" | "name" | "verifyingContract" | "version"
+        >
+      >
+    })
   }
 
+  /**
+   * Signs typed data using ERC-7739 TypedDataSign flow
+   * @param typedData - The typed data to sign
+   * @param verifierDomain - The EIP-712 domain of the verifier (smart account)
+   * @returns The ERC-7739 wrapped signature
+   */
   const signTypedDataErc7739 = async (
-    typedData: TypedDataDefinition
+    typedData: TypedDataDefinition,
+    verifierDomain: TypedDataDomain
   ): Promise<Hex> => {
-    return "0x00"
+    const { domain, types, primaryType, message } = typedData
+
+    // Validate typed data before signing
+    validateTypedData({ domain, types, primaryType, message })
+
+    return await walletClient7739.signTypedData({
+      account: parameters.walletClient.account!,
+      domain: domain!,
+      types: types!,
+      primaryType: primaryType!,
+      message: message!,
+      verifierDomain: verifierDomain as Required<
+        Pick<
+          TypedDataDomain,
+          "chainId" | "name" | "verifyingContract" | "version" | "salt"
+        >
+      >
+    })
   }
 
   return toValidator({
