@@ -483,8 +483,7 @@ describe("nexus.account", async () => {
 
     // Wait for the module installation to complete
     const receipt = await nexusClient.waitForUserOperationReceipt({
-      hash: userOpHash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
+      hash: userOpHash
     })
     expect(receipt.success).toBe(true)
 
