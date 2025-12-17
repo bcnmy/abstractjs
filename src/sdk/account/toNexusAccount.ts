@@ -772,6 +772,17 @@ export const toNexusAccount = async (
   }
 
   /**
+   * @description Gets the factory arguments for the account
+   * @returns The factory arguments
+   */
+  const getFactoryArgs = async (): Promise<{ factory: Address; factoryData: Hex }> => {
+    return {
+      factory: meeConfig.factoryAddress,
+      factoryData
+    }
+  }
+
+  /**
    * @description Gets the nonce for the account along with modified key
    * @param parameters - Optional parameters for getting the nonce
    * @returns The nonce and the key
@@ -869,8 +880,11 @@ export const toNexusAccount = async (
       appDomainSeparator
     )
 
-    let signature = await module.signMessage({ raw: toBytes(wrappedTypedHash) })
-    const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
+    let signature = await module.erc7739VersionSupported() === 0 ? 
+      await module.signMessage({ raw: toBytes(wrappedTypedHash) }) : 
+      await module.signMessageErc7739({ raw: toBytes(wrappedTypedHash) })
+    
+      const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
 
     const signatureData = concatHex([
       signature,
@@ -888,7 +902,20 @@ export const toNexusAccount = async (
     return signature
   }
 
-  // function signTypedDataVanilla1271
+  /**
+     * @description Signs a message
+     * @param params - The parameters for signing
+     * @param params.message - The message to sign
+     * @returns The signature
+     */
+  const signMessage = async (parameters: { message: SignableMessage }): Promise<Hex> => {
+    const { message } = parameters
+    const signature = await module.erc7739VersionSupported() === 0 ? 
+      await module.signMessage(message) : 
+      await module.signMessageErc7739(message)
+    const signatureWithModuleAddress = encodePacked(["address", "bytes"], [module.module, signature])
+    return signatureWithModuleAddress
+  }
 
   /**
    * @description Changes the active module for the account
@@ -989,21 +1016,9 @@ export const toNexusAccount = async (
         ? encodeExecute(calls[0])
         : encodeExecuteBatch(calls)
     },
-    getFactoryArgs: async () => ({
-      factory: meeConfig.factoryAddress,
-      factoryData
-    }),
+    getFactoryArgs,
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
-    /**
-     * @description Signs a message
-     * @param params - The parameters for signing
-     * @param params.message - The message to sign
-     * @returns The signature
-     */
-    async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
-      const tempSignature = await module.signMessage(message)
-      return encodePacked(["address", "bytes"], [module.module, tempSignature])
-    },
+    signMessage,
     signTypedData,
     signUserOperation: async (
       parameters: UnionPartialBy<UserOperation, "sender"> & {
@@ -1025,7 +1040,7 @@ export const toNexusAccount = async (
         entryPointVersion: "0.7",
         userOperation
       })
-      return await module.signUserOpHash(hash)
+      return await module.signMessage({ raw: hash })
     },
     getNonce,
 
@@ -1052,7 +1067,7 @@ export const toNexusAccount = async (
       chain,
       setModule,
       getModule: () => module,
-      version: meeConfig
+      version: meeConfig,
     }
   })
 }

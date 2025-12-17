@@ -50,7 +50,10 @@ describe("modules.toValidator", async () => {
         "initData": "0x",
         "module": "0x0000000000000000000000000000000000000000",
         "signMessage": [Function],
-        "signUserOpHash": [Function],
+        "signTypedData": [Function],
+        "signMessageErc7739": [Function],
+        "signTypedDataErc7739": [Function],
+        "erc7739VersionSupported": [Function],
         "signer": {
           "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
           "getHdKey": [Function],

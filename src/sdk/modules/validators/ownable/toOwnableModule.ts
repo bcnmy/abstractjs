@@ -1,9 +1,10 @@
-import type { Address, Hex, WalletClient } from "viem"
+import type { Address, Hex } from "viem"
 import {
   getOwnableValidator,
   getOwnableValidatorMockSignature
 } from "../../../constants"
 import { type Validator, toValidator } from "../toValidator"
+import type { Signer } from "../../../account/utils/toSigner"
 
 /**
  * Parameters for creating an Ownable module.
@@ -14,8 +15,8 @@ type ToOwnableModuleParameters = {
   threshold: number
   /** Array of owner addresses for the module. */
   owners: Address[]
-  /** Signer of the module. */
-  walletClient: WalletClient
+  /** Signer for the module. */
+  signer: Signer
 }
 
 /**
@@ -47,13 +48,14 @@ type ToOwnableModuleParameters = {
 export const toOwnableModule = (
   parameters: ToOwnableModuleParameters
 ): Validator => {
-  const { walletClient, threshold, owners } = parameters
+  const { signer, threshold, owners } = parameters
 
   return toValidator({
     ...getOwnableValidator({ threshold, owners }),
     type: "validator",
-    walletClient,
+    signer,
     getStubSignature: async (): Promise<Hex> =>
-      getOwnableValidatorMockSignature({ threshold })
+      getOwnableValidatorMockSignature({ threshold }),
+    erc7739VersionSupported_: 0 // doesn't support EIP-7739
   })
 }

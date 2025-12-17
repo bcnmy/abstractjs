@@ -1,7 +1,6 @@
-import type { Address, Hex, Prettify, SignableMessage } from "viem"
+import type { Address, Hex, OneOf, Prettify, SignableMessage, TypedDataDefinition, WalletClient } from "viem"
 import { DUMMY_SIGNATURE } from ".."
-// import type { Signer } from "../../account"
-import type { WalletClient } from "viem"
+import type { Signer } from "../../account"
 
 export type GenericValidatorConfig<
   T extends ValidatorRequiredConfig = ValidatorRequiredConfig
@@ -12,10 +11,10 @@ export type ValidatorRequiredConfig = {
   initData: Hex
   /** The hexadecimal address of the module. */
   module: Address
-  /** The eoa. */
-  // signer: Signer
-  walletClient: WalletClient
-}
+} & OneOf<
+  | { /** The signer. */ signer: Signer }
+  | { /** The wallet client. */ walletClient: WalletClient }
+>
 
 export type ValidatorOptionalConfig = {
   /** The type of the module. */
@@ -35,22 +34,12 @@ export type ValidatorActions = {
    * @returns A promise that resolves to a hexadecimal string representing the signature.
    */
   signMessage: (message: SignableMessage) => Promise<Hex>
-
   /**
    * Signs a typed data.
    * @param typedData - The typed data to sign.
    * @returns A promise that resolves to a hexadecimal string representing the signature.
    */
-  // signTypedData: () => Promise<Hex>
-
-  /**
-                 * Signs a user operation hash.
-                 * @param userOpHash - The user operation hash to sign.
-                 // Review:
-                 * @param params - Optional parameters for generating the signature.
-                 * @returns A promise that resolves to a hexadecimal string representing the signature.
-                 */
-  signUserOpHash: (userOpHash: Hex) => Promise<Hex>
+  signTypedData: (typedData: TypedDataDefinition) => Promise<Hex>
   /**
    * Gets the stub signature of the module.
    */
@@ -59,7 +48,19 @@ export type ValidatorActions = {
    * Checks if the module supports EIP-7739.
    * @returns A promise that resolves to a boolean indicating whether the module supports EIP-7739.
    */
-  erc7739VersionSupported: () => Promise<number>
+  erc7739VersionSupported: () => Promise<number>,
+  /**
+   * 
+   * Signs a message as per EIP-7739 PersonalSign flow.
+   * @param message - The message to sign.
+   * @returns A promise that resolves to a hexadecimal string representing the signature.
+   */
+  signMessageErc7739: (message: SignableMessage) => Promise<Hex>
+  /**
+   * Signs typed data as per EIP-7739 TypedDataSign flow
+   * @returns A promise that resolves to a hexadecimal string representing the signature.
+   **/
+  signTypedDataErc7739: (typedData: TypedDataDefinition) => Promise<Hex>
 }
 
 export type Validator = Prettify<
@@ -67,15 +68,16 @@ export type Validator = Prettify<
 >
 export type ValidatorParameters = Prettify<
   GenericValidatorConfig &
-    Partial<ValidatorOptionalConfig & ValidatorActions> & {
-      erc7739VersionSupported_?: number
-    }
+  Partial<ValidatorOptionalConfig & ValidatorActions> & {
+    erc7739VersionSupported_?: number
+  }
 >
 
 export const toValidator = (parameters: ValidatorParameters): Validator => {
   const {
     deInitData = "0x",
     type = "validator",
+    signer,
     walletClient,
     data = "0x",
     module,
@@ -83,13 +85,11 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     ...rest
   } = parameters
 
-  if (!walletClient.account) {
-    throw new Error(
-      "Account should be defined in the wallet client provided to the `toValidator`"
-    )
+  if (walletClient && !walletClient.account) {
+    throw new Error("Account should be defined in the wallet client provided to the `toValidator`")
   }
 
-  let _erc7739VersionSupported: number | undefined = undefined
+  let _erc7739VersionSupported: number | undefined = erc7739VersionSupported_
 
   const erc7739VersionSupported = async (): Promise<number> => {
     if (!_erc7739VersionSupported) {
@@ -100,25 +100,47 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     return _erc7739VersionSupported!
   }
 
+  const signMessage = async (message: SignableMessage): Promise<Hex> => {
+    if (signer) {
+      return await signer.signMessage({ message })
+    }
+    return await walletClient!.signMessage({
+      account: walletClient!.account!,
+      message
+    })
+  }
+
+  const signTypedData = async (typedData: TypedDataDefinition): Promise<Hex> => {
+    if (signer) {
+      return await signer.signTypedData(typedData)
+    }
+    return await walletClient!.signTypedData({
+      account: walletClient!.account!,
+      ...typedData
+    })
+  }
+
+  const signMessageErc7739 = () => {
+    throw new Error("Erc7739 PersonalSign flow is not supported by this module")
+  }
+
+  const signTypedDataErc7739 = () => {
+    throw new Error("Erc7739 TypedDataSign flow is not supported by this module")
+  }
+
   return {
     deInitData,
     data,
     module,
     address: module,
-    walletClient,
+    ...(signer ? { signer } : { walletClient: walletClient! }),
     type,
     getStubSignature: async () => DUMMY_SIGNATURE,
-    signUserOpHash: async (userOpHash: Hex) =>
-      await walletClient.signMessage({
-        account: walletClient.account!,
-        message: { raw: userOpHash }
-      }),
-    signMessage: async (message: SignableMessage) =>
-      await walletClient.signMessage({
-        account: walletClient.account!,
-        message
-      }),
+    signMessage,
+    signTypedData,
     erc7739VersionSupported,
+    signMessageErc7739,
+    signTypedDataErc7739,
     ...rest
   }
 }

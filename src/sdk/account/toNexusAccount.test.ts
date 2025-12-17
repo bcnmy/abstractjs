@@ -405,7 +405,10 @@ describe("nexus.account", async () => {
     expect(contractResponse).toBe(eip1271MagicValue)
   })
 
-  test("should sign using signTypedData SDK method", async () => {
+  test("should sign with 7739 typed data flow when nexus.signTypedData is used and module supports 7739", async () => { 
+    //make sure current module supports 7739
+    expect(await nexusAccount.getModule().erc7739VersionSupported()).not.toBe(0)
+    
     const appDomain = {
       chainId: chain.id,
       name: "TokenWithPermit",
@@ -505,6 +508,8 @@ describe("nexus.account", async () => {
     expect(allowance).toEqual(parseEther("2"))
     expect(nexusResponse).toEqual("0x1626ba7e")
   })
+
+  // TODO: add test to sign with vanilla 1271 when module does not support 7739
 
   test("check that ethers makeNonceKey creates the same key as the SDK", async () => {
     function makeNonceKey(

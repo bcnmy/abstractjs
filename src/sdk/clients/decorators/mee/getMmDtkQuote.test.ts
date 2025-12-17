@@ -430,7 +430,11 @@ describe("mee.getMmDtkQuote", () => {
     }
 
     const meeK1ModuleWithMMDTKSupport = toMeeK1Module({
-      signer: eoaAccount,
+      walletClient: createWalletClient({
+        account: eoaAccount,
+        chain: paymentChain,
+        transport: transports[0]
+      }),
       module: meeK1ModuleWithMMDTKSupportAddress,
       signatureType: "mm-dtk"
     })
