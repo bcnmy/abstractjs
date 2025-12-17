@@ -1,11 +1,17 @@
-import { type Hex, type WalletClient, concatHex, type SignableMessage, type TypedDataDefinition } from "viem"
+import {
+  type Hex,
+  type SignableMessage,
+  type TypedDataDefinition,
+  type WalletClient,
+  concatHex
+} from "viem"
+import { erc7739Actions } from "viem/experimental"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type Validator,
   type ValidatorParameters,
   toValidator
 } from "../toValidator"
-import { erc7739Actions } from "viem/experimental"
 
 const MOCK_SUPERTXN_HASH_AND_TIMESTAMPS: Hex =
   "0x9e1cce57126e9205fe085888ed6b5ca0033f168e26b8927adb1c6da566cf7c5100000000000000000000000000000000000000000000000000000000642622800000000000000000000000000000000000000000000000000000000064262668"
@@ -26,7 +32,9 @@ export type ToMeeK1ModuleParameters = Omit<
   superTxEntriesCount?: number
 }
 
-export const toMeeK1Module = (parameters: ToMeeK1ModuleParameters): Validator => {
+export const toMeeK1Module = (
+  parameters: ToMeeK1ModuleParameters
+): Validator => {
   const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
   if (!parameters.walletClient.account) {
     throw new Error(
@@ -37,11 +45,13 @@ export const toMeeK1Module = (parameters: ToMeeK1ModuleParameters): Validator =>
   const walletClient7739 = parameters.walletClient.extend(erc7739Actions())
 
   const signMessageErc7739 = async (message: SignableMessage): Promise<Hex> => {
-    return '0x00'
+    return "0x00"
   }
 
-  const signTypedDataErc7739 = async (typedData: TypedDataDefinition): Promise<Hex> => {
-    return '0x00'
+  const signTypedDataErc7739 = async (
+    typedData: TypedDataDefinition
+  ): Promise<Hex> => {
+    return "0x00"
   }
 
   return toValidator({

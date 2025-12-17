@@ -1,6 +1,6 @@
 import { getSmartSessionsValidator } from "@rhinestone/module-sdk"
-import { type Validator, toValidator } from "../toValidator"
 import type { Signer } from "../../../account/utils/toSigner"
+import { type Validator, toValidator } from "../toValidator"
 
 export type SmartSessionsModuleParameters = {
   signer: Signer

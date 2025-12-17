@@ -6,7 +6,10 @@ import {
 import type { Validator } from "../toValidator"
 
 // Re-export types from toMeeK1Module for backwards compatibility
-export { type MeeSignatureType, getMeeK1ModuleStubSignature } from "../meeK1/toMeeK1Module"
+export {
+  type MeeSignatureType,
+  getMeeK1ModuleStubSignature
+} from "../meeK1/toMeeK1Module"
 
 export type ToDefaultModuleParameters = Omit<ToMeeK1ModuleParameters, "module">
 

@@ -1,4 +1,12 @@
-import type { Address, Hex, OneOf, Prettify, SignableMessage, TypedDataDefinition, WalletClient } from "viem"
+import type {
+  Address,
+  Hex,
+  OneOf,
+  Prettify,
+  SignableMessage,
+  TypedDataDefinition,
+  WalletClient
+} from "viem"
 import { DUMMY_SIGNATURE } from ".."
 import type { Signer } from "../../account"
 
@@ -48,9 +56,9 @@ export type ValidatorActions = {
    * Checks if the module supports EIP-7739.
    * @returns A promise that resolves to a boolean indicating whether the module supports EIP-7739.
    */
-  erc7739VersionSupported: () => Promise<number>,
+  erc7739VersionSupported: () => Promise<number>
   /**
-   * 
+   *
    * Signs a message as per EIP-7739 PersonalSign flow.
    * @param message - The message to sign.
    * @returns A promise that resolves to a hexadecimal string representing the signature.
@@ -68,9 +76,9 @@ export type Validator = Prettify<
 >
 export type ValidatorParameters = Prettify<
   GenericValidatorConfig &
-  Partial<ValidatorOptionalConfig & ValidatorActions> & {
-    erc7739VersionSupported_?: number
-  }
+    Partial<ValidatorOptionalConfig & ValidatorActions> & {
+      erc7739VersionSupported_?: number
+    }
 >
 
 export const toValidator = (parameters: ValidatorParameters): Validator => {
@@ -86,7 +94,9 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
   } = parameters
 
   if (walletClient && !walletClient.account) {
-    throw new Error("Account should be defined in the wallet client provided to the `toValidator`")
+    throw new Error(
+      "Account should be defined in the wallet client provided to the `toValidator`"
+    )
   }
 
   let _erc7739VersionSupported: number | undefined = erc7739VersionSupported_
@@ -110,7 +120,9 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     })
   }
 
-  const signTypedData = async (typedData: TypedDataDefinition): Promise<Hex> => {
+  const signTypedData = async (
+    typedData: TypedDataDefinition
+  ): Promise<Hex> => {
     if (signer) {
       return await signer.signTypedData(typedData)
     }
@@ -125,7 +137,9 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
   }
 
   const signTypedDataErc7739 = () => {
-    throw new Error("Erc7739 TypedDataSign flow is not supported by this module")
+    throw new Error(
+      "Erc7739 TypedDataSign flow is not supported by this module"
+    )
   }
 
   return {

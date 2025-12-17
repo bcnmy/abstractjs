@@ -1,10 +1,10 @@
 import type { Address, Hex } from "viem"
+import type { Signer } from "../../../account/utils/toSigner"
 import {
   getOwnableValidator,
   getOwnableValidatorMockSignature
 } from "../../../constants"
 import { type Validator, toValidator } from "../toValidator"
-import type { Signer } from "../../../account/utils/toSigner"
 
 /**
  * Parameters for creating an Ownable module.

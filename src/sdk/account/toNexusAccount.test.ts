@@ -405,10 +405,10 @@ describe("nexus.account", async () => {
     expect(contractResponse).toBe(eip1271MagicValue)
   })
 
-  test("should sign with 7739 typed data flow when nexus.signTypedData is used and module supports 7739", async () => { 
+  test("should sign with 7739 typed data flow when nexus.signTypedData is used and module supports 7739", async () => {
     //make sure current module supports 7739
     expect(await nexusAccount.getModule().erc7739VersionSupported()).not.toBe(0)
-    
+
     const appDomain = {
       chainId: chain.id,
       name: "TokenWithPermit",

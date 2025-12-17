@@ -9,8 +9,8 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
-  parseEther,
-  createWalletClient
+  createWalletClient,
+  parseEther
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { getTestAccount, killNetwork } from "../../../../test/testUtils"
@@ -101,7 +101,9 @@ describe("modules.toMeeK1Module", () => {
     `)
     // Verify walletClient is present and has an account
     expect(walletClient).toBeDefined()
-    expect(walletClient?.account?.address).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+    expect(walletClient?.account?.address).toBe(
+      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    )
   })
 
   test("should generate a valid signature", async () => {

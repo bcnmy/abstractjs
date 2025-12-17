@@ -775,7 +775,10 @@ export const toNexusAccount = async (
    * @description Gets the factory arguments for the account
    * @returns The factory arguments
    */
-  const getFactoryArgs = async (): Promise<{ factory: Address; factoryData: Hex }> => {
+  const getFactoryArgs = async (): Promise<{
+    factory: Address
+    factoryData: Hex
+  }> => {
     return {
       factory: meeConfig.factoryAddress,
       factoryData
@@ -880,11 +883,12 @@ export const toNexusAccount = async (
       appDomainSeparator
     )
 
-    let signature = await module.erc7739VersionSupported() === 0 ? 
-      await module.signMessage({ raw: toBytes(wrappedTypedHash) }) : 
-      await module.signMessageErc7739({ raw: toBytes(wrappedTypedHash) })
-    
-      const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
+    let signature =
+      (await module.erc7739VersionSupported()) === 0
+        ? await module.signMessage({ raw: toBytes(wrappedTypedHash) })
+        : await module.signMessageErc7739({ raw: toBytes(wrappedTypedHash) })
+
+    const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
 
     const signatureData = concatHex([
       signature,
@@ -903,17 +907,23 @@ export const toNexusAccount = async (
   }
 
   /**
-     * @description Signs a message
-     * @param params - The parameters for signing
-     * @param params.message - The message to sign
-     * @returns The signature
-     */
-  const signMessage = async (parameters: { message: SignableMessage }): Promise<Hex> => {
+   * @description Signs a message
+   * @param params - The parameters for signing
+   * @param params.message - The message to sign
+   * @returns The signature
+   */
+  const signMessage = async (parameters: {
+    message: SignableMessage
+  }): Promise<Hex> => {
     const { message } = parameters
-    const signature = await module.erc7739VersionSupported() === 0 ? 
-      await module.signMessage(message) : 
-      await module.signMessageErc7739(message)
-    const signatureWithModuleAddress = encodePacked(["address", "bytes"], [module.module, signature])
+    const signature =
+      (await module.erc7739VersionSupported()) === 0
+        ? await module.signMessage(message)
+        : await module.signMessageErc7739(message)
+    const signatureWithModuleAddress = encodePacked(
+      ["address", "bytes"],
+      [module.module, signature]
+    )
     return signatureWithModuleAddress
   }
 
@@ -1067,7 +1077,7 @@ export const toNexusAccount = async (
       chain,
       setModule,
       getModule: () => module,
-      version: meeConfig,
+      version: meeConfig
     }
   })
 }
