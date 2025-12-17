@@ -132,9 +132,11 @@ export const getSafeQuote = async (
       : {})
   }
 
-  // Using the quote-permit endpoint as the Safe transaction
+  // Using the quote-permit endpoint because the Safe Txn 
   // will approve whatever is required to be approved, so the
-  // rest is similar to the regular permit fusion mode
+  // rest part of the flow is similar to the regular permit fusion mode,
+  // only in permit mode the 2612 permit approves tokens, here the Safe Txn 
+  // approves tokens (or transfers native tokens to the orchestrator)
   const quote = await getQuote(
     client,
     {

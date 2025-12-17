@@ -13,10 +13,6 @@ import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
-import getSafeQuote, {
-  type GetSafeQuoteParams,
-  type GetSafeQuotePayload
-} from "./getSafeQuote"
 import {
   type CleanUp,
   DEFAULT_GAS_LIMIT,
@@ -24,6 +20,10 @@ import {
   type Instruction
 } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
+import getSafeQuote, {
+  type GetSafeQuoteParams,
+  type GetSafeQuotePayload
+} from "./getSafeQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**

@@ -11,12 +11,12 @@ import {
   type SignPermitQuotePayload,
   signPermitQuote
 } from "./signPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
 import {
   type SignSafeQuoteParams,
   type SignSafeQuotePayload,
   signSafeQuote
 } from "./signSafeQuote"
-import { getMeeVersionsForQuote } from "./signQuote"
 
 /**
  * Union type for parameters that can be used with signFusionQuote
