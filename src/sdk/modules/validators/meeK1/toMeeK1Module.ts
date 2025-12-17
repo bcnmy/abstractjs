@@ -15,9 +15,14 @@ export const toMeeK1Module = (
   }
 ): Validator => {
   const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
+  if (!parameters.walletClient.account) {
+    throw new Error(
+      "Account should be set in the wallet client provided to set the MeeK1 module"
+    )
+  }
   return toValidator({
-    initData: parameters.signer.address,
-    data: parameters.signer.address,
+    initData: parameters.walletClient.account.address,
+    data: parameters.walletClient.account.address,
     deInitData: "0x",
     ...parameters,
     address: parameters.module,

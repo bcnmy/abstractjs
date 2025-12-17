@@ -22,9 +22,14 @@ export const toDefaultModule = (
   }
 ): Validator => {
   const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
+  if (!parameters.walletClient.account) {
+    throw new Error(
+      "Account should be defined in the wallet client provided to the `toDefaultModule`"
+    )
+  }
   return toValidator({
-    initData: parameters.signer.address,
-    data: parameters.signer.address,
+    initData: parameters.walletClient.account.address,
+    data: parameters.walletClient.account.address,
     deInitData: "0x",
     ...parameters,
     address: zeroAddress,

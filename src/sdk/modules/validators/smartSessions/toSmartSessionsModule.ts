@@ -1,19 +1,19 @@
 import { getSmartSessionsValidator } from "@rhinestone/module-sdk"
-import type { Signer } from "../../../account/utils/toSigner"
 import { type Validator, toValidator } from "../toValidator"
+import type { WalletClient } from "viem"
 
 export type SmartSessionsModuleParameters = {
-  signer: Signer
+  walletClient: WalletClient
 }
 
 export const toSmartSessionsModule = (
   parameters: SmartSessionsModuleParameters
 ): Validator => {
-  const { signer } = parameters ?? {}
+  const { walletClient } = parameters ?? {}
 
   return toValidator({
     ...getSmartSessionsValidator({ useRegistry: false }),
-    signer,
+    walletClient,
     type: "validator"
   })
 }

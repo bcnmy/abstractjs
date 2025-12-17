@@ -1,5 +1,4 @@
-import type { Address, Hex } from "viem"
-import type { Signer } from "../../../account/utils/toSigner"
+import type { Address, Hex, WalletClient } from "viem"
 import {
   getOwnableValidator,
   getOwnableValidatorMockSignature
@@ -16,7 +15,7 @@ type ToOwnableModuleParameters = {
   /** Array of owner addresses for the module. */
   owners: Address[]
   /** Signer of the module. */
-  signer: Signer
+  walletClient: WalletClient
 }
 
 /**
@@ -48,12 +47,12 @@ type ToOwnableModuleParameters = {
 export const toOwnableModule = (
   parameters: ToOwnableModuleParameters
 ): Validator => {
-  const { signer, threshold, owners } = parameters
+  const { walletClient, threshold, owners } = parameters
 
   return toValidator({
     ...getOwnableValidator({ threshold, owners }),
     type: "validator",
-    signer,
+    walletClient,
     getStubSignature: async (): Promise<Hex> =>
       getOwnableValidatorMockSignature({ threshold })
   })

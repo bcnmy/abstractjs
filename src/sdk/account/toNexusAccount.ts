@@ -304,7 +304,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 >
 
 const prepareValidators = async (
-  signer: Signer,
+  walletClient: WalletClient<Transport, Chain | undefined, Account, RpcSchema>,
   meeConfig: MEEVersionConfig,
   customValidators?: Validator[]
 ): Promise<Validator[]> => {
@@ -317,7 +317,7 @@ const prepareValidators = async (
   if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     validators = [
       toMeeK1Module({
-        signer: await toSigner({ signer }),
+        walletClient,
         module: meeConfig.defaultValidatorAddress
       })
     ]
@@ -558,12 +558,12 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   const validators: Validator[] = await prepareValidators(
-    signer,
+    walletClient,
     meeConfig,
     customValidators
   )
 
-  const defaultValidator = toDefaultModule({ signer })
+  const defaultValidator = toDefaultModule({ walletClient })
 
   // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
   let module = validators[0] || defaultValidator
@@ -887,6 +887,8 @@ export const toNexusAccount = async (
 
     return signature
   }
+
+  // function signTypedDataVanilla1271
 
   /**
    * @description Changes the active module for the account
