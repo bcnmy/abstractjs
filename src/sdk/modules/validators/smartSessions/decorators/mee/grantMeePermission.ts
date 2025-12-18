@@ -107,7 +107,7 @@ export const grantMeePermission = async <
 
   /**
    * Actions can be defined for multiple chains.
-   * Curernt approach is to build a single session for each unique chainId.
+   * Current approach is to build a single session for each unique chainId.
    * So all the actions for a given chainId will be added to the same session.
    *
    * TODO: In future, we may want to add an additional parameter to the

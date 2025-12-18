@@ -1,14 +1,14 @@
 import { getSpendingLimitsPolicy, getSudoPolicy } from "@rhinestone/module-sdk"
 import {
+  http,
   type Address,
   type Chain,
   type Hex,
   type LocalAccount,
   type Transport,
-  toFunctionSelector,
+  type WalletClient,
   createWalletClient,
-  http,
-  WalletClient
+  toFunctionSelector
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -33,7 +33,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { type MeeVersionsWithChainId } from "../../utils"
+import type { MeeVersionsWithChainId } from "../../utils"
 import { toInstallData } from "../../utils/toInstallData"
 import buildMultichainInstructions from "./buildMultichainInstructions"
 
