@@ -589,6 +589,7 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
     })
 
     expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.quote.quoteType).toBe("permit")
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote

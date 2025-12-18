@@ -726,7 +726,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_2_0)
+          version: getMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })

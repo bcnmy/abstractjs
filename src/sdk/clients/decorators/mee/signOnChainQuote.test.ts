@@ -494,6 +494,7 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
           })
         ]
       })
+
       // Execute the quote
       const { hash } = await meeClient.executeFusionQuote({
         fusionQuote
@@ -596,7 +597,7 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
           {
             chain: network.chain,
             transport: http(network.rpcUrl),
-            version: getMEEVersion(MEEVersion.V2_2_0)
+            version: getMEEVersion(MEEVersion.V2_2_1)
           }
         ]
       })

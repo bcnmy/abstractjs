@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.1.19
+
+### Patch Changes
+
+- Added EIP-712 typed data signing support for smart account mode, upgraded to MEE v2.2.1 contracts with new addresses, and improved quote execution with proper version handling. This enables using 712 typed signatures for signing supertransactions when using non-fusion modes.
+
 ## 1.1.18
 
 ### Patch Changes

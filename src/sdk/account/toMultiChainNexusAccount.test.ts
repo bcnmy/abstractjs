@@ -279,6 +279,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             chainId: baseSepolia.id
           }
         })
+
         const { hash } = await meeClient.executeQuote({
           quote
         })
@@ -324,6 +325,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
+
       test("works with mee version 2.1.0", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
@@ -337,14 +339,15 @@ describe("mee.toMultiChainNexusAccount", async () => {
         })
         await executeTx(nexusAccount)
       })
-      test("works with mee version 2.2.0", async () => {
+
+      test("works with mee version 2.2.1", async () => {
         const nexusAccount = await toMultichainNexusAccount({
           signer: newSigner,
           chainConfigurations: [
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V2_2_0)
+              version: getMEEVersion(MEEVersion.V2_2_1)
             }
           ]
         })
