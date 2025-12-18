@@ -5,7 +5,10 @@ import {
   type Hex,
   type LocalAccount,
   type Transport,
-  toFunctionSelector
+  toFunctionSelector,
+  createWalletClient,
+  http,
+  WalletClient
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -30,7 +33,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
-import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
+import { type MeeVersionsWithChainId } from "../../utils"
 import { toInstallData } from "../../utils/toInstallData"
 import buildMultichainInstructions from "./buildMultichainInstructions"
 
@@ -48,6 +51,7 @@ describe("mee.buildMultichainInstructions", () => {
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
   let meeVersions: MeeVersionsWithChainId
+  let eoaWalletClient: WalletClient
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -58,6 +62,12 @@ describe("mee.buildMultichainInstructions", () => {
 
     eoaAccount = network.account!
     redeemerAccount = privateKeyToAccount(generatePrivateKey())
+
+    eoaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: paymentChain,
+      transport: http(network.rpcUrl)
+    })
 
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
@@ -86,7 +96,7 @@ describe("mee.buildMultichainInstructions", () => {
   })
 
   it("should build multichain instructions", async () => {
-    const meeValidator = toDefaultModule({ signer: eoaAccount })
+    const meeValidator = toDefaultModule({ walletClient: eoaWalletClient })
     const instructions: Instruction[] = await buildMultichainInstructions(
       {
         accountAddress: mcNexus.signer.address,
@@ -127,7 +137,7 @@ describe("mee.buildMultichainInstructions", () => {
   })
 
   it("should install ownables, meeValidator and smartSessionValidator on several chains at once, and initialise each module on each chain", async () => {
-    const meeValidator = toDefaultModule({ signer: eoaAccount })
+    const meeValidator = toDefaultModule({ walletClient: eoaWalletClient })
     const smartSessionValidator = toSmartSessionsModule({ signer: eoaAccount })
     const ownableValidator = toOwnableModule({
       signer: eoaAccount,

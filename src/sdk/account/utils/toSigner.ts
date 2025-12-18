@@ -78,9 +78,15 @@ export async function toSigner<
         throw new Error("Not supported")
       },
       async signTypedData(typedData) {
+        // ethers doesn't expect EIP712Domain in types (it adds it automatically)
+        // so we need to remove it to avoid "ambiguous primary types" error
+        const { EIP712Domain: _, ...typesWithoutDomain } = typedData.types as {
+          EIP712Domain?: unknown
+          [key: string]: unknown
+        }
         return wallet.signTypedData(
           typedData.domain,
-          typedData.types,
+          typesWithoutDomain,
           typedData.message
         )
       }
