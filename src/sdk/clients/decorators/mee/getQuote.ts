@@ -1,13 +1,14 @@
 import {
-  type Address,
-  createPublicClient,
-  type Hex,
   http,
+  type Address,
+  type Hex,
   type OneOf,
+  createPublicClient,
   pad,
   toHex
 } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getChain } from "../../../account"
 import {
   buildComposable,
   formatCallDataInputParamsWithVersion,
@@ -34,9 +35,9 @@ import {
   SmartSessionMode
 } from "../../../constants"
 import {
-  getMEEVersion,
   type ModularSmartAccount,
-  type RuntimeValue
+  type RuntimeValue,
+  getMEEVersion
 } from "../../../modules"
 import {
   type ComposableCall,
@@ -59,7 +60,6 @@ import {
 import type { QuoteType } from "./getQuoteType"
 import type { TokenTrigger } from "./signPermitQuote"
 import type { InstructionMetadata } from "./types/instruction-metadata.type"
-import { getChain } from "../../../account"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -1193,7 +1193,7 @@ const preparePaymentInfo = async (
       sponsorshipUrl = sponsorshipOptions.url
     }
 
-    let nonce
+    let nonce: string
 
     try {
       // Try to see if the nexus account is defined on sponsorship chain to inhert the RPC url from it
@@ -1215,7 +1215,7 @@ const preparePaymentInfo = async (
           }
         )
 
-        nonce = nonceInfo.nonce
+        nonce = nonceInfo.nonce.toString()
       } else {
         // Try to use the RPC defined from the sponsorshipOptions orelse defaults to public RPC
         const publicClient = createPublicClient({
@@ -1231,7 +1231,7 @@ const preparePaymentInfo = async (
           validationMode: "0x00"
         })
 
-        nonce = nonceInfo.nonce
+        nonce = nonceInfo.nonce.toString()
       }
     } catch {
       // If incase there is any error in fetching the nonce locally ? Fallback to API based nonce fetching
