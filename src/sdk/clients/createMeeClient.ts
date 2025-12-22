@@ -98,7 +98,7 @@ export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 export const createMeeClient = async (params: CreateMeeClientParams) => {
   const {
     account,
-    pollingInterval = 1000,
+    pollingInterval = 75,
     url = DEFAULT_PATHFINDER_URL,
     apiKey = DEFAULT_PATHFINDER_API_KEY
   } = params

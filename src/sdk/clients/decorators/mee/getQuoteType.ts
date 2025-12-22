@@ -1,3 +1,4 @@
+import { zeroAddress } from "viem"
 import { type AnyData, isPermitSupported } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetFusionQuoteParams } from "./getFusionQuote"
@@ -57,6 +58,11 @@ const isPermitQuote = async (
 
   // If trigger call is available, it is not permit quote
   if ("call" in trigger) {
+    return false
+  }
+
+  // If native token ? it is not definitely permit supported, so return early to save one RPC call
+  if (trigger.tokenAddress === zeroAddress) {
     return false
   }
 

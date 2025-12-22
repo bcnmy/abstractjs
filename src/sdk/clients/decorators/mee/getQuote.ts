@@ -1,8 +1,18 @@
-import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
+import {
+  type Address,
+  createPublicClient,
+  type Hex,
+  http,
+  type OneOf,
+  pad,
+  toHex
+} from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import {
   buildComposable,
-  formatCallDataInputParamsWithVersion
+  formatCallDataInputParamsWithVersion,
+  getDefaultNonceKey,
+  getNonceWithKeyUtil
 } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
@@ -19,10 +29,15 @@ import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
+  MEEVersion,
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
 } from "../../../constants"
-import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
+import {
+  getMEEVersion,
+  type ModularSmartAccount,
+  type RuntimeValue
+} from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -44,6 +59,7 @@ import {
 import type { QuoteType } from "./getQuoteType"
 import type { TokenTrigger } from "./signPermitQuote"
 import type { InstructionMetadata } from "./types/instruction-metadata.type"
+import { getChain } from "../../../account"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -216,6 +232,11 @@ export type SponsorshipOptionsParams = {
    * Custom headers to be passed to self hosted sponsorship backends.
    */
   customHeaders?: Record<string, string>
+  /**
+   * RPC url for fetching the nonce for sponsorship.
+   * Default to public RPC url (Not reliable). If the sponsorship chain is defined ? Rpc url will be inherited from the chain configuration
+   */
+  rpcUrl?: Url
   /**
    * Gas tank parameters
    */
@@ -1172,18 +1193,63 @@ const preparePaymentInfo = async (
       sponsorshipUrl = sponsorshipOptions.url
     }
 
-    const sponsorshipClient = createHttpClient(sponsorshipUrl)
+    let nonce
 
-    const { nonce } = await sponsorshipClient.request<{
-      nonce: string
-      nonceKey: string
-    }>({
-      path: `sponsorship/nonce/${chainId}/${sender}`,
-      method: "GET",
-      ...(sponsorshipOptions?.customHeaders
-        ? { headers: sponsorshipOptions.customHeaders }
-        : {})
-    })
+    try {
+      // Try to see if the nexus account is defined on sponsorship chain to inhert the RPC url from it
+      const nexusAccount = account_.deploymentOn(chainId)
+
+      // Sponsorship account will be always MEE version 2.0.0
+      const { defaultValidatorAddress } = getMEEVersion(MEEVersion.V2_0_0)
+      const defaultNonceKey = await getDefaultNonceKey(sender, chainId)
+
+      if (nexusAccount) {
+        // Reuse the RPC url from existing chain config
+        const nonceInfo = await getNonceWithKeyUtil(
+          nexusAccount.publicClient,
+          sender,
+          {
+            moduleAddress: defaultValidatorAddress,
+            key: defaultNonceKey,
+            validationMode: "0x00"
+          }
+        )
+
+        nonce = nonceInfo.nonce
+      } else {
+        // Try to use the RPC defined from the sponsorshipOptions orelse defaults to public RPC
+        const publicClient = createPublicClient({
+          transport: sponsorshipOptions?.rpcUrl
+            ? http(sponsorshipOptions.rpcUrl)
+            : http(),
+          chain: getChain(chainId)
+        })
+
+        const nonceInfo = await getNonceWithKeyUtil(publicClient, sender, {
+          moduleAddress: defaultValidatorAddress,
+          key: defaultNonceKey,
+          validationMode: "0x00"
+        })
+
+        nonce = nonceInfo.nonce
+      }
+    } catch {
+      // If incase there is any error in fetching the nonce locally ? Fallback to API based nonce fetching
+      const sponsorshipClient = createHttpClient(sponsorshipUrl)
+
+      const nonceInfo = await sponsorshipClient.request<{
+        nonce: string
+        nonceKey: string
+      }>({
+        path: `sponsorship/nonce/${chainId}/${sender}`,
+        method: "GET",
+        ...(sponsorshipOptions?.customHeaders
+          ? { headers: sponsorshipOptions.customHeaders }
+          : {})
+      })
+
+      nonce = nonceInfo.nonce
+    }
 
     paymentInfo = {
       sponsored: true,
