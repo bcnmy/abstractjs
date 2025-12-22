@@ -1,5 +1,4 @@
 import type { Hex } from "viem"
-import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
