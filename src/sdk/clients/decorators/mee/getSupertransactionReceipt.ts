@@ -80,6 +80,8 @@ export type BaseGetSupertransactionReceiptPayload = Omit<
    * @example "FAILED"
    */
   transactionStatus: UserOpStatus["executionStatus"]
+  isFinalised: boolean
+  message?: string
 }
 
 /**
@@ -140,15 +142,19 @@ export async function getSupertransactionReceipt(
 
   const userOpsWithoutPayment = explorerResponse.userOps.slice(1)
 
-  const metaStatus = await parseTransactionStatus(userOpsWithoutPayment)
-  switch (metaStatus.status) {
+  const transactionStatus = await parseTransactionStatus(
+    userOpsWithoutPayment,
+    parameters.mode
+  )
+
+  switch (transactionStatus.status) {
     case "FAILED": {
-      console.log({ metaStatus, explorerResponse, hash: params.hash })
-      throw new Error(parseErrorMessage(metaStatus.message))
+      console.log({ transactionStatus, explorerResponse, hash: params.hash })
+      throw new Error(parseErrorMessage(transactionStatus.message))
     }
     case "MINED_FAIL": {
-      console.log({ metaStatus, explorerResponse, hash: params.hash })
-      throw new Error(parseErrorMessage(metaStatus.message))
+      console.log({ transactionStatus, explorerResponse, hash: params.hash })
+      throw new Error(parseErrorMessage(transactionStatus.message))
     }
     case "PENDING": {
       break
@@ -207,7 +213,9 @@ export async function getSupertransactionReceipt(
     userOps: userOpsWithoutPayment,
     explorerLinks,
     receipts,
-    transactionStatus: metaStatus.status
+    transactionStatus: transactionStatus.status,
+    isFinalised: transactionStatus.isFinalised,
+    message: transactionStatus.message
   } as GetSupertransactionReceiptPayload
 }
 

@@ -99,21 +99,16 @@ export const waitForSupertransactionReceipt = async (
     }
   }
 
-  const statusResult = await parseTransactionStatus(userOps, parameters.mode)
-
-  // Update the response with the calculated status
-  explorerResponse.transactionStatus = statusResult.status
-
   // Handle error status cases (FAILED, MINED_FAIL)
   if (
-    statusResult.status === "FAILED" ||
-    statusResult.status === "MINED_FAIL"
+    explorerResponse.transactionStatus === "FAILED" ||
+    explorerResponse.transactionStatus === "MINED_FAIL"
   ) {
-    throw new Error(statusResult.message || "Transaction failed")
+    throw new Error(explorerResponse.message || "Transaction failed")
   }
 
   // If transaction is not finalized yet, continue polling
-  if (!statusResult.isFinalised) {
+  if (!explorerResponse.isFinalised) {
     await new Promise((resolve) => setTimeout(resolve, pollingInterval))
     return await waitForSupertransactionReceipt(client, parameters)
   }

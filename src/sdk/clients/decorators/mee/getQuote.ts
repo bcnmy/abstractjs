@@ -906,11 +906,16 @@ export const getQuote = async (
     }
   }
 
-  const { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed } =
-    await preparePaymentInfo(client, {
+  const [
+    { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed },
+    preparedUserOps
+  ] = await Promise.all([
+    preparePaymentInfo(client, {
       ...parameters,
       initDataTypeByChainId
-    })
+    }),
+    prepareUserOps(account_, finalInstructions, false, moduleAddress)
+  ])
 
   let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
 
@@ -931,19 +936,13 @@ export const getQuote = async (
   if (isSessionDetailsProcessed)
     hasProcessedSessionDetails.add(paymentInfo.chainId)
 
-  const preparedUserOps = await prepareUserOps(
-    account_,
-    finalInstructions,
-    false,
-    moduleAddress
-  )
-
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
   if (cleanUps && cleanUps.length > 0) {
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
+
     const result = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
