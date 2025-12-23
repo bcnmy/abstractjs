@@ -132,13 +132,15 @@ export const getMeeK1ModuleStubSignature = (
     prefix = "0x177eee00"
     mockModePayload = concatHex([
       MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
-      "0x00000000000000000000000000000000000000000000000000000000000000a0",
+      "0x00000000000000000000000000000000000000000000000000000000000000a0", // offsets
       "0x0000000000000000000000000000000000000000000000000000000000000100"
     ])
   }
   // for permit mode, on-chain mode, and mm-dtk mode, we imitate the sig structure
   // hex values are taken from a real signature for an according fusion mode
   // stub signatures are used to estimate gas and are not expected to be valid
+
+  // here and below sample data from some random actual userOp encoding with preserved length are used to imitate the signature structure
   if (signatureType === "permit") {
     prefix = "0x177eee01"
     mockModePayload = concatHex([
