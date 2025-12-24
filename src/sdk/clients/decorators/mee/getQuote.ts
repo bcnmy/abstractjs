@@ -106,6 +106,11 @@ export interface InstructionLevelTimeBounds {
    * If multiple instructions are batched together as single userOp which has multiple timebounds, the bigger timebound window will be used
    */
   upperBoundTimestamp?: number
+  /**
+   * Execution simulation retry delay (milliseconds) will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
+   * uses cases such as limit orders, DCA and etc... and also very helpful to reduce orchestration fees for long standing transactions
+   */
+  executionSimulationRetryDelay?: number
 }
 
 /**
@@ -312,6 +317,11 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   upperBoundTimestamp?: number
   /**
+   * Execution simulation retry delay (milliseconds) will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
+   * uses cases such as limit orders, DCA and etc... and also very helpful to reduce orchestration fees for long standing transactions
+   */
+  executionSimulationRetryDelay?: number
+  /**
    * gasLimit option to override the default payment gas limit
    */
   gasLimit?: bigint
@@ -442,6 +452,8 @@ export type UserOp = {
   lowerBoundTimestamp?: number
   /** Upper bound timestamp for operation validity */
   upperBoundTimestamp?: number
+  /** Execution simulation retry delay for constraint simulation delay */
+  executionSimulationRetryDelay?: number
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
   /** Cleanup userop flag - Special user op */
@@ -597,6 +609,8 @@ export interface MeeFilledUserOpDetails {
   signature?: Hex
   /** Userop finality confirmation. Soft confirmation and Hard confirmation is supported */
   isConfirmed?: boolean
+  /** Execution simulation retry delay for constraint simulation delay */
+  executionSimulationRetryDelay?: string
 }
 
 /**
@@ -667,6 +681,7 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
+    executionSimulationRetryDelay: executionSimulationRetryDelay_,
     delegate = false,
     authorizations = [],
     multichain7702Auth = false,
@@ -972,7 +987,8 @@ export const getQuote = async (
         metadata,
         simulationOverrides,
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -1069,6 +1085,9 @@ export const getQuote = async (
               CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION
             : // Instruction level timebound will be considered first
               upperBoundTimestamp || upperBoundTimestamp_,
+          // Instruction level execution simulation retry delay will be considered first and then global config
+          executionSimulationRetryDelay:
+            executionSimulationRetryDelay || executionSimulationRetryDelay_,
           sender,
           callData,
           callGasLimit,
@@ -1421,7 +1440,8 @@ const prepareUserOps = async (
         instruction.metadata,
         instruction.simulationOverrides,
         instruction.lowerBoundTimestamp,
-        instruction.upperBoundTimestamp
+        instruction.upperBoundTimestamp,
+        instruction.executionSimulationRetryDelay
       ])
     })
   )

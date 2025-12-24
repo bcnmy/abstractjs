@@ -94,7 +94,8 @@ export const buildIntent = async (
     mode,
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
 
   const { instructions } = await buildBridgeInstructions({
@@ -106,7 +107,8 @@ export const buildIntent = async (
     mode,
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   })
 
   return [...currentInstructions, ...instructions]

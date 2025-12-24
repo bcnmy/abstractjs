@@ -73,7 +73,8 @@ export const buildNativeTokenTransfer = async (
     to,
     metadata: metadataOverride,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -145,7 +146,8 @@ export const buildNativeTokenTransfer = async (
         chainId,
         metadata: metadataOverride || metadata,
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       },
       composabilityParams
     )
@@ -175,7 +177,8 @@ export const buildNativeTokenTransfer = async (
         isComposable: false,
         chainId,
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       }
     ]
   }

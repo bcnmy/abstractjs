@@ -59,7 +59,8 @@ export const buildMultichainInstructions = async (
     account,
     metadata: metadataOverride,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
 
   const instructions = await Promise.all(
@@ -100,7 +101,8 @@ export const buildMultichainInstructions = async (
         chainId,
         metadata: metadataOverride || metadata,
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       }
     })
   )

@@ -80,7 +80,8 @@ describe("utils.batchInstructions", () => {
     account: MultichainSmartAccount,
     amount: string,
     lowerBoundTimestamp?: number,
-    upperBoundTimestamp?: number
+    upperBoundTimestamp?: number,
+    executionSimulationRetryDelay?: number
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -90,7 +91,8 @@ describe("utils.batchInstructions", () => {
         spender: account.addressOn(base.id, true),
         amount: parseEther(amount),
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       }
     )
 
@@ -98,7 +100,8 @@ describe("utils.batchInstructions", () => {
     account: MultichainSmartAccount,
     amount: string,
     lowerBoundTimestamp?: number,
-    upperBoundTimestamp?: number
+    upperBoundTimestamp?: number,
+    executionSimulationRetryDelay?: number
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -108,7 +111,8 @@ describe("utils.batchInstructions", () => {
         spender: account.addressOn(optimism.id, true),
         amount: parseEther(amount),
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       }
     )
 
@@ -116,7 +120,8 @@ describe("utils.batchInstructions", () => {
     account: MultichainSmartAccount,
     amount: string,
     lowerBoundTimestamp?: number,
-    upperBoundTimestamp?: number
+    upperBoundTimestamp?: number,
+    executionSimulationRetryDelay?: number
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -126,7 +131,8 @@ describe("utils.batchInstructions", () => {
         spender: account.addressOn(mainnet.id, true),
         amount: parseEther(amount),
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       }
     )
 
@@ -375,6 +381,82 @@ describe("utils.batchInstructions", () => {
     )
     expect(batchedInstructions[0].upperBoundTimestamp).to.eq(
       upperBoundTimestamp + 180
+    )
+  })
+
+  test("Should use instruction level executionSimulationRetryDelay", async () => {
+    const lowerBoundTimestamp = Math.floor(Date.now() / 1000)
+    const upperBoundTimestamp = lowerBoundTimestamp + 300 // 5 mins
+    const executionSimulationRetryDelay = 1 * 60 * 1000 // 1 minute
+
+    const instructions = [
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp,
+        executionSimulationRetryDelay + 1000
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp
+      )
+    ]
+
+    const resolvedInstructions = await resolveInstructions(instructions)
+
+    expect(resolvedInstructions[0].executionSimulationRetryDelay).to.eq(
+      executionSimulationRetryDelay
+    )
+    expect(resolvedInstructions[1].executionSimulationRetryDelay).to.eq(
+      executionSimulationRetryDelay + 1000
+    )
+    expect(resolvedInstructions[2].executionSimulationRetryDelay).to.eq(
+      undefined
+    )
+  })
+
+  test("Should use instruction level largest executionSimulationRetryDelay if batched", async () => {
+    const lowerBoundTimestamp = Math.floor(Date.now() / 1000)
+    const upperBoundTimestamp = lowerBoundTimestamp + 300 // 5 mins
+    const executionSimulationRetryDelay = 1 * 60 * 1000 // 1 minute
+
+    const instructions = [
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
+      ),
+      createBaseApproval(
+        mcNexus,
+        "1.0",
+        lowerBoundTimestamp,
+        upperBoundTimestamp,
+        executionSimulationRetryDelay + 1000
+      )
+    ]
+
+    const resolvedInstructions = await resolveInstructions(instructions)
+
+    const batchedInstructions = await batchInstructions({
+      accountAddress: mcNexus.signer.address,
+      meeVersions,
+      instructions: resolvedInstructions
+    })
+
+    expect(batchedInstructions[0].executionSimulationRetryDelay).to.eq(
+      executionSimulationRetryDelay + 1000
     )
   })
 })
