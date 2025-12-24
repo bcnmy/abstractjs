@@ -41,13 +41,17 @@
     "typedoc": "^0.27.9",
     "viem": "^2.26.2",
     "vitest": "^3.0.7",
-    "yargs": "^17.7.2"
+    "yargs": "^17.7.2",
+    "@safe-global/types-kit": "3.0.0",
+    "@safe-global/protocol-kit": "6.1.2"
+    
   },
   "peerDependencies": {
     "@metamask/delegation-toolkit": "^0.11.0",
     "@rhinestone/module-sdk": "0.4.0",
     "typescript": "^5.8.2",
-    "viem": "^2.26.2"
+    "viem": "^2.26.2",
+    "@safe-global/types-kit": "3.0.0"
   },
   "exports": {
     ".": {

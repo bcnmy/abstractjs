@@ -1,7 +1,6 @@
 import {
   type Address,
   type Hex,
-  type WalletClient,
   concatHex,
   encodeAbiParameters,
   encodeFunctionData,
@@ -14,21 +13,12 @@ import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
-
-/**
- * Safe transaction operation type
- * 0 = Call (regular transaction)
- * 1 = DelegateCall
- */
-export enum SafeOperation {
-  Call = 0,
-  DelegateCall = 1
-}
+import { type SafeTransactionDataPartial, OperationType, SafeTransaction } from "@safe-global/types-kit"
 
 /**
  * Safe transaction data structure matching the Solidity SafeTxnData struct
  */
-export interface SafeTxnData {
+export interface SafeTxnDataForNode {
   /** Original domain separator of the Safe */
   ogDomainSeparator: Hex
   /** Target address of the transaction */
@@ -38,7 +28,7 @@ export interface SafeTxnData {
   /** Transaction calldata (with supertxn hash appended) */
   data: Hex
   /** Operation type (Call or DelegateCall) */
-  operation: SafeOperation
+  operation: OperationType
   /** Gas allocated for the Safe transaction execution */
   safeTxGas: bigint
   /** Base gas (stipend) for data and signature checks */
@@ -65,20 +55,13 @@ export type SignSafeQuoteParams = {
    */
   fusionQuote: GetSafeQuotePayload
   /**
-   * The Safe wallet client used for signing the Safe transaction.
-   * This should be a wallet client configured for the Safe that can
-   * collect signatures from the required owners.
+   * The Safe transaction
    */
-  safeWalletClient: WalletClient
+  signedSafeTxn: SafeTransaction,
   /**
-   * The Safe account address that holds the funds
+   * The Safe master account address
    */
   safeAccount: Address
-  /**
-   * Optional companion smart account to execute the superTxn
-   * If not provided, uses the client's default account
-   */
-  companionAccount?: MultichainSmartAccount
 }
 
 /**
@@ -95,26 +78,10 @@ export type SignSafeQuotePayload = GetQuotePayload & {
 // Safe SA mode prefix - 0x177eee04 for Safe Smart Account mode
 export const SAFE_SA_PREFIX = "0x177eee04" as const
 
-// Safe transaction typehash for EIP-712
-// keccak256("SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)")
-export const SAFE_TX_TYPEHASH =
-  "0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8" as const
-
 // Safe EIP-712 domain typehash
 // keccak256("EIP712Domain(uint256 chainId,address verifyingContract)")
 const SAFE_DOMAIN_TYPEHASH =
   "0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218" as const
-
-// Minimal Safe ABI for reading nonce
-const SAFE_ABI = [
-  {
-    inputs: [],
-    name: "nonce",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function"
-  }
-] as const
 
 /**
  * Computes the Safe domain separator for a given Safe address and chain
@@ -136,134 +103,6 @@ export const computeSafeDomainSeparator = (
 }
 
 /**
- * Computes the Safe transaction hash for signing
- */
-export const computeSafeTxHash = (
-  domainSeparator: Hex,
-  safeTxData: Omit<SafeTxnData, "ogDomainSeparator" | "signatures">
-): Hex => {
-  const encodedData = encodeAbiParameters(
-    [
-      { type: "bytes32" }, // SAFE_TX_TYPEHASH
-      { type: "address" }, // to
-      { type: "uint256" }, // value
-      { type: "bytes32" }, // keccak256(data)
-      { type: "uint8" }, // operation
-      { type: "uint256" }, // safeTxGas
-      { type: "uint256" }, // baseGas
-      { type: "uint256" }, // gasPrice
-      { type: "address" }, // gasToken
-      { type: "address" }, // refundReceiver
-      { type: "uint256" } // nonce
-    ],
-    [
-      SAFE_TX_TYPEHASH,
-      safeTxData.to,
-      safeTxData.value,
-      keccak256(safeTxData.data),
-      safeTxData.operation,
-      safeTxData.safeTxGas,
-      safeTxData.baseGas,
-      safeTxData.gasPrice,
-      safeTxData.gasToken,
-      safeTxData.refundReceiver,
-      safeTxData.nonce
-    ]
-  )
-
-  const structHash = keccak256(encodedData)
-
-  // EIP-712 final hash: keccak256("\x19\x01" || domainSeparator || structHash)
-  return keccak256(concatHex(["0x1901", domainSeparator, structHash]))
-}
-
-/**
- * Prepares the signable Safe transaction payload.
- * This function creates the Safe transaction data structure that needs to be signed
- * by the Safe owners to approve token spending or forward native ETH for the supertransaction.
- *
- * @param quoteParams - The Safe quote parameters
- * @param safeAccount - The Safe address
- * @param spender - The address that will be approved to spend tokens (Nexus orchestrator)
- * @param recipient - The address that will receive the funds (for native transfers)
- * @param chainId - The chain ID where the Safe is deployed
- * @param safeNonce - The current nonce of the Safe
- * @param ethForwarderAddress - The address of the ETH forwarder contract (for native token transfers)
- * @returns Object containing the Safe transaction data and metadata
- */
-export const prepareSignableSafeQuotePayload = async (
-  quoteParams: GetSafeQuotePayload,
-  safeAccount: Address,
-  spender: Address,
-  recipient: Address,
-  chainId: number,
-  safeNonce: bigint,
-  ethForwarderAddress: Address
-): Promise<{
-  safeTxData: Omit<SafeTxnData, "signatures">
-  safeTxHash: Hex
-}> => {
-  const { quote, trigger } = quoteParams
-
-  const amount = trigger.approvalAmount ?? trigger.amount!
-
-  let to: Address
-  let value: bigint
-  let calldata: Hex
-
-  if (trigger.tokenAddress === zeroAddress) {
-    // Native token case: call the ETH forwarder contract
-    const forwardCalldata = encodeFunctionData({
-      abi: ForwarderAbi,
-      functionName: "forward",
-      args: [recipient]
-    })
-    to = ethForwarderAddress
-    value = amount
-    calldata = forwardCalldata
-  } else {
-    // ERC20 token case: approve the spender
-    const approveCalldata = encodeFunctionData({
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [spender, amount]
-    })
-    to = trigger.tokenAddress!
-    value = 0n
-    calldata = approveCalldata
-  }
-
-  // Append the supertxn hash to the calldata
-  const dataWithHash = concatHex([calldata, quote.hash])
-
-  // Compute domain separator
-  const domainSeparator = computeSafeDomainSeparator(safeAccount, chainId)
-
-  // Build Safe transaction data
-  const safeTxData: Omit<SafeTxnData, "signatures"> = {
-    ogDomainSeparator: domainSeparator,
-    to,
-    value,
-    data: dataWithHash,
-    operation: SafeOperation.Call,
-    safeTxGas: 0n, // Let Safe estimate
-    baseGas: 0n,
-    gasPrice: 0n, // No refund
-    gasToken: zeroAddress,
-    refundReceiver: zeroAddress,
-    nonce: safeNonce
-  }
-
-  // Compute the Safe transaction hash that needs to be signed
-  const safeTxHash = computeSafeTxHash(domainSeparator, safeTxData)
-
-  return {
-    safeTxData,
-    safeTxHash
-  }
-}
-
-/**
  * Formats the signed Safe quote payload by encoding the Safe transaction data
  * and signatures as required by the K1MeeValidator.
  *
@@ -274,7 +113,7 @@ export const prepareSignableSafeQuotePayload = async (
  */
 export const formatSignedSafeQuotePayload = (
   quoteParams: GetSafeQuotePayload,
-  safeTxData: Omit<SafeTxnData, "signatures">,
+  safeTxData: Omit<SafeTxnDataForNode, "signatures">,
   signatures: Hex
 ): SignSafeQuotePayload => {
   const { quote } = quoteParams
@@ -364,12 +203,43 @@ export const signSafeQuote = async (
   client: BaseMeeClient,
   parameters: SignSafeQuoteParams
 ): Promise<SignSafeQuotePayload> => {
-  const {
-    companionAccount: account_ = client.account,
-    safeWalletClient,
-    safeAccount,
-    fusionQuote: { trigger }
-  } = parameters
+
+  const { fusionQuote, signedSafeTxn } = parameters
+  const txnData = signedSafeTxn.data
+
+  const signatures = signedSafeTxn.encodedSignatures()
+
+  const ogDomainSeparator = computeSafeDomainSeparator(parameters.safeAccount, fusionQuote.trigger.chainId)
+
+  const safeTxData = {
+    ogDomainSeparator,
+    to: txnData.to,
+    value: BigInt(txnData.value),
+    data: txnData.data as Hex,
+    operation: txnData.operation,
+    safeTxGas: BigInt(txnData.safeTxGas),
+    baseGas: BigInt(txnData.baseGas),
+    gasPrice: BigInt(txnData.gasPrice),
+    gasToken: txnData.gasToken as Address,
+    refundReceiver: txnData.refundReceiver as Address,
+    nonce: BigInt(txnData.nonce),
+    signatures: signatures as Hex
+  }
+
+  return formatSignedSafeQuotePayload(
+    parameters.fusionQuote,
+    safeTxData,
+    signatures as Hex
+  )
+}
+
+export function getDataToPrepareSafeTransaction(
+  client: BaseMeeClient,
+  quoteParams: GetSafeQuotePayload,
+  companionAccount?: MultichainSmartAccount
+): SafeTransactionDataPartial {
+
+  const { quote, trigger } = quoteParams
 
   if (trigger.call) {
     throw new Error(
@@ -381,45 +251,50 @@ export const signSafeQuote = async (
     throw new Error("Amount is required to sign a Safe quote")
   }
 
-  const spender = account_.addressOn(trigger.chainId, true)
+  const account = companionAccount ?? client.account
 
-  // By default the trigger amount will be deposited to the companion smart account.
-  // If a custom recipient is defined, it will deposit to the recipient address
+  const spender = account.addressOn(trigger.chainId, true)
   const recipient = trigger.recipientAddress || spender
+  const { version } = account.deploymentOn(trigger.chainId, true)
+  const ethForwarderAddress = version.ethForwarderAddress
 
-  // Get the public client and version for the trigger chain
-  const { publicClient, version } = account_.deploymentOn(trigger.chainId, true)
+  const amount = trigger.approvalAmount ?? trigger.amount!
 
-  // Fetch the Safe nonce from the contract
-  const safeNonce = await publicClient.readContract({
-    address: safeAccount,
-    abi: SAFE_ABI,
-    functionName: "nonce"
-  })
+  let to: Address
+  let value: bigint
+  let calldata: Hex
 
-  const { safeTxData, safeTxHash } = await prepareSignableSafeQuotePayload(
-    parameters.fusionQuote,
-    safeAccount,
-    spender,
-    recipient,
-    trigger.chainId,
-    safeNonce,
-    version.ethForwarderAddress
-  )
+  if (trigger.tokenAddress === zeroAddress) {
+    // Native token case: call the ETH forwarder contract
+    const forwardCalldata = encodeFunctionData({
+      abi: ForwarderAbi,
+      functionName: "forward",
+      args: [recipient]
+    })
+    to = ethForwarderAddress
+    value = amount
+    calldata = forwardCalldata
+  } else {
+    // ERC20 token case: approve the spender
+    const approveCalldata = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [spender, amount]
+    })
+    to = trigger.tokenAddress!
+    value = 0n
+    calldata = approveCalldata
+  }
 
-  // Sign the Safe transaction hash
-  // TODO: research some Safe wallet SDK ,
-  // which signers it provides and what the signer object returns
-  const signatures = await safeWalletClient.signMessage({
-    account: safeWalletClient.account!,
-    message: { raw: safeTxHash }
-  })
+  // Append the supertxn hash to the calldata
+  const dataWithHash = concatHex([calldata, quote.hash])
 
-  return formatSignedSafeQuotePayload(
-    parameters.fusionQuote,
-    safeTxData,
-    signatures
-  )
+  return {
+    to,
+    value: value.toString(),
+    data: dataWithHash,
+    operation: OperationType.Call,
+  }
 }
 
 export default signSafeQuote
