@@ -18,6 +18,8 @@
     "@metamask/delegation-toolkit": "^0.11.0",
     "@pimlico/alto": "^0.0.4",
     "@rhinestone/module-sdk": "0.4.0",
+    "@safe-global/protocol-kit": "6.1.2",
+    "@safe-global/types-kit": "3.0.0",
     "@size-limit/esbuild-why": "^11.2.0",
     "@size-limit/preset-small-lib": "^11.2.0",
     "@types/bun": "^1.2.4",
@@ -41,8 +43,7 @@
     "typedoc": "^0.27.9",
     "viem": "^2.26.2",
     "vitest": "^3.0.7",
-    "yargs": "^17.7.2",
-    "@safe-global/types-kit": "3.0.0"
+    "yargs": "^17.7.2"
   },
   "peerDependencies": {
     "@metamask/delegation-toolkit": "^0.11.0",
@@ -137,6 +138,6 @@
   "types": "./dist/_types/index.d.ts",
   "typings": "./dist/_types/index.d.ts",
   "patchedDependencies": {
-    "@safe-global/types-kit@3.0.0": "patches/@safe-global%2Ftypes-kit@3.0.0.patch"
+    "@safe-global/types-kit@3.0.0": "patches/@safe-global-types-kit@3.0.0.patch"
   }
 }
