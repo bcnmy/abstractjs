@@ -5,9 +5,7 @@ import getSupertransactionReceipt, {
   type GetSupertransactionReceiptPayloadWithReceipts
 } from "./getSupertransactionReceipt"
 
-// Reduced this from 1000 ms to 75 ms for the performance aspect as the SDK gives more priority to performance by default.
-// Any value less than 1000 ms for polling is considered as not good in the case of public APIs.
-export const DEFAULT_POLLING_INTERVAL = 75 // 75 millisecond
+export const DEFAULT_POLLING_INTERVAL = 250
 
 // memory storage for txHash by meeUserOp hash to send notification when txHash changes for meeUserOp
 const txHashMapByMeeUserOpHash: Map<string, string> = new Map()
@@ -60,7 +58,15 @@ export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,
   parameters: WaitForSupertransactionReceiptParams
 ): Promise<WaitForSupertransactionReceiptPayload> => {
-  const pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
+  // Defaults to client pollingInterval config initially
+  let pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
+
+  if (parameters.pollingInterval && parameters.pollingInterval > 0) {
+    pollingInterval = parameters.pollingInterval
+  } else if (parameters.mode === "fast-block") {
+    // Very fast polling if the fast block mode is used and no custom polling is configured
+    pollingInterval = 75
+  }
 
   // Force waitForReceipts to true for this function
   const paramsWithWait = { ...parameters, waitForReceipts: true }

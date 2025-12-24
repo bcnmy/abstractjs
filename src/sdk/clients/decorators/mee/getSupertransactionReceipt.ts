@@ -43,6 +43,10 @@ export type GetSupertransactionReceiptParams =
      * If not provided, uses the client's default account
      */
     account?: MultichainSmartAccount
+    /**
+     * Interval delay between fetching the tx receipt to check if the transaction is mined
+     */
+    pollingInterval?: number
   }
 
 /**
