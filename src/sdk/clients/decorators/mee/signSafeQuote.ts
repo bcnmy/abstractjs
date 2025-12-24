@@ -204,7 +204,7 @@ export const formatSignedSafeQuotePayload = (
  * ```
  */
 export const signSafeQuote = async (
-  client: BaseMeeClient,
+  _client: BaseMeeClient,
   parameters: SignSafeQuoteParams
 ): Promise<SignSafeQuotePayload> => {
   const { fusionQuote, signedSafeTxn } = parameters
@@ -219,7 +219,7 @@ export const signSafeQuote = async (
 
   const safeTxData = {
     ogDomainSeparator,
-    to: txnData.to,
+    to: txnData.to as `0x${string}`,
     value: BigInt(txnData.value),
     data: txnData.data as Hex,
     operation: txnData.operation,

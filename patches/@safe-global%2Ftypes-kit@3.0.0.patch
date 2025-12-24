@@ -1,0 +1,15 @@
+diff --git a/dist/src/index.d.ts b/dist/src/index.d.ts
+index a234d050bc12cff66e3036acd9b2060ea8cec1eb..0d56a0e00e051f38a1ba01f4a943d600577eca2f 100644
+--- a/dist/src/index.d.ts
++++ b/dist/src/index.d.ts
+@@ -10,9 +10,4 @@ export * from './contracts/SafeWebAuthnSharedSigner';
+ export * from './contracts/common/BaseContract';
+ export * from './contracts/assets';
+ export * from './types';
+-declare module 'abitype' {
+-    interface Register {
+-        AddressType: string;
+-    }
+-}
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
