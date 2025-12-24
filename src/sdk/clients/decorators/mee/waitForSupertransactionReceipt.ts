@@ -1,12 +1,11 @@
 import type { Hex } from "viem"
-import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
 import type { BaseMeeClient } from "../../createMeeClient"
 import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
   type GetSupertransactionReceiptPayloadWithReceipts
 } from "./getSupertransactionReceipt"
 
-export const DEFAULT_POLLING_INTERVAL = 1000
+export const DEFAULT_POLLING_INTERVAL = 250
 
 // memory storage for txHash by meeUserOp hash to send notification when txHash changes for meeUserOp
 const txHashMapByMeeUserOpHash: Map<string, string> = new Map()
@@ -59,7 +58,15 @@ export const waitForSupertransactionReceipt = async (
   client: BaseMeeClient,
   parameters: WaitForSupertransactionReceiptParams
 ): Promise<WaitForSupertransactionReceiptPayload> => {
-  const pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
+  // Defaults to client pollingInterval config initially
+  let pollingInterval = client.pollingInterval ?? DEFAULT_POLLING_INTERVAL
+
+  if (parameters.pollingInterval && parameters.pollingInterval > 0) {
+    pollingInterval = parameters.pollingInterval
+  } else if (parameters.mode === "fast-block") {
+    // Very fast polling if the fast block mode is used and no custom polling is configured
+    pollingInterval = 75
+  }
 
   // Force waitForReceipts to true for this function
   const paramsWithWait = { ...parameters, waitForReceipts: true }
@@ -99,21 +106,16 @@ export const waitForSupertransactionReceipt = async (
     }
   }
 
-  const statusResult = await parseTransactionStatus(userOps, parameters.mode)
-
-  // Update the response with the calculated status
-  explorerResponse.transactionStatus = statusResult.status
-
   // Handle error status cases (FAILED, MINED_FAIL)
   if (
-    statusResult.status === "FAILED" ||
-    statusResult.status === "MINED_FAIL"
+    explorerResponse.transactionStatus === "FAILED" ||
+    explorerResponse.transactionStatus === "MINED_FAIL"
   ) {
-    throw new Error(statusResult.message || "Transaction failed")
+    throw new Error(explorerResponse.message || "Transaction failed")
   }
 
   // If transaction is not finalized yet, continue polling
-  if (!statusResult.isFinalised) {
+  if (!explorerResponse.isFinalised) {
     await new Promise((resolve) => setTimeout(resolve, pollingInterval))
     return await waitForSupertransactionReceipt(client, parameters)
   }

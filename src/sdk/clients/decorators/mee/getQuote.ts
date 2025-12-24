@@ -1,8 +1,19 @@
-import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
+import {
+  http,
+  type Address,
+  type Hex,
+  type OneOf,
+  createPublicClient,
+  pad,
+  toHex
+} from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getChain } from "../../../account"
 import {
   buildComposable,
-  formatCallDataInputParamsWithVersion
+  formatCallDataInputParamsWithVersion,
+  getDefaultNonceKey,
+  getNonceWithKeyUtil
 } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
@@ -19,10 +30,15 @@ import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
+  MEEVersion,
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
 } from "../../../constants"
-import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
+import {
+  type ModularSmartAccount,
+  type RuntimeValue,
+  getMEEVersion
+} from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -221,6 +237,11 @@ export type SponsorshipOptionsParams = {
    * Custom headers to be passed to self hosted sponsorship backends.
    */
   customHeaders?: Record<string, string>
+  /**
+   * RPC url for fetching the nonce for sponsorship.
+   * Default to public RPC url (Not reliable). If the sponsorship chain is defined ? Rpc url will be inherited from the chain configuration
+   */
+  rpcUrl?: Url
   /**
    * Gas tank parameters
    */
@@ -921,11 +942,16 @@ export const getQuote = async (
     }
   }
 
-  const { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed } =
-    await preparePaymentInfo(client, {
+  const [
+    { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed },
+    preparedUserOps
+  ] = await Promise.all([
+    preparePaymentInfo(client, {
       ...parameters,
       initDataTypeByChainId
-    })
+    }),
+    prepareUserOps(account_, finalInstructions, false, moduleAddress)
+  ])
 
   let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
 
@@ -946,19 +972,13 @@ export const getQuote = async (
   if (isSessionDetailsProcessed)
     hasProcessedSessionDetails.add(paymentInfo.chainId)
 
-  const preparedUserOps = await prepareUserOps(
-    account_,
-    finalInstructions,
-    false,
-    moduleAddress
-  )
-
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
   if (cleanUps && cleanUps.length > 0) {
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
+
     const result = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
@@ -1192,18 +1212,63 @@ const preparePaymentInfo = async (
       sponsorshipUrl = sponsorshipOptions.url
     }
 
-    const sponsorshipClient = createHttpClient(sponsorshipUrl)
+    let nonce: string
 
-    const { nonce } = await sponsorshipClient.request<{
-      nonce: string
-      nonceKey: string
-    }>({
-      path: `sponsorship/nonce/${chainId}/${sender}`,
-      method: "GET",
-      ...(sponsorshipOptions?.customHeaders
-        ? { headers: sponsorshipOptions.customHeaders }
-        : {})
-    })
+    try {
+      // Try to see if the nexus account is defined on sponsorship chain to inhert the RPC url from it
+      const nexusAccount = account_.deploymentOn(chainId)
+
+      // Sponsorship account will be always MEE version 2.0.0
+      const { defaultValidatorAddress } = getMEEVersion(MEEVersion.V2_0_0)
+      const defaultNonceKey = await getDefaultNonceKey(sender, chainId)
+
+      if (nexusAccount) {
+        // Reuse the RPC url from existing chain config
+        const nonceInfo = await getNonceWithKeyUtil(
+          nexusAccount.publicClient,
+          sender,
+          {
+            moduleAddress: defaultValidatorAddress,
+            key: defaultNonceKey,
+            validationMode: "0x00"
+          }
+        )
+
+        nonce = nonceInfo.nonce.toString()
+      } else {
+        // Try to use the RPC defined from the sponsorshipOptions orelse defaults to public RPC
+        const publicClient = createPublicClient({
+          transport: sponsorshipOptions?.rpcUrl
+            ? http(sponsorshipOptions.rpcUrl)
+            : http(),
+          chain: getChain(chainId)
+        })
+
+        const nonceInfo = await getNonceWithKeyUtil(publicClient, sender, {
+          moduleAddress: defaultValidatorAddress,
+          key: defaultNonceKey,
+          validationMode: "0x00"
+        })
+
+        nonce = nonceInfo.nonce.toString()
+      }
+    } catch {
+      // If incase there is any error in fetching the nonce locally ? Fallback to API based nonce fetching
+      const sponsorshipClient = createHttpClient(sponsorshipUrl)
+
+      const nonceInfo = await sponsorshipClient.request<{
+        nonce: string
+        nonceKey: string
+      }>({
+        path: `sponsorship/nonce/${chainId}/${sender}`,
+        method: "GET",
+        ...(sponsorshipOptions?.customHeaders
+          ? { headers: sponsorshipOptions.customHeaders }
+          : {})
+      })
+
+      nonce = nonceInfo.nonce
+    }
 
     paymentInfo = {
       sponsored: true,
