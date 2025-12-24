@@ -107,7 +107,7 @@ export interface InstructionLevelTimeBounds {
    */
   upperBoundTimestamp?: number
   /**
-   * Execution simulation retry delay will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
+   * Execution simulation retry delay (milliseconds) will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
    * uses cases such as limit orders, DCA and etc... and also very helpful to reduce orchestration fees for long standing transactions
    */
   executionSimulationRetryDelay?: number
@@ -317,7 +317,7 @@ export type GetQuoteParams = SupertransactionLike & {
    */
   upperBoundTimestamp?: number
   /**
-   * Execution simulation retry delay will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
+   * Execution simulation retry delay (milliseconds) will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
    * uses cases such as limit orders, DCA and etc... and also very helpful to reduce orchestration fees for long standing transactions
    */
   executionSimulationRetryDelay?: number

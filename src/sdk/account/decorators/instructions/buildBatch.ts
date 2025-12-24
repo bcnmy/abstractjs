@@ -61,7 +61,6 @@ export const buildBatch = async (
   let maxExecutionSimulationRetryDelay = 0
   let finalLowerBoundTimestamp = 0
   let finalUpperBoundTimestamp = 0
-  let finalExecutionSimulationRetryDelay = 0
 
   for (const {
     lowerBoundTimestamp,
@@ -75,7 +74,6 @@ export const buildBatch = async (
 
       if (isMax) {
         maxExecutionSimulationRetryDelay = executionSimulationRetryDelay
-        finalExecutionSimulationRetryDelay = maxExecutionSimulationRetryDelay
       }
     }
 
@@ -144,8 +142,8 @@ export const buildBatch = async (
       ...(finalUpperBoundTimestamp !== 0
         ? { upperBoundTimestamp: finalUpperBoundTimestamp }
         : {}),
-      ...(finalExecutionSimulationRetryDelay !== 0
-        ? { executionSimulationRetryDelay: finalExecutionSimulationRetryDelay }
+      ...(maxExecutionSimulationRetryDelay !== 0
+        ? { executionSimulationRetryDelay: maxExecutionSimulationRetryDelay }
         : {})
     }
   ]
