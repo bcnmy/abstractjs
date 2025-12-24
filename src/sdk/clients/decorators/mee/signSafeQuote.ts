@@ -1,4 +1,9 @@
 import {
+  OperationType,
+  type SafeTransaction,
+  type SafeTransactionDataPartial
+} from "@safe-global/types-kit"
+import {
   type Address,
   type Hex,
   concatHex,
@@ -13,7 +18,6 @@ import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
-import { type SafeTransactionDataPartial, OperationType, SafeTransaction } from "@safe-global/types-kit"
 
 /**
  * Safe transaction data structure matching the Solidity SafeTxnData struct
@@ -57,7 +61,7 @@ export type SignSafeQuoteParams = {
   /**
    * The Safe transaction
    */
-  signedSafeTxn: SafeTransaction,
+  signedSafeTxn: SafeTransaction
   /**
    * The Safe master account address
    */
@@ -203,13 +207,15 @@ export const signSafeQuote = async (
   client: BaseMeeClient,
   parameters: SignSafeQuoteParams
 ): Promise<SignSafeQuotePayload> => {
-
   const { fusionQuote, signedSafeTxn } = parameters
   const txnData = signedSafeTxn.data
 
   const signatures = signedSafeTxn.encodedSignatures()
 
-  const ogDomainSeparator = computeSafeDomainSeparator(parameters.safeAccount, fusionQuote.trigger.chainId)
+  const ogDomainSeparator = computeSafeDomainSeparator(
+    parameters.safeAccount,
+    fusionQuote.trigger.chainId
+  )
 
   const safeTxData = {
     ogDomainSeparator,
@@ -238,7 +244,6 @@ export function getDataToPrepareSafeTransaction(
   quoteParams: GetSafeQuotePayload,
   companionAccount?: MultichainSmartAccount
 ): SafeTransactionDataPartial {
-
   const { quote, trigger } = quoteParams
 
   if (trigger.call) {
@@ -293,7 +298,7 @@ export function getDataToPrepareSafeTransaction(
     to,
     value: value.toString(),
     data: dataWithHash,
-    operation: OperationType.Call,
+    operation: OperationType.Call
   }
 }
 
