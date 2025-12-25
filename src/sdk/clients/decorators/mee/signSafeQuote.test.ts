@@ -53,16 +53,28 @@ describe("getMockSafeSigner", () => {
 
   test("should throw on signTransaction", async () => {
     const signer = getMockSafeSigner(testSafeAddress)
-    await expect(signer.signTransaction({} as any)).rejects.toThrow(
-      "signTransaction is not supported for Safe-owned signer"
-    )
+    await expect(
+      signer.signTransaction({
+        chainId: 1,
+        maxFeePerGas: 1n,
+        maxPriorityFeePerGas: 1n,
+        gas: 21000n,
+        nonce: 0,
+        to: testSafeAddress
+      })
+    ).rejects.toThrow("signTransaction is not supported for Safe-owned signer")
   })
 
   test("should throw on signTypedData", async () => {
     const signer = getMockSafeSigner(testSafeAddress)
-    await expect(signer.signTypedData({} as any)).rejects.toThrow(
-      "signTypedData is not supported for Safe-owned signer"
-    )
+    await expect(
+      signer.signTypedData({
+        domain: {},
+        types: { Message: [{ name: "content", type: "string" }] },
+        primaryType: "Message",
+        message: { content: "test" }
+      })
+    ).rejects.toThrow("signTypedData is not supported for Safe-owned signer")
   })
 })
 
