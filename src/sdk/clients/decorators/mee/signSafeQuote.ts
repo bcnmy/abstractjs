@@ -6,6 +6,7 @@ import {
 import {
   type Address,
   type Hex,
+  type LocalAccount,
   concatHex,
   encodeAbiParameters,
   encodeFunctionData,
@@ -13,6 +14,7 @@ import {
   keccak256,
   zeroAddress
 } from "viem"
+import { toAccount } from "viem/accounts"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
@@ -300,6 +302,65 @@ export function getDataToPrepareSafeTransaction(
     data: dataWithHash,
     operation: OperationType.Call
   }
+}
+
+/**
+ * Creates a mock signer that uses the Safe address as the signer address.
+ *
+ * This signer is intended for use with `toMultichainNexusAccount` when the
+ * orchestrator should be owned by a Safe multisig. The actual signing happens
+ * through the Safe's multisig flow (using protocol-kit), not through this signer.
+ *
+ * The returned signer:
+ * - Has `address` set to the Safe's address
+ * - Will throw an error if any signing method is called
+ * - Can only be used with Safe-mode operations (getSafeQuote, signSafeQuote, etc.)
+ *
+ * @param safeAddress - The address of the Safe multisig
+ * @returns A LocalAccount-compatible mock signer with the Safe address
+ *
+ * @example
+ * ```typescript
+ * import { getMockSafeSigner } from "@biconomy/abstractjs"
+ *
+ * const safeAddress = "0x..." // Your Safe multisig address
+ * const safeSigner = getMockSafeSigner(safeAddress)
+ *
+ * // Create a multichain Nexus account owned by the Safe
+ * const mcNexus = await toMultichainNexusAccount({
+ *   signer: safeSigner,
+ *   chainConfigurations: [
+ *     { chain: baseSepolia, transport: http(), version: getMEEVersion(MEEVersion.V2_3_0) },
+ *     { chain: optimismSepolia, transport: http(), version: getMEEVersion(MEEVersion.V2_3_0) }
+ *   ]
+ * })
+ *
+ * // The Nexus orchestrator is now owned by the Safe
+ * // Use getSafeQuote and signSafeQuote for transactions
+ * ```
+ */
+export const getMockSafeSigner = (safeAddress: Address): LocalAccount => {
+  return toAccount({
+    address: safeAddress,
+    async signMessage(_): Promise<Hex> {
+      throw new Error(
+        "signMessage is not supported for Safe-owned signer. " +
+          "Use protocol-kit to sign Safe transactions instead."
+      )
+    },
+    async signTransaction(_): Promise<Hex> {
+      throw new Error(
+        "signTransaction is not supported for Safe-owned signer. " +
+          "Use protocol-kit to sign Safe transactions instead."
+      )
+    },
+    async signTypedData(_): Promise<Hex> {
+      throw new Error(
+        "signTypedData is not supported for Safe-owned signer. " +
+          "Use protocol-kit to sign Safe transactions instead."
+      )
+    }
+  })
 }
 
 export default signSafeQuote

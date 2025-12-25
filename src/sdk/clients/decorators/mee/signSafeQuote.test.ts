@@ -15,8 +15,8 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  TEST_BLOCK_CONFIRMATIONS,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
@@ -29,8 +29,42 @@ import { MEEVersion } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
-import { getDataToPrepareSafeTransaction } from "./signSafeQuote"
+import {
+  getDataToPrepareSafeTransaction,
+  getMockSafeSigner
+} from "./signSafeQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+
+describe("getMockSafeSigner", () => {
+  const testSafeAddress =
+    "0x1234567890123456789012345678901234567890" as Address
+
+  test("should return signer with correct Safe address", () => {
+    const signer = getMockSafeSigner(testSafeAddress)
+    expect(signer.address).toBe(testSafeAddress)
+  })
+
+  test("should throw on signMessage", async () => {
+    const signer = getMockSafeSigner(testSafeAddress)
+    await expect(signer.signMessage({ message: "test" })).rejects.toThrow(
+      "signMessage is not supported for Safe-owned signer"
+    )
+  })
+
+  test("should throw on signTransaction", async () => {
+    const signer = getMockSafeSigner(testSafeAddress)
+    await expect(signer.signTransaction({} as any)).rejects.toThrow(
+      "signTransaction is not supported for Safe-owned signer"
+    )
+  })
+
+  test("should throw on signTypedData", async () => {
+    const signer = getMockSafeSigner(testSafeAddress)
+    await expect(signer.signTypedData({} as any)).rejects.toThrow(
+      "signTypedData is not supported for Safe-owned signer"
+    )
+  })
+})
 
 describe("mee.signSafeQuote", () => {
   let network: NetworkConfig
@@ -130,7 +164,6 @@ describe("mee.signSafeQuote", () => {
 
     const predictedSafeAddress =
       (await protocolKitOwner1.getAddress()) as Address
-    console.log("Predicted Safe address:", predictedSafeAddress)
 
     // Check if the Safe is already deployed
     const safeCode = await baseSepoliaPublicClient.getCode({
@@ -139,6 +172,7 @@ describe("mee.signSafeQuote", () => {
     const isDeployed = safeCode !== undefined && safeCode !== "0x"
 
     if (!isDeployed) {
+      console.log("Predicted Safe address:", predictedSafeAddress)
       console.log("Deploying new Safe...")
 
       // Deploy the Safe
@@ -155,10 +189,11 @@ describe("mee.signSafeQuote", () => {
       await baseSepoliaPublicClient.waitForTransactionReceipt({ hash: txHash })
       console.log("Safe deployed on Base Sepolia at:", predictedSafeAddress)
     } else {
+      /*
       console.log(
         "Safe already deployed on Base Sepolia at:",
         predictedSafeAddress
-      )
+      ) */
     }
 
     safeAddress = predictedSafeAddress
@@ -208,10 +243,12 @@ describe("mee.signSafeQuote", () => {
       })
       console.log("Safe deployed on OP Sepolia at:", predictedSafeAddress)
     } else {
+      /*
       console.log(
         "Safe already deployed on OP Sepolia at:",
         predictedSafeAddress
       )
+      */
     }
 
     // Re-initialize protocol kit with the deployed Safe address
@@ -228,18 +265,21 @@ describe("mee.signSafeQuote", () => {
     })
 
     // Step 2: Create Nexus orchestrator on both baseSepolia and opSepolia
+    // Use getMockSafeSigner so that the Nexus orchestrator is owned by the Safe
+    const safeSigner = getMockSafeSigner(safeAddress)
+
     mcNexus = await toMultichainNexusAccount({
-      signer: eoaAccount,
+      signer: safeSigner,
       chainConfigurations: [
         {
           chain: baseSepolia,
           transport: http(baseSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getMEEVersion(MEEVersion.V2_3_0)
         },
         {
           chain: optimismSepolia,
           transport: http(opSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getMEEVersion(MEEVersion.V2_3_0)
         }
       ]
     })
@@ -252,8 +292,8 @@ describe("mee.signSafeQuote", () => {
     const nexusAddressOnBaseSepolia = mcNexus.addressOn(baseSepolia.id, true)
     const nexusAddressOnOpSepolia = mcNexus.addressOn(optimismSepolia.id, true)
 
-    console.log("Nexus address on Base Sepolia:", nexusAddressOnBaseSepolia)
-    console.log("Nexus address on OP Sepolia:", nexusAddressOnOpSepolia)
+    //console.log("Nexus address on Base Sepolia:", nexusAddressOnBaseSepolia)
+    //console.log("Nexus address on OP Sepolia:", nexusAddressOnOpSepolia)
 
     // Step 3: Fund Safe with testnet USDCP token on Base Sepolia
     const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
@@ -294,10 +334,12 @@ describe("mee.signSafeQuote", () => {
       })
       console.log("Safe funded with USDCP on Base Sepolia")
     } else {
+      /*
       console.log(
         "Safe already has sufficient USDCP balance on Base Sepolia:",
         safeBalance
       )
+      */
     }
 
     // Step 4: Fund Nexus orchestrator with USDCP on OP Sepolia
@@ -342,10 +384,12 @@ describe("mee.signSafeQuote", () => {
       })
       console.log("Nexus orchestrator funded with USDCP on OP Sepolia")
     } else {
+      /*
       console.log(
         "Nexus orchestrator already has sufficient USDCP balance on OP Sepolia:",
         nexusBalanceOnOpSepolia
       )
+      */
     }
   })
 
@@ -354,7 +398,7 @@ describe("mee.signSafeQuote", () => {
     const usdcpAddressOpSepolia = testnetMcTestUSDCP.addressOn(
       optimismSepolia.id
     )
-    const triggerAmount = 1n
+    const triggerAmount = 123000n // 0.123 USDCP (6 decimals)
 
     // Step 1: Get the Safe quote
     // Payment and trigger on Base Sepolia
@@ -368,16 +412,19 @@ describe("mee.signSafeQuote", () => {
       instructions: [
         // Transfer 0.01 USDCP on Base Sepolia
         mcNexus.build({
-          type: "transfer",
+          type: "transferFrom", // we use transferFrom because Safe only approves funds in the trigger
           data: {
             tokenAddress: usdcpAddressBaseSepolia,
             amount: transferAmount,
             chainId: baseSepolia.id,
-            recipient: recipientAddress
+            recipient: recipientAddress,
+            sender: mcNexus.signer.address
           }
         }),
         // Transfer 0.01 USDCP on OP Sepolia
         mcNexus.build({
+          // here we use transfer as on the target chain we assume
+          // funds land on the orchestrator address itself
           type: "transfer",
           data: {
             tokenAddress: usdcpAddressOpSepolia,
@@ -399,9 +446,6 @@ describe("mee.signSafeQuote", () => {
     expect(safeQuote.quote.hash).toBeDefined()
     expect(safeQuote.trigger).toBeDefined()
 
-    console.log("Safe quote obtained:", safeQuote.quote.hash)
-    console.log("Recipient address:", recipientAddress)
-
     // Step 2: Get data to prepare Safe transaction
     const safeTxnDataPartial = getDataToPrepareSafeTransaction(
       meeClient,
@@ -413,31 +457,27 @@ describe("mee.signSafeQuote", () => {
     expect(safeTxnDataPartial.to).toBeDefined()
     expect(safeTxnDataPartial.data).toBeDefined()
 
+    /*
     console.log("Safe transaction data prepared:", {
       to: safeTxnDataPartial.to,
       data: safeTxnDataPartial.data
     })
+    */
 
     // Step 3: Create Safe transaction using protocol-kit
     const safeTransaction = await protocolKitOwner1.createTransaction({
       transactions: [safeTxnDataPartial]
     })
-
     expect(safeTransaction).toBeDefined()
-    console.log("Safe transaction created")
 
     // Step 4: Sign with first owner
     let signedSafeTxn = await protocolKitOwner1.signTransaction(safeTransaction)
-    console.log("Transaction signed by owner 1")
-
     // Step 5: Sign with second owner
     signedSafeTxn = await protocolKitOwner2.signTransaction(signedSafeTxn)
-    console.log("Transaction signed by owner 2")
 
     // Verify we have the required signatures
     const signatures = signedSafeTxn.signatures
     expect(signatures.size).toBe(2)
-    console.log("Total signatures collected:", signatures.size)
 
     // Step 6: Sign the Safe quote using signSafeQuote
     const signedSafeQuote = await meeClient.signSafeQuote({
@@ -450,29 +490,21 @@ describe("mee.signSafeQuote", () => {
     expect(signedSafeQuote.signature).toBeDefined()
     expect(signedSafeQuote.signature.startsWith("0x177eee04")).toBe(true) // SAFE_SA_PREFIX
 
-    console.log("Safe quote signed successfully")
     console.log("Quote hash:", signedSafeQuote.hash)
 
     // Step 7: Execute the signed quote
-    console.log("Executing signed Safe quote...")
     const { hash } = await executeSignedQuote(meeClient, {
       signedQuote: signedSafeQuote
     })
 
     // Step 8: Wait for the supertransaction receipt
-    console.log("Waiting for supertransaction receipt...")
     const receipt = await waitForSupertransactionReceipt(meeClient, {
       hash,
       confirmations: TEST_BLOCK_CONFIRMATIONS
     })
 
-    console.log("Supertransaction receipt:", receipt)
-    console.log("Explorer links:", receipt.explorerLinks)
-
     expect(receipt).toBeDefined()
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
     expect(receipt.explorerLinks.length).toBeGreaterThan(0)
-
-    console.log("Safe quote executed successfully!")
   })
 })

@@ -1,0 +1,15 @@
+diff --git a/dist/src/index.d.ts b/dist/src/index.d.ts
+index e3eb741ac8d93a294f9f033fac89f0645051a7a2..ab7659fe741f68c30584735f9e25ac4f6cf717e6 100644
+--- a/dist/src/index.d.ts
++++ b/dist/src/index.d.ts
+@@ -19,9 +19,4 @@ import generateOnChainIdentifier from './utils/on-chain-tracking/generateOnChain
+ export { estimateTxBaseGas, estimateTxGas, estimateSafeTxGas, estimateSafeDeploymentGas, extractPasskeyData, ContractManager, CreateCallBaseContract, createERC20TokenTransferTransaction, DEFAULT_SAFE_VERSION, EthSafeSignature, MultiSendCallOnlyBaseContract, MultiSendBaseContract, generateOnChainIdentifier, PREDETERMINED_SALT_NONCE, SafeBaseContract, SafeProxyFactoryBaseContract, SafeTransactionOptionalProps, SignMessageLibBaseContract, encodeCreateProxyWithNonce, encodeMultiSendData, decodeMultiSendData, encodeSetupCallData, getCompatibilityFallbackHandlerContract, getCreateCallContract, getERC20Decimals, getMultiSendCallOnlyContract, getMultiSendContract, getSafeProxyFactoryContract, getSafeContract, getSignMessageLibContract, getSafeWebAuthnSignerFactoryContract, getSafeWebAuthnSharedSignerContract, isGasTokenCompatibleWithHandlePayment, predictSafeAddress, getPredictedSafeAddressInitCode, standardizeSafeTransactionData, validateEip3770Address, validateEthereumAddress, generateSignature, generateEIP712Signature, buildContractSignature, buildSignatureBytes, preimageSafeTransactionHash, preimageSafeMessageHash, getEip712TxTypes, getEip712MessageTypes, getSafeAddressFromDeploymentTx, hashSafeMessage, generateTypedData, SafeProvider, createPasskeyClient, EthSafeTransaction, EthSafeMessage, getPasskeyOwnerAddress };
+ export * from './types';
+ export default Safe;
+-declare module 'abitype' {
+-    interface Register {
+-        AddressType: string;
+-    }
+-}
+ //# sourceMappingURL=index.d.ts.map
+\ No newline at end of file

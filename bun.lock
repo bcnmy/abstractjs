@@ -53,6 +53,7 @@
   },
   "patchedDependencies": {
     "@safe-global/types-kit@3.0.0": "patches/@safe-global-types-kit@3.0.0.patch",
+    "@safe-global/protocol-kit@6.1.2": "patches/@safe-global%2Fprotocol-kit@6.1.2.patch",
   },
   "packages": {
     "@adraffy/ens-normalize": ["@adraffy/ens-normalize@1.10.1", "", {}, "sha512-96Z2IP3mYmF1Xg2cDm8f1gWGf/HUVedQ3FMifV4kG/PQ4yEP51xDtRAEfhVNt5f/uzpNkZHwWQuUcu6D6K+Ekw=="],
