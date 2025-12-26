@@ -37,7 +37,10 @@ import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
-import {
+import signSafeQuote, {
+  SAFE_SA_PREFIX,
+  computeSafeDomainSeparator,
+  formatSignedSafeQuotePayload,
   getDataToPrepareSafeTransaction,
   getMockSafeSigner,
   validateSafeDeployment
@@ -763,7 +766,7 @@ describe("mee.signSafeQuote", () => {
     }
   })
 
-  test("should sign a Safe quote with multiple signers", async () => {
+  test("should sign and execute a Safe quote with multiple signers", async () => {
     const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
     const usdcpAddressOpSepolia = testnetMcTestUSDCP.addressOn(
       optimismSepolia.id
