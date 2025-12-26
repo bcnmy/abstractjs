@@ -11,7 +11,6 @@ import {
   createPublicClient,
   createWalletClient,
   decodeFunctionData,
-  encodeFunctionData,
   erc20Abi,
   zeroAddress
 } from "viem"
@@ -38,9 +37,6 @@ import { executeSignedQuote } from "./executeSignedQuote"
 import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
 import signSafeQuote, {
-  SAFE_SA_PREFIX,
-  computeSafeDomainSeparator,
-  formatSignedSafeQuotePayload,
   getDataToPrepareSafeTransaction,
   getMockSafeSigner,
   validateSafeDeployment

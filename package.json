@@ -138,6 +138,6 @@
   "typings": "./dist/_types/index.d.ts",
   "patchedDependencies": {
     "@safe-global/types-kit@3.0.0": "patches/@safe-global-types-kit@3.0.0.patch",
-    "@safe-global/protocol-kit@6.1.2": "patches/@safe-global%2Fprotocol-kit@6.1.2.patch"
+    "@safe-global/protocol-kit@6.1.2": "patches/@safe-global-protocol-kit@6.1.2.patch"
   }
 }
