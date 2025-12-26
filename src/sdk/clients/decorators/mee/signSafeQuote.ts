@@ -4,10 +4,12 @@ import {
   type SafeTransactionDataPartial
 } from "@safe-global/types-kit"
 import {
+  http,
   type Address,
   type Hex,
   type LocalAccount,
   concatHex,
+  createPublicClient,
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
@@ -171,6 +173,70 @@ export const formatSignedSafeQuotePayload = (
 }
 
 /**
+ * Extracts unique chain IDs from the quote's userOps, excluding the payment
+ * chain if the quote is sponsored (since the payment userOp at index 0 is
+ * handled by the sponsor in that case).
+ *
+ * @param quote - The quote payload containing userOps and payment info
+ * @returns Array of unique chain IDs where the Safe must be deployed
+ */
+const getInvolvedChainIds = (quote: GetQuotePayload): number[] => {
+  const { userOps, paymentInfo } = quote
+  const isSponsored = paymentInfo.sponsored === true
+
+  // If sponsored, skip the first userOp (payment userOp) as it's handled by sponsor
+  const relevantUserOps = isSponsored ? userOps.slice(1) : userOps
+
+  const chainIds = relevantUserOps.map((op) => Number(op.chainId))
+  return [...new Set(chainIds)]
+}
+
+/**
+ * Validates that the Safe is deployed on all chains involved in the supertransaction.
+ * Throws an error if the Safe is not deployed on any required chain.
+ *
+ * @param client - The Mee client instance
+ * @param quote - The quote payload containing userOps
+ * @param safeAddress - The Safe address to validate
+ * @throws Error if Safe is not deployed on any required chain
+ */
+export const validateSafeDeployment = async (
+  client: BaseMeeClient,
+  quote: GetQuotePayload,
+  safeAddress: Address
+): Promise<void> => {
+  const chainIds = getInvolvedChainIds(quote)
+
+  const deploymentChecks = await Promise.all(
+    chainIds.map(async (chainId) => {
+      const deployment = client.account.deploymentOn(chainId, false)
+      if (!deployment) {
+        return { chainId, deployed: false, reason: "no deployment config" }
+      }
+
+      const publicClient = createPublicClient({
+        chain: deployment.client.chain,
+        transport: http()
+      })
+
+      const code = await publicClient.getCode({ address: safeAddress })
+      const isDeployed = code !== undefined && code !== "0x"
+
+      return { chainId, deployed: isDeployed }
+    })
+  )
+
+  const undeployedChains = deploymentChecks.filter((check) => !check.deployed)
+
+  if (undeployedChains.length > 0) {
+    const chainList = undeployedChains.map((c) => c.chainId).join(", ")
+    throw new Error(
+      `Safe at ${safeAddress} is not deployed on chains: ${chainList}. Safe must be deployed on all chains involved in the supertransaction.`
+    )
+  }
+}
+
+/**
  * Signs a Safe quote for the Safe Smart Account fusion mode.
  * This enables using a Gnosis Safe multisig as the master account for supertransactions.
  *
@@ -206,10 +272,18 @@ export const formatSignedSafeQuotePayload = (
  * ```
  */
 export const signSafeQuote = async (
-  _client: BaseMeeClient,
+  client: BaseMeeClient,
   parameters: SignSafeQuoteParams
 ): Promise<SignSafeQuotePayload> => {
   const { fusionQuote, signedSafeTxn } = parameters
+
+  // Validate Safe is deployed on all chains involved in the supertransaction
+  await validateSafeDeployment(
+    client,
+    fusionQuote.quote,
+    parameters.safeAccount
+  )
+
   const txnData = signedSafeTxn.data
 
   const signatures = signedSafeTxn.encodedSignatures()

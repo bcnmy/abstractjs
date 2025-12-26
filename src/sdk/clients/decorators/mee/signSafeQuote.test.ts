@@ -1,5 +1,5 @@
-import { OperationType } from "@safe-global/types-kit"
 import Safe from "@safe-global/protocol-kit"
+import { OperationType } from "@safe-global/types-kit"
 import {
   http,
   type Account,
@@ -29,16 +29,18 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import { MEEVersion } from "../../../constants"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import { getMEEVersion } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
+import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
 import {
   getDataToPrepareSafeTransaction,
-  getMockSafeSigner
+  getMockSafeSigner,
+  validateSafeDeployment
 } from "./signSafeQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
@@ -294,6 +296,143 @@ describe("getDataToPrepareSafeTransaction", () => {
       data: dataWithoutHash
     })
     expect(decoded.args[0]).toBe(companionNexusAddress)
+  })
+})
+
+describe("validateSafeDeployment", () => {
+  const mockSafeAddress = zeroAddress // should have no code on all chains
+
+  const createMockQuote = (
+    userOps: Array<{ chainId: string }>,
+    sponsored = false
+  ): GetQuotePayload =>
+    ({
+      hash: "0xabc" as Hex,
+      userOps: userOps.map((op) => ({ chainId: op.chainId })),
+      paymentInfo: { sponsored }
+    }) as unknown as GetQuotePayload
+
+  const createMockClientWithDeployments = (
+    chainConfigs: Array<{ chainId: number; chain: Chain }>
+  ): BaseMeeClient => {
+    const account = {
+      deploymentOn: (chainId: number, _strictMode?: boolean) => {
+        const config = chainConfigs.find((c) => c.chainId === chainId)
+        if (!config) return undefined
+        return {
+          client: {
+            chain: config.chain
+          }
+        }
+      }
+    } as unknown as MultichainSmartAccount
+    return { account } as unknown as BaseMeeClient
+  }
+
+  test("should pass when Safe is deployed on all involved chains", async () => {
+    // Use a real deployed contract address (entry point is deployed everywhere)
+    const addressWithCode =
+      "0x0000000071727De22E5E9d8BAf0edAc6f37da032" as Address
+
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia }
+    ])
+
+    const quote = createMockQuote([{ chainId: baseSepolia.id.toString() }])
+
+    // Should not throw
+    await expect(
+      validateSafeDeployment(mockClient, quote, addressWithCode)
+    ).resolves.toBeUndefined()
+  })
+
+  test("should throw when Safe is not deployed on a required chain", async () => {
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia }
+    ])
+
+    const quote = createMockQuote([{ chainId: baseSepolia.id.toString() }])
+
+    // Use an address with no code
+    await expect(
+      validateSafeDeployment(mockClient, quote, mockSafeAddress)
+    ).rejects.toThrow(
+      `Safe at ${mockSafeAddress} is not deployed on chains: ${baseSepolia.id}`
+    )
+  })
+
+  test("should check multiple chains and report all undeployed ones", async () => {
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia },
+      { chainId: optimismSepolia.id, chain: optimismSepolia }
+    ])
+
+    const quote = createMockQuote([
+      { chainId: baseSepolia.id.toString() },
+      { chainId: optimismSepolia.id.toString() }
+    ])
+
+    try {
+      await validateSafeDeployment(mockClient, quote, mockSafeAddress)
+      expect.fail("Expected validateSafeDeployment to throw")
+    } catch (error) {
+      const message = (error as Error).message
+      expect(message).toContain("is not deployed on chains:")
+      expect(message).toContain(baseSepolia.id.toString())
+      expect(message).toContain(optimismSepolia.id.toString())
+    }
+  })
+
+  test("should skip payment userOp chain when sponsored", async () => {
+    // This address has code on optimismSepolia but NOT on baseSepolia
+    const addressWithCodeOnlyOnOpSepolia =
+      "0x6db5b92627d073e602ef08ee1699de2e4b5e557d" as Address
+
+    // Configure both chains
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia },
+      { chainId: optimismSepolia.id, chain: optimismSepolia }
+    ])
+
+    // When sponsored, the first userOp (payment) should be skipped
+    const quote = createMockQuote(
+      [
+        { chainId: baseSepolia.id.toString() }, // emulates Payment userOp
+        { chainId: optimismSepolia.id.toString() }
+      ],
+      true // sponsored = true, default payment chain with sponsorship is op sepolia
+    )
+
+    // Should not throw because baseSepolia (payment chain) is skipped when sponsored
+    // and the checked address has code on op sepolia
+    await expect(
+      validateSafeDeployment(mockClient, quote, addressWithCodeOnlyOnOpSepolia)
+    ).resolves.toBeUndefined()
+  })
+
+  test("should include payment userOp chain when not sponsored", async () => {
+    const addressWithCodeOnlyOnOpSepolia =
+      "0x6db5b92627d073e602ef08ee1699de2e4b5e557d" as Address
+
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia },
+      { chainId: optimismSepolia.id, chain: optimismSepolia }
+    ])
+
+    const quote = createMockQuote(
+      [
+        { chainId: baseSepolia.id.toString() }, // emulates payment userOp
+        { chainId: optimismSepolia.id.toString() } // Actual instruction
+      ],
+      false // sponsored = false
+    )
+
+    // Should throw because checked address has no code on op base sepolia chain
+    await expect(
+      validateSafeDeployment(mockClient, quote, addressWithCodeOnlyOnOpSepolia)
+    ).rejects.toThrow(
+      `Safe at ${addressWithCodeOnlyOnOpSepolia} is not deployed on chains: ${baseSepolia.id}`
+    )
   })
 })
 
@@ -624,8 +763,7 @@ describe("mee.signSafeQuote", () => {
     }
   })
 
-  // TODO: unskip it for Merge
-  test.skip("should sign a Safe quote with multiple signers", async () => {
+  test("should sign a Safe quote with multiple signers", async () => {
     const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
     const usdcpAddressOpSepolia = testnetMcTestUSDCP.addressOn(
       optimismSepolia.id
