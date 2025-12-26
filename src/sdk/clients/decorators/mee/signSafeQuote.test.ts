@@ -394,7 +394,7 @@ describe("mee.signSafeQuote", () => {
       await opSepoliaPublicClient.waitForTransactionReceipt({
         hash: transferHash
       })
-      console.log("Nexus orchestrator funded with USDCP on OP Sepolia")
+      //console.log("Nexus orchestrator funded with USDCP on OP Sepolia")
     } else {
       /*
       console.log(
@@ -424,13 +424,13 @@ describe("mee.signSafeQuote", () => {
       instructions: [
         // Transfer 0.01 USDCP on Base Sepolia
         mcNexus.build({
-          type: "transferFrom", // we use transferFrom because Safe only approves funds in the trigger
+          type: "transfer", 
           data: {
             tokenAddress: usdcpAddressBaseSepolia,
             amount: transferAmount,
             chainId: baseSepolia.id,
             recipient: recipientAddress,
-            sender: mcNexus.signer.address
+            //sender: mcNexus.signer.address
           }
         }),
         // Transfer 0.01 USDCP on OP Sepolia
