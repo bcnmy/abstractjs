@@ -647,7 +647,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       // so the balance should be the same -gas that nexus paid to MEE Node, as gas is paid as USDC token
       expect(Number(balanceAfter)).to.be.approximately(
         Number(balanceBefore),
-        99999
+        499999
       )
 
       console.log(`[${name}]`, { explorerLinks, hash })

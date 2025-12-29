@@ -14,6 +14,7 @@ export const toSmartSessionsModule = (
   return toValidator({
     ...getSmartSessionsValidator({ useRegistry: false }),
     signer,
-    type: "validator"
+    type: "validator",
+    erc7739VersionSupported_: 0 // doesn't support EIP-7739 by itself. sessionValidator can support it.
   })
 }
