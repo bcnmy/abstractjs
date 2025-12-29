@@ -1,5 +1,21 @@
 # @biconomy/abstractjs
 
+## 1.1.20
+
+### Patch Changes
+
+#### Features:
+  1. Supertransactions are supported for `Safe smart wallets` now. You can execute supertransaction with Safe Multisig wallet with `Safe fusion mode`
+  2. `Custom execution simulation retry` feature is supported which enables you to create a long running supertransaction by adjusting the simulation interval as needed
+  3. `Latency optimizations` - Concurrent nonce calculation, improved sponsorship nonce calculation, reduced RPC calls for permit mode and other pre validation checks to reduce latency for different scenarios.
+  4. Support for `ERC-7739` Readable Typed Signatures for Smart Accounts
+
+#### Breaking changes:
+  1. `toDefaultModule` and `toMeeK1Module` now require WalletClient object instead of signer object to enable 7739 signatures Ownables and SS modules do not support 7739 thus still accept signer toValidator() now accepts any of WalletClient or signer objects.
+  2. New methods: `signMessageErc7739` and `signTypedDataErc7739` are exposed for Validator objects to sign for 7739. (used by Nexus account under the hood)
+  3. Nexus account will by default always use `7739` if current module supports it.
+  4. `sponsorshipOptions.rpcUrl` - Sponsorship options now expects a RPC url, by default public RPC is used or if the chain is defined in chainConfig, it will be reused. It is recommended to pass a reliable RPC url or define a sponsorship chain in chain config
+
 ## 1.1.19
 
 ### Patch Changes
