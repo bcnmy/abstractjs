@@ -1,4 +1,5 @@
 import Safe from "@safe-global/protocol-kit"
+import { OperationType } from "@safe-global/types-kit"
 import {
   http,
   type Account,
@@ -9,7 +10,9 @@ import {
   type Transport,
   createPublicClient,
   createWalletClient,
-  erc20Abi
+  decodeFunctionData,
+  erc20Abi,
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -26,12 +29,17 @@ import {
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
 import { MEEVersion } from "../../../constants"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import { getMEEVersion } from "../../../modules"
+import type { BaseMeeClient } from "../../createMeeClient"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
-import {
+import type { GetQuotePayload } from "./getQuote"
+import type { GetSafeQuotePayload } from "./getSafeQuote"
+import signSafeQuote, {
   getDataToPrepareSafeTransaction,
-  getMockSafeSigner
+  getMockSafeSigner,
+  validateSafeDeployment
 } from "./signSafeQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
@@ -75,6 +83,355 @@ describe("getMockSafeSigner", () => {
         message: { content: "test" }
       })
     ).rejects.toThrow("signTypedData is not supported for Safe-owned signer")
+  })
+})
+
+describe("getDataToPrepareSafeTransaction", () => {
+  const mockQuoteHash =
+    "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" as Hex
+  const mockTokenAddress =
+    "0x1111111111111111111111111111111111111111" as Address
+  const mockNexusAddress =
+    "0x2222222222222222222222222222222222222222" as Address
+  const mockEthForwarderAddress =
+    "0x3333333333333333333333333333333333333333" as Address
+  const mockRecipientAddress =
+    "0x4444444444444444444444444444444444444444" as Address
+
+  const createMockAccount = (
+    nexusAddress: Address,
+    ethForwarderAddress: Address
+  ): MultichainSmartAccount =>
+    ({
+      addressOn: (_chainId: number, _strictMode?: boolean) => nexusAddress,
+      deploymentOn: (_chainId: number, _strictMode?: boolean) => ({
+        version: { ethForwarderAddress }
+      })
+    }) as unknown as MultichainSmartAccount
+
+  const createMockClient = (account: MultichainSmartAccount): BaseMeeClient =>
+    ({ account }) as unknown as BaseMeeClient
+
+  const createMockQuoteParams = (
+    overrides: Partial<GetSafeQuotePayload["trigger"]> = {}
+  ): GetSafeQuotePayload => ({
+    quote: { hash: mockQuoteHash } as GetSafeQuotePayload["quote"],
+    trigger: {
+      tokenAddress: mockTokenAddress,
+      chainId: baseSepolia.id,
+      amount: 1000000n,
+      ...overrides
+    } as GetSafeQuotePayload["trigger"]
+  })
+
+  test("should generate ERC20 approve calldata for token triggers", () => {
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const quoteParams = createMockQuoteParams()
+
+    const result = getDataToPrepareSafeTransaction(mockClient, quoteParams)
+
+    expect(result.to).toBe(mockTokenAddress)
+    expect(result.value).toBe("0")
+    expect(result.operation).toBe(OperationType.Call)
+
+    // Verify the calldata contains the approve function call
+    const dataWithoutHash = result.data.slice(0, result.data.length - 64) as Hex
+    const decoded = decodeFunctionData({
+      abi: erc20Abi,
+      data: dataWithoutHash
+    })
+    expect(decoded.functionName).toBe("approve")
+    expect(decoded.args[0]).toBe(mockNexusAddress) // spender
+    expect(decoded.args[1]).toBe(1000000n) // amount
+
+    // Verify quote hash is appended
+    expect(result.data.endsWith(mockQuoteHash.slice(2))).toBe(true)
+  })
+
+  test("should use approvalAmount when provided", () => {
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const quoteParams = createMockQuoteParams({
+      amount: 1000000n,
+      approvalAmount: 2000000n
+    })
+
+    const result = getDataToPrepareSafeTransaction(mockClient, quoteParams)
+
+    const dataWithoutHash = result.data.slice(0, result.data.length - 64) as Hex
+    const decoded = decodeFunctionData({
+      abi: erc20Abi,
+      data: dataWithoutHash
+    })
+    expect(decoded.args[1]).toBe(2000000n) // should use approvalAmount
+  })
+
+  test("should generate ETH forwarder calldata for native token triggers", () => {
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const quoteParams = createMockQuoteParams({
+      tokenAddress: zeroAddress,
+      amount: 1000000000000000000n // 1 ETH
+    })
+
+    const result = getDataToPrepareSafeTransaction(mockClient, quoteParams)
+
+    expect(result.to).toBe(mockEthForwarderAddress)
+    expect(result.value).toBe("1000000000000000000")
+    expect(result.operation).toBe(OperationType.Call)
+
+    // Verify the calldata contains the forward function call
+    const dataWithoutHash = result.data.slice(0, result.data.length - 64) as Hex
+    const decoded = decodeFunctionData({
+      abi: ForwarderAbi,
+      data: dataWithoutHash
+    })
+    expect(decoded.functionName).toBe("forward")
+    expect(decoded.args[0]).toBe(mockNexusAddress) // recipient defaults to spender
+  })
+
+  test("should use recipientAddress when provided for native token", () => {
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const quoteParams = createMockQuoteParams({
+      tokenAddress: zeroAddress,
+      amount: 1000000000000000000n,
+      recipientAddress: mockRecipientAddress
+    })
+
+    const result = getDataToPrepareSafeTransaction(mockClient, quoteParams)
+
+    const dataWithoutHash = result.data.slice(0, result.data.length - 64) as Hex
+    const decoded = decodeFunctionData({
+      abi: ForwarderAbi,
+      data: dataWithoutHash
+    })
+    expect(decoded.args[0]).toBe(mockRecipientAddress)
+  })
+
+  test("should throw error for custom triggers", () => {
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const quoteParams = {
+      quote: { hash: mockQuoteHash } as GetSafeQuotePayload["quote"],
+      trigger: {
+        chainId: baseSepolia.id,
+        call: {
+          to: mockTokenAddress,
+          data: "0x1234" as Hex,
+          value: 0n,
+          gasLimit: 100000n
+        }
+      }
+    } as GetSafeQuotePayload
+
+    expect(() =>
+      getDataToPrepareSafeTransaction(mockClient, quoteParams)
+    ).toThrow("Custom triggers are not supported for Safe fusion transactions")
+  })
+
+  test("should throw error when amount is missing", () => {
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const quoteParams = {
+      quote: { hash: mockQuoteHash } as GetSafeQuotePayload["quote"],
+      trigger: {
+        tokenAddress: mockTokenAddress,
+        chainId: baseSepolia.id
+      }
+    } as GetSafeQuotePayload
+
+    expect(() =>
+      getDataToPrepareSafeTransaction(mockClient, quoteParams)
+    ).toThrow("Amount is required to sign a Safe quote")
+  })
+
+  test("should use companionAccount when provided", () => {
+    const companionNexusAddress =
+      "0x5555555555555555555555555555555555555555" as Address
+    const companionEthForwarder =
+      "0x6666666666666666666666666666666666666666" as Address
+
+    const mockAccount = createMockAccount(
+      mockNexusAddress,
+      mockEthForwarderAddress
+    )
+    const mockClient = createMockClient(mockAccount)
+    const companionAccount = createMockAccount(
+      companionNexusAddress,
+      companionEthForwarder
+    )
+    const quoteParams = createMockQuoteParams()
+
+    const result = getDataToPrepareSafeTransaction(
+      mockClient,
+      quoteParams,
+      companionAccount
+    )
+
+    // Verify it uses the companion account's address as spender
+    const dataWithoutHash = result.data.slice(0, result.data.length - 64) as Hex
+    const decoded = decodeFunctionData({
+      abi: erc20Abi,
+      data: dataWithoutHash
+    })
+    expect(decoded.args[0]).toBe(companionNexusAddress)
+  })
+})
+
+describe("validateSafeDeployment", () => {
+  const mockSafeAddress = zeroAddress // should have no code on all chains
+
+  const createMockQuote = (
+    userOps: Array<{ chainId: string }>,
+    sponsored = false
+  ): GetQuotePayload =>
+    ({
+      hash: "0xabc" as Hex,
+      userOps: userOps.map((op) => ({ chainId: op.chainId })),
+      paymentInfo: { sponsored }
+    }) as unknown as GetQuotePayload
+
+  const createMockClientWithDeployments = (
+    chainConfigs: Array<{ chainId: number; chain: Chain }>
+  ): BaseMeeClient => {
+    const account = {
+      deploymentOn: (chainId: number, _strictMode?: boolean) => {
+        const config = chainConfigs.find((c) => c.chainId === chainId)
+        if (!config) return undefined
+        return {
+          client: {
+            chain: config.chain
+          }
+        }
+      }
+    } as unknown as MultichainSmartAccount
+    return { account } as unknown as BaseMeeClient
+  }
+
+  test("should pass when Safe is deployed on all involved chains", async () => {
+    // Use a real deployed contract address (entry point is deployed everywhere)
+    const addressWithCode =
+      "0x0000000071727De22E5E9d8BAf0edAc6f37da032" as Address
+
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia }
+    ])
+
+    const quote = createMockQuote([{ chainId: baseSepolia.id.toString() }])
+
+    // Should not throw
+    await expect(
+      validateSafeDeployment(mockClient, quote, addressWithCode)
+    ).resolves.toBeUndefined()
+  })
+
+  test("should throw when Safe is not deployed on a required chain", async () => {
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia }
+    ])
+
+    const quote = createMockQuote([{ chainId: baseSepolia.id.toString() }])
+
+    // Use an address with no code
+    await expect(
+      validateSafeDeployment(mockClient, quote, mockSafeAddress)
+    ).rejects.toThrow(
+      `Safe at ${mockSafeAddress} is not deployed on chains: ${baseSepolia.id}`
+    )
+  })
+
+  test("should check multiple chains and report all undeployed ones", async () => {
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia },
+      { chainId: optimismSepolia.id, chain: optimismSepolia }
+    ])
+
+    const quote = createMockQuote([
+      { chainId: baseSepolia.id.toString() },
+      { chainId: optimismSepolia.id.toString() }
+    ])
+
+    try {
+      await validateSafeDeployment(mockClient, quote, mockSafeAddress)
+      expect.fail("Expected validateSafeDeployment to throw")
+    } catch (error) {
+      const message = (error as Error).message
+      expect(message).toContain("is not deployed on chains:")
+      expect(message).toContain(baseSepolia.id.toString())
+      expect(message).toContain(optimismSepolia.id.toString())
+    }
+  })
+
+  test("should skip payment userOp chain when sponsored", async () => {
+    // This address has code on optimismSepolia but NOT on baseSepolia
+    const addressWithCodeOnlyOnOpSepolia =
+      "0x6db5b92627d073e602ef08ee1699de2e4b5e557d" as Address
+
+    // Configure both chains
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia },
+      { chainId: optimismSepolia.id, chain: optimismSepolia }
+    ])
+
+    // When sponsored, the first userOp (payment) should be skipped
+    const quote = createMockQuote(
+      [
+        { chainId: baseSepolia.id.toString() }, // emulates Payment userOp
+        { chainId: optimismSepolia.id.toString() }
+      ],
+      true // sponsored = true, default payment chain with sponsorship is op sepolia
+    )
+
+    // Should not throw because baseSepolia (payment chain) is skipped when sponsored
+    // and the checked address has code on op sepolia
+    await expect(
+      validateSafeDeployment(mockClient, quote, addressWithCodeOnlyOnOpSepolia)
+    ).resolves.toBeUndefined()
+  })
+
+  test("should include payment userOp chain when not sponsored", async () => {
+    const addressWithCodeOnlyOnOpSepolia =
+      "0x6db5b92627d073e602ef08ee1699de2e4b5e557d" as Address
+
+    const mockClient = createMockClientWithDeployments([
+      { chainId: baseSepolia.id, chain: baseSepolia },
+      { chainId: optimismSepolia.id, chain: optimismSepolia }
+    ])
+
+    const quote = createMockQuote(
+      [
+        { chainId: baseSepolia.id.toString() }, // emulates payment userOp
+        { chainId: optimismSepolia.id.toString() } // Actual instruction
+      ],
+      false // sponsored = false
+    )
+
+    // Should throw because checked address has no code on op base sepolia chain
+    await expect(
+      validateSafeDeployment(mockClient, quote, addressWithCodeOnlyOnOpSepolia)
+    ).rejects.toThrow(
+      `Safe at ${addressWithCodeOnlyOnOpSepolia} is not deployed on chains: ${baseSepolia.id}`
+    )
   })
 })
 
@@ -405,7 +762,7 @@ describe("mee.signSafeQuote", () => {
     }
   })
 
-  test("should sign a Safe quote with multiple signers", async () => {
+  test("should sign and execute a Safe quote with multiple signers", async () => {
     const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
     const usdcpAddressOpSepolia = testnetMcTestUSDCP.addressOn(
       optimismSepolia.id
