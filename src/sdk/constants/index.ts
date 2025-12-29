@@ -10,6 +10,10 @@ export * from "./protocols"
  */
 export enum MEEVersion {
   /**
+   *  New K1 Validator with Safe SA as master account support
+   **/
+  V2_3_0 = "2.3.0",
+  /**
    * Nexus 1.2.1
    * - Composability 1.1.0
    * - 7702 accounts initialization with eoa's signature (relayers' support)
@@ -59,6 +63,17 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   MEEVersion,
   MEEVersionConfig
 > = {
+  [MEEVersion.V2_3_0]: {
+    version: MEEVersion.V2_3_0,
+    accountId: "biconomy.nexus.1.3.1",
+    factoryAddress: "0x5836Bdb35913c7CBA6ef40675354445121449917",
+    bootStrapAddress: "0xCa8f48912A3a33fE694c318a1d097AD394CFAB76",
+    implementationAddress: "0x54F220e4f0DEAb58Be26153df5a674668B9d7Fb2",
+    validatorAddress: "0x1Cdae7dcc3f32551865EfE3d77AC2b88Ee2905B4",
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
+    composabilityVersion: ComposabilityVersion.V1_1_0
+  },
   [MEEVersion.V2_2_1]: {
     version: MEEVersion.V2_2_1,
     accountId: "biconomy.nexus.1.3.1",

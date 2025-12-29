@@ -20,16 +20,22 @@ import {
   type Instruction
 } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
+import getSafeQuote, {
+  type GetSafeQuoteParams,
+  type GetSafeQuotePayload
+} from "./getSafeQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote
  * @see {@link GetPermitQuotePayload} - Payload when permit is enabled
  * @see {@link GetOnChainQuotePayload} - Payload when using standard on-chain transactions
+ * @see {@link GetSafeQuotePayload} - Payload when using Safe Smart Account mode
  */
 export type GetFusionQuotePayload =
   | GetPermitQuotePayload
   | GetOnChainQuotePayload
+  | GetSafeQuotePayload
 
 /**
  * Parameters for getting a fusion quote
@@ -56,6 +62,11 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    * mode won't be used
    */
   delegatorSmartAccount?: MetaMaskSmartAccount
+  /**
+   * Optional Safe smart account address
+   * If provided, the Safe Smart Account fusion mode will be used
+   */
+  safeAccount?: Address
 }
 
 /**
@@ -105,6 +116,11 @@ export const getFusionQuote = async (
   // if delegator smart account is provided, we use mm-dtk fusion mode
   if (parameters.delegatorSmartAccount) {
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
+  }
+
+  // if safe account is provided, we use safe-sa fusion mode
+  if (parameters.safeAccount) {
+    return getSafeQuote(client, parameters as GetSafeQuoteParams)
   }
 
   const signatureType = await getQuoteType(client, parameters)
