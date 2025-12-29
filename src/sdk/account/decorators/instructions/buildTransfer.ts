@@ -100,7 +100,8 @@ export const buildTransfer = async (
     recipient,
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -182,7 +183,8 @@ export const buildTransfer = async (
       isComposable: isComposableCall,
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     }
   ]
 }

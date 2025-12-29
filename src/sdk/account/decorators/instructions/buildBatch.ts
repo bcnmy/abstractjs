@@ -58,13 +58,25 @@ export const buildBatch = async (
   const resolvedInstructions = await resolveInstructions(instructions)
 
   let maxTimeWindow = 0
+  let maxExecutionSimulationRetryDelay = 0
   let finalLowerBoundTimestamp = 0
   let finalUpperBoundTimestamp = 0
 
   for (const {
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } of resolvedInstructions) {
+    if (executionSimulationRetryDelay !== undefined) {
+      // The last defined max executionSimulationRetryDelay will be considered
+      const isMax =
+        executionSimulationRetryDelay >= maxExecutionSimulationRetryDelay
+
+      if (isMax) {
+        maxExecutionSimulationRetryDelay = executionSimulationRetryDelay
+      }
+    }
+
     if (
       lowerBoundTimestamp !== undefined &&
       upperBoundTimestamp !== undefined
@@ -129,6 +141,9 @@ export const buildBatch = async (
         : {}),
       ...(finalUpperBoundTimestamp !== 0
         ? { upperBoundTimestamp: finalUpperBoundTimestamp }
+        : {}),
+      ...(maxExecutionSimulationRetryDelay !== 0
+        ? { executionSimulationRetryDelay: maxExecutionSimulationRetryDelay }
         : {})
     }
   ]

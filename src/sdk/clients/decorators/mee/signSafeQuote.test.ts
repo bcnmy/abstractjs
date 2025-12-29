@@ -424,12 +424,12 @@ describe("mee.signSafeQuote", () => {
       instructions: [
         // Transfer 0.01 USDCP on Base Sepolia
         mcNexus.build({
-          type: "transfer", 
+          type: "transfer",
           data: {
             tokenAddress: usdcpAddressBaseSepolia,
             amount: transferAmount,
             chainId: baseSepolia.id,
-            recipient: recipientAddress,
+            recipient: recipientAddress
             //sender: mcNexus.signer.address
           }
         }),

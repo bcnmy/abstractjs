@@ -104,7 +104,8 @@ export const buildWithdrawal = async (
     recipient = accountAddress, // EOA or owner account address
     metadata: metadataOverride,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
 
   const [meeVersionInfo] = meeVersions.filter(
@@ -168,7 +169,8 @@ export const buildWithdrawal = async (
           chainId,
           metadata: metadataOverride || metadata,
           lowerBoundTimestamp,
-          upperBoundTimestamp
+          upperBoundTimestamp,
+          executionSimulationRetryDelay
         },
         composabilityParams
       )
@@ -232,7 +234,8 @@ export const buildWithdrawal = async (
           isComposable: true,
           metadata,
           lowerBoundTimestamp,
-          upperBoundTimestamp
+          upperBoundTimestamp,
+          executionSimulationRetryDelay
         }
       ]
     }
@@ -259,7 +262,8 @@ export const buildWithdrawal = async (
       chainId,
       metadata,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     }
   ]
 }

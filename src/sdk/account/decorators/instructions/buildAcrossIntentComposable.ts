@@ -115,7 +115,8 @@ export const buildAcrossIntentComposable = async (
     fees: fees_,
     metadata,
     lowerBoundTimestamp,
-    upperBoundTimestamp
+    upperBoundTimestamp,
+    executionSimulationRetryDelay
   } = parameters
 
   // sanity checks
@@ -144,7 +145,8 @@ export const buildAcrossIntentComposable = async (
       amount: runtimeERC20BalanceOf(inputAmountRuntimeParams), // use without changes
       recipient: acrossIntentWrapperOnOrigin,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     },
     composabilityParams
   )
@@ -233,7 +235,8 @@ export const buildAcrossIntentComposable = async (
       gasLimit,
       metadata: metadata || bridgeMetadata,
       lowerBoundTimestamp,
-      upperBoundTimestamp
+      upperBoundTimestamp,
+      executionSimulationRetryDelay
     },
     composabilityParams
   )

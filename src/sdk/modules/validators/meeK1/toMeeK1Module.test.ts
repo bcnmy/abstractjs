@@ -9,6 +9,7 @@ import {
   type Address,
   type Chain,
   type LocalAccount,
+  createWalletClient,
   parseEther
 } from "viem"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
@@ -47,7 +48,11 @@ describe("modules.toMeeK1Module", () => {
     const { testClient } = await toClients(infra.network)
 
     meeModule = toMeeK1Module({
-      signer: eoaAccount,
+      walletClient: createWalletClient({
+        account: eoaAccount,
+        chain,
+        transport: http(infra.network.rpcUrl)
+      }),
       module: "0x00000000d12897DDAdC2044614A9677B191A2d95" // MEE validator address
     })
 
@@ -76,36 +81,33 @@ describe("modules.toMeeK1Module", () => {
   })
 
   test("should have a consistent snapshot", async () => {
-    expect(meeModule).toMatchInlineSnapshot(`
+    // Extract only stable properties for snapshot (exclude walletClient which has dynamic values)
+    const { walletClient, ...stableProps } = meeModule
+    expect(stableProps).toMatchInlineSnapshot(`
       {
         "address": "0x00000000d12897DDAdC2044614A9677B191A2d95",
         "data": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "deInitData": "0x",
+        "erc7739VersionSupported": [Function],
         "getStubSignature": [Function],
         "initData": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "module": "0x00000000d12897DDAdC2044614A9677B191A2d95",
         "signMessage": [Function],
-        "signUserOpHash": [Function],
-        "signer": {
-          "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-          "getHdKey": [Function],
-          "nonceManager": undefined,
-          "publicKey": "0x048318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed753547f11ca8696646f2f3acb08e31016afac23e630c5d11f59f61fef57b0d2aa5",
-          "sign": [Function],
-          "signAuthorization": [Function],
-          "signMessage": [Function],
-          "signTransaction": [Function],
-          "signTypedData": [Function],
-          "source": "hd",
-          "type": "local",
-        },
+        "signMessageErc7739": [Function],
+        "signTypedData": [Function],
+        "signTypedDataErc7739": [Function],
         "type": "validator",
       }
     `)
+    // Verify walletClient is present and has an account
+    expect(walletClient).toBeDefined()
+    expect(walletClient?.account?.address).toBe(
+      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    )
   })
 
   test("should generate a valid signature", async () => {
-    const signature = await meeModule.signer.signMessage({ message: "test" })
+    const signature = await meeModule.signMessage("test")
     expect(signature).toMatchInlineSnapshot(
       `"0xf755d9a72d5b7386765e7f0e833af68795b739a267122dae933f41b781b5aed0626ce3263308ebd4c37bed84319b66da2794368771046825bd89b98ba68c4e871b"`
     )

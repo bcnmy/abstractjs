@@ -19,16 +19,10 @@ import {
   type WalletClient,
   concatHex,
   createPublicClient,
-  domainSeparator,
   encodeAbiParameters,
   encodeFunctionData,
   encodePacked,
-  keccak256,
   parseAbi,
-  parseAbiParameters,
-  toBytes,
-  toHex,
-  validateTypedData,
   zeroAddress
 } from "viem"
 import {
@@ -69,23 +63,14 @@ import {
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
 import { toInitData } from "./utils"
-import {
-  EXECUTE_BATCH,
-  EXECUTE_SINGLE,
-  PARENT_TYPEHASH
-} from "./utils/Constants"
+import { EXECUTE_BATCH, EXECUTE_SINGLE } from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
 import {
   type EthersWallet,
-  type TypedDataWith712,
   addressEquals,
-  eip712WrapHash,
-  getAccountDomainStructFields,
-  getTypesForEIP712Domain,
   isNullOrUndefined,
-  supportsCancun,
-  typeToString
+  supportsCancun
 } from "./utils/Utils"
 import {
   type MEEVersionConfig,
@@ -304,7 +289,7 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 >
 
 const prepareValidators = async (
-  signer: Signer,
+  walletClient: WalletClient<Transport, Chain | undefined, Account, RpcSchema>,
   meeConfig: MEEVersionConfig,
   customValidators?: Validator[]
 ): Promise<Validator[]> => {
@@ -317,7 +302,7 @@ const prepareValidators = async (
   if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
     validators = [
       toMeeK1Module({
-        signer: await toSigner({ signer }),
+        walletClient,
         module: meeConfig.defaultValidatorAddress
       })
     ]
@@ -558,12 +543,12 @@ export const toNexusAccount = async (
 
   // Prepare validator modules
   const validators: Validator[] = await prepareValidators(
-    signer,
+    walletClient,
     meeConfig,
     customValidators
   )
 
-  const defaultValidator = toDefaultModule({ signer })
+  const defaultValidator = toDefaultModule({ walletClient })
 
   // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
   let module = validators[0] || defaultValidator
@@ -772,6 +757,20 @@ export const toNexusAccount = async (
   }
 
   /**
+   * @description Gets the factory arguments for the account
+   * @returns The factory arguments
+   */
+  const getFactoryArgs = async (): Promise<{
+    factory: Address
+    factoryData: Hex
+  }> => {
+    return {
+      factory: meeConfig.factoryAddress,
+      factoryData
+    }
+  }
+
+  /**
    * @description Gets the nonce for the account along with modified key
    * @param parameters - Optional parameters for getting the nonce
    * @returns The nonce and the key
@@ -816,76 +815,52 @@ export const toNexusAccount = async (
   }
 
   /**
-   * @description Signs typed data
+   * @description Signs typed data. Uses ERC-7739 TypedDataSign flow for modules that support it.
    * @param parameters - The typed data parameters
-   * @returns The signature
+   * @returns The signature with module address prepended (Nexus-specific format)
    */
   async function signTypedData<
     const typedData extends TypedData | Record<string, unknown>,
     primaryType extends keyof typedData | "EIP712Domain" = keyof typedData
   >(parameters: TypedDataDefinition<typedData, primaryType>): Promise<Hex> {
-    const { message, primaryType, types: _types, domain } = parameters
+    // Cast to base TypedDataDefinition for module interface compatibility
+    const typedDataParams = parameters as TypedDataDefinition
 
-    if (!domain) throw new Error("Missing domain")
-    if (!message) throw new Error("Missing message")
+    // Use ERC-7739 signing if supported, otherwise fall back to standard signing
+    const signature =
+      (await module.erc7739VersionSupported()) === 0
+        ? await module.signTypedData(typedDataParams)
+        : await module.signTypedDataErc7739(
+            typedDataParams,
+            (await getEip712Domain()).domain
+          )
 
-    const types = {
-      EIP712Domain: getTypesForEIP712Domain({ domain }),
-      ..._types
-    }
+    // Prepend module address to signature (Nexus-specific wrapper)
+    return encodePacked(["address", "bytes"], [module.module, signature])
+  }
 
-    // @ts-ignore: Comes from nexus parent typehash
-    const messageStuff: Hex = message.stuff
+  /**
+   * @description Signs a message. Uses ERC-7739 PersonalSign flow for modules that support it.
+   * @param params - The parameters for signing
+   * @param params.message - The message to sign
+   * @returns The signature with module address prepended (Nexus-specific format)
+   */
+  const signMessage = async (parameters: {
+    message: SignableMessage
+  }): Promise<Hex> => {
+    const { message } = parameters
 
-    // @ts-ignore
-    validateTypedData({
-      domain,
-      message,
-      primaryType,
-      types
-    })
+    // Use ERC-7739 signing if supported, otherwise fall back to standard signing
+    const signature =
+      (await module.erc7739VersionSupported()) === 0
+        ? await module.signMessage(message)
+        : await module.signMessageErc7739(
+            message,
+            (await getEip712Domain()).domain
+          )
 
-    const appDomainSeparator = domainSeparator({ domain })
-    const accountDomainStructFields = await getAccountDomainStructFields(
-      publicClient,
-      await getAddress()
-    )
-
-    const parentStructHash = keccak256(
-      encodePacked(
-        ["bytes", "bytes"],
-        [
-          encodeAbiParameters(parseAbiParameters(["bytes32, bytes32"]), [
-            keccak256(toBytes(PARENT_TYPEHASH)),
-            messageStuff
-          ]),
-          accountDomainStructFields
-        ]
-      )
-    )
-
-    const wrappedTypedHash = eip712WrapHash(
-      parentStructHash,
-      appDomainSeparator
-    )
-
-    let signature = await module.signMessage({ raw: toBytes(wrappedTypedHash) })
-    const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
-
-    const signatureData = concatHex([
-      signature,
-      appDomainSeparator,
-      messageStuff,
-      toHex(contentsType),
-      toHex(contentsType.length, { size: 2 })
-    ])
-
-    signature = encodePacked(
-      ["address", "bytes"],
-      [module.module, signatureData]
-    )
-
-    return signature
+    // Prepend module address to signature (Nexus-specific wrapper)
+    return encodePacked(["address", "bytes"], [module.module, signature])
   }
 
   /**
@@ -987,21 +962,9 @@ export const toNexusAccount = async (
         ? encodeExecute(calls[0])
         : encodeExecuteBatch(calls)
     },
-    getFactoryArgs: async () => ({
-      factory: meeConfig.factoryAddress,
-      factoryData
-    }),
+    getFactoryArgs,
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
-    /**
-     * @description Signs a message
-     * @param params - The parameters for signing
-     * @param params.message - The message to sign
-     * @returns The signature
-     */
-    async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
-      const tempSignature = await module.signMessage(message)
-      return encodePacked(["address", "bytes"], [module.module, tempSignature])
-    },
+    signMessage,
     signTypedData,
     signUserOperation: async (
       parameters: UnionPartialBy<UserOperation, "sender"> & {
@@ -1023,7 +986,7 @@ export const toNexusAccount = async (
         entryPointVersion: "0.7",
         userOperation
       })
-      return await module.signUserOpHash(hash)
+      return await module.signMessage({ raw: hash })
     },
     getNonce,
 

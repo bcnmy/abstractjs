@@ -15,7 +15,7 @@ type ToOwnableModuleParameters = {
   threshold: number
   /** Array of owner addresses for the module. */
   owners: Address[]
-  /** Signer of the module. */
+  /** Signer for the module. */
   signer: Signer
 }
 
@@ -55,6 +55,7 @@ export const toOwnableModule = (
     type: "validator",
     signer,
     getStubSignature: async (): Promise<Hex> =>
-      getOwnableValidatorMockSignature({ threshold })
+      getOwnableValidatorMockSignature({ threshold }),
+    erc7739VersionSupported_: 0 // doesn't support EIP-7739
   })
 }

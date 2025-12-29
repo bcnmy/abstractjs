@@ -1,8 +1,19 @@
-import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
+import {
+  http,
+  type Address,
+  type Hex,
+  type OneOf,
+  createPublicClient,
+  pad,
+  toHex
+} from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getChain } from "../../../account"
 import {
   buildComposable,
-  formatCallDataInputParamsWithVersion
+  formatCallDataInputParamsWithVersion,
+  getDefaultNonceKey,
+  getNonceWithKeyUtil
 } from "../../../account/decorators"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
@@ -19,10 +30,15 @@ import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
+  MEEVersion,
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
 } from "../../../constants"
-import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
+import {
+  type ModularSmartAccount,
+  type RuntimeValue,
+  getMEEVersion
+} from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -106,6 +122,11 @@ export interface InstructionLevelTimeBounds {
    * If multiple instructions are batched together as single userOp which has multiple timebounds, the bigger timebound window will be used
    */
   upperBoundTimestamp?: number
+  /**
+   * Execution simulation retry delay (milliseconds) will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
+   * uses cases such as limit orders, DCA and etc... and also very helpful to reduce orchestration fees for long standing transactions
+   */
+  executionSimulationRetryDelay?: number
 }
 
 /**
@@ -217,6 +238,11 @@ export type SponsorshipOptionsParams = {
    */
   customHeaders?: Record<string, string>
   /**
+   * RPC url for fetching the nonce for sponsorship.
+   * Default to public RPC url (Not reliable). If the sponsorship chain is defined ? Rpc url will be inherited from the chain configuration
+   */
+  rpcUrl?: Url
+  /**
    * Gas tank parameters
    */
   gasTank: {
@@ -311,6 +337,11 @@ export type GetQuoteParams = SupertransactionLike & {
    * Upper bound execution timestamp to be applied to all user operations. This is a global configuration for timebound
    */
   upperBoundTimestamp?: number
+  /**
+   * Execution simulation retry delay (milliseconds) will customize the node's execution retry for your userOps. This will help you to configure the constraints check interval for
+   * uses cases such as limit orders, DCA and etc... and also very helpful to reduce orchestration fees for long standing transactions
+   */
+  executionSimulationRetryDelay?: number
   /**
    * gasLimit option to override the default payment gas limit
    */
@@ -442,6 +473,8 @@ export type UserOp = {
   lowerBoundTimestamp?: number
   /** Upper bound timestamp for operation validity */
   upperBoundTimestamp?: number
+  /** Execution simulation retry delay for constraint simulation delay */
+  executionSimulationRetryDelay?: number
   /** EIP7702Auth */
   eip7702Auth?: MeeAuthorization
   /** Cleanup userop flag - Special user op */
@@ -597,6 +630,8 @@ export interface MeeFilledUserOpDetails {
   signature?: Hex
   /** Userop finality confirmation. Soft confirmation and Hard confirmation is supported */
   isConfirmed?: boolean
+  /** Execution simulation retry delay for constraint simulation delay */
+  executionSimulationRetryDelay?: string
 }
 
 /**
@@ -667,6 +702,7 @@ export const getQuote = async (
     lowerBoundTimestamp: lowerBoundTimestamp_ = Math.floor(Date.now() / 1000),
     upperBoundTimestamp: upperBoundTimestamp_ = lowerBoundTimestamp_ +
       USEROP_MIN_EXEC_WINDOW_DURATION,
+    executionSimulationRetryDelay: executionSimulationRetryDelay_,
     delegate = false,
     authorizations = [],
     multichain7702Auth = false,
@@ -906,11 +942,16 @@ export const getQuote = async (
     }
   }
 
-  const { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed } =
-    await preparePaymentInfo(client, {
+  const [
+    { paymentInfo, isInitDataProcessed, isSessionDetailsProcessed },
+    preparedUserOps
+  ] = await Promise.all([
+    preparePaymentInfo(client, {
       ...parameters,
       initDataTypeByChainId
-    })
+    }),
+    prepareUserOps(account_, finalInstructions, false, moduleAddress)
+  ])
 
   let multichainEIP7702Auth: MeeAuthorization | undefined = undefined
 
@@ -931,19 +972,13 @@ export const getQuote = async (
   if (isSessionDetailsProcessed)
     hasProcessedSessionDetails.add(paymentInfo.chainId)
 
-  const preparedUserOps = await prepareUserOps(
-    account_,
-    finalInstructions,
-    false,
-    moduleAddress
-  )
-
   // If cleanup is configured, the cleanup userops will be appended to the existing userops
   // Every cleanup is a separate user op and will be executed if certain conditions met
   if (cleanUps && cleanUps.length > 0) {
     const userOpsNonceInfo: NonceInfo[] = preparedUserOps.map(
       ([, { nonceKey, nonce }]) => ({ nonce, nonceKey })
     )
+
     const result = await prepareCleanUpUserOps(
       account_,
       userOpsNonceInfo,
@@ -972,7 +1007,8 @@ export const getQuote = async (
         metadata,
         simulationOverrides,
         lowerBoundTimestamp,
-        upperBoundTimestamp
+        upperBoundTimestamp,
+        executionSimulationRetryDelay
       ]) => {
         let initDataOrUndefined: InitDataOrUndefined = undefined
 
@@ -1069,6 +1105,9 @@ export const getQuote = async (
               CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION
             : // Instruction level timebound will be considered first
               upperBoundTimestamp || upperBoundTimestamp_,
+          // Instruction level execution simulation retry delay will be considered first and then global config
+          executionSimulationRetryDelay:
+            executionSimulationRetryDelay || executionSimulationRetryDelay_,
           sender,
           callData,
           callGasLimit,
@@ -1173,18 +1212,63 @@ const preparePaymentInfo = async (
       sponsorshipUrl = sponsorshipOptions.url
     }
 
-    const sponsorshipClient = createHttpClient(sponsorshipUrl)
+    let nonce: string
 
-    const { nonce } = await sponsorshipClient.request<{
-      nonce: string
-      nonceKey: string
-    }>({
-      path: `sponsorship/nonce/${chainId}/${sender}`,
-      method: "GET",
-      ...(sponsorshipOptions?.customHeaders
-        ? { headers: sponsorshipOptions.customHeaders }
-        : {})
-    })
+    try {
+      // Try to see if the nexus account is defined on sponsorship chain to inhert the RPC url from it
+      const nexusAccount = account_.deploymentOn(chainId)
+
+      // Sponsorship account will be always MEE version 2.0.0
+      const { defaultValidatorAddress } = getMEEVersion(MEEVersion.V2_0_0)
+      const defaultNonceKey = await getDefaultNonceKey(sender, chainId)
+
+      if (nexusAccount) {
+        // Reuse the RPC url from existing chain config
+        const nonceInfo = await getNonceWithKeyUtil(
+          nexusAccount.publicClient,
+          sender,
+          {
+            moduleAddress: defaultValidatorAddress,
+            key: defaultNonceKey,
+            validationMode: "0x00"
+          }
+        )
+
+        nonce = nonceInfo.nonce.toString()
+      } else {
+        // Try to use the RPC defined from the sponsorshipOptions orelse defaults to public RPC
+        const publicClient = createPublicClient({
+          transport: sponsorshipOptions?.rpcUrl
+            ? http(sponsorshipOptions.rpcUrl)
+            : http(),
+          chain: getChain(chainId)
+        })
+
+        const nonceInfo = await getNonceWithKeyUtil(publicClient, sender, {
+          moduleAddress: defaultValidatorAddress,
+          key: defaultNonceKey,
+          validationMode: "0x00"
+        })
+
+        nonce = nonceInfo.nonce.toString()
+      }
+    } catch {
+      // If incase there is any error in fetching the nonce locally ? Fallback to API based nonce fetching
+      const sponsorshipClient = createHttpClient(sponsorshipUrl)
+
+      const nonceInfo = await sponsorshipClient.request<{
+        nonce: string
+        nonceKey: string
+      }>({
+        path: `sponsorship/nonce/${chainId}/${sender}`,
+        method: "GET",
+        ...(sponsorshipOptions?.customHeaders
+          ? { headers: sponsorshipOptions.customHeaders }
+          : {})
+      })
+
+      nonce = nonceInfo.nonce
+    }
 
     paymentInfo = {
       sponsored: true,
@@ -1421,7 +1505,8 @@ const prepareUserOps = async (
         instruction.metadata,
         instruction.simulationOverrides,
         instruction.lowerBoundTimestamp,
-        instruction.upperBoundTimestamp
+        instruction.upperBoundTimestamp,
+        instruction.executionSimulationRetryDelay
       ])
     })
   )
