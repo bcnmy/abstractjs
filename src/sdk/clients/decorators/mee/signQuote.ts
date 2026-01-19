@@ -7,8 +7,8 @@ import {
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
 import {
-  DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
-  type BaseMeeClient
+  type BaseMeeClient,
+  DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT
 } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 
