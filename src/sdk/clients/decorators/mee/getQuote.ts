@@ -1191,20 +1191,36 @@ const preparePaymentInfo = async (
       sponsorshipUrl = sponsorshipOptions.url
     }
 
-    const sponsorshipClient = createHttpClient(sponsorshipUrl)
+    const isBiconomyHostedSponsorship = [
+      getDefaultMEENetworkUrl(false), // Prod
+      getDefaultMEENetworkUrl(true) // Staging
+    ].includes(sponsorshipUrl)
 
-    const nonceInfo = await sponsorshipClient.request<{
-      nonce: string
-      nonceKey: string
-    }>({
-      path: `sponsorship/nonce/${chainId}/${sender}`,
-      method: "GET",
-      ...(sponsorshipOptions?.customHeaders
-        ? { headers: sponsorshipOptions.customHeaders }
-        : {})
-    })
+    // Biconomy hosted sponsorship will be considered as trusted sponsorship
+    const isTrustedSponsorship =
+      sender.toLowerCase() ===
+        DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT.toLowerCase() &&
+      isBiconomyHostedSponsorship
 
-    const nonce = nonceInfo.nonce
+    let nonce = "0"
+
+    // If it is not an trusted sponsorship ? The nonce will be fetched from third party sponsorship backend
+    if (!isTrustedSponsorship) {
+      const sponsorshipClient = createHttpClient(sponsorshipUrl)
+
+      const nonceInfo = await sponsorshipClient.request<{
+        nonce: string
+        nonceKey: string
+      }>({
+        path: `sponsorship/nonce/${chainId}/${sender}`,
+        method: "GET",
+        ...(sponsorshipOptions?.customHeaders
+          ? { headers: sponsorshipOptions.customHeaders }
+          : {})
+      })
+
+      nonce = nonceInfo.nonce
+    }
 
     paymentInfo = {
       sponsored: true,
