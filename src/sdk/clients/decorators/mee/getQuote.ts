@@ -278,6 +278,14 @@ export interface Simulation {
 
   /** Storage overrides to override token balance and some custom storage slots for simulation */
   overrides?: Overrides
+
+  /**
+   * callGasLimit buffer (%)
+   * Extra gas limit applied on a per-chain basis to accommodate dynamic calldata,
+   * which may consume more gas at execution time than during simulation.
+   * example: { [8453]: 50n } // Base chain => 50% buffer
+   */
+  gasLimitBuffers?: Record<number, bigint>
 }
 
 /**
