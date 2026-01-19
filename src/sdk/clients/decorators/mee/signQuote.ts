@@ -6,7 +6,10 @@ import {
 } from "../../../account/utils/getVersion"
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
-import type { BaseMeeClient } from "../../createMeeClient"
+import {
+  DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
+  type BaseMeeClient
+} from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
 
 /**
@@ -95,6 +98,10 @@ export const prepareTypedDataSignableQuotePayload = (
   quote: GetQuotePayload,
   eip712Domain: GetEip712DomainReturnType
 ) => {
+  const isTrustedSponsorship =
+    quote.userOps[0].userOp.sender.toLowerCase() ===
+    DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT.toLowerCase()
+
   const signablePayload = {
     domain: {
       name: eip712Domain.domain.name // name
@@ -117,7 +124,11 @@ export const prepareTypedDataSignableQuotePayload = (
     primaryType: "SuperTx" as const,
 
     message: {
-      meeUserOps: quote.userOps.map((userOp) => ({
+      // If it is a trusted sponsorship, the payment userop can be skipped because it is not going to be executed at all.
+      meeUserOps: (isTrustedSponsorship
+        ? quote.userOps.slice(1)
+        : quote.userOps
+      ).map((userOp) => ({
         userOpHash: userOp.userOpHash,
         lowerBoundTimestamp: userOp.lowerBoundTimestamp,
         upperBoundTimestamp: userOp.upperBoundTimestamp
