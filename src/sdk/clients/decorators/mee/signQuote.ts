@@ -42,6 +42,8 @@ export type SignQuotePayload = GetQuotePayload & {
    * The MEE versions of the quote
    */
   meeVersions?: MeeVersionsWithChainId
+  /** This flag is being used for trusted sponsorship backwards compatibility */
+  isEIP712TrustedSponsorshipSupported: boolean
 }
 
 const DEFAULT_PREFIX = "0x177eee00"
@@ -168,7 +170,8 @@ export const formatSignedQuotePayload = (
   return {
     ...quote,
     signature: concatHex([DEFAULT_PREFIX, signature]),
-    meeVersions: meeVersions
+    meeVersions: meeVersions,
+    isEIP712TrustedSponsorshipSupported: true
   }
 }
 

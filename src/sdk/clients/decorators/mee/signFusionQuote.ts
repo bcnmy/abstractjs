@@ -36,6 +36,8 @@ export type SignFusionQuotePayload = (
   | SignSafeQuotePayload
 ) & {
   meeVersions: MeeVersionsWithChainId
+  /** This flag is being used for trusted sponsorship backwards compatibility */
+  isEIP712TrustedSponsorshipSupported: boolean
 }
 
 /**
@@ -83,7 +85,8 @@ export const signFusionQuote = async (
   if ("delegatorSmartAccount" in parameters) {
     return {
       ...(await signMMDtkQuote(client, parameters as SignMmDtkQuoteParams)),
-      meeVersions
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
     }
   }
 
@@ -91,7 +94,8 @@ export const signFusionQuote = async (
   if ("safeAccount" in parameters && "safeWalletClient" in parameters) {
     return {
       ...(await signSafeQuote(client, parameters as SignSafeQuoteParams)),
-      meeVersions
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
     }
   }
 
@@ -110,19 +114,22 @@ export const signFusionQuote = async (
       if (fallbackToOnchainMode) {
         return {
           ...(await signOnChainQuote(client, parameters)),
-          meeVersions
+          meeVersions,
+          isEIP712TrustedSponsorshipSupported: true
         }
       }
 
       return {
         ...signedPermitQuotePayload,
-        meeVersions
+        meeVersions,
+        isEIP712TrustedSponsorshipSupported: true
       }
     }
     case "onchain":
       return {
         ...(await signOnChainQuote(client, parameters)),
-        meeVersions
+        meeVersions,
+        isEIP712TrustedSponsorshipSupported: true
       }
     default:
       throw new Error("Invalid quote type for fusion quote")
