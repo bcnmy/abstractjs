@@ -864,6 +864,42 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
     expect(quote).toBeDefined()
   })
+
+  test("should pass simulation if custom gas limit buffer is provided", async () => {
+    const transferInstruction = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcUSDC.addressOn(chain.id),
+        amount: parseUnits("100000", 6),
+        chainId: chain.id
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [...transferInstruction],
+      simulation: {
+        simulate: true,
+        gasLimitBuffers: {
+          [chain.id]: 50n,
+          [optimismSepolia.id]: 100n
+        },
+        overrides: {
+          tokenOverrides: [
+            {
+              tokenAddress: testnetMcUSDC.addressOn(chain.id),
+              chainId: chain.id,
+              balance: parseUnits("100000", 6), // Balance is overriden here
+              accountAddress: mcNexus.addressOn(chain.id, true)
+            }
+          ]
+        }
+      },
+      feeToken
+    })
+
+    expect(quote).toBeDefined()
+  })
 })
 
 describe("mee.getQuote({ simulations }) - Multichain Simulation Scenarios", () => {
