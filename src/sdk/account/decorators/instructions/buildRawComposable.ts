@@ -1,17 +1,18 @@
 import type { Address, Hex } from "viem"
-import { isAddress } from "viem"
 import type {
   Instruction,
   InstructionLevelTimeBounds
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
-import { ComposabilityVersion } from "../../../constants"
 import {
   type ComposableCall,
   type InputParam,
-  isRuntimeComposableValue,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
+import {
+  type ExecutionCondition,
+  createConditionInputParam
+} from "../../../modules/utils/conditions"
 import type { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 import { formatComposableCallWithVersion } from "./buildComposable"
@@ -25,6 +26,16 @@ export type BuildRawComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint | RuntimeValue
+  /**
+   * Optional conditions that must be satisfied before execution.
+   * All conditions are evaluated via STATIC_CALL before the main function.
+   * Transaction reverts if any condition fails.
+   * @since v1.2.0
+   */
+  conditions?: ExecutionCondition[]
+  /**
+   * Optional metadata describing the instruction for display purposes
+   */
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
 
@@ -68,6 +79,7 @@ export const buildRawComposable = async (
     gasLimit,
     value,
     chainId,
+    conditions,
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
@@ -94,27 +106,18 @@ export const buildRawComposable = async (
       prepareRawComposableParams(callDataEncodedArgs)
   }
 
-  // Handle different composability versions - add constraints for v1.0.0
-  if (composabilityVersion === ComposabilityVersion.V1_0_0) {
-    if (isRuntimeComposableValue(to)) {
-      throw new Error(
-        "Runtime injected target is not supported for Composability v1.0.0"
-      )
-    }
-    if (!isAddress(to as Address)) {
-      throw new Error("Invalid target contract address")
-    }
-    if (isRuntimeComposableValue(value)) {
-      throw new Error(
-        "Runtime injected value is not supported for Composability v1.0.0"
-      )
-    }
-  }
+  // Append condition InputParams if conditions are specified
+  const allInputParams = conditions?.length
+    ? [
+        ...versionAgnosticComposableParams,
+        ...conditions.map(createConditionInputParam)
+      ]
+    : versionAgnosticComposableParams
 
   const composableCall: ComposableCall = formatComposableCallWithVersion(
     composabilityVersion,
     false, // efficientMode is false for raw composable calls
-    versionAgnosticComposableParams,
+    allInputParams,
     functionSig,
     to,
     value,
