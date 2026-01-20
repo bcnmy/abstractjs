@@ -1728,6 +1728,77 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         expect(nexusUSDCBalance).to.be.eq(0n)
       }
     })
+
+    it("should execute raw composable transaction with conditions", async () => {
+      for (const {
+        name,
+        mcNexus: testMcNexus,
+        meeClient: testMeeClient
+      } of accountConfigs) {
+        console.log(
+          `Testing raw composable conditional execution with ${name}`
+        )
+
+        const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
+        const triggerAmount = minBalanceRequired // should meet the condition
+
+        const condition = createCondition({
+          targetContract: tokenAddress,
+          functionAbi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)],
+          value: minBalanceRequired,
+          type: ConditionType.GTE,
+          description: `Orchestrator must have at least ${minBalanceRequired} USDC`
+        })
+
+        // Create raw calldata for transfer function
+        const rawCalldata = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [eoaAccount.address, parseUnits("0.1", 6)]
+        })
+
+        const rawComposableWithCondition = await testMcNexus.buildComposable({
+          type: "rawCalldata",
+          data: {
+            to: tokenAddress,
+            calldata: rawCalldata,
+            chainId: chain.id,
+            conditions: [condition]
+          }
+        })
+
+        const { hash } = await testMeeClient.executeFusionQuote({
+          fusionQuote: await testMeeClient.getFusionQuote({
+            trigger: {
+              chainId: chain.id,
+              tokenAddress,
+              amount: triggerAmount
+            },
+            instructions: rawComposableWithCondition,
+            feeToken: {
+              chainId: chain.id,
+              address: tokenAddress
+            },
+            upperBoundTimestamp: Math.floor(Date.now() / 1000) + 60
+          })
+        })
+
+        console.log("waiting for supertransaction receipt")
+        const { transactionStatus, explorerLinks } =
+          await testMeeClient.waitForSupertransactionReceipt({
+            hash,
+            confirmations: TEST_BLOCK_CONFIRMATIONS
+          })
+
+        expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+        console.log(`[${name}] Raw composable conditional execution test:`, {
+          explorerLinks,
+          hash
+        })
+      }
+    })
   })
 
   // test the new 'runtimeParamViaCustomStaticCall' helper function and the injectable target at the same time
