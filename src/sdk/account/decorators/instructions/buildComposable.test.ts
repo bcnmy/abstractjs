@@ -1735,9 +1735,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         mcNexus: testMcNexus,
         meeClient: testMeeClient
       } of accountConfigs) {
-        console.log(
-          `Testing raw composable conditional execution with ${name}`
-        )
+        console.log(`Testing raw composable conditional execution with ${name}`)
 
         const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
         const triggerAmount = minBalanceRequired // should meet the condition

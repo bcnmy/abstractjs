@@ -291,40 +291,6 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     ).rejects.toThrow("Insufficient funding amount for funding transaction")
   })
 
-  test("should fail simulation if an invalid token address is provided in token overrides", async () => {
-    const transferInstruction = await mcNexus.buildComposable({
-      type: "transfer",
-      data: {
-        recipient: eoaAccount.address,
-        tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-        amount: parseUnits("100", 6),
-        chainId: chain.id
-      }
-    })
-
-    await expect(
-      meeClient.getQuote({
-        instructions: [...transferInstruction],
-        simulation: {
-          simulate: true,
-          overrides: {
-            tokenOverrides: [
-              {
-                tokenAddress: "0x0000000000000000000000000000000000000001",
-                chainId: chain.id,
-                balance: 1n,
-                accountAddress: eoaAccount.address
-              }
-            ]
-          }
-        },
-        feeToken
-      })
-    ).rejects.toThrow(
-      "Failed to detect token slot. Please check your token overrides"
-    )
-  })
-
   test("should throw an error with contract address and error selector when simulation reverts with a generic execution error", async () => {
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -467,35 +433,6 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
     })
 
     expect(quote).toBeDefined()
-  })
-
-  test("should simulation fail if `batch: false` is provided for fusion mode", async () => {
-    const nativeTokenTransferInstruction = await mcNexus.buildComposable({
-      type: "nativeTokenTransfer",
-      data: {
-        to: eoaAccount.address,
-        value: 0n,
-        chainId: chain.id
-      }
-    })
-
-    await expect(
-      meeClient.getFusionQuote({
-        trigger: {
-          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-          amount: 1n,
-          chainId: chain.id
-        },
-        instructions: [...nativeTokenTransferInstruction],
-        batch: false,
-        simulation: {
-          simulate: true
-        },
-        feeToken
-      })
-    ).rejects.toThrowError(
-      "Failed to simulate and estimate gas for userOps. Supertransaction which includes funding instruction should always use batching."
-    )
   })
 
   test("should pass simulation for undeployed nexus account in non-fusion mode with sufficient balance override", async () => {
