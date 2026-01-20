@@ -1,12 +1,15 @@
 import type { Address, Hex } from "viem"
+import { isAddress } from "viem"
 import type {
   Instruction,
   InstructionLevelTimeBounds
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
+import { ComposabilityVersion } from "../../../constants"
 import {
   type ComposableCall,
   type InputParam,
+  isRuntimeComposableValue,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
 import type { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
@@ -72,6 +75,12 @@ export const buildRawComposable = async (
   } = parameters
   const { composabilityVersion } = composabilityParameters
 
+  if (!composabilityVersion) {
+    throw new Error(`Composability version is required to build a composable call.
+      This error may be caused by using a non-composable .build decorator with a composable call.
+      Please use buildComposable instead.`)
+  }
+
   if (calldata.length < 10 || !calldata.startsWith("0x")) {
     throw new Error("Invalid calldata")
   }
@@ -85,8 +94,25 @@ export const buildRawComposable = async (
       prepareRawComposableParams(callDataEncodedArgs)
   }
 
+  // Handle different composability versions - add constraints for v1.0.0
+  if (composabilityVersion === ComposabilityVersion.V1_0_0) {
+    if (isRuntimeComposableValue(to)) {
+      throw new Error(
+        "Runtime injected target is not supported for Composability v1.0.0"
+      )
+    }
+    if (!isAddress(to as Address)) {
+      throw new Error("Invalid target contract address")
+    }
+    if (isRuntimeComposableValue(value)) {
+      throw new Error(
+        "Runtime injected value is not supported for Composability v1.0.0"
+      )
+    }
+  }
+
   const composableCall: ComposableCall = formatComposableCallWithVersion(
-    composabilityVersion!,
+    composabilityVersion,
     false, // efficientMode is false for raw composable calls
     versionAgnosticComposableParams,
     functionSig,
