@@ -9,6 +9,10 @@ import {
   type InputParam,
   prepareRawComposableParams
 } from "../../../modules/utils/composabilityCalls"
+import {
+  type ExecutionCondition,
+  createConditionInputParam
+} from "../../../modules/utils/conditions"
 import type { RuntimeValue } from "../../../modules/utils/runtimeAbiEncoding"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 import { formatComposableCallWithVersion } from "./buildComposable"
@@ -22,6 +26,16 @@ export type BuildRawComposableParameters = {
   chainId: number
   gasLimit?: bigint
   value?: bigint | RuntimeValue
+  /**
+   * Optional conditions that must be satisfied before execution.
+   * All conditions are evaluated via STATIC_CALL before the main function.
+   * Transaction reverts if any condition fails.
+   * @since v1.2.0
+   */
+  conditions?: ExecutionCondition[]
+  /**
+   * Optional metadata describing the instruction for display purposes
+   */
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
 
@@ -65,12 +79,19 @@ export const buildRawComposable = async (
     gasLimit,
     value,
     chainId,
+    conditions,
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay
   } = parameters
   const { composabilityVersion } = composabilityParameters
+
+  if (!composabilityVersion) {
+    throw new Error(`Composability version is required to build a composable call.
+      This error may be caused by using a non-composable .build decorator with a composable call.
+      Please use buildComposable instead.`)
+  }
 
   if (calldata.length < 10 || !calldata.startsWith("0x")) {
     throw new Error("Invalid calldata")
@@ -85,10 +106,18 @@ export const buildRawComposable = async (
       prepareRawComposableParams(callDataEncodedArgs)
   }
 
+  // Append condition InputParams if conditions are specified
+  const allInputParams = conditions?.length
+    ? [
+        ...versionAgnosticComposableParams,
+        ...conditions.map(createConditionInputParam)
+      ]
+    : versionAgnosticComposableParams
+
   const composableCall: ComposableCall = formatComposableCallWithVersion(
-    composabilityVersion!,
+    composabilityVersion,
     false, // efficientMode is false for raw composable calls
-    versionAgnosticComposableParams,
+    allInputParams,
     functionSig,
     to,
     value,
