@@ -1,12 +1,8 @@
 import type { Address, Prettify, PublicClient } from "viem"
-import { erc20Abi, getAbiItem, parseUnits, toFunctionSelector } from "viem"
+import { erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
-import {
-  type ActionData,
-  DEFAULT_MEE_VERSION,
-  getSpendingLimitsPolicy
-} from "../../../../../constants"
+import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
 import type { MEEVersionConfig } from "../../../../../account"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
