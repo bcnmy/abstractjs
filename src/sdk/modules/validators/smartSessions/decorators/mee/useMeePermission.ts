@@ -51,6 +51,18 @@ export const useMeePermission = async (
   } = parameters
   const meeClient = meeClient_ as MeeClient
 
+  const isEnableAndUseSessionDetailExists = sessionDetailsArray.some(
+    (sessionDetailsInfo) =>
+      sessionDetailsInfo.mode === SmartSessionMode.UNSAFE_ENABLE
+  )
+
+  // If permission/session enabled via prepareForPermission ? The usePermission flow should always use USE mode
+  if (!isEnableAndUseSessionDetailExists && mode_ === "ENABLE_AND_USE") {
+    throw new Error(
+      "ENABLE_AND_USE mode cannot be used with given session details, instead try USE mode directly"
+    )
+  }
+
   const mode =
     mode_ === "ENABLE_AND_USE"
       ? SmartSessionMode.UNSAFE_ENABLE

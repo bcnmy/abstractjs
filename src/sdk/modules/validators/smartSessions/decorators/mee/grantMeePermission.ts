@@ -16,6 +16,7 @@ import {
   grantPermissionPersonalSign,
   grantPermissionTypedDataSign
 } from "../grantPermission"
+import { addPaymentPolicyForActions } from "./prepareForPermissions"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]
@@ -128,9 +129,7 @@ export const grantMeePermission = async <
       (deployment) => deployment?.client?.chain?.id === chainId
     )
 
-    const actionsForChain = actions.filter(
-      (action) => action.chainId === chainId
-    )
+    let actionsForChain = actions.filter((action) => action.chainId === chainId)
 
     const defaultVersionConfig: MEEVersionConfig =
       getMEEVersion(DEFAULT_MEE_VERSION)
@@ -138,44 +137,19 @@ export const grantMeePermission = async <
       deployment?.version.validatorAddress ||
       defaultVersionConfig.validatorAddress
 
-    let paymentAction: (ActionData & { chainId: number }) | undefined =
-      undefined
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
-      // if some permission is already defining the policy for the feeToken.transfer, throw an error
-      if (
-        actionsForChain.some(
-          (action) =>
-            action.actionTargetSelector ===
-              toFunctionSelector(
-                getAbiItem({ abi: erc20Abi, name: "transfer" })
-              ) && action.actionTarget === feeToken.address
-        )
-      ) {
-        throw new Error(`You are defining the policy that prevents using ${feeToken.address} on chain ${chainId} as the fee token. 
-                         Possible solutions:
-                         1. Remove the 'transfer' method of ${feeToken.address} from the actions array.
-                         2. Use a different fee token.
-                         3. Use sponsored mode.`)
-      }
-
-      // else add the payment action policy
-      paymentAction = {
-        actionTarget: feeToken.address,
-        actionTargetSelector: "0xa9059cbb" as Address, // transfer
-        actionPolicies: [
-          getPolicyForPayment(maxPaymentAmount!, feeToken.address)
-        ],
-        chainId
-      }
+      actionsForChain = addPaymentPolicyForActions(
+        actionsForChain,
+        feeToken,
+        maxPaymentAmount!
+      )
     }
 
     return {
       account: deployment,
       redeemer,
-      actions: paymentAction
-        ? [...actionsForChain, paymentAction]
-        : actionsForChain,
+      actions: actionsForChain,
       sessionValidator: meeValidatorAddress,
       sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
       permitERC4337Paymaster: true
@@ -191,8 +165,4 @@ export const grantMeePermission = async <
         undefined as AnyData,
         grantPermissionParameters
       )
-}
-
-const getPolicyForPayment = (maxPaymentAmount: bigint, token: Address) => {
-  return getSpendingLimitsPolicy([{ limit: maxPaymentAmount, token }])
 }

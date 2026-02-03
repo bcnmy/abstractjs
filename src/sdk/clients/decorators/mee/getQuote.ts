@@ -288,6 +288,35 @@ export interface Simulation {
   gasLimitBuffers?: Record<number, bigint>
 }
 
+/** EIP 7702 authorization params */
+export type EIP7702AuthorizationParams = OneOf<
+  | {
+      /**
+       * Whether to delegate the transaction to the account
+       */
+      delegate?: false
+      /**
+       * Whether to delegate the transaction to the account with chain id zero
+       */
+      multichain7702Auth?: false
+    }
+  | {
+      /**
+       * Whether to delegate the transaction to the account
+       */
+      delegate: true
+      /**
+       * Whether to delegate the transaction to the account with chain id zero
+       */
+      multichain7702Auth?: boolean
+      /**
+       * The array of authorization data for the transaction. Should be a valid Viem compatible Authorization param
+       * If not provided, the account will be delegated to the implementation address, using chainId 0.
+       */
+      authorizations?: SignAuthorizationReturnType[]
+    }
+>
+
 /**
  * Parameters required for requesting a quote from the MEE service
  */
@@ -408,33 +437,7 @@ export type GetQuoteParams = SupertransactionLike & {
         sponsorshipOptions?: SponsorshipOptionsParams
       }
   > &
-  OneOf<
-    | {
-        /**
-         * Whether to delegate the transaction to the account
-         */
-        delegate?: false
-        /**
-         * Whether to delegate the transaction to the account with chain id zero
-         */
-        multichain7702Auth?: false
-      }
-    | {
-        /**
-         * Whether to delegate the transaction to the account
-         */
-        delegate: true
-        /**
-         * Whether to delegate the transaction to the account with chain id zero
-         */
-        multichain7702Auth?: boolean
-        /**
-         * The array of authorization data for the transaction. Should be a valid Viem compatible Authorization param
-         * If not provided, the account will be delegated to the implementation address, using chainId 0.
-         */
-        authorizations?: SignAuthorizationReturnType[]
-      }
-  >
+  EIP7702AuthorizationParams
 
 export type MeeAuthorization = {
   address: Hex

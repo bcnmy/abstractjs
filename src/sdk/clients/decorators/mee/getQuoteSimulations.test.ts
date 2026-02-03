@@ -3,35 +3,25 @@ import {
   toMetaMaskSmartAccount
 } from "@metamask/delegation-toolkit"
 import {
-  getSpendingLimitsPolicy,
-  getTimeFramePolicy
-} from "@rhinestone/module-sdk"
-import {
   http,
   type Account,
-  type Address,
   type Chain,
   type LocalAccount,
-  type OneOf,
   type PublicClient,
   type Transport,
   type WalletClient,
   createPublicClient,
   createWalletClient,
-  erc20Abi,
-  getAbiItem,
   parseEther,
   parseUnits,
   publicActions,
-  toBytes,
-  toFunctionSelector,
-  toHex,
   zeroAddress
 } from "viem"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import type { FeeTokenInfo, Instruction } from "."
+import { generateNewTestnetMcNexusAccountAndMeeClient } from "../../../../test/mee-utils/generate-mc-nexus"
+import { prepareForTestnetSmartSessions } from "../../../../test/mee-utils/prepare-for-smart-session"
 import {
   type NetworkConfig,
   TESTNET_RPC_URLS,
@@ -43,10 +33,7 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import {
-  getRandomAccountIndex,
-  transferErc20
-} from "../../../../test/testUtils"
+import { transferErc20 } from "../../../../test/testUtils"
 import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
@@ -55,23 +42,17 @@ import {
 import {
   DEFAULT_MEE_VERSION,
   MEEVersion,
-  getSudoPolicy,
-  getUniversalActionPolicy,
-  getUsageLimitPolicy,
   mcUSDC,
   testnetMcUSDC
 } from "../../../constants"
 import {
-  type ParamRule,
   getMEEVersion,
   meeSessionActions,
-  runtimeNativeBalanceOf,
-  toSmartSessionsModule
+  runtimeNativeBalanceOf
 } from "../../../modules"
 import {
   type MeeClient,
   createMeeClient,
-  getDefaultMEENetworkApiKey,
   getDefaultMEENetworkUrl,
   getDefaultMeeGasTank
 } from "../../createMeeClient"
@@ -79,82 +60,6 @@ import getMmDtkQuote from "./getMmDtkQuote"
 
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
-
-const generateNewMcNexusAccountAndMeeClient = async (
-  publicClient: PublicClient,
-  walletClient: WalletClient<Transport, Chain, Account>,
-  eoaAccount: LocalAccount,
-  options?: {
-    amount?: bigint
-    tokenType?: "onchain" | "permit"
-    newType?: "fresh-pk" | "fresh-index"
-  } & OneOf<
-    | { fundEoa: boolean }
-    | { fundMcNexus: boolean }
-    | { fundCustomAddress: boolean; accountAddress: Address }
-    | { sponsorship: boolean }
-  >
-) => {
-  const account =
-    options?.newType === "fresh-index"
-      ? eoaAccount
-      : privateKeyToAccount(generatePrivateKey())
-
-  const mcNexus = await toMultichainNexusAccount({
-    signer: account,
-    chainConfigurations: [
-      {
-        chain: optimismSepolia,
-        transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
-      },
-      {
-        chain: baseSepolia,
-        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-        version: getMEEVersion(DEFAULT_MEE_VERSION)
-      }
-    ],
-    ...(options?.newType === "fresh-index"
-      ? { index: BigInt(getRandomAccountIndex(1000, 1000000000)) }
-      : {})
-  })
-
-  const meeClient = await createMeeClient({
-    account: mcNexus,
-    apiKey: options?.sponsorship
-      ? "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
-      : getDefaultMEENetworkApiKey(true)
-  })
-
-  let fundingAddress: Address | undefined = undefined
-
-  if (options?.fundEoa) {
-    fundingAddress = account.address
-  }
-
-  if (options?.fundMcNexus) {
-    fundingAddress = mcNexus.addressOn(baseSepolia.id, true)
-  }
-
-  if (options?.fundCustomAddress && options?.accountAddress) {
-    fundingAddress = options.accountAddress
-  }
-
-  if (fundingAddress) {
-    await transferErc20({
-      publicClient,
-      walletClient,
-      tokenAddress:
-        options?.tokenType === "onchain"
-          ? testnetMcTestUSDC.addressOn(baseSepolia.id)
-          : testnetMcTestUSDCP.addressOn(baseSepolia.id),
-      recipient: fundingAddress,
-      amount: options?.amount || parseUnits("0.6", 6)
-    })
-  }
-
-  return { mcNexus, meeClient, eoaAccount: account }
-}
 
 const getInstructions = async (
   mcNexus: MultichainSmartAccount
@@ -195,7 +100,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
     eoaAccount = network.account!
-    chain = network.chain
+    chain = baseSepolia
 
     mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
@@ -230,11 +135,14 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
   })
 
   test("should throw an error if there are insufficient funds to pay relayer fees", async () => {
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount
-    )
+    const { mcNexus, meeClient } =
+      await generateNewTestnetMcNexusAccountAndMeeClient(
+        baseSepolia,
+        optimismSepolia,
+        publicClient,
+        walletClient,
+        eoaAccount
+      )
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -261,11 +169,14 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should throw an error if there are insufficient funds for the trigger amount in fusion mode", async () => {
     // generating new account to have zero balance
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount
-    )
+    const { mcNexus, meeClient } =
+      await generateNewTestnetMcNexusAccountAndMeeClient(
+        baseSepolia,
+        optimismSepolia,
+        publicClient,
+        walletClient,
+        eoaAccount
+      )
 
     const transferInstruction = await mcNexus.buildComposable({
       type: "transfer",
@@ -437,15 +348,18 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account in non-fusion mode with sufficient balance override", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundMcNexus: true,
-        tokenType: "permit"
-      }
-    )
+    const { mcNexus, meeClient } =
+      await generateNewTestnetMcNexusAccountAndMeeClient(
+        baseSepolia,
+        optimismSepolia,
+        publicClient,
+        walletClient,
+        eoaAccount,
+        {
+          fundMcNexus: true,
+          tokenType: "permit"
+        }
+      )
 
     const nativeTokenTransferInstruction = await mcNexus.buildComposable({
       type: "nativeTokenTransfer",
@@ -479,15 +393,18 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account in permit mode", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundEoa: true,
-        tokenType: "permit"
-      }
-    )
+    const { mcNexus, meeClient } =
+      await generateNewTestnetMcNexusAccountAndMeeClient(
+        baseSepolia,
+        optimismSepolia,
+        publicClient,
+        walletClient,
+        eoaAccount,
+        {
+          fundEoa: true,
+          tokenType: "permit"
+        }
+      )
 
     const tokenTransfer = await mcNexus.buildComposable({
       type: "transfer",
@@ -517,15 +434,18 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account in onchain mode", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        fundEoa: true,
-        tokenType: "onchain"
-      }
-    )
+    const { mcNexus, meeClient } =
+      await generateNewTestnetMcNexusAccountAndMeeClient(
+        baseSepolia,
+        optimismSepolia,
+        publicClient,
+        walletClient,
+        eoaAccount,
+        {
+          fundEoa: true,
+          tokenType: "onchain"
+        }
+      )
 
     const tokenTransfer = await mcNexus.buildComposable({
       type: "transfer",
@@ -612,14 +532,17 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
 
   test("should pass simulation for undeployed nexus account with sponsorship enabled", async () => {
     // New fresh undeployed account
-    const { mcNexus, meeClient } = await generateNewMcNexusAccountAndMeeClient(
-      publicClient,
-      walletClient,
-      eoaAccount,
-      {
-        sponsorship: true
-      }
-    )
+    const { mcNexus, meeClient } =
+      await generateNewTestnetMcNexusAccountAndMeeClient(
+        baseSepolia,
+        optimismSepolia,
+        publicClient,
+        walletClient,
+        eoaAccount,
+        {
+          sponsorship: true
+        }
+      )
 
     const tokenTransfer = await mcNexus.buildComposable({
       type: "transfer",
@@ -1074,155 +997,6 @@ describe.runIf(runLifecycleTests)(
       })
     })
 
-    const prepareForSmartSessionsTest = async () => {
-      // New orchestrator account
-      const { mcNexus, meeClient } =
-        await generateNewMcNexusAccountAndMeeClient(
-          publicClient,
-          walletClient,
-          eoaAccount,
-          {
-            fundEoa: true,
-            tokenType: "permit",
-            amount: parseUnits("2", 6)
-          }
-        )
-
-      const paramRule: ParamRule = {
-        condition: 1, // EQUAL
-        isLimited: false,
-        offset: 0n,
-        ref: toHex(toBytes("0x", { size: 32 })),
-        usage: { limit: BigInt(0), used: BigInt(0) }
-      }
-
-      const universalActionPolicy = getUniversalActionPolicy({
-        paramRules: {
-          length: 1n,
-          // Weird rhinestone typescript type which forces to have 16 of this like this
-          rules: [
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule,
-            paramRule
-          ]
-        },
-        valueLimitPerUse: parseUnits("100", 6)
-      })
-
-      const sessionSigner = privateKeyToAccount(generatePrivateKey())
-
-      const ssValidator = toSmartSessionsModule({
-        signer: sessionSigner
-      })
-
-      const sessionsMeeClient = meeClient.extend(meeSessionActions)
-
-      const payload = await sessionsMeeClient.prepareForPermissions({
-        smartSessionsValidator: ssValidator,
-        feeToken: {
-          address: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id
-        },
-        trigger: {
-          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
-          chainId: chain.id,
-          amount: parseUnits("1", 6)
-        }
-      })
-
-      if (payload) {
-        await meeClient.waitForSupertransactionReceipt({ hash: payload.hash })
-      }
-
-      const sessionDetails =
-        await sessionsMeeClient.grantPermissionTypedDataSign({
-          redeemer: sessionSigner.address,
-          feeToken: {
-            address: testnetMcTestUSDCP.addressOn(chain.id),
-            chainId: chain.id
-          },
-          actions: [
-            {
-              chainId: chain.id,
-              actionTarget: testnetMcTestUSDC.addressOn(chain.id),
-              actionTargetSelector: toFunctionSelector(
-                getAbiItem({ abi: erc20Abi, name: "transfer" })
-              ),
-              actionPolicies: [
-                getSudoPolicy(),
-                getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-                getSpendingLimitsPolicy([
-                  {
-                    token: testnetMcTestUSDC.addressOn(chain.id),
-                    limit: parseUnits("100", 6)
-                  }
-                ]),
-                universalActionPolicy,
-                getTimeFramePolicy({
-                  validAfter: 0,
-                  validUntil: Date.now() + 60 * 60 * 24
-                })
-              ]
-            },
-            {
-              chainId: chain.id,
-              actionTarget: testnetMcUSDC.addressOn(chain.id),
-              actionTargetSelector: toFunctionSelector(
-                getAbiItem({ abi: erc20Abi, name: "transfer" })
-              ),
-              actionPolicies: [
-                getSudoPolicy(),
-                getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-                getSpendingLimitsPolicy([
-                  {
-                    token: testnetMcUSDC.addressOn(chain.id),
-                    limit: parseUnits("100", 6)
-                  }
-                ]),
-                universalActionPolicy,
-                getTimeFramePolicy({
-                  validAfter: 0,
-                  validUntil: Date.now() + 60 * 60 * 24
-                })
-              ]
-            }
-          ],
-          maxPaymentAmount: parseUnits("2", 6)
-        })
-
-      const userOwnedOrchestratorWithSessionSigner =
-        await toMultichainNexusAccount({
-          chainConfigurations: [
-            {
-              chain: chain,
-              transport: http(network.rpcUrl),
-              version: getMEEVersion(DEFAULT_MEE_VERSION),
-              accountAddress: mcNexus.addressOn(chain.id)!
-            }
-          ],
-          signer: sessionSigner
-        })
-
-      return {
-        sessionAccount: userOwnedOrchestratorWithSessionSigner,
-        sessionDetails,
-        mcNexus
-      }
-    }
-
     test("Simulated gas estimation and execution: test simulating cleanUp tokens for different cases", async () => {
       const quoteWithNativeTokenCleanUp = await meeClient.getQuote({
         instructions: [await getInstructions(mcNexus)],
@@ -1309,7 +1083,9 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: simple mode, account undeployed", async () => {
       const { mcNexus, meeClient } =
-        await generateNewMcNexusAccountAndMeeClient(
+        await generateNewTestnetMcNexusAccountAndMeeClient(
+          baseSepolia,
+          optimismSepolia,
           publicClient,
           walletClient,
           eoaAccount,
@@ -1381,7 +1157,9 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: onchain mode, account undeployed", async () => {
       const { mcNexus, meeClient } =
-        await generateNewMcNexusAccountAndMeeClient(
+        await generateNewTestnetMcNexusAccountAndMeeClient(
+          baseSepolia,
+          optimismSepolia,
           publicClient,
           walletClient,
           eoaAccount,
@@ -1452,7 +1230,9 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: permit mode, account undeployed", async () => {
       const { mcNexus, meeClient } =
-        await generateNewMcNexusAccountAndMeeClient(
+        await generateNewTestnetMcNexusAccountAndMeeClient(
+          baseSepolia,
+          optimismSepolia,
           publicClient,
           walletClient,
           eoaAccount,
@@ -1507,7 +1287,9 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: sponsored simple mode, account undeployed", async () => {
       const { mcNexus, meeClient } =
-        await generateNewMcNexusAccountAndMeeClient(
+        await generateNewTestnetMcNexusAccountAndMeeClient(
+          baseSepolia,
+          optimismSepolia,
           publicClient,
           walletClient,
           eoaAccount,
@@ -1576,7 +1358,13 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: Smart sessions, single calldata, and only one action execution", async () => {
       const { sessionDetails, sessionAccount, mcNexus } =
-        await prepareForSmartSessionsTest()
+        await prepareForTestnetSmartSessions(
+          baseSepolia,
+          optimismSepolia,
+          publicClient,
+          walletClient,
+          eoaAccount
+        )
 
       const sessionSignerMeeClient = await createMeeClient({
         account: sessionAccount
@@ -1598,7 +1386,7 @@ describe.runIf(runLifecycleTests)(
       const executionPayload =
         await sessionSignerSessionMeeClient.usePermission({
           sessionDetails,
-          mode: "ENABLE_AND_USE",
+          mode: "USE",
           simulation: {
             simulate: true
           },
@@ -1618,7 +1406,13 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: Smart sessions, batch calldata, and single action execution", async () => {
       const { sessionDetails, sessionAccount, mcNexus } =
-        await prepareForSmartSessionsTest()
+        await prepareForTestnetSmartSessions(
+          baseSepolia,
+          optimismSepolia,
+          publicClient,
+          walletClient,
+          eoaAccount
+        )
 
       const sessionSignerMeeClient = await createMeeClient({
         account: sessionAccount
@@ -1640,7 +1434,7 @@ describe.runIf(runLifecycleTests)(
       const executionPayload =
         await sessionSignerSessionMeeClient.usePermission({
           sessionDetails,
-          mode: "ENABLE_AND_USE",
+          mode: "USE",
           simulation: {
             simulate: true
           },
@@ -1660,7 +1454,13 @@ describe.runIf(runLifecycleTests)(
 
     test("Simulated gas estimation and execution: Smart sessions, batch calldata, and multiple action execution", async () => {
       const { sessionDetails, sessionAccount, mcNexus } =
-        await prepareForSmartSessionsTest()
+        await prepareForTestnetSmartSessions(
+          baseSepolia,
+          optimismSepolia,
+          publicClient,
+          walletClient,
+          eoaAccount
+        )
 
       const sessionSignerMeeClient = await createMeeClient({
         account: sessionAccount
@@ -1682,7 +1482,7 @@ describe.runIf(runLifecycleTests)(
       const tokenTransferTwo = await mcNexus.build({
         type: "transfer",
         data: {
-          tokenAddress: testnetMcUSDC.addressOn(chain.id),
+          tokenAddress: testnetMcTestUSDCP.addressOn(chain.id),
           recipient: eoaAccount.address,
           amount: 0n,
           chainId: chain.id
@@ -1692,7 +1492,7 @@ describe.runIf(runLifecycleTests)(
       const executionPayload =
         await sessionSignerSessionMeeClient.usePermission({
           sessionDetails,
-          mode: "ENABLE_AND_USE",
+          mode: "USE",
           simulation: {
             simulate: true
           },
