@@ -34,7 +34,7 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { transferErc20, type NetworkConfig } from "../../../../test/testUtils"
 import { getMeeScanLink } from "../../../account"
 import {
   type MultichainSmartAccount,
@@ -56,6 +56,7 @@ import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import type { GrantMeePermissionPayload } from "./decorators/mee/grantMeePermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
+import { buildAction } from "../../../account/decorators/buildAction"
 
 // const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
 // const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"
@@ -1028,5 +1029,120 @@ describe("mee.multichainSmartSessions", () => {
     })
 
     console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
+  })
+
+  test("Smart sessions flow: erc20 spending limit action", async () => {
+    const actions = [
+      buildAction({
+        type: "erc20SpendingLimit",
+        data: {
+          chainIds: [paymentChain.id],
+          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+          recipientAddress: "0x0000000000000000000000000000000000000001",
+          limitPerAction: parseUnits("0.5", 6),
+          maxLimit: parseUnits("0.5", 6)
+        }
+      })
+    ].flat()
+
+    const { sessionDetails, sessionAccount, mcNexus } =
+      await prepareForTestnetSmartSessions(
+        paymentChain,
+        targetChain,
+        paymentChainPublicClient,
+        paymentChainWalletClient,
+        eoaAccount,
+        "new",
+        true, // use7702 mode
+        actions
+      )
+
+    // transfer usdc to the fee account
+    await transferErc20({
+      publicClient: paymentChainPublicClient,
+      walletClient: paymentChainWalletClient,
+      tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+      recipient: mcNexus.addressOn(paymentChain.id, true),
+      amount: parseUnits("1", 6)
+    })
+
+    const sessionSignerMeeClient = await createMeeClient({
+      account: sessionAccount
+    })
+
+    const sessionSignerSessionMeeClient =
+      sessionSignerMeeClient.extend(meeSessionActions)
+
+    const actionInstructions = [
+      // Valid instruction which satisfies all the policy constraints
+      {
+        isValid: true,
+        instructions: await mcNexus.build({
+          type: "transfer",
+          data: {
+            tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+            recipient: "0x0000000000000000000000000000000000000001",
+            amount: parseUnits("0.5", 6),
+            chainId: paymentChain.id
+          }
+        })
+      },
+      // Invalid: Recipient address contraint failure
+      {
+        isValid: false,
+        instructions: await mcNexus.build({
+          type: "transfer",
+          data: {
+            tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+            recipient: "0x0000000000000000000000000000000000000002",
+            amount: parseUnits("0.5", 6),
+            chainId: paymentChain.id
+          }
+        })
+      },
+      // Invalid: Amount spending limit constraint failure
+      {
+        isValid: false,
+        instructions: await mcNexus.build({
+          type: "transfer",
+          data: {
+            tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+            recipient: "0x0000000000000000000000000000000000000001",
+            amount: parseUnits("2", 6),
+            chainId: paymentChain.id
+          }
+        })
+      }
+    ]
+
+    for await (const { instructions, isValid } of actionInstructions) {
+      const executionPromise = sessionSignerSessionMeeClient.usePermission({
+        sessionDetails,
+        mode: "USE",
+        simulation: {
+          simulate: true
+        },
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(paymentChain.id),
+          chainId: paymentChain.id
+        },
+        instructions
+      })
+
+      if (isValid) {
+        const executionPayload = await executionPromise
+
+        await sessionSignerMeeClient.waitForSupertransactionReceipt({
+          hash: executionPayload.hash
+        })
+
+        console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
+      } else {
+        // Policy Violation Reverts with pre simulations
+        await expect(executionPromise).rejects.toThrowError(
+          "UserOp [1] simulation failed. Revert reason: Execution reverted at contract 0x00000000008bdaba73cd9815d79069c247eb4bda and reverted with error selector 0x3b577361"
+        )
+      }
+    }
   })
 })

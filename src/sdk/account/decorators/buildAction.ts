@@ -10,7 +10,8 @@ import {
 import type { MultichainActionData } from "../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import {
   type BuildActionPolicyTypes,
-  buildActionPolicy
+  buildActionPolicy,
+  calldataArgument
 } from "./buildActionPolicy"
 
 /**
@@ -164,7 +165,7 @@ export const buildAction = (
           rules: [
             {
               condition: "equal",
-              calldataOffset: 0n,
+              calldataOffset: calldataArgument(1),
               comparisonValue: recipientAddress
             }
           ]
@@ -196,7 +197,7 @@ export const buildAction = (
           rules: [
             {
               condition: "lessThanOrEqual",
-              calldataOffset: 20n,
+              calldataOffset: calldataArgument(2),
               comparisonValue: limitPerAction || maxLimit,
               isLimited: true,
               usage: { limit: maxLimit, used: 0n }

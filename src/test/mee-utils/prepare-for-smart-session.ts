@@ -26,6 +26,8 @@ import type { GrantPermissionResponse } from "../../sdk/modules/validators/smart
 import { TESTNET_RPC_URLS } from "../testSetup"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../testTokens"
 import { generateNewTestnetMcNexusAccountAndMeeClient } from "./generate-mc-nexus"
+import { MultichainActionData } from "../../sdk/modules/validators/smartSessions/decorators/mee/grantMeePermission"
+import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
 
 export const prepareForTestnetSmartSessions = async (
   paymentChain: Chain,
@@ -34,7 +36,8 @@ export const prepareForTestnetSmartSessions = async (
   paymentChainWalletClient: WalletClient<Transport, Chain, Account>,
   eoaAccount: LocalAccount,
   enableSessionType: "legacy" | "new" = "new",
-  use7702Auth = false
+  use7702Auth = false,
+  customActions?: MultichainActionData["actions"]
 ) => {
   // New orchestrator account
   const { mcNexus, meeClient } =
@@ -60,93 +63,96 @@ export const prepareForTestnetSmartSessions = async (
 
   const sessionsMeeClient = meeClient.extend(meeSessionActions)
 
-  const actions = [
-    mcNexus.buildAction({
-      type: "transfer",
-      data: {
-        chainIds: [paymentChain.id],
-        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
-        policies: [
-          { type: "sudo" },
-          { type: "usageLimit", limit: 100n },
-          {
-            type: "spendingLimits",
-            tokenLimits: [
-              {
-                token: testnetMcTestUSDC.addressOn(paymentChain.id),
-                limit: parseUnits("100", 6)
-              }
-            ]
-          },
-          {
-            type: "timeframe",
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          },
-          {
-            type: "universal",
-            valueLimitPerUse: parseUnits("100", 6),
-            rules: [
-              {
-                condition: "greaterThan",
-                calldataOffset: 0n,
-                comparisonValue: toHex(toBytes("0x", { size: 32 }))
-              }
-            ]
-          }
-        ]
-      }
-    }),
-    mcNexus.buildAction({
-      type: "custom",
-      data: {
-        chainIds: [paymentChain.id],
-        contractAddress: testnetMcUSDC.addressOn(paymentChain.id),
-        functionSignature: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        policies: [
-          { type: "sudo" },
-          { type: "usageLimit", limit: 100n },
-          {
-            type: "spendingLimits",
-            tokenLimits: [
-              {
-                token: testnetMcUSDC.addressOn(paymentChain.id),
-                limit: parseUnits("100", 6)
-              }
-            ]
-          },
-          {
-            type: "timeframe",
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          },
-          {
-            type: "universal",
-            valueLimitPerUse: parseUnits("100", 6),
-            rules: [
-              {
-                condition: "greaterThan",
-                calldataOffset: 0n,
-                comparisonValue: toHex(toBytes("0x", { size: 32 }))
-              }
-            ]
-          }
-        ]
-      }
-    }),
-    mcNexus.buildAction({
-      type: "custom",
-      data: {
-        chainIds: [paymentChain.id],
-        contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id),
-        functionSignature: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        )
-      }
-    })
-  ].flat()
+  const actions =
+    customActions && customActions.length > 0
+      ? customActions
+      : [
+          mcNexus.buildAction({
+            type: "transfer",
+            data: {
+              chainIds: [paymentChain.id],
+              contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+              policies: [
+                { type: "sudo" },
+                { type: "usageLimit", limit: 100n },
+                {
+                  type: "spendingLimits",
+                  tokenLimits: [
+                    {
+                      token: testnetMcTestUSDC.addressOn(paymentChain.id),
+                      limit: parseUnits("100", 6)
+                    }
+                  ]
+                },
+                {
+                  type: "timeframe",
+                  validAfter: 0,
+                  validUntil: Date.now() + 60 * 60 * 24
+                },
+                {
+                  type: "universal",
+                  valueLimitPerUse: parseUnits("100", 6),
+                  rules: [
+                    {
+                      condition: "greaterThan",
+                      calldataOffset: calldataArgument(1),
+                      comparisonValue: toHex(toBytes("0x", { size: 32 }))
+                    }
+                  ]
+                }
+              ]
+            }
+          }),
+          mcNexus.buildAction({
+            type: "custom",
+            data: {
+              chainIds: [paymentChain.id],
+              contractAddress: testnetMcUSDC.addressOn(paymentChain.id),
+              functionSignature: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              policies: [
+                { type: "sudo" },
+                { type: "usageLimit", limit: 100n },
+                {
+                  type: "spendingLimits",
+                  tokenLimits: [
+                    {
+                      token: testnetMcUSDC.addressOn(paymentChain.id),
+                      limit: parseUnits("100", 6)
+                    }
+                  ]
+                },
+                {
+                  type: "timeframe",
+                  validAfter: 0,
+                  validUntil: Date.now() + 60 * 60 * 24
+                },
+                {
+                  type: "universal",
+                  valueLimitPerUse: parseUnits("100", 6),
+                  rules: [
+                    {
+                      condition: "greaterThan",
+                      calldataOffset: calldataArgument(1),
+                      comparisonValue: toHex(toBytes("0x", { size: 32 }))
+                    }
+                  ]
+                }
+              ]
+            }
+          }),
+          mcNexus.buildAction({
+            type: "custom",
+            data: {
+              chainIds: [paymentChain.id],
+              contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id),
+              functionSignature: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              )
+            }
+          })
+        ].flat()
 
   const sessionParams = {
     redeemer: sessionSigner.address,

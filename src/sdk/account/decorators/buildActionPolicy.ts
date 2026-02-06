@@ -1,4 +1,4 @@
-import { type Address, type Hex, toBytes, toHex } from "viem"
+import { type Address, type Hex, isAddress, padHex, toBytes, toHex } from "viem"
 import {
   type PolicyData,
   getSpendingLimitsPolicy,
@@ -161,6 +161,27 @@ const getUniversalActionPolicyConditionType = (
   return condition
 }
 
+const toBytes32 = (value: bigint | Address): Hex => {
+  if (typeof value === "bigint") {
+    return padHex(toHex(value), { size: 32 })
+  }
+
+  if (isAddress(value)) {
+    return padHex(value, { size: 32 })
+  }
+
+  throw new Error("Invalid value: must be bigint or address")
+}
+
+// 32 bytes calldata param value
+export const calldataArgument = (value: number) => {
+  if (value <= 0) {
+    throw new Error("Invalid calldata argument value");
+  }
+
+  return BigInt((value - 1) * 32);
+}
+
 /**
  * Prepares data for the Universal Action Policy, including parameter rules and per-action value limits.
  */
@@ -172,7 +193,7 @@ const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
   const defaultParamRule: ParamRule = {
     condition: ParamCondition.GREATER_THAN,
     isLimited: false,
-    offset: 0n,
+    offset: calldataArgument(1),
     ref: toHex(toBytes("0x", { size: 32 })),
     usage: { limit: BigInt(0), used: BigInt(0) }
   }
@@ -186,7 +207,7 @@ const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
           configuredRule.condition
         ),
         offset: configuredRule.calldataOffset,
-        ref: toHex(toBytes(configuredRule.comparisonValue, { size: 32 })),
+        ref: toBytes32(configuredRule.comparisonValue),
         isLimited: configuredRule.isLimited || false,
         usage: configuredRule.usage || { limit: BigInt(0), used: BigInt(0) }
       })
