@@ -15,6 +15,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
+import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
   type AnyData,
@@ -23,11 +24,10 @@ import {
   toSmartSessionsModule
 } from "../../sdk/modules"
 import type { GrantPermissionResponse } from "../../sdk/modules/validators/smartSessions/decorators/grantPermission"
+import type { MultichainActionData } from "../../sdk/modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import { TESTNET_RPC_URLS } from "../testSetup"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../testTokens"
 import { generateNewTestnetMcNexusAccountAndMeeClient } from "./generate-mc-nexus"
-import { MultichainActionData } from "../../sdk/modules/validators/smartSessions/decorators/mee/grantMeePermission"
-import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
 
 export const prepareForTestnetSmartSessions = async (
   paymentChain: Chain,

@@ -34,8 +34,9 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import { transferErc20, type NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig, transferErc20 } from "../../../../test/testUtils"
 import { getMeeScanLink } from "../../../account"
+import { buildAction } from "../../../account/decorators/buildAction"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -56,7 +57,6 @@ import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
 import type { GrantMeePermissionPayload } from "./decorators/mee/grantMeePermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
-import { buildAction } from "../../../account/decorators/buildAction"
 
 // const COUNTER_ON_OPTIMISM = "0x167a039E79E4E90550333c7D97a12ebf5f6f116A"
 // const COUNTER_ON_BASE = "0x3D9aEd944CC8cD91a89aa318efd6CDCD870241e8"

@@ -176,10 +176,10 @@ const toBytes32 = (value: bigint | Address): Hex => {
 // 32 bytes calldata param value
 export const calldataArgument = (value: number) => {
   if (value <= 0) {
-    throw new Error("Invalid calldata argument value");
+    throw new Error("Invalid calldata argument value")
   }
 
-  return BigInt((value - 1) * 32);
+  return BigInt((value - 1) * 32)
 }
 
 /**
