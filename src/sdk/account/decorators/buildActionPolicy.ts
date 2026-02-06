@@ -1,4 +1,12 @@
-import { type Address, type Hex, isAddress, padHex, toBytes, toHex } from "viem"
+import {
+  type Address,
+  type Hex,
+  isAddress,
+  isHex,
+  padHex,
+  toBytes,
+  toHex
+} from "viem"
 import {
   type PolicyData,
   getSpendingLimitsPolicy,
@@ -161,7 +169,7 @@ const getUniversalActionPolicyConditionType = (
   return condition
 }
 
-const toBytes32 = (value: bigint | Address): Hex => {
+const toBytes32 = (value: bigint | Address | Hex): Hex => {
   if (typeof value === "bigint") {
     return padHex(toHex(value), { size: 32 })
   }
@@ -170,7 +178,11 @@ const toBytes32 = (value: bigint | Address): Hex => {
     return padHex(value, { size: 32 })
   }
 
-  throw new Error("Invalid value: must be bigint or address")
+  if (isHex(value)) {
+    return padHex(value, { size: 32 })
+  }
+
+  throw new Error("Invalid value: must be bigint, address, or hex string")
 }
 
 // 32 bytes calldata param value
