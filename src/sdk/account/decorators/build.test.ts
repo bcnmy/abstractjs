@@ -10,7 +10,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { type MeeVersionsWithChainId } from "../utils"
+import type { MeeVersionsWithChainId } from "../utils"
 import { build } from "./build"
 
 describe("mee.build", () => {

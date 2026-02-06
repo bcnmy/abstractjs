@@ -1,5 +1,7 @@
-import { http, parseUnits, type LocalAccount } from "viem"
+import { http, type LocalAccount, parseUnits } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
+import { toNetwork } from "../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
   DEFAULT_MEE_VERSION,
@@ -14,9 +16,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { toNetwork } from "../../../test/testSetup"
 import { calldataArgument } from "./buildActionPolicy"
-import { testnetMcTestUSDCP } from "../../../test/testTokens"
 
 describe("mee.buildActionPolicy", () => {
   let network: NetworkConfig

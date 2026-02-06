@@ -1,13 +1,14 @@
 import {
+  http,
+  type LocalAccount,
   erc20Abi,
   erc721Abi,
   getAbiItem,
-  http,
   toFunctionSelector,
-  zeroAddress,
-  type LocalAccount
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
+import { toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import {
   DEFAULT_MEE_VERSION,
@@ -21,7 +22,6 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
-import { toNetwork } from "../../../test/testSetup"
 import { calldataArgument } from "./buildActionPolicy"
 
 describe("mee.buildAction", () => {
