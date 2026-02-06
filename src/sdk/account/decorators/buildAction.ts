@@ -1,14 +1,17 @@
+import type { PolicyData } from "@rhinestone/module-sdk"
 import {
-  Address,
+  type Address,
+  type Hex,
   erc20Abi,
   getAbiItem,
-  Hex,
   isAddress,
   toFunctionSelector
 } from "viem"
-import { buildActionPolicy, BuildActionPolicyTypes } from "./buildActionPolicy"
-import { MultichainActionData } from "../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
-import { PolicyData } from "@rhinestone/module-sdk"
+import type { MultichainActionData } from "../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
+import {
+  type BuildActionPolicyTypes,
+  buildActionPolicy
+} from "./buildActionPolicy"
 
 /**
  * Common base parameters for all build actions.

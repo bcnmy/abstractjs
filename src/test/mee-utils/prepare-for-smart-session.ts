@@ -6,12 +6,12 @@ import {
   type PublicClient,
   type Transport,
   type WalletClient,
+  erc20Abi,
+  getAbiItem,
   parseUnits,
   toBytes,
-  toHex,
   toFunctionSelector,
-  getAbiItem,
-  erc20Abi
+  toHex
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"

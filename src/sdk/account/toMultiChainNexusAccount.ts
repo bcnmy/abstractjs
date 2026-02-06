@@ -4,20 +4,23 @@ import type {
   Instruction,
   MeeAuthorization
 } from "../clients/decorators/mee/getQuote"
+import type { ComposabilityVersion, MEEVersion, PolicyData } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
-import {
-  type ChainConfiguration,
-  type DelegationParams,
-  type ToNexusSmartAccountParameters,
-  toNexusAccount
-} from "./toNexusAccount"
-import type { Signer } from "./utils/toSigner"
+import type { MultichainActionData } from "../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import {
   type BuildComposableInstructionTypes,
   type BuildInstructionTypes,
   buildComposable as buildComposableDecorator,
   build as buildDecorator
 } from "./decorators/build"
+import {
+  type BuildActionTypes,
+  buildAction as buildActionDecorator
+} from "./decorators/buildAction"
+import {
+  type BuildActionPolicyTypes,
+  buildActionPolicy as buildActionPolicyDecorator
+} from "./decorators/buildActionPolicy"
 import {
   type BridgingInstructions,
   type MultichainBridgingParams,
@@ -32,7 +35,6 @@ import {
   type IsDelegatedPayload,
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
-import type { ComposabilityVersion, MEEVersion, PolicyData } from "../constants"
 import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
@@ -52,16 +54,14 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
+import {
+  type ChainConfiguration,
+  type DelegationParams,
+  type ToNexusSmartAccountParameters,
+  toNexusAccount
+} from "./toNexusAccount"
 import type { MultichainToken } from "./utils/Types"
-import {
-  BuildActionPolicyTypes,
-  buildActionPolicy as buildActionPolicyDecorator
-} from "./decorators/buildActionPolicy"
-import {
-  BuildActionTypes,
-  buildAction as buildActionDecorator
-} from "./decorators/buildAction"
-import { MultichainActionData } from "../modules/validators/smartSessions/decorators/mee/grantMeePermission"
+import type { Signer } from "./utils/toSigner"
 
 /**
  * Parameters required to create a multichain Nexus account

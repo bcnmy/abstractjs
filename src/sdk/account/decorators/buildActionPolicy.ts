@@ -1,13 +1,13 @@
-import { Address, Hex, toBytes, toHex } from "viem"
+import { type Address, type Hex, toBytes, toHex } from "viem"
 import {
+  type PolicyData,
+  getSpendingLimitsPolicy,
   getSudoPolicy,
   getTimeFramePolicy,
   getUniversalActionPolicy,
-  getUsageLimitPolicy,
-  getSpendingLimitsPolicy,
-  PolicyData
+  getUsageLimitPolicy
 } from "../../constants"
-import { LimitUsage, ParamCondition, ParamRule } from "../../modules"
+import { type LimitUsage, ParamCondition, type ParamRule } from "../../modules"
 
 /**
  * Sudo policy type — allows unrestricted action.
@@ -167,7 +167,7 @@ const getUniversalActionPolicyConditionType = (
 const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
   const { rules, valueLimitPerUse } = params
 
-  let paramRules: ParamRule[] = []
+  const paramRules: ParamRule[] = []
 
   const defaultParamRule: ParamRule = {
     condition: ParamCondition.GREATER_THAN,
