@@ -12,7 +12,6 @@ import {
   toNexusAccount
 } from "./toNexusAccount"
 import type { Signer } from "./utils/toSigner"
-
 import {
   type BuildComposableInstructionTypes,
   type BuildInstructionTypes,
@@ -33,8 +32,7 @@ import {
   type IsDelegatedPayload,
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
-
-import type { ComposabilityVersion, MEEVersion } from "../constants"
+import type { ComposabilityVersion, MEEVersion, PolicyData } from "../constants"
 import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
@@ -55,6 +53,15 @@ import {
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
 import type { MultichainToken } from "./utils/Types"
+import {
+  BuildActionPolicyTypes,
+  buildActionPolicy as buildActionPolicyDecorator
+} from "./decorators/buildActionPolicy"
+import {
+  BuildActionTypes,
+  buildAction as buildActionDecorator
+} from "./decorators/buildAction"
+import { MultichainActionData } from "../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 
 /**
  * Parameters required to create a multichain Nexus account
@@ -126,6 +133,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+
   /**
    * Function to build composable instructions
    * @param params - The parameters for the composable instruction
@@ -141,6 +149,29 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+
+  /**
+   * Function to build action policy for smart sessions
+   * @param params - The parameters for the smart session action policies
+   * @returns Action policy
+   * @example
+   * const actionPolicy = await mcAccount.buildActionPolicy({
+   *   type: "sudo"
+   * })
+   */
+  buildActionPolicy: (params: BuildActionPolicyTypes) => PolicyData
+
+  /**
+   * Function to build actions for smart sessions
+   * @param params - The parameters for the smart session actions
+   * @returns Action
+   * @example
+   * const action = await mcAccount.buildAction({
+   *   type: "transfer",
+   *   data: { chainIds: [1, 10], contractAddress: "0x...", policies: [{ type: "sudo" }] }
+   * })
+   */
+  buildAction: (params: BuildActionTypes) => MultichainActionData["actions"]
 
   /**
    * Function to build instructions for bridging a token across all deployments
@@ -338,6 +369,16 @@ export async function toMultichainNexusAccount(
       params
     )
 
+  const buildActionPolicy = (params: BuildActionPolicyTypes): PolicyData => {
+    return buildActionPolicyDecorator(params)
+  }
+
+  const buildAction = (
+    params: BuildActionTypes
+  ): MultichainActionData["actions"] => {
+    return buildActionDecorator(params)
+  }
+
   const buildComposable = (
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
@@ -417,6 +458,8 @@ export async function toMultichainNexusAccount(
     getUnifiedERC20Balance,
     build,
     buildComposable,
+    buildActionPolicy,
+    buildAction,
     buildBridgeInstructions,
     queryBridge,
     isDelegated,

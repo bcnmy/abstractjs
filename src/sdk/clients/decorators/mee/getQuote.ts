@@ -833,7 +833,7 @@ export const getQuote = async (
             authorizations.length > 1
           ) {
             throw new Error(
-              "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
+              "Invalid authorizations: The nonce for all the chains are same and only one multichain authorization is expected"
             )
           }
 
@@ -885,7 +885,7 @@ export const getQuote = async (
       } else {
         if (authorizations.length > 1) {
           throw new Error(
-            "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
+            "Invalid authorizations: The nonce for all the chains are same and only one multichain authorization is expected"
           )
         }
 

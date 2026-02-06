@@ -6,27 +6,18 @@ import {
   type PublicClient,
   type Transport,
   type WalletClient,
-  erc20Abi,
-  getAbiItem,
   parseUnits,
   toBytes,
+  toHex,
   toFunctionSelector,
-  toHex
+  getAbiItem,
+  erc20Abi
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
-import {
-  DEFAULT_MEE_VERSION,
-  getSpendingLimitsPolicy,
-  getSudoPolicy,
-  getTimeFramePolicy,
-  getUniversalActionPolicy,
-  getUsageLimitPolicy,
-  testnetMcUSDC
-} from "../../sdk/constants"
+import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
   type AnyData,
-  type ParamRule,
   getMEEVersion,
   meeSessionActions,
   toSmartSessionsModule
@@ -61,40 +52,6 @@ export const prepareForTestnetSmartSessions = async (
       }
     )
 
-  const paramRule: ParamRule = {
-    condition: 1, // EQUAL
-    isLimited: false,
-    offset: 0n,
-    ref: toHex(toBytes("0x", { size: 32 })),
-    usage: { limit: BigInt(0), used: BigInt(0) }
-  }
-
-  const universalActionPolicy = getUniversalActionPolicy({
-    paramRules: {
-      length: 1n,
-      // Weird rhinestone typescript type which forces to have 16 of this like this
-      rules: [
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule
-      ]
-    },
-    valueLimitPerUse: parseUnits("100", 6)
-  })
-
   const sessionSigner = privateKeyToAccount(generatePrivateKey())
 
   const ssValidator = toSmartSessionsModule({
@@ -103,77 +60,98 @@ export const prepareForTestnetSmartSessions = async (
 
   const sessionsMeeClient = meeClient.extend(meeSessionActions)
 
+  const actions = [
+    mcNexus.buildAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        policies: [
+          { type: "sudo" },
+          { type: "usageLimit", limit: 100n },
+          {
+            type: "spendingLimits",
+            tokenLimits: [
+              {
+                token: testnetMcTestUSDC.addressOn(paymentChain.id),
+                limit: parseUnits("100", 6)
+              }
+            ]
+          },
+          {
+            type: "timeframe",
+            validAfter: 0,
+            validUntil: Date.now() + 60 * 60 * 24
+          },
+          {
+            type: "universal",
+            valueLimitPerUse: parseUnits("100", 6),
+            rules: [
+              {
+                condition: "greaterThan",
+                calldataOffset: 0n,
+                comparisonValue: toHex(toBytes("0x", { size: 32 }))
+              }
+            ]
+          }
+        ]
+      }
+    }),
+    mcNexus.buildAction({
+      type: "custom",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcUSDC.addressOn(paymentChain.id),
+        functionSignature: toFunctionSelector(
+          getAbiItem({ abi: erc20Abi, name: "transfer" })
+        ),
+        policies: [
+          { type: "sudo" },
+          { type: "usageLimit", limit: 100n },
+          {
+            type: "spendingLimits",
+            tokenLimits: [
+              {
+                token: testnetMcUSDC.addressOn(paymentChain.id),
+                limit: parseUnits("100", 6)
+              }
+            ]
+          },
+          {
+            type: "timeframe",
+            validAfter: 0,
+            validUntil: Date.now() + 60 * 60 * 24
+          },
+          {
+            type: "universal",
+            valueLimitPerUse: parseUnits("100", 6),
+            rules: [
+              {
+                condition: "greaterThan",
+                calldataOffset: 0n,
+                comparisonValue: toHex(toBytes("0x", { size: 32 }))
+              }
+            ]
+          }
+        ]
+      }
+    }),
+    mcNexus.buildAction({
+      type: "custom",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id),
+        functionSignature: toFunctionSelector(
+          getAbiItem({ abi: erc20Abi, name: "transfer" })
+        )
+      }
+    })
+  ].flat()
+
   const sessionParams = {
     redeemer: sessionSigner.address,
     maxPaymentAmount: parseUnits("2", 6),
-    actions: [
-      {
-        chainId: paymentChain.id,
-        actionTarget: testnetMcTestUSDC.addressOn(paymentChain.id),
-        actionTargetSelector: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        actionPolicies: [
-          getSudoPolicy(),
-          getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-          getSpendingLimitsPolicy([
-            {
-              token: testnetMcTestUSDC.addressOn(paymentChain.id),
-              limit: parseUnits("100", 6)
-            }
-          ]),
-          universalActionPolicy,
-          getTimeFramePolicy({
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          })
-        ]
-      },
-      {
-        chainId: paymentChain.id,
-        actionTarget: testnetMcUSDC.addressOn(paymentChain.id),
-        actionTargetSelector: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        actionPolicies: [
-          getSudoPolicy(),
-          getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-          getSpendingLimitsPolicy([
-            {
-              token: testnetMcUSDC.addressOn(paymentChain.id),
-              limit: parseUnits("100", 6)
-            }
-          ]),
-          universalActionPolicy,
-          getTimeFramePolicy({
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          })
-        ]
-      },
-      {
-        chainId: paymentChain.id,
-        actionTarget: testnetMcTestUSDCP.addressOn(paymentChain.id),
-        actionTargetSelector: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        actionPolicies: [
-          getSudoPolicy(),
-          getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-          getSpendingLimitsPolicy([
-            {
-              token: testnetMcTestUSDCP.addressOn(paymentChain.id),
-              limit: parseUnits("100", 6)
-            }
-          ]),
-          universalActionPolicy,
-          getTimeFramePolicy({
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          })
-        ]
-      }
-    ]
+    actions
   }
 
   let sessionDetails: GrantPermissionResponse = []
