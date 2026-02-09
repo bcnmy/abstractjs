@@ -10,6 +10,11 @@ export * from "./protocols"
  */
 export enum MEEVersion {
   /**
+   * Mee k1 validator deprecated and replaced with Stx Validator
+   * Attention: Stx data packing into the signature for Permit mode has changed.
+   **/
+  V3_0_0 = "3.0.0",
+  /**
    *  New K1 Validator with Safe SA as master account support
    **/
   V2_3_0 = "2.3.0",
@@ -63,6 +68,26 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   MEEVersion,
   MEEVersionConfig
 > = {
+  [MEEVersion.V3_0_0]: {
+    version: MEEVersion.V3_0_0,
+    accountId: "biconomy.nexus.1.3.1",
+    factoryAddress: "0x4D7388f02Bcb7D821721396604013EFe1E2208Df",
+    bootStrapAddress: "0x1B2C5Ab64baC9080d2F03FdeC976D74D83EAEbc9",
+    implementationAddress: "0xDAa7a527005796a2264a793B421185B529FCdcCb",
+    validatorAddress: "0xB84c71f1DEB50f5c3c318029D5F5990BB0520F49", // Stx Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
+    composabilityVersion: ComposabilityVersion.V1_1_0,
+    submodules: {
+      noStxModeVerifier: "0x03043fA2956d7729708E5871006E4D60f077BF9C",
+      SimpleModeSubmodule: "0x632C89b0611fE86B56720Ba447e0eBD52173C12e",
+      PermitSubmodule: "0x2eb293D700dEeaF923f6ff32741921C270Ff339b",
+      TxSubmodule: "0xBFf2aE0e9B523E8192A77c0Dd610b490eC45A08c",
+      SafeAccountSubmodule: "0x7FF806b27D736aC13fC37B74Bf6950a2A88bC79F",
+      EoaStatelessValidator: "0xdD900Cd95f072eAe396bE0487C2546Bf81d01B48",
+      P256StatelessValidator: "0xa7B97e8152aCee107a098F95f691Cd24Cf2f9835"
+    }
+  },
   [MEEVersion.V2_3_0]: {
     version: MEEVersion.V2_3_0,
     accountId: "biconomy.nexus.1.3.1",

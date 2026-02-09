@@ -15,11 +15,13 @@ import {
 import { multicall } from "viem/actions"
 import type { EIP712DomainReturn } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
-import { PERMIT_TYPEHASH } from "../../../constants"
+import { MEEVersion, PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
+import { versionIsAtLeast } from "../../../account/utils/getVersion"
 
 /**
  * Represents the payload for a signable permit quote, omitting the "account" field from SignTypedDataParameters.
@@ -620,40 +622,75 @@ export const prepareSignablePermitQuotePayload = async (
  * ```
  */
 export const formatSignedPermitQuotePayload = (
+  account_: MultichainSmartAccount,
   quoteParams: GetPermitQuotePayload,
   metadata: PermitMetadata,
   signature: Hex
 ): SignPermitQuotePayload => {
   const { quote, trigger } = quoteParams
 
-  const sigComponents = parseSignature(signature)
-
-  const encodedSignature = encodeAbiParameters(
-    [
-      { name: "token", type: "address" },
-      { name: "spender", type: "address" },
-      { name: "domainSeparator", type: "bytes32" },
-      { name: "permitTypehash", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-      { name: "chainId", type: "uint256" },
-      { name: "nonce", type: "uint256" },
-      { name: "v", type: "uint256" },
-      { name: "r", type: "bytes32" },
-      { name: "s", type: "bytes32" }
-    ],
-    [
-      trigger.tokenAddress!,
-      metadata.spender,
-      metadata.domainSeparator,
-      PERMIT_TYPEHASH,
-      metadata.amount,
-      BigInt(trigger.chainId),
-      metadata.nonce,
-      sigComponents.v!,
-      sigComponents.r,
-      sigComponents.s
-    ]
+  const startIndex = quote.paymentInfo.sponsored ? 1 : 0
+  const meeVersions = getMeeVersionsForQuote(
+    account_,
+    quote.userOps.slice(startIndex)
   )
+
+  let encodedSignature: `0x${string}`
+
+  if (versionIsAtLeast(meeVersions[0].version.version, MEEVersion.V3_0_0)) {
+    encodedSignature = encodeAbiParameters(
+      [
+        { name: "token", type: "address" },
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "domainSeparator", type: "bytes32" },
+        { name: "permitTypehash", type: "bytes32" },
+        { name: "amount", type: "uint256" },
+        { name: "chainId", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "signature", type: "bytes" }
+      ],
+      [
+        trigger.tokenAddress!,
+        metadata.owner,
+        metadata.spender,
+        metadata.domainSeparator,
+        PERMIT_TYPEHASH,
+        metadata.amount,
+        BigInt(trigger.chainId),
+        metadata.nonce,
+        signature
+      ]
+    ) 
+  } else {
+    const sigComponents = parseSignature(signature)
+    encodedSignature = encodeAbiParameters(
+      [
+        { name: "token", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "domainSeparator", type: "bytes32" },
+        { name: "permitTypehash", type: "bytes32" },
+        { name: "amount", type: "uint256" },
+        { name: "chainId", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "v", type: "uint256" },
+        { name: "r", type: "bytes32" },
+        { name: "s", type: "bytes32" }
+      ],
+      [
+        trigger.tokenAddress!,
+        metadata.spender,
+        metadata.domainSeparator,
+        PERMIT_TYPEHASH,
+        metadata.amount,
+        BigInt(trigger.chainId),
+        metadata.nonce,
+        sigComponents.v!,
+        sigComponents.r,
+        sigComponents.s
+      ]
+    )
+  }
 
   return { ...quote, signature: concatHex([PERMIT_PREFIX, encodedSignature]) }
 }
@@ -725,6 +762,7 @@ export const signPermitQuote = async (
   })
 
   const signedPermitQuotePayload = formatSignedPermitQuotePayload(
+    account_,
     parameters.fusionQuote,
     metadata,
     signature
