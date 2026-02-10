@@ -11,7 +11,8 @@ import {
   parseUnits,
   toBytes,
   toFunctionSelector,
-  toHex
+  toHex,
+  Hash
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
@@ -37,7 +38,8 @@ export const prepareForTestnetSmartSessions = async (
   eoaAccount: LocalAccount,
   enableSessionType: "legacy" | "new" = "new",
   use7702Auth = false,
-  customActions?: MultichainActionData["actions"]
+  customActions?: MultichainActionData["actions"],
+  splitActionsBy?: number
 ) => {
   // New orchestrator account
   const { mcNexus, meeClient } =
@@ -170,6 +172,8 @@ export const prepareForTestnetSmartSessions = async (
       }
     : {}
 
+  let hash: Hash | null = null
+
   if (enableSessionType === "new") {
     const payload = await sessionsMeeClient.prepareForPermissions({
       smartSessionsValidator: ssValidator,
@@ -185,6 +189,7 @@ export const prepareForTestnetSmartSessions = async (
         chainId: paymentChain.id,
         amount: parseUnits("1", 6)
       },
+      splitActionsBy,
       ...sessionParams,
       ...authParams
     })
@@ -196,6 +201,8 @@ export const prepareForTestnetSmartSessions = async (
       console.log("Prepare permissions and enable session: ", {
         explorerLinks
       })
+
+      hash = payload.hash
     }
 
     if (!payload?.sessionDetails) {
@@ -228,6 +235,8 @@ export const prepareForTestnetSmartSessions = async (
       console.log("Prepare permissions and enable session: ", {
         explorerLinks
       })
+
+      hash = payload.hash
     }
 
     sessionDetails = await sessionsMeeClient.grantPermissionTypedDataSign({
@@ -256,6 +265,7 @@ export const prepareForTestnetSmartSessions = async (
   return {
     sessionAccount: userOwnedOrchestratorWithSessionSigner,
     sessionDetails,
-    mcNexus
+    mcNexus,
+    prepareForPermissionsHash: hash
   }
 }

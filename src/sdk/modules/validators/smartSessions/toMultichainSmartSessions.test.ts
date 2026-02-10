@@ -48,7 +48,10 @@ import {
   getDefaultMeeGasTank
 } from "../../../clients/createMeeClient"
 import { isModuleInstalled } from "../../../clients/decorators/erc7579/isModuleInstalled"
-import type { FeeTokenInfo } from "../../../clients/decorators/mee"
+import type {
+  BaseGetSupertransactionReceiptPayload,
+  FeeTokenInfo
+} from "../../../clients/decorators/mee"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { getMEEVersion } from "../../utils"
@@ -1143,6 +1146,65 @@ describe("mee.multichainSmartSessions", () => {
           "UserOp [1] simulation failed. Revert reason: Execution reverted at contract 0x00000000008bdaba73cd9815d79069c247eb4bda and reverted with error selector 0x3b577361"
         )
       }
+    }
+  })
+
+  test("Smart sessions enable permission with split actions by 2", async () => {
+    const { prepareForPermissionsHash } = await prepareForTestnetSmartSessions(
+      paymentChain,
+      targetChain,
+      paymentChainPublicClient,
+      paymentChainWalletClient,
+      eoaAccount,
+      "new",
+      false,
+      undefined,
+      2
+    )
+
+    expect(prepareForPermissionsHash).toBeDefined()
+
+    if (prepareForPermissionsHash) {
+      const { userOps } =
+        await meeClient.request<BaseGetSupertransactionReceiptPayload>({
+          path: `explorer/${prepareForPermissionsHash}`,
+          method: "GET"
+        })
+
+      // Payment userOps - 1
+      // Install SS module, SCA deploy, funding userOps  - 2
+      // Enable permission userOps - 2
+      expect(userOps.length).to.be.eq(5)
+    }
+  })
+
+  test("Smart sessions enable permission with split actions by 1", async () => {
+    const { prepareForPermissionsHash, mcNexus } =
+      await prepareForTestnetSmartSessions(
+        paymentChain,
+        targetChain,
+        paymentChainPublicClient,
+        paymentChainWalletClient,
+        eoaAccount,
+        "new",
+        false,
+        undefined,
+        1
+      )
+
+    expect(prepareForPermissionsHash).toBeDefined()
+
+    if (prepareForPermissionsHash) {
+      const { userOps } =
+        await meeClient.request<BaseGetSupertransactionReceiptPayload>({
+          path: `explorer/${prepareForPermissionsHash}`,
+          method: "GET"
+        })
+
+      // Payment userOps - 1
+      // Install SS module, SCA deploy, funding userOps  - 2
+      // Enable permission userOps - 3
+      expect(userOps.length).to.be.eq(6)
     }
   })
 })

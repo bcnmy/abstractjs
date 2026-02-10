@@ -287,8 +287,30 @@ export const prepareInstructions = async (
       instructions: [...triggerTransfer, ...resolvedInstructions]
     })
   } else {
+    let partiallyBatchedInstructions: Instruction[] = []
+
+    if (resolvedInstructions.length > 0) {
+      // Try to batch trigger transfer and first dev instruction together.
+      const triggerAndFirstInstructionBatch = await batchInstructions({
+        accountAddress: account.signer.address,
+        meeVersions,
+        instructions: [...triggerTransfer, ...resolvedInstructions.slice(0, 1)]
+      })
+
+      // Trigger + first inx batched and keep rest of the instructions unbatched.
+      partiallyBatchedInstructions = [
+        ...triggerAndFirstInstructionBatch,
+        ...resolvedInstructions.slice(1)
+      ]
+    } else {
+      partiallyBatchedInstructions = [
+        ...triggerTransfer,
+        ...resolvedInstructions
+      ]
+    }
+
     // If integrators explicitly want unbatched userOps
-    batchedInstructions = [...triggerTransfer, ...resolvedInstructions]
+    batchedInstructions = partiallyBatchedInstructions
   }
 
   return { triggerGasLimit, triggerAmount, batchedInstructions }

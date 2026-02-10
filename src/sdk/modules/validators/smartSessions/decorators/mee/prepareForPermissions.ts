@@ -4,19 +4,16 @@ import {
   type OneOf,
   type PublicClient,
   decodeAbiParameters,
-  encodeFunctionData,
   erc20Abi,
   getAbiItem,
   parseUnits,
   toFunctionSelector,
   zeroAddress
 } from "viem"
-import { build } from "../../../../../account/decorators/build"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
 import { isModuleInstalled } from "../../../../../clients/decorators/erc7579/isModuleInstalled"
 import type {
-  AbstractCall,
   ExecuteSignedQuotePayload,
   FeeTokenInfo,
   Instruction,
@@ -46,12 +43,12 @@ import {
   getSudoPolicy
 } from "../../../../../constants"
 import { getMEEVersion } from "../../../../utils"
-//import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import type { AnyData } from "../../../../utils/Types"
 import type { Validator } from "../../../toValidator"
 import { generateSalt } from "../../Helpers"
 import type { GrantPermissionResponse } from "../grantPermission"
 import type { MultichainActionData } from "./grantMeePermission"
+import { batchInstructions, resolveInstructions } from "../../../../../account"
 
 // omit instructions, feeToken and trigger to make them optional
 export type PrepareForPermissionsParams = Omit<
@@ -64,6 +61,7 @@ export type PrepareForPermissionsParams = Omit<
   maxPaymentAmount?: bigint
   redeemer?: Address
   actions?: MultichainActionData["actions"]
+  splitActionsBy?: number
 } & OneOf<
     | {
         /**
@@ -129,16 +127,24 @@ export const prepareForPermissions = async (
 
       // it will also include the deployment instruction if needed
       if (!isModuleInstalled_) {
-        return build(
-          { accountAddress: client.account.signer.address, meeVersions },
+        const installModuleCalls = await toInstallWithSafeSenderCalls(
+          deployment,
           {
-            type: "default",
+            address: parameters.smartSessionsValidator.address,
+            initData: "0x",
+            type: parameters.smartSessionsValidator.type
+          }
+        )
+
+        const installModuleInstructions: Instruction[] = []
+
+        for (const installModuleCall of installModuleCalls) {
+          const instruction = await client.account.buildComposable({
+            type: "rawCalldata",
             data: {
-              calls: (await toInstallWithSafeSenderCalls(deployment, {
-                address: parameters.smartSessionsValidator.address,
-                initData: "0x",
-                type: parameters.smartSessionsValidator.type
-              })) as AbstractCall[],
+              to: installModuleCall.to,
+              calldata: installModuleCall.data!,
+              value: installModuleCall.value,
               chainId,
               metadata: [
                 {
@@ -148,8 +154,17 @@ export const prepareForPermissions = async (
                 }
               ]
             }
+          })
+
+          installModuleInstructions.push(...instruction)
+        }
+
+        return await client.account.buildComposable({
+          type: "batch",
+          data: {
+            instructions: installModuleInstructions
           }
-        )
+        })
       }
       return undefined
     })
@@ -181,27 +196,58 @@ export const prepareForPermissions = async (
     parameters.additionalInstructions ||
     parameters.trigger
   ) {
-    const cleanedInstallInstructions = installInstructions.filter(
+    const validInstallInstructions = installInstructions.filter(
       Boolean
     ) as InstructionLike[]
 
-    let completeInstructionsList = parameters.additionalInstructions
-      ? [...cleanedInstallInstructions, ...parameters.additionalInstructions]
-      : cleanedInstallInstructions
+    const unresolvedInstructions = parameters.additionalInstructions
+      ? [...validInstallInstructions, ...parameters.additionalInstructions]
+      : validInstallInstructions
 
-    completeInstructionsList = hasEnableSessionsInstructions
-      ? [...completeInstructionsList, ...enableSessionsInstructions]
-      : completeInstructionsList
+    const resolvedInstructions = await resolveInstructions(
+      unresolvedInstructions
+    )
+
+    let partiallyBatchedInstructions: Instruction[] = []
+
+    let batch: boolean = parameters.batch || true
+
+    if (batch) {
+      // By default, fund nexus, install SS module, deploy nexus will be batched
+      // Even if we wanted to split actions into multiple userOps ? The additional inx and install SS will be optimistically batched while the
+      // enable permissions actions will be unbatched down the line
+      partiallyBatchedInstructions = await batchInstructions({
+        accountAddress: client.account.signer.address,
+        meeVersions,
+        instructions: [...resolvedInstructions]
+      })
+    } else {
+      // If batch: false is explicitly defined ? Everything will be unbatched.
+      partiallyBatchedInstructions = [...resolvedInstructions]
+    }
+
+    // By default, the enable sessions will be batched with other instructions down the line.
+    // If explicit splitActions required ? The enable permissions will be executed as separate userOps
+    const instructions = hasEnableSessionsInstructions
+      ? [...partiallyBatchedInstructions, ...enableSessionsInstructions]
+      : partiallyBatchedInstructions
 
     // proceed to execute the superTx that
     // will deploy accounts/install modules and enable sessions
+
+    const isSplitActionsEnabled =
+      parameters.splitActionsBy &&
+      parameters.splitActionsBy > 0 &&
+      hasEnableSessionsInstructions
+
+    batch = isSplitActionsEnabled ? false : batch
 
     // check if trigger is provided => use fusion flow
     if (parameters.trigger) {
       const quote = await getFusionQuote(client, {
         ...parameters,
-        instructions: completeInstructionsList,
-        batch: parameters.batch || true,
+        instructions,
+        batch,
         trigger: parameters.trigger,
         simulation: parameters.simulation
       } as GetFusionQuoteParams)
@@ -222,7 +268,8 @@ export const prepareForPermissions = async (
     // otherwise use standard flow
     const { hash } = await execute(client, {
       ...parameters,
-      instructions: completeInstructionsList,
+      batch,
+      instructions,
       simulation: parameters.simulation
     } as GetQuoteParams)
 
@@ -245,13 +292,17 @@ export const prepareEnableSessions = async (
     feeToken,
     redeemer,
     maxPaymentAmount: maxPaymentAmount_,
-    actions
+    actions,
+    splitActionsBy
   } = parameters
 
   const meeVersions = client.account.deployments.map(({ version, chain }) => ({
     chainId: chain.id,
     version
   }))
+
+  const isSplitActionsEnabled =
+    parameters.splitActionsBy && parameters.splitActionsBy > 0
 
   if (!redeemer) {
     throw new Error("Smart session redeemer address is missing")
@@ -281,6 +332,20 @@ export const prepareEnableSessions = async (
   const uniqueChainIds = Array.from(
     new Set(actions.map((action) => action.chainId))
   )
+
+  const splitActionsIntoActionGroups = (
+    actions: MultichainActionData["actions"],
+    splitCount: number
+  ) => {
+    const actionGroups: MultichainActionData["actions"][] = []
+
+    for (let index = 0; index < actions.length; index += splitCount) {
+      const group = actions.slice(index, index + splitCount)
+      actionGroups.push(group)
+    }
+
+    return actionGroups
+  }
 
   const enableSessionsInstructionsWithSessionDetails = await Promise.all(
     uniqueChainIds.map(async (chainId) => {
@@ -325,12 +390,6 @@ export const prepareEnableSessions = async (
         chainId: BigInt(chainId)
       }
 
-      const enableSessionsData = encodeFunctionData({
-        abi: SmartSessionAbi,
-        functionName: "enableSessions",
-        args: [[session]]
-      })
-
       const sessionDetailsSignature = getOwnableValidatorMockSignature({
         threshold: 1
       })
@@ -339,17 +398,48 @@ export const prepareEnableSessions = async (
         session: session
       })
 
-      const instructions = await build(
-        { accountAddress: client.account.signer.address, meeVersions },
-        {
+      let enableSessionInstructions: Instruction[] = []
+
+      if (isSplitActionsEnabled) {
+        const actionGroups = splitActionsIntoActionGroups(
+          actionsForChain,
+          splitActionsBy || 2
+        )
+
+        for (const actionGroup of actionGroups) {
+          const sessionGroup = {
+            ...session,
+            actions: actionGroup
+          }
+
+          const instructions = await client.account.buildComposable({
+            type: "default",
+            data: {
+              abi: SmartSessionAbi,
+              functionName: "enableSessions",
+              args: [[sessionGroup]],
+              to: SMART_SESSIONS_ADDRESS,
+              chainId,
+              metadata: [
+                {
+                  type: "CUSTOM",
+                  description: "Enable smart sessions permissions",
+                  chainId
+                }
+              ]
+            }
+          })
+
+          enableSessionInstructions.push(...instructions)
+        }
+      } else {
+        enableSessionInstructions = await client.account.buildComposable({
           type: "default",
           data: {
-            calls: [
-              {
-                to: SMART_SESSIONS_ADDRESS,
-                data: enableSessionsData
-              }
-            ] as AbstractCall[],
+            abi: SmartSessionAbi,
+            functionName: "enableSessions",
+            args: [[session]],
+            to: SMART_SESSIONS_ADDRESS,
             chainId,
             metadata: [
               {
@@ -359,11 +449,11 @@ export const prepareEnableSessions = async (
               }
             ]
           }
-        }
-      )
+        })
+      }
 
       return {
-        instructions,
+        instructions: enableSessionInstructions,
         sessionDetails: {
           // This will be always use mode
           mode: SmartSessionMode.USE,
