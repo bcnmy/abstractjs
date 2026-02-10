@@ -424,7 +424,7 @@ export const prepareEnableSessions = async (
           ],
           value: true,
           type: ConditionType.EQ,
-          description: `Smart sessions module must be installed`
+          description: "Smart sessions module must be installed"
         })
 
         for (const actionGroup of actionGroups) {
