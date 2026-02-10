@@ -38,7 +38,7 @@ describe("mee.signFusionQuote", () => {
   let recipientAccount: LocalAccount
   let tokenAddress: Address
 
-  const index = 11n // Randomly chosen index
+  const index = 12n // Randomly chosen index
 
   let paymentChain: Chain
   let targetChain: Chain
@@ -134,7 +134,9 @@ describe("mee.signFusionQuote", () => {
         mcNexus.build({
           type: "transfer",
           data: {
-            ...trigger,
+            tokenAddress,
+            amount: triggerAmount,
+            chainId: paymentChain.id,
             recipient: recipientAccount.address
           }
         })

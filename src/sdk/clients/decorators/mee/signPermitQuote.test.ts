@@ -482,6 +482,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     })
 
     const manuallySignedPermitQuote = formatSignedPermitQuotePayload(
+      mcNexus,
       fusionQuote,
       metadata,
       signature
@@ -654,7 +655,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
 
     let trigger: TokenTrigger | undefined = undefined
 
-    // If there is no call ? It is always TokenTrigger
+    // If there is no call, it is always TokenTrigger
     if (fusionQuote.trigger && !fusionQuote.trigger.call) {
       trigger = fusionQuote.trigger
     }
