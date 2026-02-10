@@ -94,6 +94,8 @@ export const SENTINEL_ADDRESS: Hex =
 export const MODE_VALIDATION: Hex = "0x00"
 export const MODE_MODULE_ENABLE: Hex = "0x01"
 
+export const SIG_TYPE_NO_STX_VANILLA_1271_EOA: Hex = "0x177eee05"
+
 export const MODULE_ENABLE_MODE_TYPE_HASH = keccak256(
   toHex("ModuleEnableMode(address module, bytes32 initDataHash)")
 )

@@ -63,7 +63,7 @@ import {
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
 import { toInitData } from "./utils"
-import { EXECUTE_BATCH, EXECUTE_SINGLE } from "./utils/Constants"
+import { EXECUTE_BATCH, EXECUTE_SINGLE, SIG_TYPE_NO_STX_VANILLA_1271_EOA } from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
 import {
@@ -285,6 +285,11 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** EIP-712 domain for the account */
     getEip712Domain: () => Promise<GetEip712DomainReturnType>
+
+    /** Signs a message using EIP-1271 only (module.signMessage). Never uses ERC-7739. */
+    signMessage1271: (parameters: {
+      message: SignableMessage
+    }) => Promise<Hex>
   }
 >
 
@@ -864,6 +869,28 @@ export const toNexusAccount = async (
   }
 
   /**
+   * @description Signs a message using EIP-1271 flow only (module.signMessage). Never uses ERC-7739.
+   * @param params - The parameters for signing
+   * @param params.message - The message to sign
+   * @returns The signature with module address prepended (Nexus-specific format)
+   */
+  const signMessage1271 = async (parameters: {
+    message: SignableMessage
+  }): Promise<Hex> => {
+    const { message } = parameters
+    let signature = await module.signMessage(message)
+
+    // for Stx Validator, we need to explicitly mention 
+    // we want vanilla 1271 flow by using the according mode,
+    // otherwise 7739 will be used instead in the smart contract
+    if (!isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)) {
+      signature = encodePacked(["bytes4", "bytes"], [SIG_TYPE_NO_STX_VANILLA_1271_EOA, signature])
+    }
+
+    return encodePacked(["address", "bytes"], [module.module, signature])
+  }
+
+  /**
    * @description Changes the active module for the account
    * @param module - The new module to set as active
    * @returns void
@@ -965,6 +992,7 @@ export const toNexusAccount = async (
     getFactoryArgs,
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
     signMessage,
+    signMessage1271,
     signTypedData,
     signUserOperation: async (
       parameters: UnionPartialBy<UserOperation, "sender"> & {
@@ -1012,6 +1040,7 @@ export const toNexusAccount = async (
       publicClient,
       chain,
       setModule,
+      signMessage1271,
       getModule: () => module,
       version: meeConfig
     }

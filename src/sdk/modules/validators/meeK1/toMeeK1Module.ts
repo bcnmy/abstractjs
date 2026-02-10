@@ -38,7 +38,7 @@ export type ToMeeK1ModuleParameters = Omit<
 export const toMeeK1Module = (
   parameters: ToMeeK1ModuleParameters
 ): Validator => {
-  const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
+  const { signatureType = "no-mee", superTxEntriesCount = 3 } = parameters
   if (!parameters.walletClient.account) {
     throw new Error(
       "Account should be defined in the wallet client provided to the module"

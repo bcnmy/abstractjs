@@ -6,7 +6,6 @@ import {
   type TypedDataDomain,
   type WalletClient,
   concatHex,
-  encodeAbiParameters,
   encodePacked,
   validateTypedData
 } from "viem"
@@ -79,7 +78,7 @@ export type ToStxValidatorParameters = Omit<
 export const toStxValidator = (
   parameters: ToStxValidatorParameters
 ): Validator => {
-  const { signatureType = "simple", superTxEntriesCount = 3 } = parameters
+  const { signatureType = "no-stx", superTxEntriesCount = 3 } = parameters
   if (!parameters.walletClient.account) {
     throw new Error(
       "Account should be defined in the wallet client provided to the module"
@@ -136,7 +135,10 @@ export const toStxValidator = (
     types.push("bytes")
     values.push(ownershipData)
 
-    initData = encodePacked(types as readonly string[], values as readonly [])
+    initData = encodePacked(
+      types as readonly string[],
+      values as unknown as Parameters<typeof encodePacked>[1]
+    )
   } else {
     // Default format:
     // [statelessValidator(20) + safeSendersCount(1) + safeSenders(20*count) + ownershipData]
@@ -159,7 +161,10 @@ export const toStxValidator = (
     types.push("bytes")
     values.push(ownershipData)
 
-    initData = encodePacked(types as readonly string[], values as readonly [])
+    initData = encodePacked(
+      types as readonly string[],
+      values as unknown as Parameters<typeof encodePacked>[1]
+    )
   }
 
   const data = initData
