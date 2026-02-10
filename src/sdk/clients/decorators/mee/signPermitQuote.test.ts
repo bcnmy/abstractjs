@@ -59,8 +59,8 @@ import {
   prepareSignablePermitQuotePayload,
   signPermitQuote
 } from "./signPermitQuote"
-import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 import { getMeeVersionsForQuote } from "./signQuote"
+import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runPaidTests, runLifecycleTests } = inject("settings")
@@ -233,14 +233,19 @@ describe("mee.signPermitQuote", () => {
         return
       }
 
-      const meeVersions = getMeeVersionsForQuote(mcNexus, fusionQuote.quote.userOps)
+      const meeVersions = getMeeVersionsForQuote(
+        mcNexus,
+        fusionQuote.quote.userOps
+      )
       const signedQuoteFull = {
         ...signedQuote,
         meeVersions,
         isEIP712TrustedSponsorshipSupported: true
       }
 
-      const { hash } = await executeSignedQuote(meeClient, { signedQuote: signedQuoteFull })
+      const { hash } = await executeSignedQuote(meeClient, {
+        signedQuote: signedQuoteFull
+      })
       console.timeEnd("signPermitQuote:getHash")
       const receipt = await waitForSupertransactionReceipt(meeClient, {
         confirmations: TEST_BLOCK_CONFIRMATIONS,
@@ -505,7 +510,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     )
   })
 
-  test("Should generate a proper valid domain separator for exoitic tokens with different EIP712 domain types", async () => {
+  test("Should generate a proper valid domain separator for exotic tokens with different EIP712 domain types", async () => {
     const mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
       chainConfigurations: [
@@ -672,7 +677,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
 
     // add the required fields for the signed quote
     // in the wild we always use signFusionQuote wrapper that adds these fields
-    const meeVersions = getMeeVersionsForQuote(mcNexus, fusionQuote.quote.userOps)
+    const meeVersions = getMeeVersionsForQuote(
+      mcNexus,
+      fusionQuote.quote.userOps
+    )
     const signedQuoteFull = {
       ...signedQuote,
       meeVersions,

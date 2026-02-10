@@ -117,7 +117,8 @@ describe("mee.signFusionQuote", () => {
     console.time("signFusionQuote:getHash")
     console.time("signFusionQuote:receipt")
 
-    const triggerAmount = 1n
+    const triggerAmount = 5n
+    const amountToTransfer = triggerAmount - 1n
 
     const { publicClient } = mcNexus.deploymentOn(paymentChain.id, true)
     const usdcFromPaymentChain = mcUSDC.addressOn(paymentChain.id)
@@ -135,7 +136,7 @@ describe("mee.signFusionQuote", () => {
           type: "transfer",
           data: {
             tokenAddress,
-            amount: triggerAmount,
+            amount: amountToTransfer,
             chainId: paymentChain.id,
             recipient: recipientAccount.address
           }
@@ -161,6 +162,6 @@ describe("mee.signFusionQuote", () => {
       recipientAccount.address,
       usdcFromPaymentChain
     )
-    expect(recipientBalanceAfter).toBe(triggerAmount)
+    expect(recipientBalanceAfter).toBe(amountToTransfer)
   })
 })

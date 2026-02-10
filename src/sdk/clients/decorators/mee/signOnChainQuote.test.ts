@@ -52,8 +52,8 @@ import {
   signOnChainQuote
 } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
-import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 import { getMeeVersionsForQuote } from "./signQuote"
+import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
 const { runLifecycleTests, runPaidTests } = inject("settings")

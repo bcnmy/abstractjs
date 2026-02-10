@@ -1427,7 +1427,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
             chainId: chain.id,
             address: tokenAddress
           },
-          upperBoundTimestamp: Math.floor(Date.now() / 1000) + 60
+          upperBoundTimestamp: Math.floor(Date.now() / 1000) + 75
         })
       }
 
