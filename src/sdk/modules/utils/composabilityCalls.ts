@@ -10,6 +10,7 @@ import {
   zeroAddress
 } from "viem"
 import type { Abi } from "viem"
+import { toBytes32 } from "../../account"
 import { ENTRY_POINT_ADDRESS } from "../../constants"
 import type { AnyData } from "../../modules/utils/Types"
 import {
@@ -222,13 +223,20 @@ export const validateAndProcessConstraints = (
 
       // Handle value validation in a appropriate to runtime function
       if (
-        typeof constraint.value !== "bigint" ||
+        typeof constraint.value !== "bigint" &&
+        typeof constraint.value !== "boolean"
+      ) {
+        throw new Error("Invalid constraint value")
+      }
+
+      if (
+        typeof constraint.value === "bigint" &&
         constraint.value < BigInt(0)
       ) {
         throw new Error("Invalid constraint value")
       }
 
-      const valueHex = `0x${constraint.value.toString(16).padStart(64, "0")}`
+      const valueHex = toBytes32(constraint.value)
       const encodedConstraintValue = encodeAbiParameters(
         [{ type: "bytes32" }],
         [valueHex as Hex]

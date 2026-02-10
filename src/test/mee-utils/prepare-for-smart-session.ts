@@ -2,6 +2,7 @@ import {
   http,
   type Account,
   type Chain,
+  type Hash,
   type LocalAccount,
   type PublicClient,
   type Transport,
@@ -11,8 +12,7 @@ import {
   parseUnits,
   toBytes,
   toFunctionSelector,
-  toHex,
-  Hash
+  toHex
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
@@ -177,9 +177,10 @@ export const prepareForTestnetSmartSessions = async (
   if (enableSessionType === "new") {
     const payload = await sessionsMeeClient.prepareForPermissions({
       smartSessionsValidator: ssValidator,
-      simulation: {
-        simulate: true
-      },
+      // Temporarily commented now
+      // simulation: {
+      //   simulate: true
+      // },
       feeToken: {
         address: testnetMcTestUSDCP.addressOn(paymentChain.id),
         chainId: paymentChain.id

@@ -6,13 +6,16 @@ import {
   decodeAbiParameters,
   erc20Abi,
   getAbiItem,
+  getAddress,
   parseUnits,
   toFunctionSelector,
   zeroAddress
 } from "viem"
+import { batchInstructions, resolveInstructions } from "../../../../../account"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
 import { isModuleInstalled } from "../../../../../clients/decorators/erc7579/isModuleInstalled"
+import { parseModuleTypeId } from "../../../../../clients/decorators/erc7579/supportsModule"
 import type {
   ExecuteSignedQuotePayload,
   FeeTokenInfo,
@@ -32,6 +35,7 @@ import type {
 import {
   type AccountType,
   DEFAULT_MEE_VERSION,
+  NexusImplementationAbi,
   SMART_SESSIONS_ADDRESS,
   SPENDING_LIMITS_POLICY_ADDRESS,
   type Session,
@@ -42,13 +46,16 @@ import {
   getSpendingLimitsPolicy,
   getSudoPolicy
 } from "../../../../../constants"
-import { getMEEVersion } from "../../../../utils"
+import {
+  ConditionType,
+  createCondition,
+  getMEEVersion
+} from "../../../../utils"
 import type { AnyData } from "../../../../utils/Types"
 import type { Validator } from "../../../toValidator"
 import { generateSalt } from "../../Helpers"
 import type { GrantPermissionResponse } from "../grantPermission"
 import type { MultichainActionData } from "./grantMeePermission"
-import { batchInstructions, resolveInstructions } from "../../../../../account"
 
 // omit instructions, feeToken and trigger to make them optional
 export type PrepareForPermissionsParams = Omit<
@@ -406,6 +413,20 @@ export const prepareEnableSessions = async (
           splitActionsBy || 2
         )
 
+        const condition = createCondition({
+          targetContract: deployment.address,
+          functionAbi: NexusImplementationAbi,
+          functionName: "isModuleInstalled",
+          args: [
+            parseModuleTypeId(parameters.smartSessionsValidator.type),
+            getAddress(parameters.smartSessionsValidator.address),
+            "0x"
+          ],
+          value: true,
+          type: ConditionType.EQ,
+          description: `Smart sessions module must be installed`
+        })
+
         for (const actionGroup of actionGroups) {
           const sessionGroup = {
             ...session,
@@ -420,6 +441,7 @@ export const prepareEnableSessions = async (
               args: [[sessionGroup]],
               to: SMART_SESSIONS_ADDRESS,
               chainId,
+              conditions: [condition],
               metadata: [
                 {
                   type: "CUSTOM",

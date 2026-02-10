@@ -1,12 +1,4 @@
-import {
-  type Address,
-  type Hex,
-  isAddress,
-  isHex,
-  padHex,
-  toBytes,
-  toHex
-} from "viem"
+import { type Address, type Hex, toBytes, toHex } from "viem"
 import {
   type PolicyData,
   getSpendingLimitsPolicy,
@@ -16,6 +8,7 @@ import {
   getUsageLimitPolicy
 } from "../../constants"
 import { type LimitUsage, ParamCondition, type ParamRule } from "../../modules"
+import { toBytes32 } from "../utils"
 
 /**
  * Sudo policy type — allows unrestricted action.
@@ -167,22 +160,6 @@ const getUniversalActionPolicyConditionType = (
   }
 
   return condition
-}
-
-const toBytes32 = (value: bigint | Address | Hex): Hex => {
-  if (typeof value === "bigint") {
-    return padHex(toHex(value), { size: 32 })
-  }
-
-  if (isAddress(value)) {
-    return padHex(value, { size: 32 })
-  }
-
-  if (isHex(value)) {
-    return padHex(value, { size: 32 })
-  }
-
-  throw new Error("Invalid value: must be bigint, address, or hex string")
 }
 
 // 32 bytes calldata param value
