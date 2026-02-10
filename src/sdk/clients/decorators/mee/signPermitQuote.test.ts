@@ -60,6 +60,7 @@ import {
   signPermitQuote
 } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { getMeeVersionsForQuote } from "./signQuote"
 
 // @ts-ignore
 const { runPaidTests, runLifecycleTests } = inject("settings")
@@ -232,7 +233,14 @@ describe("mee.signPermitQuote", () => {
         return
       }
 
-      const { hash } = await executeSignedQuote(meeClient, { signedQuote })
+      const meeVersions = getMeeVersionsForQuote(mcNexus, fusionQuote.quote.userOps)
+      const signedQuoteFull = {
+        ...signedQuote,
+        meeVersions,
+        isEIP712TrustedSponsorshipSupported: true
+      }
+
+      const { hash } = await executeSignedQuote(meeClient, { signedQuote: signedQuoteFull })
       console.timeEnd("signPermitQuote:getHash")
       const receipt = await waitForSupertransactionReceipt(meeClient, {
         confirmations: TEST_BLOCK_CONFIRMATIONS,
@@ -662,10 +670,19 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
 
     const signedQuote = await signOnChainQuote(meeClient, { fusionQuote })
 
+    // add the required fields for the signed quote
+    // in the wild we always use signFusionQuote wrapper that adds these fields
+    const meeVersions = getMeeVersionsForQuote(mcNexus, fusionQuote.quote.userOps)
+    const signedQuoteFull = {
+      ...signedQuote,
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
+    }
+
     // Execute the quote
     const { hash } = await executeSignedQuote(meeClient, {
       signedQuote: {
-        ...signedQuote,
+        ...signedQuoteFull,
         trigger
       }
     })

@@ -17,7 +17,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
@@ -67,12 +67,12 @@ describe("mee.signFusionQuote", () => {
         {
           chain: paymentChain,
           transport: paymentChainTransport,
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(MEEVersion.V2_2_1)
         },
         {
           chain: targetChain,
           transport: targetChainTransport,
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })

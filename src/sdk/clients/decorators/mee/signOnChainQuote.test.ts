@@ -53,6 +53,7 @@ import {
 } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { getMeeVersionsForQuote } from "./signQuote"
 
 // @ts-ignore
 const { runLifecycleTests, runPaidTests } = inject("settings")
@@ -157,8 +158,15 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
         }
       }
     })
+
+    const meeVersions = getMeeVersionsForQuote(mcNexus, quote.userOps)
+    const signedQuoteFull = {
+      ...signedQuote,
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
+    }
     const executeSignedQuoteResponse = await executeSignedQuote(meeClient, {
-      signedQuote
+      signedQuote: signedQuoteFull
     })
     console.timeEnd("signOnChainQuote:getHash")
     const superTransactionReceipt = await waitForSupertransactionReceipt(
