@@ -1,9 +1,9 @@
 import {
-  createWalletClient,
   http,
-  parseEther,
   type Chain,
-  type PublicClient
+  type PublicClient,
+  createWalletClient,
+  parseEther
 } from "viem"
 import type { LocalAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"

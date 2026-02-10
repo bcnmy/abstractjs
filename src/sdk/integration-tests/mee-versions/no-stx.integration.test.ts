@@ -18,55 +18,55 @@ import {
 } from "viem"
 import { beforeAll, describe, expect, test } from "vitest"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
-import { type NetworkConfig, getBundlerUrl } from "../../../test/testUtils"
+import { getBundlerUrl } from "../../../test/testUtils"
 import { eip1271MagicValue } from "../../account/utils/Constants"
 import {
   type NexusClient,
   createSmartAccountClient
 } from "../../clients/createBicoBundlerClient"
+import { MEEVersion } from "../../constants"
 import type { AccountConfig } from "./setupMultiVersion"
 import { setupMultiVersionAccounts } from "./setupMultiVersion"
-import { MEEVersion } from "../../constants"
+
+const versions = [
+  { version: MEEVersion.V2_0_0, label: "V2.0.0" },
+  { version: MEEVersion.V2_2_1, label: "V2.2.1" },
+  { version: MEEVersion.V3_0_0, label: "V3.0.0" }
+]
 
 describe("No-STX Mode Integration Tests", () => {
-  let accountConfigs: AccountConfig[] = []
-  let network: NetworkConfig
+  const accountConfigMap = new Map<MEEVersion, AccountConfig>()
 
   beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
-    const eoaAccount = network.account!
-
-    // Create accounts for all 3 versions
-    accountConfigs = await setupMultiVersionAccounts({
-      eoaAccount
+    const network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    const configs = await setupMultiVersionAccounts({
+      eoaAccount: network.account!
     })
+    for (const config of configs) {
+      accountConfigMap.set(config.version, config)
+    }
   })
 
-  test("should execute regular userOp without supertxn envelope for all versions", async () => {
-    for (const { name, mcNexus } of accountConfigs) {
-      console.log(`Testing ${name}`)
+  describe.each(versions)("$label", ({ version }) => {
+    const getConfig = () => accountConfigMap.get(version)!
 
-      // Get deployment for first chain
+    test("should execute regular userOp without supertxn envelope", async () => {
+      const { mcNexus } = getConfig()
+
       const deployment = mcNexus.deploymentOn(
         mcNexus.deployments[0].client.chain!.id,
         true
       )
 
-      // Create bundler client for regular userOp execution.
-      // Use bundler URL for the deployment's chain (not network.chain), since we use
-      // the first deployment which may not match TESTNET_CHAIN_ID.
       const chainId = deployment.client.chain!.id
       const nexusClient: NexusClient = createSmartAccountClient({
         account: deployment,
         bundlerUrl: getBundlerUrl(chainId)
       })
 
-      // Prepare a simple ETH transfer
       const recipientAddress = "0x1234567890123456789012345678901234567890"
       const transferAmount = parseEther("0.001")
 
-      // Execute userOp (no supertxn envelope).
-      // Pass account explicitly so viem uses this account's signUserOperation (real signature, not stub).
       const userOpHash = await nexusClient.sendUserOperation({
         account: deployment,
         calls: [
@@ -77,32 +77,26 @@ describe("No-STX Mode Integration Tests", () => {
         ]
       })
 
-      // Wait for userOp receipt
       const userOpReceipt = await nexusClient.waitForUserOperationReceipt({
         hash: userOpHash
       })
 
       const txHash = userOpReceipt.receipt.transactionHash
 
-      // Verify transaction was executed
       expect(txHash).toBeDefined()
       expect(txHash).toMatch(/^0x[a-fA-F0-9]{64}$/)
 
-      // Wait for receipt
       const receipt = await nexusClient.waitForTransactionReceipt({
         hash: txHash,
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
 
       expect(receipt.status).toBe("success")
-    }
-  })
+    })
 
-  test("should validate EIP-1271 signature for all versions", async () => {
-    for (const { name, mcNexus } of accountConfigs) {
-      console.log(`Testing ${name}`)
+    test("should validate EIP-1271 signature", async () => {
+      const { mcNexus } = getConfig()
 
-      // Get deployment for first chain
       const deployment = mcNexus.deploymentOn(
         mcNexus.deployments[0].client.chain!.id,
         true
@@ -110,13 +104,10 @@ describe("No-STX Mode Integration Tests", () => {
       const accountAddress = await deployment.getAddress()
       const publicClient = deployment.client as PublicClient
 
-      // Message to sign
       const message = "Hello from no-stx mode!"
 
-      // Sign message with account signer
       const signature: Hex = await deployment.signMessage1271({ message })
 
-      // Call isValidSignature on the contract
       const result = await publicClient.readContract({
         address: accountAddress,
         abi: parseAbi([
@@ -125,20 +116,17 @@ describe("No-STX Mode Integration Tests", () => {
         functionName: "isValidSignature",
         args: [hashMessage(message), signature]
       })
-      
-      // Verify EIP-1271 magic value
+
       expect(result).toBe(eip1271MagicValue)
-    }
+    })
   })
 
   test("should validate ERC-7739 signature by default for v3.0.0", async () => {
-    // get the account config for v3.0.0
-    const accountConfig = accountConfigs.find(config => config.version === MEEVersion.V3_0_0)
+    const accountConfig = accountConfigMap.get(MEEVersion.V3_0_0)
     if (!accountConfig) {
       throw new Error("Account config for v3.0.0 not found")
     }
 
-    // get the deployment for v3.0.0
     const deployment = accountConfig.mcNexus.deploymentOn(
       accountConfig.mcNexus.deployments[0].client.chain!.id,
       true
@@ -147,10 +135,8 @@ describe("No-STX Mode Integration Tests", () => {
     const publicClient = deployment.client as PublicClient
     const message = "Hello from v3.0.0"
 
-    // now use Nexus' signMessage to sign a message
     const signature: Hex = await deployment.signMessage({ message })
 
-    // call isValidSignature on the contract
     const result = await publicClient.readContract({
       address: deployment.address,
       abi: parseAbi([
@@ -158,9 +144,8 @@ describe("No-STX Mode Integration Tests", () => {
       ]),
       functionName: "isValidSignature",
       args: [hashMessage(message), signature]
-    })  
+    })
 
-    // verify the signature
     expect(result).toBe(eip1271MagicValue)
   })
 })

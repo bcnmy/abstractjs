@@ -63,7 +63,11 @@ import {
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
 import { toInitData } from "./utils"
-import { EXECUTE_BATCH, EXECUTE_SINGLE, SIG_TYPE_NO_STX_VANILLA_1271_EOA } from "./utils/Constants"
+import {
+  EXECUTE_BATCH,
+  EXECUTE_SINGLE,
+  SIG_TYPE_NO_STX_VANILLA_1271_EOA
+} from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
 import {
@@ -880,11 +884,14 @@ export const toNexusAccount = async (
     const { message } = parameters
     let signature = await module.signMessage(message)
 
-    // for Stx Validator, we need to explicitly mention 
+    // for Stx Validator, we need to explicitly mention
     // we want vanilla 1271 flow by using the according mode,
     // otherwise 7739 will be used instead in the smart contract
     if (!isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)) {
-      signature = encodePacked(["bytes4", "bytes"], [SIG_TYPE_NO_STX_VANILLA_1271_EOA, signature])
+      signature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_VANILLA_1271_EOA, signature]
+      )
     }
 
     return encodePacked(["address", "bytes"], [module.module, signature])
