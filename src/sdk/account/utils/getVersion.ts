@@ -211,15 +211,15 @@ export type MEEVersionConfig = {
     attesterThreshold: number
   }
   /** The composable module address for the account */
-  composableModuleAddress?: Address,
+  composableModuleAddress?: Address
   /** Submodules for the stx validator */
   submodules?: {
-    noStxModeVerifier?: Address,
-    SimpleModeSubmodule?: Address,
-    PermitSubmodule?: Address,
-    TxSubmodule?: Address,
-    SafeAccountSubmodule?: Address,
-    EoaStatelessValidator?: Address,
+    noStxModeVerifier?: Address
+    SimpleModeSubmodule?: Address
+    PermitSubmodule?: Address
+    TxSubmodule?: Address
+    SafeAccountSubmodule?: Address
+    EoaStatelessValidator?: Address
     P256StatelessValidator?: Address
   }
 }

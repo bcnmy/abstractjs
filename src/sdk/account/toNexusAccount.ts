@@ -548,7 +548,7 @@ export const toNexusAccount = async (
     customValidators
   )
 
-  const defaultValidator = toDefaultModule({ walletClient })
+  const defaultValidator = toDefaultModule({ walletClient, meeConfig })
 
   // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
   let module = validators[0] || defaultValidator

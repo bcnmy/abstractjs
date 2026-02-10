@@ -15,13 +15,13 @@ import {
 import { multicall } from "viem/actions"
 import type { EIP712DomainReturn } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import { versionIsAtLeast } from "../../../account/utils/getVersion"
 import { MEEVersion, PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
 import { getMeeVersionsForQuote } from "./signQuote"
-import { versionIsAtLeast } from "../../../account/utils/getVersion"
 
 /**
  * Represents the payload for a signable permit quote, omitting the "account" field from SignTypedDataParameters.
@@ -661,7 +661,7 @@ export const formatSignedPermitQuotePayload = (
         metadata.nonce,
         signature
       ]
-    ) 
+    )
   } else {
     const sigComponents = parseSignature(signature)
     encodedSignature = encodeAbiParameters(
