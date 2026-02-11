@@ -180,7 +180,7 @@ describe("mee.multichainSmartSessions", () => {
     // make random address
     const aliceAddress = privateKeyToAccount(generatePrivateKey()).address
 
-    const additionalInstructions = await mcNexus.build({
+    const additionalInstructions = await mcNexus.buildComposable({
       type: "approve",
       data: {
         tokenAddress: testnetMcTestUSDCP.addressOn(targetChain.id),

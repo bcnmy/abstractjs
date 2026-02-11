@@ -13,6 +13,7 @@ import {
   grantPermissionTypedDataSign
 } from "../grantPermission"
 import { addPaymentPolicyForActions } from "./prepareForPermissions"
+import type { SessionAction } from "../../../../../account/decorators/buildAction"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]
@@ -135,11 +136,36 @@ export const grantMeePermission = async <
 
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
-      actionsForChain = addPaymentPolicyForActions(
-        actionsForChain,
+      // This is a legacy setup, the session action will be always one and no unbatched cases here
+      const sessionAction: SessionAction = {
+        actions: [],
+        chainId
+      }
+
+      for (const {
+        actionTargetSelector,
+        actionPolicies,
+        actionTarget
+      } of actionsForChain) {
+        sessionAction.actions.push({
+          actionTargetSelector,
+          actionPolicies,
+          actionTarget
+        })
+      }
+
+      const [updatedSessionAction] = addPaymentPolicyForActions(
+        [sessionAction],
         feeToken,
         maxPaymentAmount!
       )
+
+      actionsForChain = updatedSessionAction.actions.map((action) => {
+        return {
+          ...action,
+          chainId: sessionAction.chainId
+        }
+      })
     }
 
     return {
