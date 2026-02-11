@@ -1,7 +1,9 @@
 import type {
   AbstractCall,
+  CustomOverride,
   Instruction,
-  InstructionLike
+  InstructionLike,
+  TokenOverride
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData, ComposableCall } from "../../../modules"
@@ -61,11 +63,14 @@ export const buildBatch = async (
   let maxExecutionSimulationRetryDelay = 0
   let finalLowerBoundTimestamp = 0
   let finalUpperBoundTimestamp = 0
+  let customOverrides: CustomOverride[] = []
+  let tokenOverrides: TokenOverride[] = []
 
   for (const {
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } of resolvedInstructions) {
     if (executionSimulationRetryDelay !== undefined) {
       // The last defined max executionSimulationRetryDelay will be considered
@@ -94,6 +99,16 @@ export const buildBatch = async (
         maxTimeWindow = timeWindow
         finalLowerBoundTimestamp = lowerBoundTimestamp
         finalUpperBoundTimestamp = upperBoundTimestamp
+      }
+    }
+
+    if (simulationOverrides !== undefined) {
+      if (simulationOverrides.customOverrides !== undefined) {
+        customOverrides.push(...simulationOverrides.customOverrides)
+      }
+
+      if (simulationOverrides.tokenOverrides !== undefined) {
+        tokenOverrides.push(...simulationOverrides.tokenOverrides)
       }
     }
   }
@@ -144,6 +159,9 @@ export const buildBatch = async (
         : {}),
       ...(maxExecutionSimulationRetryDelay !== 0
         ? { executionSimulationRetryDelay: maxExecutionSimulationRetryDelay }
+        : {}),
+      ...(tokenOverrides.length > 0 || customOverrides.length > 0
+        ? { simulationOverrides: { tokenOverrides, customOverrides } }
         : {})
     }
   ]

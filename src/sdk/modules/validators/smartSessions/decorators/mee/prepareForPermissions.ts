@@ -4,19 +4,27 @@ import {
   type OneOf,
   type PublicClient,
   decodeAbiParameters,
+  encodeAbiParameters,
   erc20Abi,
   getAbiItem,
   getAddress,
+  keccak256,
+  parseAbiParameters,
   parseUnits,
   toFunctionSelector,
   zeroAddress
 } from "viem"
-import { batchInstructions, resolveInstructions } from "../../../../../account"
+import {
+  batchInstructions,
+  resolveInstructions,
+  toBytes32
+} from "../../../../../account"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
 import { isModuleInstalled } from "../../../../../clients/decorators/erc7579/isModuleInstalled"
 import { parseModuleTypeId } from "../../../../../clients/decorators/erc7579/supportsModule"
 import type {
+  CustomOverride,
   ExecuteSignedQuotePayload,
   FeeTokenInfo,
   Instruction,
@@ -303,11 +311,6 @@ export const prepareEnableSessions = async (
     splitActionsBy
   } = parameters
 
-  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
-    chainId: chain.id,
-    version
-  }))
-
   const isSplitActionsEnabled =
     parameters.splitActionsBy && parameters.splitActionsBy > 0
 
@@ -442,6 +445,13 @@ export const prepareEnableSessions = async (
               to: SMART_SESSIONS_ADDRESS,
               chainId,
               conditions: [condition],
+              simulationOverrides: {
+                customOverrides: getCustomStateOverridesForIsModuleInstalled(
+                  parameters.smartSessionsValidator.address,
+                  deployment.address,
+                  chainId
+                )
+              },
               metadata: [
                 {
                   type: "CUSTOM",
@@ -504,6 +514,40 @@ export const prepareEnableSessions = async (
   )
 
   return enableSessionsInstructionsWithSessionDetails
+}
+
+export const getCustomStateOverridesForIsModuleInstalled = (
+  validatorAddress: Address,
+  accountAddress: Address,
+  chainId: number
+): CustomOverride[] => {
+  // EERC-7201 namespaced storage slot where the AccountStorage struct starts for Nexus
+  const STORAGE_LOCATION: Hex =
+    "0x0bb70095b32b9671358306b0339b4c06e7cbd8cb82505941fba30d1eb5b82f00"
+  // A SentinelList is a circular linked list that uses a special "SENTINEL" address (0x1)
+  const SENTINEL: Address = "0x0000000000000000000000000000000000000001"
+
+  const getValidatorSlot = (validatorAddress: Address): Hex => {
+    const encoded = encodeAbiParameters(
+      parseAbiParameters("address, bytes32"),
+      [validatorAddress, STORAGE_LOCATION]
+    )
+
+    return keccak256(encoded)
+  }
+
+  const customOverrides: CustomOverride[] = []
+
+  const customOverrideForValidator: CustomOverride = {
+    contractAddress: accountAddress,
+    storageSlot: getValidatorSlot(validatorAddress),
+    chainId,
+    value: toBytes32(SENTINEL)
+  }
+
+  customOverrides.push(customOverrideForValidator)
+
+  return customOverrides
 }
 
 export const addPaymentPolicyForActions = (

@@ -12,7 +12,8 @@
 import { type Address, zeroAddress } from "viem"
 import type {
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion, ForwarderAbi } from "../../../constants"
@@ -34,6 +35,8 @@ export type BuildNativeTokenTransferParameters = {
   gasLimit?: bigint
   value: bigint | RuntimeValue
   chainId: number
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
 
@@ -74,7 +77,8 @@ export const buildNativeTokenTransfer = async (
     metadata: metadataOverride,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -147,7 +151,8 @@ export const buildNativeTokenTransfer = async (
         metadata: metadataOverride || metadata,
         lowerBoundTimestamp,
         upperBoundTimestamp,
-        executionSimulationRetryDelay
+        executionSimulationRetryDelay,
+        simulationOverrides
       },
       composabilityParams
     )
@@ -178,7 +183,8 @@ export const buildNativeTokenTransfer = async (
         chainId,
         lowerBoundTimestamp,
         upperBoundTimestamp,
-        executionSimulationRetryDelay
+        executionSimulationRetryDelay,
+        simulationOverrides
       }
     ]
   }

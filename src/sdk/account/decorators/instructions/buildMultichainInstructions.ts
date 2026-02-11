@@ -2,7 +2,8 @@ import type { OneOf } from "viem"
 import type {
   AbstractCall,
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { Call } from "../../utils/Types"
 import type { BaseInstructionsParams } from "../build"
@@ -45,7 +46,10 @@ export type BuildMultichainInstructionsParameters = {
       metadata?: InstructionMetadata[]
     }
 > &
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds & {
+    /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+    simulationOverrides?: Overrides
+  }
 
 export const buildMultichainInstructions = async (
   baseParams: BaseInstructionsParams,
@@ -60,7 +64,8 @@ export const buildMultichainInstructions = async (
     metadata: metadataOverride,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
 
   const instructions = await Promise.all(
@@ -102,7 +107,8 @@ export const buildMultichainInstructions = async (
         metadata: metadataOverride || metadata,
         lowerBoundTimestamp,
         upperBoundTimestamp,
-        executionSimulationRetryDelay
+        executionSimulationRetryDelay,
+        simulationOverrides
       }
     })
   )

@@ -10,7 +10,8 @@ import {
 import { isNativeToken } from "../../../account/utils"
 import type {
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion } from "../../../constants"
@@ -76,6 +77,8 @@ export type BuildComposableParameters = {
    * @since v1.2.0
    */
   conditions?: ExecutionCondition[]
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   /**
    * Optional metadata describing the instruction for display purposes
    */
@@ -352,7 +355,8 @@ export const buildComposableUtil = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
 
   const calls = await buildComposableCall(parameters, composabilityParams)
@@ -374,7 +378,8 @@ export const buildComposableUtil = async (
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
       upperBoundTimestamp,
-      executionSimulationRetryDelay
+      executionSimulationRetryDelay,
+      simulationOverrides
     }
   ]
 }

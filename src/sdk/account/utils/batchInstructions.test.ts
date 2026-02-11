@@ -27,6 +27,7 @@ import { DEFAULT_MEE_VERSION } from "../../constants"
 import { mcUSDC } from "../../constants/tokens"
 import { getMEEVersion } from "../../modules"
 import { batchInstructions } from "./batchInstructions"
+import { Overrides } from "../../clients/decorators/mee"
 
 describe("utils.batchInstructions", () => {
   let network: NetworkConfig
@@ -81,7 +82,8 @@ describe("utils.batchInstructions", () => {
     amount: string,
     lowerBoundTimestamp?: number,
     upperBoundTimestamp?: number,
-    executionSimulationRetryDelay?: number
+    executionSimulationRetryDelay?: number,
+    simulationOverrides?: Overrides
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -92,7 +94,8 @@ describe("utils.batchInstructions", () => {
         amount: parseEther(amount),
         lowerBoundTimestamp,
         upperBoundTimestamp,
-        executionSimulationRetryDelay
+        executionSimulationRetryDelay,
+        simulationOverrides
       }
     )
 
@@ -101,7 +104,8 @@ describe("utils.batchInstructions", () => {
     amount: string,
     lowerBoundTimestamp?: number,
     upperBoundTimestamp?: number,
-    executionSimulationRetryDelay?: number
+    executionSimulationRetryDelay?: number,
+    simulationOverrides?: Overrides
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -112,7 +116,8 @@ describe("utils.batchInstructions", () => {
         amount: parseEther(amount),
         lowerBoundTimestamp,
         upperBoundTimestamp,
-        executionSimulationRetryDelay
+        executionSimulationRetryDelay,
+        simulationOverrides
       }
     )
 
@@ -121,7 +126,8 @@ describe("utils.batchInstructions", () => {
     amount: string,
     lowerBoundTimestamp?: number,
     upperBoundTimestamp?: number,
-    executionSimulationRetryDelay?: number
+    executionSimulationRetryDelay?: number,
+    simulationOverrides?: Overrides
   ) =>
     buildApprove(
       { accountAddress: account.signer.address, meeVersions },
@@ -132,7 +138,8 @@ describe("utils.batchInstructions", () => {
         amount: parseEther(amount),
         lowerBoundTimestamp,
         upperBoundTimestamp,
-        executionSimulationRetryDelay
+        executionSimulationRetryDelay,
+        simulationOverrides
       }
     )
 
@@ -458,5 +465,99 @@ describe("utils.batchInstructions", () => {
     expect(batchedInstructions[0].executionSimulationRetryDelay).to.eq(
       executionSimulationRetryDelay + 1000
     )
+  })
+
+  test("Should simulationOverrides applied on instruction level", async () => {
+    const instructions = [
+      createBaseApproval(mcNexus, "1.0", undefined, undefined, undefined, {
+        tokenOverrides: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: 84532,
+            balance: 1n,
+            accountAddress: zeroAddress
+          }
+        ],
+        customOverrides: [
+          {
+            contractAddress: zeroAddress,
+            chainId: 84532,
+            storageSlot: "0x",
+            value: "0x"
+          }
+        ]
+      }),
+      createBaseApproval(mcNexus, "1.0", undefined, undefined, undefined, {
+        tokenOverrides: [
+          {
+            tokenAddress: zeroAddress,
+            chainId: 84532,
+            balance: 1n,
+            accountAddress: zeroAddress
+          }
+        ],
+        customOverrides: [
+          {
+            contractAddress: zeroAddress,
+            chainId: 84532,
+            storageSlot: "0x",
+            value: "0x"
+          }
+        ]
+      })
+    ]
+
+    const resolvedInstructions = await resolveInstructions(instructions)
+
+    expect(resolvedInstructions.length).to.be.eq(2)
+
+    expect(resolvedInstructions[0].simulationOverrides).toBeDefined()
+    expect(
+      resolvedInstructions[0].simulationOverrides?.tokenOverrides
+    ).toBeDefined()
+    expect(
+      resolvedInstructions[0].simulationOverrides?.customOverrides
+    ).toBeDefined()
+    expect(
+      resolvedInstructions[0].simulationOverrides?.tokenOverrides?.length
+    ).to.be.eq(1)
+    expect(
+      resolvedInstructions[0].simulationOverrides?.customOverrides?.length
+    ).to.be.eq(1)
+
+    expect(resolvedInstructions[1].simulationOverrides).toBeDefined()
+    expect(
+      resolvedInstructions[1].simulationOverrides?.tokenOverrides
+    ).toBeDefined()
+    expect(
+      resolvedInstructions[1].simulationOverrides?.customOverrides
+    ).toBeDefined()
+    expect(
+      resolvedInstructions[1].simulationOverrides?.tokenOverrides?.length
+    ).to.be.eq(1)
+    expect(
+      resolvedInstructions[1].simulationOverrides?.customOverrides?.length
+    ).to.be.eq(1)
+
+    const batchedInstructions = await batchInstructions({
+      accountAddress: mcNexus.signer.address,
+      meeVersions,
+      instructions: resolvedInstructions
+    })
+
+    expect(batchedInstructions.length).to.be.eq(1)
+    expect(batchedInstructions[0].simulationOverrides).toBeDefined()
+    expect(
+      batchedInstructions[0].simulationOverrides?.tokenOverrides
+    ).toBeDefined()
+    expect(
+      batchedInstructions[0].simulationOverrides?.customOverrides
+    ).toBeDefined()
+    expect(
+      batchedInstructions[0].simulationOverrides?.tokenOverrides?.length
+    ).to.be.eq(2)
+    expect(
+      batchedInstructions[0].simulationOverrides?.customOverrides?.length
+    ).to.be.eq(2)
   })
 })

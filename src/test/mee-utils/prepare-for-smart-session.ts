@@ -177,10 +177,9 @@ export const prepareForTestnetSmartSessions = async (
   if (enableSessionType === "new") {
     const payload = await sessionsMeeClient.prepareForPermissions({
       smartSessionsValidator: ssValidator,
-      // Temporarily commented now
-      // simulation: {
-      //   simulate: true
-      // },
+      simulation: {
+        simulate: true
+      },
       feeToken: {
         address: testnetMcTestUSDCP.addressOn(paymentChain.id),
         chainId: paymentChain.id
