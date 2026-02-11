@@ -5,6 +5,7 @@ import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
 import type { MEEVersionConfig } from "../../../../../account"
+import type { SessionAction } from "../../../../../account/decorators/buildAction"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
@@ -13,7 +14,6 @@ import {
   grantPermissionTypedDataSign
 } from "../grantPermission"
 import { addPaymentPolicyForActions } from "./prepareForPermissions"
-import type { SessionAction } from "../../../../../account/decorators/buildAction"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]
