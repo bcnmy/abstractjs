@@ -42,6 +42,7 @@ import type {
 } from "../../../../../clients/decorators/mee/getQuote"
 import {
   type AccountType,
+  ActionData,
   DEFAULT_MEE_VERSION,
   NexusImplementationAbi,
   SMART_SESSIONS_ADDRESS,
@@ -63,7 +64,7 @@ import type { AnyData } from "../../../../utils/Types"
 import type { Validator } from "../../../toValidator"
 import { generateSalt } from "../../Helpers"
 import type { GrantPermissionResponse } from "../grantPermission"
-import type { MultichainActionData } from "./grantMeePermission"
+import { SessionAction } from "../../../../../account/decorators/buildAction"
 
 // omit instructions, feeToken and trigger to make them optional
 export type PrepareForPermissionsParams = Omit<
@@ -75,8 +76,8 @@ export type PrepareForPermissionsParams = Omit<
   trigger?: Trigger
   maxPaymentAmount?: bigint
   redeemer?: Address
-  actions?: MultichainActionData["actions"]
-  splitActionsBy?: number
+  actions?: SessionAction[]
+  batchActions?: boolean
 } & OneOf<
     | {
         /**
@@ -110,6 +111,11 @@ export const prepareForPermissions = async (
   client: BaseMeeClient,
   parameters: PrepareForPermissionsParams
 ): Promise<PrepareForPermissionsPayload> => {
+  const {
+    // By default, actions are batched
+    batchActions = true
+  } = parameters
+
   const meeVersions = client.account.deployments.map(({ version, chain }) => ({
     chainId: chain.id,
     version
@@ -229,8 +235,8 @@ export const prepareForPermissions = async (
 
     if (batch) {
       // By default, fund nexus, install SS module, deploy nexus will be batched
-      // Even if we wanted to split actions into multiple userOps ? The additional inx and install SS will be optimistically batched while the
-      // enable permissions actions will be unbatched down the line
+      // Even if we wanted to unbatch actions into multiple userOps ? The additional instructions and install SS will be
+      // optimistically batched while the enable permissions actions will be unbatched down the line
       partiallyBatchedInstructions = await batchInstructions({
         accountAddress: client.account.signer.address,
         meeVersions,
@@ -241,8 +247,6 @@ export const prepareForPermissions = async (
       partiallyBatchedInstructions = [...resolvedInstructions]
     }
 
-    // By default, the enable sessions will be batched with other instructions down the line.
-    // If explicit splitActions required ? The enable permissions will be executed as separate userOps
     const instructions = hasEnableSessionsInstructions
       ? [...partiallyBatchedInstructions, ...enableSessionsInstructions]
       : partiallyBatchedInstructions
@@ -250,12 +254,11 @@ export const prepareForPermissions = async (
     // proceed to execute the superTx that
     // will deploy accounts/install modules and enable sessions
 
-    const isSplitActionsEnabled =
-      parameters.splitActionsBy &&
-      parameters.splitActionsBy > 0 &&
-      hasEnableSessionsInstructions
+    // If batch actions is disabled and there are enable permission inxs ? The quote will be unbatched
+    const isUnbatchActionsRequired =
+      !batchActions && hasEnableSessionsInstructions
 
-    batch = isSplitActionsEnabled ? false : batch
+    batch = isUnbatchActionsRequired ? false : batch
 
     // check if trigger is provided => use fusion flow
     if (parameters.trigger) {
@@ -307,19 +310,25 @@ export const prepareEnableSessions = async (
     feeToken,
     redeemer,
     maxPaymentAmount: maxPaymentAmount_,
-    actions,
-    splitActionsBy
+    actions: sessionActions,
+    // Actions are batched by default
+    batchActions = true
   } = parameters
-
-  const isSplitActionsEnabled =
-    parameters.splitActionsBy && parameters.splitActionsBy > 0
 
   if (!redeemer) {
     throw new Error("Smart session redeemer address is missing")
   }
 
-  if (!actions || actions.length === 0) {
+  if (!sessionActions || sessionActions.length === 0) {
     throw new Error("Smart sessions actions are missing")
+  }
+
+  for (const { actions, chainId } of sessionActions) {
+    if (actions.length === 0) {
+      throw new Error(
+        `Smart sessions actions are empty for the chain (${chainId})`
+      )
+    }
   }
 
   let maxPaymentAmount = maxPaymentAmount_ || 0n
@@ -340,22 +349,8 @@ export const prepareEnableSessions = async (
   const permitERC4337Paymaster = true
 
   const uniqueChainIds = Array.from(
-    new Set(actions.map((action) => action.chainId))
+    new Set(sessionActions.map((sessionAction) => sessionAction.chainId))
   )
-
-  const splitActionsIntoActionGroups = (
-    actions: MultichainActionData["actions"],
-    splitCount: number
-  ) => {
-    const actionGroups: MultichainActionData["actions"][] = []
-
-    for (let index = 0; index < actions.length; index += splitCount) {
-      const group = actions.slice(index, index + splitCount)
-      actionGroups.push(group)
-    }
-
-    return actionGroups
-  }
 
   const enableSessionsInstructionsWithSessionDetails = await Promise.all(
     uniqueChainIds.map(async (chainId) => {
@@ -369,13 +364,13 @@ export const prepareEnableSessions = async (
         )
       }
 
-      let actionsForChain = actions.filter(
-        (action) => action.chainId === chainId
+      let sessionActionsForChain = sessionActions.filter(
+        (sessionAction) => sessionAction.chainId === chainId
       )
 
       if (feeToken && feeToken.chainId === chainId) {
-        actionsForChain = addPaymentPolicyForActions(
-          actionsForChain,
+        sessionActionsForChain = addPaymentPolicyForActions(
+          sessionActionsForChain,
           feeToken,
           maxPaymentAmount
         )
@@ -387,6 +382,15 @@ export const prepareEnableSessions = async (
         deployment.version.validatorAddress ||
         defaultVersionConfig.validatorAddress
 
+      if (batchActions && sessionActionsForChain.length > 1) {
+        sessionActionsForChain = client.account.buildAction({
+          type: "batch",
+          data: {
+            actions: sessionActionsForChain
+          }
+        })
+      }
+
       const session: Session = {
         // MEE K1 validator is our session validator
         sessionValidator: meeValidatorAddress,
@@ -395,7 +399,9 @@ export const prepareEnableSessions = async (
         salt: generateSalt(),
         userOpPolicies: permitERC4337Paymaster ? [getSudoPolicy()] : [],
         erc7739Policies: { allowedERC7739Content: [], erc1271Policies: [] },
-        actions: actionsForChain,
+        // If the actions are batched ? all the actions will be available in first elements itself
+        // If its unbatched ? It will be reassigned below
+        actions: sessionActionsForChain[0].actions,
         permitERC4337Paymaster,
         chainId: BigInt(chainId)
       }
@@ -410,12 +416,7 @@ export const prepareEnableSessions = async (
 
       let enableSessionInstructions: Instruction[] = []
 
-      if (isSplitActionsEnabled) {
-        const actionGroups = splitActionsIntoActionGroups(
-          actionsForChain,
-          splitActionsBy || 2
-        )
-
+      if (!batchActions) {
         const condition = createCondition({
           targetContract: deployment.address,
           functionAbi: NexusImplementationAbi,
@@ -430,10 +431,10 @@ export const prepareEnableSessions = async (
           description: "Smart sessions module must be installed"
         })
 
-        for (const actionGroup of actionGroups) {
+        for (const { actions } of sessionActionsForChain) {
           const sessionGroup = {
             ...session,
-            actions: actionGroup
+            actions: actions
           }
 
           const instructions = await client.account.buildComposable({
@@ -551,84 +552,114 @@ export const getCustomStateOverridesForIsModuleInstalled = (
 }
 
 export const addPaymentPolicyForActions = (
-  actionsForChain: MultichainActionData["actions"],
+  sessionActionsForChain: SessionAction[],
   feeToken: FeeTokenInfo,
   maxPaymentAmount: bigint
-): MultichainActionData["actions"] => {
+): SessionAction[] => {
   const transferSelector = toFunctionSelector(
     getAbiItem({ abi: erc20Abi, name: "transfer" })
   )
 
-  const updatedActionsForChain = actionsForChain.map((action) => {
-    if (
-      action.actionTargetSelector.toLowerCase() ===
-        transferSelector.toLowerCase() &&
-      action.actionTarget.toLowerCase() === feeToken.address.toLowerCase()
-    ) {
-      const updatedActionPolicies = action.actionPolicies.map(
-        (actionPolicy) => {
-          if (
-            actionPolicy.policy.toLowerCase() ===
-            SPENDING_LIMITS_POLICY_ADDRESS.toLowerCase()
-          ) {
-            const [tokens, limits] = decodeAbiParameters(
-              [{ type: "address[]" }, { type: "uint256[]" }],
-              actionPolicy.initData
-            )
+  let updatedSessionActionsForChain: SessionAction[] =
+    sessionActionsForChain.map((sessionAction) => {
+      const updatedActions = sessionAction.actions.map((action) => {
+        if (
+          action.actionTargetSelector.toLowerCase() ===
+            transferSelector.toLowerCase() &&
+          action.actionTarget.toLowerCase() === feeToken.address.toLowerCase()
+        ) {
+          const updatedActionPolicies = action.actionPolicies.map(
+            (actionPolicy) => {
+              if (
+                actionPolicy.policy.toLowerCase() ===
+                SPENDING_LIMITS_POLICY_ADDRESS.toLowerCase()
+              ) {
+                const [tokens, limits] = decodeAbiParameters(
+                  [{ type: "address[]" }, { type: "uint256[]" }],
+                  actionPolicy.initData
+                )
 
-            const updatedTokensAndLimits: {
-              limit: bigint
-              token: Address
-            }[] = []
+                const updatedTokensAndLimits: {
+                  limit: bigint
+                  token: Address
+                }[] = []
 
-            for (let index = 0; index < tokens.length; index++) {
-              const token = tokens[index]
-              const limit = limits[index]
+                for (let index = 0; index < tokens.length; index++) {
+                  const token = tokens[index]
+                  const limit = limits[index]
 
-              if (token.toLowerCase() === feeToken.address.toLowerCase()) {
-                updatedTokensAndLimits.push({
-                  token,
-                  limit: limit + maxPaymentAmount
-                })
-              } else {
-                updatedTokensAndLimits.push({ token, limit })
+                  if (token.toLowerCase() === feeToken.address.toLowerCase()) {
+                    updatedTokensAndLimits.push({
+                      token,
+                      limit: limit + maxPaymentAmount
+                    })
+                  } else {
+                    updatedTokensAndLimits.push({ token, limit })
+                  }
+                }
+
+                return getSpendingLimitsPolicy(updatedTokensAndLimits)
               }
+
+              return actionPolicy
             }
+          )
 
-            return getSpendingLimitsPolicy(updatedTokensAndLimits)
-          }
-
-          return actionPolicy
+          return { ...action, actionPolicies: updatedActionPolicies }
         }
-      )
 
-      return { ...action, actionPolicies: updatedActionPolicies }
+        return action
+      })
+
+      return {
+        ...sessionAction,
+        actions: updatedActions
+      }
+    })
+
+  const isPolicyForPaymentTokenExists = updatedSessionActionsForChain.some(
+    (sessionAction) => {
+      return sessionAction.actions.some((action) => {
+        return (
+          action.actionTargetSelector.toLowerCase() ===
+            transferSelector.toLowerCase() &&
+          action.actionTarget.toLowerCase() === feeToken.address.toLowerCase()
+        )
+      })
     }
-
-    return action
-  })
-
-  const isPolicyForPaymentTokenExists = updatedActionsForChain.some(
-    (action) =>
-      action.actionTargetSelector.toLowerCase() ===
-        transferSelector.toLowerCase() &&
-      action.actionTarget.toLowerCase() === feeToken.address.toLowerCase()
   )
 
   if (!isPolicyForPaymentTokenExists) {
-    const paymentAction = {
+    let isPaymentPolicyAdded = false
+
+    const paymentAction: ActionData = {
       actionTarget: feeToken.address,
       actionTargetSelector: transferSelector,
       actionPolicies: [
         getSpendingLimitsPolicy([
           { limit: maxPaymentAmount, token: feeToken.address }
         ])
-      ],
-      chainId: feeToken.chainId
+      ]
     }
 
-    updatedActionsForChain.push(paymentAction)
+    updatedSessionActionsForChain = updatedSessionActionsForChain.map(
+      (sessionAction) => {
+        // Payment policy will be added into the first session action for the payment chain
+        if (
+          !isPaymentPolicyAdded &&
+          sessionAction.chainId === feeToken.chainId
+        ) {
+          isPaymentPolicyAdded = true
+          return {
+            ...sessionAction,
+            actions: [...sessionAction.actions, paymentAction]
+          }
+        }
+
+        return sessionAction
+      }
+    )
   }
 
-  return updatedActionsForChain
+  return updatedSessionActionsForChain
 }

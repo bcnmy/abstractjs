@@ -6,7 +6,6 @@ import type {
 } from "../clients/decorators/mee/getQuote"
 import type { ComposabilityVersion, MEEVersion, PolicyData } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
-import type { MultichainActionData } from "../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import {
   type BuildComposableInstructionTypes,
   type BuildInstructionTypes,
@@ -15,6 +14,7 @@ import {
 } from "./decorators/build"
 import {
   type BuildActionTypes,
+  SessionAction,
   buildAction as buildActionDecorator
 } from "./decorators/buildAction"
 import {
@@ -171,7 +171,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    *   data: { chainIds: [1, 10], contractAddress: "0x...", policies: [{ type: "sudo" }] }
    * })
    */
-  buildAction: (params: BuildActionTypes) => MultichainActionData["actions"]
+  buildAction: (params: BuildActionTypes) => SessionAction[]
 
   /**
    * Function to build instructions for bridging a token across all deployments
@@ -373,9 +373,7 @@ export async function toMultichainNexusAccount(
     return buildActionPolicyDecorator(params)
   }
 
-  const buildAction = (
-    params: BuildActionTypes
-  ): MultichainActionData["actions"] => {
+  const buildAction = (params: BuildActionTypes): SessionAction[] => {
     return buildActionDecorator(params)
   }
 

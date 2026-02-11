@@ -23,11 +23,11 @@ import {
 } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import type { Overrides } from "../../clients/decorators/mee"
 import { DEFAULT_MEE_VERSION } from "../../constants"
 import { mcUSDC } from "../../constants/tokens"
 import { getMEEVersion } from "../../modules"
 import { batchInstructions } from "./batchInstructions"
-import { Overrides } from "../../clients/decorators/mee"
 
 describe("utils.batchInstructions", () => {
   let network: NetworkConfig

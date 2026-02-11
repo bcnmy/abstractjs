@@ -25,10 +25,10 @@ import {
   toSmartSessionsModule
 } from "../../sdk/modules"
 import type { GrantPermissionResponse } from "../../sdk/modules/validators/smartSessions/decorators/grantPermission"
-import type { MultichainActionData } from "../../sdk/modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import { TESTNET_RPC_URLS } from "../testSetup"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../testTokens"
 import { generateNewTestnetMcNexusAccountAndMeeClient } from "./generate-mc-nexus"
+import { SessionAction } from "../../sdk/account/decorators/buildAction"
 
 export const prepareForTestnetSmartSessions = async (
   paymentChain: Chain,
@@ -38,8 +38,8 @@ export const prepareForTestnetSmartSessions = async (
   eoaAccount: LocalAccount,
   enableSessionType: "legacy" | "new" = "new",
   use7702Auth = false,
-  customActions?: MultichainActionData["actions"],
-  splitActionsBy?: number
+  customActions?: SessionAction[],
+  batchActions: boolean = true
 ) => {
   // New orchestrator account
   const { mcNexus, meeClient } =
@@ -189,7 +189,7 @@ export const prepareForTestnetSmartSessions = async (
         chainId: paymentChain.id,
         amount: parseUnits("1", 6)
       },
-      splitActionsBy,
+      batchActions,
       ...sessionParams,
       ...authParams
     })
@@ -244,7 +244,15 @@ export const prepareForTestnetSmartSessions = async (
         address: testnetMcTestUSDCP.addressOn(paymentChain.id),
         chainId: paymentChain.id
       },
-      ...sessionParams
+      ...sessionParams,
+      actions: sessionParams.actions.flatMap((sessionAction) => {
+        return sessionAction.actions.map((action) => {
+          return {
+            ...action,
+            chainId: sessionAction.chainId
+          }
+        })
+      })
     })
   }
 

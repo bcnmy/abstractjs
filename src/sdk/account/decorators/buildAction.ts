@@ -1,4 +1,3 @@
-import type { PolicyData } from "@rhinestone/module-sdk"
 import {
   type Address,
   type Hex,
@@ -7,12 +6,17 @@ import {
   isAddress,
   toFunctionSelector
 } from "viem"
-import type { MultichainActionData } from "../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import {
   type BuildActionPolicyTypes,
   buildActionPolicy,
   calldataArgument
 } from "./buildActionPolicy"
+import { ActionData, PolicyData } from "../../constants"
+
+export type SessionAction = {
+  actions: ActionData[]
+  chainId: number
+}
 
 /**
  * Common base parameters for all build actions.
@@ -69,12 +73,23 @@ export type BuildCustomAction = {
   }
 }
 
+/**
+ * Build batch action for batching the existing session actions
+ */
+export type BuildBatchActions = {
+  type: "batch"
+  data: {
+    actions: SessionAction[]
+  }
+}
+
 export type BuildActionTypes =
   | BuildTransferAction
   | BuildTransferFromAction
   | BuildApproveAction
   | BuildERC20SpendingLimitAction
   | BuildCustomAction
+  | BuildBatchActions
 
 const resolvePoliciesOrApplyUnrestrictedPolicy = (
   policies?: BuildActionPolicyTypes[]
@@ -89,9 +104,7 @@ const resolvePoliciesOrApplyUnrestrictedPolicy = (
   return actionPolicies
 }
 
-export const buildAction = (
-  parameters: BuildActionTypes
-): MultichainActionData["actions"] => {
+export const buildAction = (parameters: BuildActionTypes): SessionAction[] => {
   const { type, data } = parameters
 
   switch (type) {
@@ -106,10 +119,14 @@ export const buildAction = (
 
       return data.chainIds.map((chainId) => {
         return {
-          chainId,
-          actionTarget: data.contractAddress,
-          actionTargetSelector: functionSignature,
-          actionPolicies
+          actions: [
+            {
+              actionTarget: data.contractAddress,
+              actionTargetSelector: functionSignature,
+              actionPolicies
+            }
+          ],
+          chainId
         }
       })
     }
@@ -124,10 +141,14 @@ export const buildAction = (
 
       return data.chainIds.map((chainId) => {
         return {
-          chainId,
-          actionTarget: data.contractAddress,
-          actionTargetSelector: functionSignature,
-          actionPolicies
+          actions: [
+            {
+              actionTarget: data.contractAddress,
+              actionTargetSelector: functionSignature,
+              actionPolicies
+            }
+          ],
+          chainId
         }
       })
     }
@@ -142,10 +163,14 @@ export const buildAction = (
 
       return data.chainIds.map((chainId) => {
         return {
-          chainId,
-          actionTarget: data.contractAddress,
-          actionTargetSelector: functionSignature,
-          actionPolicies
+          actions: [
+            {
+              actionTarget: data.contractAddress,
+              actionTargetSelector: functionSignature,
+              actionPolicies
+            }
+          ],
+          chainId
         }
       })
     }
@@ -210,10 +235,14 @@ export const buildAction = (
 
       return data.chainIds.map((chainId) => {
         return {
-          chainId,
-          actionTarget: data.contractAddress,
-          actionTargetSelector: functionSignature,
-          actionPolicies: policies
+          actions: [
+            {
+              actionTarget: data.contractAddress,
+              actionTargetSelector: functionSignature,
+              actionPolicies: policies
+            }
+          ],
+          chainId
         }
       })
     }
@@ -224,12 +253,38 @@ export const buildAction = (
 
       return data.chainIds.map((chainId) => {
         return {
-          chainId,
-          actionTarget: data.contractAddress,
-          actionTargetSelector: data.functionSignature,
-          actionPolicies
+          actions: [
+            {
+              actionTarget: data.contractAddress,
+              actionTargetSelector: data.functionSignature,
+              actionPolicies
+            }
+          ],
+          chainId
         }
       })
+    }
+    case "batch": {
+      if (data.actions.length < 2) {
+        throw new Error("A Batch must contain at least 2 actions")
+      }
+
+      if (
+        data.actions.some(
+          ({ chainId }) => Number(chainId) !== Number(data.actions[0].chainId)
+        )
+      ) {
+        throw new Error("All actions must be on the same chain")
+      }
+
+      const batchedActions = data.actions.flatMap(({ actions }) => actions)
+
+      return [
+        {
+          actions: batchedActions,
+          chainId: data.actions[0].chainId
+        }
+      ]
     }
     /**
      * Defensive: Unrecognized type, throw an explicit error.

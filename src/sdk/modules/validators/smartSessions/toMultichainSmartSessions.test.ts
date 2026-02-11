@@ -1149,36 +1149,7 @@ describe("mee.multichainSmartSessions", () => {
     }
   })
 
-  test("Smart sessions enable permission with split actions by 2", async () => {
-    const { prepareForPermissionsHash } = await prepareForTestnetSmartSessions(
-      paymentChain,
-      targetChain,
-      paymentChainPublicClient,
-      paymentChainWalletClient,
-      eoaAccount,
-      "new",
-      false,
-      undefined,
-      2
-    )
-
-    expect(prepareForPermissionsHash).toBeDefined()
-
-    if (prepareForPermissionsHash) {
-      const { userOps } =
-        await meeClient.request<BaseGetSupertransactionReceiptPayload>({
-          path: `explorer/${prepareForPermissionsHash}`,
-          method: "GET"
-        })
-
-      // Payment userOps - 1
-      // Install SS module, SCA deploy, funding userOps  - 2
-      // Enable permission userOps - 2
-      expect(userOps.length).to.be.eq(5)
-    }
-  })
-
-  test("Smart sessions enable permission with split actions by 1", async () => {
+  test("Smart sessions enable permission with actions unbatched", async () => {
     const { prepareForPermissionsHash, mcNexus } =
       await prepareForTestnetSmartSessions(
         paymentChain,
@@ -1189,7 +1160,7 @@ describe("mee.multichainSmartSessions", () => {
         "new",
         false,
         undefined,
-        1
+        false
       )
 
     expect(prepareForPermissionsHash).toBeDefined()
@@ -1205,6 +1176,66 @@ describe("mee.multichainSmartSessions", () => {
       // Install SS module, SCA deploy, funding userOps  - 2
       // Enable permission userOps - 3
       expect(userOps.length).to.be.eq(6)
+    }
+  })
+
+  test("Smart sessions enable permission with custom actions batching", async () => {
+    const approveAction = buildAction({
+      type: "approve",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id)
+      }
+    })
+
+    const transferAction = buildAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id)
+      }
+    })
+
+    const transferFromAction = buildAction({
+      type: "transferFrom",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id)
+      }
+    })
+
+    const batchOne = buildAction({
+      type: "batch",
+      data: {
+        actions: [...approveAction, ...transferFromAction]
+      }
+    })
+
+    const { prepareForPermissionsHash } = await prepareForTestnetSmartSessions(
+      paymentChain,
+      targetChain,
+      paymentChainPublicClient,
+      paymentChainWalletClient,
+      eoaAccount,
+      "new",
+      false,
+      [...batchOne, ...transferAction],
+      false
+    )
+
+    expect(prepareForPermissionsHash).toBeDefined()
+
+    if (prepareForPermissionsHash) {
+      const { userOps } =
+        await meeClient.request<BaseGetSupertransactionReceiptPayload>({
+          path: `explorer/${prepareForPermissionsHash}`,
+          method: "GET"
+        })
+
+      // Payment userOps - 1
+      // Install SS module, SCA deploy, funding userOps  - 2
+      // Enable permission userOps - 2
+      expect(userOps.length).to.be.eq(5)
     }
   })
 })

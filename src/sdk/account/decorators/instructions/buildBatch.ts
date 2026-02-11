@@ -63,8 +63,8 @@ export const buildBatch = async (
   let maxExecutionSimulationRetryDelay = 0
   let finalLowerBoundTimestamp = 0
   let finalUpperBoundTimestamp = 0
-  let customOverrides: CustomOverride[] = []
-  let tokenOverrides: TokenOverride[] = []
+  const customOverrides: CustomOverride[] = []
+  const tokenOverrides: TokenOverride[] = []
 
   for (const {
     lowerBoundTimestamp,

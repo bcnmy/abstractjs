@@ -60,11 +60,15 @@ describe("mee.buildAction", () => {
     )
 
     expect(transferAction).toBeDefined()
-    expect(transferAction.actionTarget).to.eq(zeroAddress)
-    expect(transferAction.actionTargetSelector).to.eq(functionSignature)
+    expect(transferAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(transferAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(transferAction.chainId).to.eq(network.chain.id)
-    expect(transferAction.actionPolicies.length).to.eq(1)
-    expect(transferAction.actionPolicies[0].policy).to.eq(SUDO_POLICY_ADDRESS)
+    expect(transferAction.actions[0].actionPolicies.length).to.eq(1)
+    expect(transferAction.actions[0].actionPolicies[0].policy).to.eq(
+      SUDO_POLICY_ADDRESS
+    )
   })
 
   it("Build transfer action with custom policies", async () => {
@@ -82,12 +86,16 @@ describe("mee.buildAction", () => {
     )
 
     expect(transferAction).toBeDefined()
-    expect(transferAction.actionTarget).to.eq(zeroAddress)
-    expect(transferAction.actionTargetSelector).to.eq(functionSignature)
+    expect(transferAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(transferAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(transferAction.chainId).to.eq(network.chain.id)
-    expect(transferAction.actionPolicies.length).to.eq(2)
-    expect(transferAction.actionPolicies[0].policy).to.eq(SUDO_POLICY_ADDRESS)
-    expect(transferAction.actionPolicies[1].policy).to.eq(
+    expect(transferAction.actions[0].actionPolicies.length).to.eq(2)
+    expect(transferAction.actions[0].actionPolicies[0].policy).to.eq(
+      SUDO_POLICY_ADDRESS
+    )
+    expect(transferAction.actions[0].actionPolicies[1].policy).to.eq(
       USAGE_LIMIT_POLICY_ADDRESS
     )
   })
@@ -106,11 +114,13 @@ describe("mee.buildAction", () => {
     )
 
     expect(transferFromAction).toBeDefined()
-    expect(transferFromAction.actionTarget).to.eq(zeroAddress)
-    expect(transferFromAction.actionTargetSelector).to.eq(functionSignature)
+    expect(transferFromAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(transferFromAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(transferFromAction.chainId).to.eq(network.chain.id)
-    expect(transferFromAction.actionPolicies.length).to.eq(1)
-    expect(transferFromAction.actionPolicies[0].policy).to.eq(
+    expect(transferFromAction.actions[0].actionPolicies.length).to.eq(1)
+    expect(transferFromAction.actions[0].actionPolicies[0].policy).to.eq(
       SUDO_POLICY_ADDRESS
     )
   })
@@ -136,14 +146,16 @@ describe("mee.buildAction", () => {
     )
 
     expect(transferFromAction).toBeDefined()
-    expect(transferFromAction.actionTarget).to.eq(zeroAddress)
-    expect(transferFromAction.actionTargetSelector).to.eq(functionSignature)
+    expect(transferFromAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(transferFromAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(transferFromAction.chainId).to.eq(network.chain.id)
-    expect(transferFromAction.actionPolicies.length).to.eq(2)
-    expect(transferFromAction.actionPolicies[0].policy).to.eq(
+    expect(transferFromAction.actions[0].actionPolicies.length).to.eq(2)
+    expect(transferFromAction.actions[0].actionPolicies[0].policy).to.eq(
       SUDO_POLICY_ADDRESS
     )
-    expect(transferFromAction.actionPolicies[1].policy).to.eq(
+    expect(transferFromAction.actions[0].actionPolicies[1].policy).to.eq(
       SPENDING_LIMITS_POLICY_ADDRESS
     )
   })
@@ -162,11 +174,15 @@ describe("mee.buildAction", () => {
     )
 
     expect(approveAction).toBeDefined()
-    expect(approveAction.actionTarget).to.eq(zeroAddress)
-    expect(approveAction.actionTargetSelector).to.eq(functionSignature)
+    expect(approveAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(approveAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(approveAction.chainId).to.eq(network.chain.id)
-    expect(approveAction.actionPolicies.length).to.eq(1)
-    expect(approveAction.actionPolicies[0].policy).to.eq(SUDO_POLICY_ADDRESS)
+    expect(approveAction.actions[0].actionPolicies.length).to.eq(1)
+    expect(approveAction.actions[0].actionPolicies[0].policy).to.eq(
+      SUDO_POLICY_ADDRESS
+    )
   })
 
   it("Build approve action with custom policies", async () => {
@@ -196,12 +212,16 @@ describe("mee.buildAction", () => {
     )
 
     expect(approveAction).toBeDefined()
-    expect(approveAction.actionTarget).to.eq(zeroAddress)
-    expect(approveAction.actionTargetSelector).to.eq(functionSignature)
+    expect(approveAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(approveAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(approveAction.chainId).to.eq(network.chain.id)
-    expect(approveAction.actionPolicies.length).to.eq(2)
-    expect(approveAction.actionPolicies[0].policy).to.eq(SUDO_POLICY_ADDRESS)
-    expect(approveAction.actionPolicies[1].policy).to.eq(
+    expect(approveAction.actions[0].actionPolicies.length).to.eq(2)
+    expect(approveAction.actions[0].actionPolicies[0].policy).to.eq(
+      SUDO_POLICY_ADDRESS
+    )
+    expect(approveAction.actions[0].actionPolicies[1].policy).to.eq(
       UNIVERSAL_ACTION_POLICY_ADDRESS
     )
   })
@@ -221,11 +241,15 @@ describe("mee.buildAction", () => {
     })
 
     expect(customAction).toBeDefined()
-    expect(customAction.actionTarget).to.eq(zeroAddress)
-    expect(customAction.actionTargetSelector).to.eq(functionSignature)
+    expect(customAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(customAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(customAction.chainId).to.eq(network.chain.id)
-    expect(customAction.actionPolicies.length).to.eq(1)
-    expect(customAction.actionPolicies[0].policy).to.eq(SUDO_POLICY_ADDRESS)
+    expect(customAction.actions[0].actionPolicies.length).to.eq(1)
+    expect(customAction.actions[0].actionPolicies[0].policy).to.eq(
+      SUDO_POLICY_ADDRESS
+    )
   })
 
   it("Build custom action with custom policies", async () => {
@@ -256,12 +280,16 @@ describe("mee.buildAction", () => {
     })
 
     expect(customAction).toBeDefined()
-    expect(customAction.actionTarget).to.eq(zeroAddress)
-    expect(customAction.actionTargetSelector).to.eq(functionSignature)
+    expect(customAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(customAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(customAction.chainId).to.eq(network.chain.id)
-    expect(customAction.actionPolicies.length).to.eq(2)
-    expect(customAction.actionPolicies[0].policy).to.eq(SUDO_POLICY_ADDRESS)
-    expect(customAction.actionPolicies[1].policy).to.eq(
+    expect(customAction.actions[0].actionPolicies.length).to.eq(2)
+    expect(customAction.actions[0].actionPolicies[0].policy).to.eq(
+      SUDO_POLICY_ADDRESS
+    )
+    expect(customAction.actions[0].actionPolicies[1].policy).to.eq(
       UNIVERSAL_ACTION_POLICY_ADDRESS
     )
   })
@@ -312,14 +340,16 @@ describe("mee.buildAction", () => {
     })
 
     expect(customAction).toBeDefined()
-    expect(customAction.actionTarget).to.eq(zeroAddress)
-    expect(customAction.actionTargetSelector).to.eq(functionSignature)
+    expect(customAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(customAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
     expect(customAction.chainId).to.eq(network.chain.id)
-    expect(customAction.actionPolicies.length).to.eq(2)
-    expect(customAction.actionPolicies[0].policy).to.eq(
+    expect(customAction.actions[0].actionPolicies.length).to.eq(2)
+    expect(customAction.actions[0].actionPolicies[0].policy).to.eq(
       UNIVERSAL_ACTION_POLICY_ADDRESS
     )
-    expect(customAction.actionPolicies[1].policy).to.eq(
+    expect(customAction.actions[0].actionPolicies[1].policy).to.eq(
       SPENDING_LIMITS_POLICY_ADDRESS
     )
   })
@@ -329,7 +359,7 @@ describe("mee.buildAction", () => {
       getAbiItem({ abi: erc20Abi, name: "transfer" })
     )
 
-    const [customAction] = mcNexus.buildAction({
+    const [erc20SpendingLimitAction] = mcNexus.buildAction({
       type: "erc20SpendingLimit",
       data: {
         chainIds: [network.chain.id],
@@ -338,12 +368,14 @@ describe("mee.buildAction", () => {
       }
     })
 
-    expect(customAction).toBeDefined()
-    expect(customAction.actionTarget).to.eq(zeroAddress)
-    expect(customAction.actionTargetSelector).to.eq(functionSignature)
-    expect(customAction.chainId).to.eq(network.chain.id)
-    expect(customAction.actionPolicies.length).to.eq(1)
-    expect(customAction.actionPolicies[0].policy).to.eq(
+    expect(erc20SpendingLimitAction).toBeDefined()
+    expect(erc20SpendingLimitAction.actions[0].actionTarget).to.eq(zeroAddress)
+    expect(erc20SpendingLimitAction.actions[0].actionTargetSelector).to.eq(
+      functionSignature
+    )
+    expect(erc20SpendingLimitAction.chainId).to.eq(network.chain.id)
+    expect(erc20SpendingLimitAction.actions[0].actionPolicies.length).to.eq(1)
+    expect(erc20SpendingLimitAction.actions[0].actionPolicies[0].policy).to.eq(
       UNIVERSAL_ACTION_POLICY_ADDRESS
     )
   })
@@ -352,5 +384,54 @@ describe("mee.buildAction", () => {
     expect(() => calldataArgument(0)).to.throw(
       "Invalid calldata argument value"
     )
+  })
+
+  it("Build batch actions ", async () => {
+    const [actionOne] = mcNexus.buildAction({
+      type: "erc20SpendingLimit",
+      data: {
+        chainIds: [network.chain.id],
+        contractAddress: zeroAddress,
+        maxLimit: 1n
+      }
+    })
+
+    const [actionTwo] = mcNexus.buildAction({
+      type: "erc20SpendingLimit",
+      data: {
+        chainIds: [network.chain.id],
+        contractAddress: zeroAddress,
+        maxLimit: 1n
+      }
+    })
+
+    const batchedActions = mcNexus.buildAction({
+      type: "batch",
+      data: {
+        actions: [actionOne, actionTwo]
+      }
+    })
+
+    expect(batchedActions.length).to.be.eq(1)
+  })
+
+  it("Build batch actions should fail if one action is attempted for batching", async () => {
+    const [actionOne] = mcNexus.buildAction({
+      type: "erc20SpendingLimit",
+      data: {
+        chainIds: [network.chain.id],
+        contractAddress: zeroAddress,
+        maxLimit: 1n
+      }
+    })
+
+    expect(() =>
+      mcNexus.buildAction({
+        type: "batch",
+        data: {
+          actions: [actionOne]
+        }
+      })
+    ).to.throw("A Batch must contain at least 2 actions")
   })
 })
