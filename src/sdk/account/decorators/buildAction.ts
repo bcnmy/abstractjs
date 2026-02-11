@@ -6,12 +6,12 @@ import {
   isAddress,
   toFunctionSelector
 } from "viem"
+import type { ActionData, PolicyData } from "../../constants"
 import {
   type BuildActionPolicyTypes,
   buildActionPolicy,
   calldataArgument
 } from "./buildActionPolicy"
-import { ActionData, PolicyData } from "../../constants"
 
 export type SessionAction = {
   actions: ActionData[]

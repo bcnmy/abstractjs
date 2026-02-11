@@ -14,7 +14,7 @@ import {
 } from "./decorators/build"
 import {
   type BuildActionTypes,
-  SessionAction,
+  type SessionAction,
   buildAction as buildActionDecorator
 } from "./decorators/buildAction"
 import {

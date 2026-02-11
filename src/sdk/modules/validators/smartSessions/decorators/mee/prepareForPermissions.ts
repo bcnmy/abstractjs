@@ -19,6 +19,7 @@ import {
   resolveInstructions,
   toBytes32
 } from "../../../../../account"
+import type { SessionAction } from "../../../../../account/decorators/buildAction"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
 import { isModuleInstalled } from "../../../../../clients/decorators/erc7579/isModuleInstalled"
@@ -42,7 +43,7 @@ import type {
 } from "../../../../../clients/decorators/mee/getQuote"
 import {
   type AccountType,
-  ActionData,
+  type ActionData,
   DEFAULT_MEE_VERSION,
   NexusImplementationAbi,
   SMART_SESSIONS_ADDRESS,
@@ -64,7 +65,6 @@ import type { AnyData } from "../../../../utils/Types"
 import type { Validator } from "../../../toValidator"
 import { generateSalt } from "../../Helpers"
 import type { GrantPermissionResponse } from "../grantPermission"
-import { SessionAction } from "../../../../../account/decorators/buildAction"
 
 // omit instructions, feeToken and trigger to make them optional
 export type PrepareForPermissionsParams = Omit<

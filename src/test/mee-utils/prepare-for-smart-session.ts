@@ -16,6 +16,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
+import type { SessionAction } from "../../sdk/account/decorators/buildAction"
 import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
@@ -28,7 +29,6 @@ import type { GrantPermissionResponse } from "../../sdk/modules/validators/smart
 import { TESTNET_RPC_URLS } from "../testSetup"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../testTokens"
 import { generateNewTestnetMcNexusAccountAndMeeClient } from "./generate-mc-nexus"
-import { SessionAction } from "../../sdk/account/decorators/buildAction"
 
 export const prepareForTestnetSmartSessions = async (
   paymentChain: Chain,
@@ -39,7 +39,7 @@ export const prepareForTestnetSmartSessions = async (
   enableSessionType: "legacy" | "new" = "new",
   use7702Auth = false,
   customActions?: SessionAction[],
-  batchActions: boolean = true
+  batchActions = true
 ) => {
   // New orchestrator account
   const { mcNexus, meeClient } =
