@@ -16,17 +16,12 @@
  * Testnets: Base Sepolia, Optimism Sepolia
  */
 
-import {
-  http,
-  type PublicClient,
-  createWalletClient,
-  erc20Abi
-} from "viem"
+import { http, type PublicClient, createWalletClient, erc20Abi } from "viem"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  TEST_BLOCK_CONFIRMATIONS,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../../test/testSetup"
 import { testnetMcTestUSDC } from "../../../test/testTokens"
@@ -87,9 +82,7 @@ function buildGetFusionQuoteParams(
     }
   ]
 
-  const simulation = options.simulated
-    ? { simulate: true as const }
-    : undefined
+  const simulation = options.simulated ? { simulate: true as const } : undefined
 
   if (options.sponsored) {
     return {
