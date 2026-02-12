@@ -1,12 +1,13 @@
 /**
- * Permit Mode (Fusion) Integration Tests
+ * On-Chain Mode (Fusion) Integration Tests
  *
- * Tests multi-chain permit fusion supertransactions via meeClient across MEE versions.
- * Permit mode characteristics:
+ * Tests multi-chain on-chain fusion supertransactions via meeClient across MEE versions.
+ * On-chain mode characteristics:
  * - Uses meeClient.getFusionQuote() + meeClient.executeFusionQuote() flow
- * - getFusionQuote auto-detects permit-enabled trigger token and returns permit quote
+ * - getFusionQuote auto-detects non-permit token and selects on-chain mode
  * - No smart account pre-funding needed (fusion pulls funds from EOA)
- * - STX instructions transfer the same ERC20 token used for payment
+ * - STX instructions transfer the same ERC20 token used in the trigger
+ * - Uses testnetMcTestUSDC (no permit) instead of testnetMcTestUSDCP (permit)
  *
  * Test matrix (12 cases total):
  * - 3 versions x 4 combinations of sponsorship (yes/no) and simulation (yes/no)
@@ -15,10 +16,20 @@
  * Testnets: Base Sepolia, Optimism Sepolia
  */
 
+import {
+  http,
+  type PublicClient,
+  createWalletClient,
+  erc20Abi
+} from "viem"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
-import { testnetMcTestUSDCP } from "../../../test/testTokens"
+import {
+  TEST_BLOCK_CONFIRMATIONS,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../../test/testSetup"
+import { testnetMcTestUSDC } from "../../../test/testTokens"
 import {
   getDefaultMEENetworkUrl,
   getDefaultMeeGasTank
@@ -45,7 +56,7 @@ const modes = [
   { sponsored: true, simulated: true, label: "sponsored, simulated" }
 ]
 
-const TRIGGER_TOKEN_ADDRESS = testnetMcTestUSDCP.addressOn(baseSepolia.id)
+const TRIGGER_TOKEN_ADDRESS = testnetMcTestUSDC.addressOn(baseSepolia.id)
 const TRIGGER_AMOUNT = 1n
 
 function buildGetFusionQuoteParams(
@@ -76,7 +87,9 @@ function buildGetFusionQuoteParams(
     }
   ]
 
-  const simulation = options.simulated ? { simulate: true as const } : undefined
+  const simulation = options.simulated
+    ? { simulate: true as const }
+    : undefined
 
   if (options.sponsored) {
     return {
@@ -102,7 +115,7 @@ function buildGetFusionQuoteParams(
   }
 }
 
-describe("Permit Mode (Fusion) Integration Tests", () => {
+describe("On-Chain Mode (Fusion) Integration Tests", () => {
   const accountConfigMap = new Map<MEEVersion, AccountConfig>()
 
   beforeAll(async () => {
@@ -121,7 +134,7 @@ describe("Permit Mode (Fusion) Integration Tests", () => {
     const getConfig = () => accountConfigMap.get(version)
 
     test.each(modes)(
-      "permit fusion STX ($label)",
+      "onchain fusion STX ($label)",
       async ({ sponsored, simulated }) => {
         const config = getConfig()
         if (!config) return // skip versions not set up
@@ -137,7 +150,25 @@ describe("Permit Mode (Fusion) Integration Tests", () => {
 
         expect(fusionQuote).toBeDefined()
         expect("trigger" in fusionQuote).toBe(true)
-        expect(fusionQuote.quote.quoteType).toBe("permit")
+        expect(fusionQuote.quote.quoteType).toBe("onchain")
+
+        // Mimic the trigger: manually transfer ERC20 from EOA to smart account
+        // (in production, the on-chain trigger contract handles this)
+        const deployment = mcNexus.deploymentOn(baseSepolia.id, true)
+        const walletClient = createWalletClient({
+          account: eoaAccount,
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+        })
+        const publicClient = deployment.client as PublicClient
+
+        const transferHash = await walletClient.writeContract({
+          address: TRIGGER_TOKEN_ADDRESS,
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [deployment.address, TRIGGER_AMOUNT]
+        })
+        await publicClient.waitForTransactionReceipt({ hash: transferHash })
 
         const { hash } = await meeClient.executeFusionQuote({ fusionQuote })
         expect(hash).toBeDefined()
