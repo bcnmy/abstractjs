@@ -71,16 +71,16 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   [MEEVersion.V3_0_0]: {
     version: MEEVersion.V3_0_0,
     accountId: "biconomy.nexus.1.3.1",
-    factoryAddress: "0x4D7388f02Bcb7D821721396604013EFe1E2208Df",
-    bootStrapAddress: "0x1B2C5Ab64baC9080d2F03FdeC976D74D83EAEbc9",
-    implementationAddress: "0xDAa7a527005796a2264a793B421185B529FCdcCb",
-    validatorAddress: "0xB84c71f1DEB50f5c3c318029D5F5990BB0520F49", // Stx Validator Address
+    factoryAddress: "0x68281B4BBEfdFA714D779509499f18198105B389",
+    bootStrapAddress: "0x1D07902D2a50160f323E3C64cf2F9a7a2bf3E2eD",
+    implementationAddress: "0xCaa65948B2Bf9124128E57b9567D8bb8b919D333",
+    validatorAddress: "0xa179c6e2f1aF68C06121036845CC3ED30deA878B", // Stx Validator Address
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
     composabilityVersion: ComposabilityVersion.V1_1_0,
     submodules: {
       noStxModeVerifier: "0x03043fA2956d7729708E5871006E4D60f077BF9C",
-      SimpleModeSubmodule: "0x632C89b0611fE86B56720Ba447e0eBD52173C12e",
+      SimpleModeSubmodule: "0x3dE6bd76AB8B77fc9E4b79168EaF2253Ff1F0410",
       PermitSubmodule: "0x2eb293D700dEeaF923f6ff32741921C270Ff339b",
       TxSubmodule: "0xBFf2aE0e9B523E8192A77c0Dd610b490eC45A08c",
       SafeAccountSubmodule: "0x7FF806b27D736aC13fC37B74Bf6950a2A88bC79F",

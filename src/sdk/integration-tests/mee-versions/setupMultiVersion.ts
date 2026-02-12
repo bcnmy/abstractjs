@@ -33,6 +33,7 @@ export type SetupMultiVersionOptions = {
   versions?: MEEVersion[] // Optional: specify which versions to create
   chains?: Chain[] // Optional: specify which chains
   index?: bigint // Optional: account index (default: 1n)
+  apiKey?: string // Optional: API key for the MEE client
 }
 
 const MIN_BALANCE = parseEther("0.0005")
@@ -83,9 +84,10 @@ export async function setupMultiVersionAccounts(
 ): Promise<AccountConfig[]> {
   const {
     eoaAccount,
-    versions = [MEEVersion.V2_0_0, MEEVersion.V2_2_1, MEEVersion.V3_0_0],
+    versions = [/*MEEVersion.V2_0_0, */ MEEVersion.V2_2_1, MEEVersion.V3_0_0],
     chains = [baseSepolia, optimismSepolia],
-    index = 1n
+    index = 1n,
+    apiKey
   } = options
 
   const accountConfigs: AccountConfig[] = []
@@ -103,7 +105,10 @@ export async function setupMultiVersionAccounts(
 
     await fundAccountsIfNeeded(mcNexus, eoaAccount)
 
-    const meeClient = await createMeeClient({ account: mcNexus })
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      ...(apiKey && { apiKey })
+    })
 
     const versionName =
       version === MEEVersion.V2_0_0
