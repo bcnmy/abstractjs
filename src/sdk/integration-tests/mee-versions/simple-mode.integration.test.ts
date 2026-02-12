@@ -25,17 +25,17 @@ import {
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
-  TEST_BLOCK_CONFIRMATIONS,
   TESTNET_RPC_URLS,
+  TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
-import { MEEVersion } from "../../constants"
 import {
   getDefaultMEENetworkUrl,
   getDefaultMeeGasTank
 } from "../../clients/createMeeClient"
 import type { GetQuoteParams } from "../../clients/decorators/mee/getQuote"
+import { MEEVersion } from "../../constants"
 import type { AccountConfig } from "./setupMultiVersion"
 import { setupMultiVersionAccounts } from "./setupMultiVersion"
 
