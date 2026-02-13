@@ -1,7 +1,10 @@
 import type { Address, Prettify, PublicClient } from "viem"
 import { erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
-import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
+import {
+  type FeeTokenInfo,
+  addPaymentPolicyForActions
+} from "../../../../../clients/decorators/mee"
 import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
 import type { MEEVersionConfig } from "../../../../../account"
@@ -13,7 +16,6 @@ import {
   grantPermissionPersonalSign,
   grantPermissionTypedDataSign
 } from "../grantPermission"
-import { addPaymentPolicyForActions } from "./prepareForPermissions"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]

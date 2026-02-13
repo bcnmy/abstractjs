@@ -317,6 +317,26 @@ export type EIP7702AuthorizationParams = OneOf<
     }
 >
 
+/** FeeToken or Sponsorship params */
+export type FeePaymentParams = OneOf<
+  | {
+      /**
+       * Token to be used for paying transaction fees
+       */
+      feeToken: FeeTokenInfo
+    }
+  | {
+      /**
+       * sponsorship flag to enable the sponsored super transactions.
+       */
+      sponsorship: true
+      /**
+       * Sponsorship options for overrides
+       */
+      sponsorshipOptions?: SponsorshipOptionsParams
+    }
+>
+
 /**
  * Parameters required for requesting a quote from the MEE service
  */
@@ -419,24 +439,7 @@ export type GetQuoteParams = SupertransactionLike & {
         eoa?: Address
       }
   > &
-  OneOf<
-    | {
-        /**
-         * Token to be used for paying transaction fees
-         */
-        feeToken: FeeTokenInfo
-      }
-    | {
-        /**
-         * sponsorship flag to enable the sponsored super transactions.
-         */
-        sponsorship: true
-        /**
-         * Sponsorship options for overrides
-         */
-        sponsorshipOptions?: SponsorshipOptionsParams
-      }
-  > &
+  FeePaymentParams &
   EIP7702AuthorizationParams
 
 export type MeeAuthorization = {

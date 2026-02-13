@@ -13,33 +13,9 @@ import {
   toFunctionSelector,
   zeroAddress
 } from "viem"
-import {
-  batchInstructions,
-  resolveInstructions,
-  toBytes32
-} from "../../../../../account"
-import type { SessionAction } from "../../../../../account/decorators/buildAction"
-import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
-import { toInstallWithSafeSenderCalls } from "../../../../../clients/decorators/erc7579/installModule"
-import { isModuleInstalled } from "../../../../../clients/decorators/erc7579/isModuleInstalled"
-import { parseModuleTypeId } from "../../../../../clients/decorators/erc7579/supportsModule"
-import type {
-  CustomOverride,
-  ExecuteSignedQuotePayload,
-  FeePaymentParams,
-  FeeTokenInfo,
-  Instruction,
-  Trigger
-} from "../../../../../clients/decorators/mee"
-import { execute } from "../../../../../clients/decorators/mee/execute"
-import { executeFusionQuote } from "../../../../../clients/decorators/mee/executeFusionQuote"
-import type { GetFusionQuoteParams } from "../../../../../clients/decorators/mee/getFusionQuote"
-import { getFusionQuote } from "../../../../../clients/decorators/mee/getFusionQuote"
-import type {
-  EIP7702AuthorizationParams,
-  GetQuoteParams,
-  InstructionLike
-} from "../../../../../clients/decorators/mee/getQuote"
+import { batchInstructions, resolveInstructions } from "../../../account"
+import type { SessionAction } from "../../../account/decorators/buildAction"
+import { toBytes32 } from "../../../account/utils/Utils"
 import {
   type AccountType,
   type ActionData,
@@ -54,55 +30,102 @@ import {
   getPermissionId,
   getSpendingLimitsPolicy,
   getSudoPolicy
-} from "../../../../../constants"
+} from "../../../constants"
 import {
+  type AnyData,
   ConditionType,
   createCondition,
+  generateSalt,
   getMEEVersion
-} from "../../../../utils"
-import type { AnyData } from "../../../../utils/Types"
-import type { Validator } from "../../../toValidator"
-import { generateSalt } from "../../Helpers"
-import type { GrantPermissionResponse } from "../grantPermission"
+} from "../../../modules"
+import type { GrantMeePermissionPayload } from "../../../modules/validators/smartSessions/decorators/mee/grantMeePermission"
+import type { BaseMeeClient } from "../../createMeeClient"
+import { toInstallWithSafeSenderCalls } from "../erc7579/installModule"
+import { isModuleInstalled } from "../erc7579/isModuleInstalled"
+import { parseModuleTypeId } from "../erc7579/supportsModule"
+import getFusionQuote, { type GetFusionQuoteParams } from "./getFusionQuote"
+import type { GetOnChainQuotePayload } from "./getOnChainQuote"
+import type { GetPermitQuotePayload } from "./getPermitQuote"
+import getQuote, {
+  type CustomOverride,
+  type EIP7702AuthorizationParams,
+  type FeePaymentParams,
+  type FeeTokenInfo,
+  type GetQuoteParams,
+  type GetQuotePayload,
+  type Instruction,
+  type InstructionLike
+} from "./getQuote"
+import type { QuoteType } from "./getQuoteType"
+import type { Trigger } from "./signPermitQuote"
 
-// omit instructions, feeToken and trigger to make them optional
-export type PrepareForPermissionsParams = Omit<
-  GetFusionQuoteParams,
-  "instructions" | "feeToken" | "trigger"
-> & {
-  smartSessionsValidator: Validator
-  additionalInstructions?: InstructionLike[]
-  trigger?: Trigger
+export type SessionDetail = GrantMeePermissionPayload[0]
+
+export type EnableSession = {
+  redeemer: Address
+  actions: SessionAction[]
   maxPaymentAmount?: bigint
-  redeemer?: Address
-  actions?: SessionAction[]
   batchActions?: boolean
-} & FeePaymentParams &
+}
+
+export type PrepareEnableSessionResponse = {
+  instructions: Instruction[]
+  sessionDetails: SessionDetail
+}
+
+export type BaseSessionQuoteResponse = {
+  quoteType: QuoteType
+  quote: GetQuotePayload | GetPermitQuotePayload | GetOnChainQuotePayload
+}
+
+interface GetSessionQuoteResponseConfig {
+  PREPARE:
+    | (BaseSessionQuoteResponse & {
+        sessionDetails?: SessionDetail[]
+      })
+    | undefined
+  USE: BaseSessionQuoteResponse
+}
+
+export type SessionQuoteMode = keyof GetSessionQuoteResponseConfig
+
+type BaseQuoteParamsForSessionQuote = Omit<
+  GetQuoteParams,
+  "smartSessionMode" | "instructions"
+> & { instructions?: InstructionLike[] } & FeePaymentParams &
   EIP7702AuthorizationParams
 
-/**
- * Returns undefined if there was no need to prepare the superTx
- */
-export type PrepareForPermissionsPayload =
-  | (ExecuteSignedQuotePayload & {
-      sessionDetails?: GrantPermissionResponse
-    })
-  | undefined
+type BaseSessionQuoteParams = BaseQuoteParamsForSessionQuote & {
+  trigger?: Trigger
+}
 
-export const prepareForPermissions = async (
+type SessionQuotePrepareParams = BaseSessionQuoteParams & {
+  mode: "PREPARE"
+  smartSessionValidatorAddress?: Address
+  enableSession?: EnableSession
+}
+
+type SessionQuoteUseParams = BaseSessionQuoteParams & {
+  mode: "USE"
+  sessionDetails: SessionDetail[]
+}
+
+export type GetSessionQuoteParams =
+  | SessionQuotePrepareParams
+  | SessionQuoteUseParams
+
+// Conditional return type based on the actual parameter type
+export type GetSessionQuoteResponse<T extends GetSessionQuoteParams> =
+  T extends SessionQuotePrepareParams
+    ? GetSessionQuoteResponseConfig["PREPARE"]
+    : T extends SessionQuoteUseParams
+      ? GetSessionQuoteResponseConfig["USE"]
+      : never
+
+export const prepareInstallSessionValidator = async (
   client: BaseMeeClient,
-  parameters: PrepareForPermissionsParams
-): Promise<PrepareForPermissionsPayload> => {
-  const {
-    // By default, actions are batched
-    batchActions = true
-  } = parameters
-
-  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
-    chainId: chain.id,
-    version
-  }))
-
+  smartSessionValidatorAddress = SMART_SESSIONS_ADDRESS
+): Promise<Instruction[]> => {
   // check if we need to install the module on any of the chains
   // it includes the deployment of the account on the chains if needed
   // because knowing the account is not deployed on a chain, means the module has not been installed on that chain
@@ -121,9 +144,9 @@ export const prepareForPermissions = async (
         ? await isModuleInstalled(undefined as AnyData, {
             account: deployment,
             module: {
-              address: parameters.smartSessionsValidator.address,
+              address: smartSessionValidatorAddress,
               initData: "0x",
-              type: parameters.smartSessionsValidator.type
+              type: "validator"
             }
           })
         : false
@@ -133,9 +156,9 @@ export const prepareForPermissions = async (
         const installModuleCalls = await toInstallWithSafeSenderCalls(
           deployment,
           {
-            address: parameters.smartSessionsValidator.address,
+            address: smartSessionValidatorAddress,
             initData: "0x",
-            type: parameters.smartSessionsValidator.type
+            type: "validator"
           }
         )
 
@@ -173,129 +196,23 @@ export const prepareForPermissions = async (
     })
   )
 
-  const hasInstallInstructions = installInstructions.some(Boolean)
-
-  const enableSessionsInstructions: Instruction[] = []
-  const sessionDetailsArray: GrantPermissionResponse = []
-
-  if (parameters.redeemer && parameters.actions) {
-    const enableSessionsInstructionsWithSessionDetails =
-      await prepareEnableSessions(client, parameters)
-
-    for (const {
-      instructions,
-      sessionDetails
-    } of enableSessionsInstructionsWithSessionDetails) {
-      sessionDetailsArray.push(sessionDetails)
-      enableSessionsInstructions.push(...instructions)
-    }
-  }
-
-  const hasEnableSessionsInstructions = enableSessionsInstructions.length > 0
-
-  if (
-    hasInstallInstructions ||
-    hasEnableSessionsInstructions ||
-    parameters.additionalInstructions ||
-    parameters.trigger
-  ) {
-    const validInstallInstructions = installInstructions.filter(
-      Boolean
-    ) as InstructionLike[]
-
-    const unresolvedInstructions = parameters.additionalInstructions
-      ? [...validInstallInstructions, ...parameters.additionalInstructions]
-      : validInstallInstructions
-
-    const resolvedInstructions = await resolveInstructions(
-      unresolvedInstructions
-    )
-
-    let partiallyBatchedInstructions: Instruction[] = []
-
-    let batch: boolean = parameters.batch || true
-
-    if (batch) {
-      // By default, fund nexus, install SS module, deploy nexus will be batched
-      // Even if we wanted to unbatch actions into multiple userOps ? The additional instructions and install SS will be
-      // optimistically batched while the enable permissions actions will be unbatched down the line
-      partiallyBatchedInstructions = await batchInstructions({
-        accountAddress: client.account.signer.address,
-        meeVersions,
-        instructions: [...resolvedInstructions]
-      })
-    } else {
-      // If batch: false is explicitly defined ? Everything will be unbatched.
-      partiallyBatchedInstructions = [...resolvedInstructions]
-    }
-
-    const instructions = hasEnableSessionsInstructions
-      ? [...partiallyBatchedInstructions, ...enableSessionsInstructions]
-      : partiallyBatchedInstructions
-
-    // proceed to execute the superTx that
-    // will deploy accounts/install modules and enable sessions
-
-    // If batch actions is disabled and there are enable permission inxs ? The quote will be unbatched
-    const isUnbatchActionsRequired =
-      !batchActions && hasEnableSessionsInstructions
-
-    batch = isUnbatchActionsRequired ? false : batch
-
-    // check if trigger is provided => use fusion flow
-    if (parameters.trigger) {
-      const quote = await getFusionQuote(client, {
-        ...parameters,
-        instructions,
-        batch,
-        trigger: parameters.trigger,
-        simulation: parameters.simulation
-      } as GetFusionQuoteParams)
-
-      const { hash } = await executeFusionQuote(client, {
-        fusionQuote: quote,
-        companionAccount: client.account
-      })
-
-      return {
-        hash,
-        ...(sessionDetailsArray.length > 0
-          ? { sessionDetails: sessionDetailsArray }
-          : {})
-      }
-    }
-
-    // otherwise use standard flow
-    const { hash } = await execute(client, {
-      ...parameters,
-      batch,
-      instructions,
-      simulation: parameters.simulation
-    } as GetQuoteParams)
-
-    return {
-      hash,
-      ...(sessionDetailsArray.length > 0
-        ? { sessionDetails: sessionDetailsArray }
-        : {})
-    }
-  }
-
-  return undefined
+  return installInstructions.filter((inx) => inx !== undefined).flat()
 }
 
 export const prepareEnableSessions = async (
   client: BaseMeeClient,
-  parameters: PrepareForPermissionsParams
-) => {
+  enableSession: EnableSession,
+  // Default to official smart session validator address
+  smartSessionValidatorAddress = SMART_SESSIONS_ADDRESS,
+  feeToken?: FeeTokenInfo
+): Promise<PrepareEnableSessionResponse[]> => {
   const {
-    feeToken,
     redeemer,
     maxPaymentAmount: maxPaymentAmount_,
     actions: sessionActions,
     // Actions are batched by default
     batchActions = true
-  } = parameters
+  } = enableSession
 
   if (!redeemer) {
     throw new Error("Smart session redeemer address is missing")
@@ -404,8 +321,8 @@ export const prepareEnableSessions = async (
           functionAbi: NexusImplementationAbi,
           functionName: "isModuleInstalled",
           args: [
-            parseModuleTypeId(parameters.smartSessionsValidator.type),
-            getAddress(parameters.smartSessionsValidator.address),
+            parseModuleTypeId("validator"),
+            getAddress(smartSessionValidatorAddress),
             "0x"
           ],
           value: true,
@@ -430,7 +347,7 @@ export const prepareEnableSessions = async (
               conditions: [condition],
               simulationOverrides: {
                 customOverrides: getCustomStateOverridesForIsModuleInstalled(
-                  parameters.smartSessionsValidator.address,
+                  smartSessionValidatorAddress,
                   deployment.address,
                   chainId
                 )
@@ -644,4 +561,230 @@ export const addPaymentPolicyForActions = (
   }
 
   return updatedSessionActionsForChain
+}
+
+/**
+ * Gets a session quote for a set of actions and session configuration using the MEE service.
+ * This method prepares a quote either for PREPARE mode (for deploying or enabling a session)
+ * or for USE mode (for using an already enabled session).
+ *
+ * @param client - The base MEE client instance
+ * @param parameters - The parameters for the quote request, including instructions, session configuration, mode, and optionally trigger details and fee token
+ * @returns Promise resolving to a GetSessionQuoteResponse containing the quote payload and optional session details
+ *
+ * @example
+ * ```typescript
+ * const sessionQuote = await getSessionQuote(meeClient, {
+ *   mode: "PREPARE",
+ *   smartSessionValidatorAddress: '0x',
+ *   enableSession: sessionEnableDetails,
+ *   feeToken: { address: ..., chainId: ... },
+ *   instructions: [ ... ],
+ * });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * const sessionQuote = await getSessionQuote(meeClient, {
+ *   mode: "USE",
+ *   sessionDetails: [ ... ],
+ *   feeToken: { address: ..., chainId: ... },
+ *   instructions: [ ... ]
+ * });
+ * ```
+ */
+export const getSessionQuote = async <T extends GetSessionQuoteParams>(
+  client: BaseMeeClient,
+  parameters: T
+): Promise<GetSessionQuoteResponse<T>> => {
+  const {
+    mode,
+    // By default, emtpy instructions
+    instructions = [],
+    feeToken,
+    trigger,
+    // By default the batch will be true
+    batch = true
+  } = parameters
+
+  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
+  if (mode === "PREPARE") {
+    const { smartSessionValidatorAddress, enableSession } = parameters
+
+    const batchActions: boolean = enableSession?.batchActions || true
+
+    // Prepare session validator install instructions
+    const sessionValidatorInstallInstructions =
+      await prepareInstallSessionValidator(client, smartSessionValidatorAddress)
+
+    const hasSessionValidatorInstallInstructions =
+      sessionValidatorInstallInstructions.length > 0
+
+    // Prepare session enable instructions
+    const enableSessionsInstructions: Instruction[] = []
+    const sessionDetailsArray: SessionDetail[] = []
+
+    if (enableSession) {
+      const enableSessionsInstructionsWithSessionDetails =
+        await prepareEnableSessions(
+          client,
+          enableSession,
+          smartSessionValidatorAddress,
+          feeToken
+        )
+
+      for (const {
+        instructions,
+        sessionDetails
+      } of enableSessionsInstructionsWithSessionDetails) {
+        sessionDetailsArray.push(sessionDetails)
+        enableSessionsInstructions.push(...instructions)
+      }
+    }
+
+    const hasEnableSessionsInstructions = enableSessionsInstructions.length > 0
+
+    // Additional instructions
+    const hasInstructions = instructions.length > 0
+
+    // Funding instructions
+    const hasFundingRequest = !!trigger
+
+    if (
+      !hasSessionValidatorInstallInstructions &&
+      !hasEnableSessionsInstructions &&
+      !hasInstructions &&
+      !hasFundingRequest
+    ) {
+      return undefined as GetSessionQuoteResponse<T>
+    }
+
+    const resolvedInstructions = await resolveInstructions([
+      ...sessionValidatorInstallInstructions,
+      ...instructions
+    ])
+
+    let partiallyBatchedInstructions: Instruction[] = []
+
+    if (batch) {
+      // By default, fund nexus, install SS module, deploy nexus will be batched
+      // Even if we wanted to unbatch actions into multiple userOps ? The additional instructions and install SS will be
+      // optimistically batched while the enable permissions actions will be unbatched down the line
+      partiallyBatchedInstructions = await batchInstructions({
+        accountAddress: client.account.signer.address,
+        meeVersions,
+        instructions: [...resolvedInstructions]
+      })
+    } else {
+      // If batch: false is explicitly defined ? Everything will be unbatched.
+      partiallyBatchedInstructions = [...resolvedInstructions]
+    }
+
+    const finalInstructions = [
+      ...partiallyBatchedInstructions,
+      ...enableSessionsInstructions
+    ]
+
+    // If batch actions is disabled and there are enable permission inxs ? The quote will be unbatched
+    const isUnbatchActionsRequired =
+      !batchActions && hasEnableSessionsInstructions
+
+    const {
+      // Avoiding these params to be passed forward
+      mode: _avoidOne,
+      smartSessionValidatorAddress: _avoidTwo,
+      enableSession: _avoidThree,
+      ...rest
+    } = parameters
+
+    if (hasFundingRequest) {
+      // Safe and Delegated smart accounts are not supported here
+      const fusionQuote = await getFusionQuote(client, {
+        ...rest,
+        trigger: rest.trigger!,
+        feePayer: undefined,
+        batch: isUnbatchActionsRequired ? false : batch,
+        instructions: finalInstructions
+      } as GetFusionQuoteParams)
+
+      return {
+        quoteType: fusionQuote.quote.quoteType!,
+        quote: fusionQuote,
+        ...(sessionDetailsArray.length > 0
+          ? { sessionDetails: sessionDetailsArray }
+          : {})
+      } as GetSessionQuoteResponse<T>
+    }
+
+    const quote = await getQuote(client, {
+      ...rest,
+      batch: isUnbatchActionsRequired ? false : batch,
+      instructions: finalInstructions
+    } as GetQuoteParams)
+
+    return {
+      quoteType: quote.quoteType!,
+      quote,
+      ...(sessionDetailsArray.length > 0
+        ? { sessionDetails: sessionDetailsArray }
+        : {})
+    } as GetSessionQuoteResponse<T>
+  }
+
+  const {
+    sessionDetails,
+    // Avoiding these params to be passed forward
+    mode: _avoidOne,
+    ...rest
+  } = parameters
+
+  const isEnableAndUseSessionDetailExists = sessionDetails.some(
+    (sessionDetailsInfo) =>
+      sessionDetailsInfo.mode === SmartSessionMode.UNSAFE_ENABLE
+  )
+
+  if (isEnableAndUseSessionDetailExists) {
+    throw new Error(
+      "ENABLE_AND_USE mode is not supported, session details is invalid."
+    )
+  }
+
+  const quote = await getQuote(client, {
+    ...rest,
+    moduleAddress: SMART_SESSIONS_ADDRESS,
+    shortEncodingSuperTxn: true,
+    // The mode will be always USE.
+    smartSessionMode: "USE",
+    sessionDetails
+  } as GetQuoteParams)
+
+  const startIndex = quote.paymentInfo.sponsored ? 1 : 0
+
+  for (const [index, userOp] of quote.userOps.entries()) {
+    // Skip payment userOp if sponsored
+    if (index < startIndex) continue
+
+    const relevantIndex = sessionDetails.findIndex(
+      ({ enableSessionData }) =>
+        enableSessionData?.enableSession?.sessionToEnable?.chainId ===
+        BigInt(userOp.chainId)
+    )
+
+    if (relevantIndex === -1) {
+      throw new Error(
+        `No session details found for chainId ${userOp.chainId}`
+      )
+    }
+
+    userOp.sessionDetails = sessionDetails[relevantIndex]
+  }
+
+  return {
+    quoteType: quote.quoteType!,
+    quote
+  } as GetSessionQuoteResponse<T>
 }
