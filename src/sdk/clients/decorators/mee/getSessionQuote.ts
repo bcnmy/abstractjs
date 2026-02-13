@@ -230,7 +230,7 @@ export const prepareEnableSessions = async (
     }
   }
 
-  let maxPaymentAmount = maxPaymentAmount_ || 0n
+  let maxPaymentAmount = maxPaymentAmount_ ?? 0n
 
   if (feeToken && !maxPaymentAmount_) {
     const { publicClient } = client.account.deploymentOn(feeToken.chainId, true)
@@ -615,7 +615,7 @@ export const getSessionQuote = async <T extends GetSessionQuoteParams>(
   if (mode === "PREPARE") {
     const { smartSessionValidatorAddress, enableSession } = parameters
 
-    const batchActions: boolean = enableSession?.batchActions || true
+    const batchActions: boolean = enableSession?.batchActions ?? true
 
     // Prepare session validator install instructions
     const sessionValidatorInstallInstructions =

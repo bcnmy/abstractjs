@@ -197,7 +197,7 @@ const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
         ),
         offset: configuredRule.calldataOffset,
         ref: toBytes32(configuredRule.comparisonValue),
-        isLimited: configuredRule.isLimited || false,
+        isLimited: configuredRule.isLimited ?? false,
         usage: configuredRule.usage || { limit: BigInt(0), used: BigInt(0) }
       })
     } else {

@@ -1,4 +1,3 @@
-import { getSudoPolicy, getUniversalActionPolicy } from "@rhinestone/module-sdk"
 import type {
   Account,
   Address,
@@ -23,7 +22,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import { prepareForTestnetSmartSessions } from "../../../../test/mee-utils/prepare-for-smart-session"
 import {
   TESTNET_RPC_URLS,
@@ -52,7 +51,13 @@ import type {
   BaseGetSupertransactionReceiptPayload,
   FeeTokenInfo
 } from "../../../clients/decorators/mee"
-import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
+import {
+  DEFAULT_MEE_VERSION,
+  MEEVersion,
+  getSudoPolicy,
+  getUniversalActionPolicy,
+  testnetMcUSDC
+} from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { getMEEVersion } from "../../utils"
 import type { AnyData } from "../../utils/Types"
@@ -76,7 +81,7 @@ enum ParamCondition {
   IN_RANGE = 6
 }
 
-describe("mee.multichainSmartSessions", () => {
+describe("mee.multichainSmartSessions (Legacy)", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 

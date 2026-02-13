@@ -115,7 +115,7 @@ export const prepareForPermissions = async (
 
     let partiallyBatchedInstructions: Instruction[] = []
 
-    let batch: boolean = parameters.batch || true
+    let batch: boolean = parameters.batch ?? true
 
     if (batch) {
       // By default, fund nexus, install SS module, deploy nexus will be batched

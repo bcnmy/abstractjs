@@ -28,7 +28,7 @@ export const isPermitTokenInfo = async (
   if (supportedFeeTokenInfo.supportedFeeToken) {
     // detect w/o extra RPCcall
     permitEnabled =
-      supportedFeeTokenInfo.supportedFeeToken.permitEnabled || false
+      supportedFeeTokenInfo.supportedFeeToken.permitEnabled ?? false
   } else {
     const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
     // detect via RPCcall
