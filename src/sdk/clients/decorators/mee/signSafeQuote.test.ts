@@ -12,7 +12,8 @@ import {
   createWalletClient,
   decodeFunctionData,
   erc20Abi,
-  zeroAddress
+  zeroAddress,
+  encodePacked
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -36,12 +37,13 @@ import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
-import signSafeQuote, {
+import  {
   getDataToPrepareSafeTransaction,
   getMockSafeSigner,
   validateSafeDeployment
 } from "./signSafeQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
+import { getMeeVersionsForQuote } from "./signQuote"
 
 describe("getMockSafeSigner", () => {
   const testSafeAddress =
@@ -557,12 +559,6 @@ describe("mee.signSafeQuote", () => {
 
       await baseSepoliaPublicClient.waitForTransactionReceipt({ hash: txHash })
       console.log("Safe deployed on Base Sepolia at:", predictedSafeAddress)
-    } else {
-      /*
-      console.log(
-        "Safe already deployed on Base Sepolia at:",
-        predictedSafeAddress
-      ) */
     }
 
     safeAddress = predictedSafeAddress
@@ -611,13 +607,6 @@ describe("mee.signSafeQuote", () => {
         hash: txHashOpSepolia
       })
       console.log("Safe deployed on OP Sepolia at:", predictedSafeAddress)
-    } else {
-      /*
-      console.log(
-        "Safe already deployed on OP Sepolia at:",
-        predictedSafeAddress
-      )
-      */
     }
 
     // Re-initialize protocol kit with the deployed Safe address
@@ -643,14 +632,18 @@ describe("mee.signSafeQuote", () => {
         {
           chain: baseSepolia,
           transport: http(baseSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V2_3_0)
+          version: getMEEVersion(MEEVersion.V3_0_0)
         },
         {
           chain: optimismSepolia,
           transport: http(opSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V2_3_0)
+          version: getMEEVersion(MEEVersion.V3_0_0)
         }
-      ]
+      ],
+      defaultModuleParameters: {
+        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules?.SafeAccountSubmodule as Address,
+        ownershipData: encodePacked(["address"], [safeAddress])
+      }
     })
 
     meeClient = await createMeeClient({
@@ -658,11 +651,7 @@ describe("mee.signSafeQuote", () => {
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
-    const nexusAddressOnBaseSepolia = mcNexus.addressOn(baseSepolia.id, true)
     const nexusAddressOnOpSepolia = mcNexus.addressOn(optimismSepolia.id, true)
-
-    //console.log("Nexus address on Base Sepolia:", nexusAddressOnBaseSepolia)
-    //console.log("Nexus address on OP Sepolia:", nexusAddressOnOpSepolia)
 
     // Step 3: Fund Safe with testnet USDCP token on Base Sepolia
     const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
@@ -702,14 +691,7 @@ describe("mee.signSafeQuote", () => {
         hash: transferHash
       })
       console.log("Safe funded with USDCP on Base Sepolia")
-    } else {
-      /*
-      console.log(
-        "Safe already has sufficient USDCP balance on Base Sepolia:",
-        safeBalance
-      )
-      */
-    }
+    } 
 
     // Step 4: Fund Nexus orchestrator with USDCP on OP Sepolia
     // (since there's no trigger on OP Sepolia, we need to fund it manually)
@@ -751,14 +733,6 @@ describe("mee.signSafeQuote", () => {
       await opSepoliaPublicClient.waitForTransactionReceipt({
         hash: transferHash
       })
-      //console.log("Nexus orchestrator funded with USDCP on OP Sepolia")
-    } else {
-      /*
-      console.log(
-        "Nexus orchestrator already has sufficient USDCP balance on OP Sepolia:",
-        nexusBalanceOnOpSepolia
-      )
-      */
     }
   })
 
@@ -815,6 +789,8 @@ describe("mee.signSafeQuote", () => {
     expect(safeQuote.quote.hash).toBeDefined()
     expect(safeQuote.trigger).toBeDefined()
 
+    //console.log("Safe quote:", safeQuote)
+
     // Step 2: Get data to prepare Safe transaction
     const safeTxnDataPartial = getDataToPrepareSafeTransaction(
       meeClient,
@@ -825,13 +801,6 @@ describe("mee.signSafeQuote", () => {
     expect(safeTxnDataPartial).toBeDefined()
     expect(safeTxnDataPartial.to).toBeDefined()
     expect(safeTxnDataPartial.data).toBeDefined()
-
-    /*
-    console.log("Safe transaction data prepared:", {
-      to: safeTxnDataPartial.to,
-      data: safeTxnDataPartial.data
-    })
-    */
 
     // Step 3: Create Safe transaction using protocol-kit
     const safeTransaction = await protocolKitOwner1.createTransaction({
@@ -859,11 +828,15 @@ describe("mee.signSafeQuote", () => {
     expect(signedSafeQuote.signature).toBeDefined()
     expect(signedSafeQuote.signature.startsWith("0x177eee04")).toBe(true) // SAFE_SA_PREFIX
 
-    console.log("Quote hash:", signedSafeQuote.hash)
-
+    const meeVersions = getMeeVersionsForQuote(mcNexus, signedSafeQuote.userOps)
+    
     // Step 7: Execute the signed quote
     const { hash } = await executeSignedQuote(meeClient, {
-      signedQuote: signedSafeQuote
+      signedQuote: { 
+        ...signedSafeQuote,
+        meeVersions,
+        isEIP712TrustedSponsorshipSupported: true
+      }
     })
 
     // Step 8: Wait for the supertransaction receipt

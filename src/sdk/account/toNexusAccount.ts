@@ -49,7 +49,7 @@ import {
   type ComposableCall,
   InputParamType
 } from "../modules/utils/composabilityCalls"
-import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
+import { toDefaultModule, type ToDefaultModuleParameters } from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
@@ -161,6 +161,8 @@ export type ToNexusSmartAccountParameters = {
   fallbacks?: Array<GenericModuleConfig>
   /** Optional init data */
   initData?: Hex
+  /** Optional default module parameters */
+  defaultModuleParameters?: Partial<ToDefaultModuleParameters>
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -477,7 +479,8 @@ export const toNexusAccount = async (
     hook: customHook,
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
-    initData: customInitData
+    initData: customInitData,
+    defaultModuleParameters
   } = parameters
 
   // if the MEE version is not older than 2.0.0 ? SDK checks for cancun support and throw error if not
@@ -557,7 +560,7 @@ export const toNexusAccount = async (
     customValidators
   )
 
-  const defaultValidator = toDefaultModule({ walletClient, meeConfig })
+  const defaultValidator = toDefaultModule( {...defaultModuleParameters, walletClient, meeConfig })
 
   // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
   let module = validators[0] || defaultValidator
