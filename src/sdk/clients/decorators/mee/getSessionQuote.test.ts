@@ -12,9 +12,9 @@ import {
   http,
   createPublicClient,
   createWalletClient,
+  getAbiItem,
   parseUnits,
-  toFunctionSelector,
-  getAbiItem
+  toFunctionSelector
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -25,9 +25,13 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import { type NetworkConfig } from "../../../../test/testUtils"
+import type { NetworkConfig } from "../../../../test/testUtils"
+import type { SessionAction } from "../../../account/decorators/buildAction"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { createMeeClient, MeeClient } from "../../../clients/createMeeClient"
+import {
+  type MeeClient,
+  createMeeClient
+} from "../../../clients/createMeeClient"
 import type {
   BaseGetSupertransactionReceiptPayload,
   FeeTokenInfo,
@@ -37,7 +41,6 @@ import type {
 } from "../../../clients/decorators/mee"
 import { CounterAbi, DEFAULT_MEE_VERSION } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
-import { SessionAction } from "../../../account/decorators/buildAction"
 
 describe("mee.getSessionQuote", () => {
   let network: NetworkConfig
