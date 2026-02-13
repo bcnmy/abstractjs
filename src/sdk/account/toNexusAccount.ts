@@ -69,7 +69,9 @@ import { toInitData } from "./utils"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
-  SIG_TYPE_NO_STX_VANILLA_1271_EOA
+  SIG_TYPE_NO_STX_VANILLA_1271_EOA,
+  SIG_TYPE_NO_STX_VANILLA_1271_P256,
+  SIG_TYPE_NO_STX_P256
 } from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
@@ -85,6 +87,7 @@ import {
   isVersionOlder
 } from "./utils/getVersion"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
+import { isP256Signer } from "./utils/toP256Signer"
 import { toWalletClient } from "./utils/toWalletClient"
 
 export type GetInitDataParams = {
@@ -549,6 +552,15 @@ export const toNexusAccount = async (
 
   const signer = await toSigner({ signer: _signer })
 
+  if (
+    isP256Signer(signer) &&
+    isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)
+  ) {
+    throw new Error(
+      `P256 signers require MEE version ${MEEVersion.V3_0_0} or higher. Current version: ${meeConfig.version}`
+    )
+  }
+
   const walletClient = toWalletClient({
     unresolvedSigner: _signer,
     resolvedSigner: signer,
@@ -855,8 +867,19 @@ export const toNexusAccount = async (
             (await getEip712Domain()).domain
           )
 
+    let wrappedSignature = signature
+    if (
+      !isVersionOlder(meeConfig.version, MEEVersion.V3_0_0) &&
+      isP256Signer(signer)
+    ) {
+      wrappedSignature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_P256, signature]
+      )
+    }
+
     // Prepend module address to signature (Nexus-specific wrapper)
-    return encodePacked(["address", "bytes"], [module.module, signature])
+    return encodePacked(["address", "bytes"], [module.module, wrappedSignature])
   }
 
   /**
@@ -879,8 +902,19 @@ export const toNexusAccount = async (
             (await getEip712Domain()).domain
           )
 
+    let wrappedSignature = signature
+    if (
+      !isVersionOlder(meeConfig.version, MEEVersion.V3_0_0) &&
+      isP256Signer(signer)
+    ) {
+      wrappedSignature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_P256, signature]
+      )
+    }
+
     // Prepend module address to signature (Nexus-specific wrapper)
-    return encodePacked(["address", "bytes"], [module.module, signature])
+    return encodePacked(["address", "bytes"], [module.module, wrappedSignature])
   }
 
   /**
@@ -899,10 +933,10 @@ export const toNexusAccount = async (
     // we want vanilla 1271 flow by using the according mode,
     // otherwise 7739 will be used instead in the smart contract
     if (!isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)) {
-      signature = encodePacked(
-        ["bytes4", "bytes"],
-        [SIG_TYPE_NO_STX_VANILLA_1271_EOA, signature]
-      )
+      const prefix = isP256Signer(signer)
+        ? SIG_TYPE_NO_STX_VANILLA_1271_P256
+        : SIG_TYPE_NO_STX_VANILLA_1271_EOA
+      signature = encodePacked(["bytes4", "bytes"], [prefix, signature])
     }
 
     return encodePacked(["address", "bytes"], [module.module, signature])

@@ -599,10 +599,7 @@ describe("modules.toStxValidator", () => {
       // Extract x and y from the public key
       const x = `0x${p256Signer.publicKey.slice(4, 68)}` as Hex
       const y = `0x${p256Signer.publicKey.slice(68, 132)}` as Hex
-      const expectedOwnershipData = encodePacked(
-        ["bytes32", "bytes32"],
-        [x, y]
-      )
+      const expectedOwnershipData = encodePacked(["bytes32", "bytes32"], [x, y])
 
       const expectedInitData = encodePacked(
         ["address", "uint8", "bytes"],
@@ -670,6 +667,53 @@ describe("modules.toStxValidator", () => {
       )
 
       expect(validator.initData).toBe(expectedInitData)
+    })
+
+    test("should produce valid P256 signatures with signMessage", async () => {
+      const validator = toStxValidator({
+        walletClient: p256WalletClient,
+        signer: p256Signer,
+        module: zeroAddress,
+        submodules: {
+          P256StatelessValidator: mockP256StatelessValidator
+        }
+      })
+
+      const signature = await validator.signMessage("test message")
+      // Should be 64-byte P256 signature (r || s): 128 hex chars + "0x" = 130
+      expect(signature.length).toBe(130)
+      expect(signature).toMatch(/^0x[0-9a-f]{128}$/i)
+    })
+
+    test("should produce valid P256 signatures with signTypedData", async () => {
+      const validator = toStxValidator({
+        walletClient: p256WalletClient,
+        signer: p256Signer,
+        module: zeroAddress,
+        submodules: {
+          P256StatelessValidator: mockP256StatelessValidator
+        }
+      })
+
+      const typedData = {
+        domain: {
+          name: "Test",
+          version: "1",
+          chainId: 1
+        },
+        types: {
+          Message: [{ name: "content", type: "string" }]
+        },
+        primaryType: "Message" as const,
+        message: {
+          content: "Hello"
+        }
+      }
+
+      const signature = await validator.signTypedData(typedData)
+      // Should be 64-byte P256 signature (r || s): 128 hex chars + "0x" = 130
+      expect(signature.length).toBe(130)
+      expect(signature).toMatch(/^0x[0-9a-f]{128}$/i)
     })
   })
 })

@@ -14,6 +14,15 @@ import { toAccount } from "viem/accounts"
 export type P256Signer = LocalAccount<"p256">
 
 /**
+ * Checks if a signer is a P256 signer.
+ * @param signer - The signer to check
+ * @returns True if the signer is a P256 signer
+ */
+export const isP256Signer = (
+  signer: { source?: string } | undefined
+): boolean => signer?.source === "p256"
+
+/**
  * Creates a P256 (secp256r1) signer that implements viem's LocalAccount interface.
  *
  * The signer produces raw P256 ECDSA signatures (r || s, 64 bytes) suitable for
@@ -48,9 +57,7 @@ export const toP256Signer = (privateKey: Hex): P256Signer => {
 
   const account = toAccount({
     address,
-    async signMessage({
-      message
-    }: { message: SignableMessage }): Promise<Hex> {
+    async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
       const hash = hashMessage(message)
       return signP256(hash)
     },

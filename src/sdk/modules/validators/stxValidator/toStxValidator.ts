@@ -28,10 +28,7 @@ export type StxSignatureType =
   | "on-chain"
   | "safe-sa"
 
-export type ToStxValidatorParameters = Omit<
-  ValidatorParameters,
-  "initData"
-> & {
+export type ToStxValidatorParameters = Omit<ValidatorParameters, "initData"> & {
   walletClient: WalletClient
   signatureType?: StxSignatureType
   superTxEntriesCount?: number
