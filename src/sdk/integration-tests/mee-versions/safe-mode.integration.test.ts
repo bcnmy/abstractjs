@@ -27,8 +27,8 @@ import {
   type Transport,
   createPublicClient,
   createWalletClient,
-  erc20Abi,
-  encodePacked
+  encodePacked,
+  erc20Abi
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
@@ -111,9 +111,7 @@ function buildGetSafeQuoteParams(
     })
   ]
 
-  const simulation = options.simulated
-    ? { simulate: true as const }
-    : undefined
+  const simulation = options.simulated ? { simulate: true as const } : undefined
 
   if (options.sponsored) {
     return {
@@ -255,8 +253,7 @@ describe("Safe Account Mode Integration Tests", () => {
         predictedSafe
       })
 
-      const predictedAddressOpSepolia =
-        await protocolKitOpSepolia.getAddress()
+      const predictedAddressOpSepolia = await protocolKitOpSepolia.getAddress()
       if (predictedAddressOpSepolia !== predictedSafeAddress) {
         throw new Error(
           `Safe address mismatch! Base Sepolia: ${predictedSafeAddress}, OP Sepolia: ${predictedAddressOpSepolia}`
@@ -309,7 +306,8 @@ describe("Safe Account Mode Integration Tests", () => {
         }
       ],
       defaultModuleParameters: {
-        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules?.SafeAccountSubmodule as Address,
+        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules
+          ?.SafeAccountSubmodule as Address,
         ownershipData: encodePacked(["address"], [safeAddress])
       }
     })

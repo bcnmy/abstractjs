@@ -131,7 +131,8 @@ export const formatSignedSafeQuotePayload = (
 
   // Encode the SafeTxnData struct for the signature
   const encodedSafeTxnData = encodeAbiParameters(
-    [ { name: "safeAccount", type: "address" },
+    [
+      { name: "safeAccount", type: "address" },
       {
         name: "safeTxnData",
         type: "tuple",

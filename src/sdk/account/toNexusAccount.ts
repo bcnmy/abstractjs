@@ -49,7 +49,10 @@ import {
   type ComposableCall,
   InputParamType
 } from "../modules/utils/composabilityCalls"
-import { toDefaultModule, type ToDefaultModuleParameters } from "../modules/validators/default/toDefaultModule"
+import {
+  type ToDefaultModuleParameters,
+  toDefaultModule
+} from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
@@ -560,7 +563,11 @@ export const toNexusAccount = async (
     customValidators
   )
 
-  const defaultValidator = toDefaultModule( {...defaultModuleParameters, walletClient, meeConfig })
+  const defaultValidator = toDefaultModule({
+    ...defaultModuleParameters,
+    walletClient,
+    meeConfig
+  })
 
   // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
   let module = validators[0] || defaultValidator

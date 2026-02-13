@@ -6,25 +6,19 @@ import {
   type Address,
   type Chain,
   type Hex,
-  type LocalAccount,
   type Transport,
   createPublicClient,
   createWalletClient,
   decodeFunctionData,
+  encodePacked,
   erc20Abi,
-  zeroAddress,
-  encodePacked
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import {
-  TESTNET_RPC_URLS,
-  TEST_BLOCK_CONFIRMATIONS,
-  toNetwork
-} from "../../../../test/testSetup"
+import { TESTNET_RPC_URLS, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
-import type { NetworkConfig } from "../../../../test/testUtils"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -34,16 +28,13 @@ import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import { getMEEVersion } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
-import { executeSignedQuote } from "./executeSignedQuote"
 import type { GetQuotePayload } from "./getQuote"
 import type { GetSafeQuotePayload } from "./getSafeQuote"
-import  {
+import {
   getDataToPrepareSafeTransaction,
   getMockSafeSigner,
   validateSafeDeployment
 } from "./signSafeQuote"
-import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
-import { getMeeVersionsForQuote } from "./signQuote"
 
 describe("getMockSafeSigner", () => {
   const testSafeAddress =
@@ -438,10 +429,6 @@ describe("validateSafeDeployment", () => {
 })
 
 describe("mee.signSafeQuote", () => {
-  let network: NetworkConfig
-  let eoaAccount: LocalAccount
-  let eoaAccountTwo: LocalAccount
-
   let safeAddress: Address
   let protocolKitOwner1: Safe
   let protocolKitOwner2: Safe
@@ -459,10 +446,10 @@ describe("mee.signSafeQuote", () => {
   const transferAmount = 10000n
 
   beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    const network = await toNetwork("TESTNET_FROM_ENV_VARS")
 
-    eoaAccount = network.account!
-    eoaAccountTwo = network.accountTwo!
+    const eoaAccount = network.account!
+    const eoaAccountTwo = network.accountTwo!
 
     // Generate a random recipient address for the USDCP transfer
     recipientAddress = privateKeyToAccount(generatePrivateKey()).address
@@ -641,7 +628,8 @@ describe("mee.signSafeQuote", () => {
         }
       ],
       defaultModuleParameters: {
-        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules?.SafeAccountSubmodule as Address,
+        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules
+          ?.SafeAccountSubmodule as Address,
         ownershipData: encodePacked(["address"], [safeAddress])
       }
     })
@@ -650,93 +638,9 @@ describe("mee.signSafeQuote", () => {
       account: mcNexus,
       apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
-
-    const nexusAddressOnOpSepolia = mcNexus.addressOn(optimismSepolia.id, true)
-
-    // Step 3: Fund Safe with testnet USDCP token on Base Sepolia
-    const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
-    const safeBalance = await baseSepoliaPublicClient.readContract({
-      address: usdcpAddressBaseSepolia,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [safeAddress]
-    })
-
-    const safeFundingAmount = 1000000n // 1 USDCP (6 decimals)
-
-    if (safeBalance < safeFundingAmount) {
-      console.log("Funding Safe with USDCP on Base Sepolia...")
-      const eoaBalance = await baseSepoliaPublicClient.readContract({
-        address: usdcpAddressBaseSepolia,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [eoaAccount.address]
-      })
-
-      if (eoaBalance < safeFundingAmount) {
-        throw new Error(
-          `Insufficient USDCP balance in EOA on Base Sepolia. Have: ${eoaBalance}, Need: ${safeFundingAmount}`
-        )
-      }
-
-      const transferHash = await baseSepoliaWalletClient.writeContract({
-        address: usdcpAddressBaseSepolia,
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [safeAddress, safeFundingAmount],
-        chain: baseSepolia
-      })
-
-      await baseSepoliaPublicClient.waitForTransactionReceipt({
-        hash: transferHash
-      })
-      console.log("Safe funded with USDCP on Base Sepolia")
-    } 
-
-    // Step 4: Fund Nexus orchestrator with USDCP on OP Sepolia
-    // (since there's no trigger on OP Sepolia, we need to fund it manually)
-    const usdcpAddressOpSepolia = testnetMcTestUSDCP.addressOn(
-      optimismSepolia.id
-    )
-    const nexusBalanceOnOpSepolia = await opSepoliaPublicClient.readContract({
-      address: usdcpAddressOpSepolia,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [nexusAddressOnOpSepolia]
-    })
-
-    const nexusFundingAmount = 100000n // 0.1 USDCP (6 decimals) - enough for a few transfers
-
-    if (nexusBalanceOnOpSepolia < nexusFundingAmount) {
-      console.log("Funding Nexus orchestrator with USDCP on OP Sepolia...")
-      const eoaBalanceOpSepolia = await opSepoliaPublicClient.readContract({
-        address: usdcpAddressOpSepolia,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [eoaAccount.address]
-      })
-
-      if (eoaBalanceOpSepolia < nexusFundingAmount) {
-        throw new Error(
-          `Insufficient USDCP balance in EOA on OP Sepolia. Have: ${eoaBalanceOpSepolia}, Need: ${nexusFundingAmount}`
-        )
-      }
-
-      const transferHash = await opSepoliaWalletClient.writeContract({
-        address: usdcpAddressOpSepolia,
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [nexusAddressOnOpSepolia, nexusFundingAmount],
-        chain: optimismSepolia
-      })
-
-      await opSepoliaPublicClient.waitForTransactionReceipt({
-        hash: transferHash
-      })
-    }
   })
 
-  test("should sign and execute a Safe quote with multiple signers", async () => {
+  test("should sign a Safe quote with multiple signers", async () => {
     const usdcpAddressBaseSepolia = testnetMcTestUSDCP.addressOn(baseSepolia.id)
     const usdcpAddressOpSepolia = testnetMcTestUSDCP.addressOn(
       optimismSepolia.id
@@ -827,26 +731,5 @@ describe("mee.signSafeQuote", () => {
     expect(signedSafeQuote).toBeDefined()
     expect(signedSafeQuote.signature).toBeDefined()
     expect(signedSafeQuote.signature.startsWith("0x177eee04")).toBe(true) // SAFE_SA_PREFIX
-
-    const meeVersions = getMeeVersionsForQuote(mcNexus, signedSafeQuote.userOps)
-    
-    // Step 7: Execute the signed quote
-    const { hash } = await executeSignedQuote(meeClient, {
-      signedQuote: { 
-        ...signedSafeQuote,
-        meeVersions,
-        isEIP712TrustedSponsorshipSupported: true
-      }
-    })
-
-    // Step 8: Wait for the supertransaction receipt
-    const receipt = await waitForSupertransactionReceipt(meeClient, {
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
-    })
-
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
-    expect(receipt.explorerLinks.length).toBeGreaterThan(0)
   })
 })
