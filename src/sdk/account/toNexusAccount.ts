@@ -566,6 +566,7 @@ export const toNexusAccount = async (
   const defaultValidator = toDefaultModule({
     ...defaultModuleParameters,
     walletClient,
+    signer,
     meeConfig
   })
 

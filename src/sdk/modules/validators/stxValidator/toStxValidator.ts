@@ -30,7 +30,7 @@ export type StxSignatureType =
 
 export type ToStxValidatorParameters = Omit<
   ValidatorParameters,
-  "initData" | "signer"
+  "initData"
 > & {
   walletClient: WalletClient
   signatureType?: StxSignatureType
@@ -38,13 +38,15 @@ export type ToStxValidatorParameters = Omit<
 
   /**
    * Address of the stateless validator to use
-   * Defaults to EoaStatelessValidator from submodules if not provided
+   * Defaults to P256StatelessValidator or EoaStatelessValidator from submodules
+   * based on the signer type
    */
   statelessValidator?: Address
 
   /**
    * Ownership data for the stateless validator
    * For EOA: auto-generated as encodePacked(['address'], [walletClient.account.address])
+   * For P256: auto-generated as x || y (64 bytes) from the signer's publicKey
    * For other validators: must be provided by user as pre-encoded bytes
    */
   ownershipData?: Hex
@@ -88,21 +90,38 @@ export const toStxValidator = (
   // Prepare initData and data using encodePacked
   let initData: Hex
 
-  // Get stateless validator address (default to EoaStatelessValidator)
+  // Detect P256 signer
+  const isP256 = parameters.signer?.source === "p256"
+
+  // Get stateless validator address (auto-select based on signer type)
   const statelessValidator =
     parameters.statelessValidator ??
-    parameters.submodules?.EoaStatelessValidator
+    (isP256
+      ? parameters.submodules?.P256StatelessValidator
+      : parameters.submodules?.EoaStatelessValidator)
 
-  if (!statelessValidator) {
-    throw new Error(
-      "Either provide statelessValidator or submodules with EoaStatelessValidator address"
+  // Prepare ownershipData based on signer type
+  let ownershipData: Hex
+  if (parameters.ownershipData) {
+    ownershipData = parameters.ownershipData
+  } else if (isP256 && parameters.signer) {
+    // P256: ownership data is x || y (64 bytes) extracted from uncompressed public key (04 || x || y)
+    const x = `0x${parameters.signer.publicKey.slice(4, 68)}` as Hex
+    const y = `0x${parameters.signer.publicKey.slice(68, 132)}` as Hex
+    ownershipData = encodePacked(["bytes32", "bytes32"], [x, y])
+  } else {
+    // EOA: ownership data is the account address
+    ownershipData = encodePacked(
+      ["address"],
+      [parameters.walletClient.account.address]
     )
   }
 
-  // Prepare ownershipData
-  const ownershipData =
-    parameters.ownershipData ??
-    encodePacked(["address"], [parameters.walletClient.account.address])
+  if (!statelessValidator) {
+    throw new Error(
+      "Either provide statelessValidator or submodules with a StatelessValidator address"
+    )
+  }
 
   // Prepare safe senders
   const safeSenders = parameters.safeSenders ?? []
@@ -223,11 +242,15 @@ export const toStxValidator = (
     })
   }
 
+  // Destructure signer out to avoid OneOf<{signer} | {walletClient}> type conflict
+  // The walletClient already wraps the signer, so signing works correctly through it
+  const { signer: _signer, ...restParameters } = parameters
+
   return toValidator({
     initData,
     data,
     deInitData: "0x",
-    ...parameters,
+    ...restParameters,
     address: parameters.module,
     module: parameters.module,
     type: "validator",

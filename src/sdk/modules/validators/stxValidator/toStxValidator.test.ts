@@ -1,14 +1,20 @@
+import { p256 } from "@noble/curves/nist.js"
 import {
   http,
   type Address,
+  type Hex,
   type WalletClient,
   createWalletClient,
   encodePacked,
+  hexToBytes,
+  toHex,
   zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { sepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
+import { toP256Signer } from "../../../account/utils/toP256Signer"
+import { toWalletClient } from "../../../account/utils/toWalletClient"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type StxSignatureType,
@@ -125,7 +131,7 @@ describe("modules.toStxValidator", () => {
           module: zeroAddress
         })
       ).toThrow(
-        "Either provide statelessValidator or submodules with EoaStatelessValidator address"
+        "Either provide statelessValidator or submodules with a StatelessValidator address"
       )
     })
 
@@ -500,6 +506,170 @@ describe("modules.toStxValidator", () => {
       expect(validator).toHaveProperty("signTypedDataErc7739")
       expect(validator).toHaveProperty("getStubSignature")
       expect(validator).toHaveProperty("erc7739VersionSupported")
+    })
+  })
+
+  describe("P256 Signer Support", () => {
+    let p256Signer: ReturnType<typeof toP256Signer>
+    let p256WalletClient: WalletClient
+    const mockP256StatelessValidator: Address =
+      "0xAAbbCCDdeEFf00112233445566778899aABBcCDd"
+    const p256TestPrivateKey: Hex =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+    beforeAll(() => {
+      p256Signer = toP256Signer(p256TestPrivateKey)
+      p256WalletClient = toWalletClient({
+        unresolvedSigner: p256Signer,
+        resolvedSigner: p256Signer,
+        chain: sepolia,
+        transport: http()
+      })
+    })
+
+    test("toP256Signer should create signer with correct source", () => {
+      expect(p256Signer.source).toBe("p256")
+      expect(p256Signer.type).toBe("local")
+      expect(p256Signer.address).toBeDefined()
+    })
+
+    test("toP256Signer should have uncompressed public key (04 || x || y)", () => {
+      // Uncompressed P256 public key: 04 prefix + 32 bytes x + 32 bytes y = 65 bytes = 132 hex chars + "0x" prefix
+      expect(p256Signer.publicKey).toMatch(/^0x04/)
+      expect(p256Signer.publicKey.length).toBe(132)
+    })
+
+    test("toP256Signer signMessage should return 64-byte P256 signature", async () => {
+      const sig = await p256Signer.signMessage({ message: "hello" })
+      // 64 bytes = 128 hex chars + "0x" prefix = 130
+      expect(sig.length).toBe(130)
+    })
+
+    test("toP256Signer signature should be verifiable with noble p256", async () => {
+      const sig = await p256Signer.signMessage({ message: "hello" })
+      const sigBytes = hexToBytes(sig)
+      const publicKeyBytes = hexToBytes(p256Signer.publicKey)
+
+      // Reconstruct the hash that was signed (personal sign)
+      const { hashMessage } = await import("viem")
+      const hash = hashMessage("hello")
+      const hashBytes = hexToBytes(hash)
+
+      const isValid = p256.verify(sigBytes, hashBytes, publicKeyBytes, {
+        prehash: false
+      })
+      expect(isValid).toBe(true)
+    })
+
+    test("should auto-select P256StatelessValidator when signer is P256", () => {
+      const validator = toStxValidator({
+        walletClient: p256WalletClient,
+        signer: p256Signer,
+        module: zeroAddress,
+        submodules: {
+          EoaStatelessValidator: mockEoaStatelessValidator,
+          P256StatelessValidator: mockP256StatelessValidator
+        }
+      })
+
+      expect(validator).toBeDefined()
+      // initData should contain P256StatelessValidator address, not EOA
+      expect(
+        validator.initData
+          .toLowerCase()
+          .includes(mockP256StatelessValidator.slice(2).toLowerCase())
+      ).toBe(true)
+      expect(
+        validator.initData
+          .toLowerCase()
+          .includes(mockEoaStatelessValidator.slice(2).toLowerCase())
+      ).toBe(false)
+    })
+
+    test("should encode P256 ownership data as x || y (64 bytes)", () => {
+      const validator = toStxValidator({
+        walletClient: p256WalletClient,
+        signer: p256Signer,
+        module: zeroAddress,
+        submodules: {
+          P256StatelessValidator: mockP256StatelessValidator
+        }
+      })
+
+      // Extract x and y from the public key
+      const x = `0x${p256Signer.publicKey.slice(4, 68)}` as Hex
+      const y = `0x${p256Signer.publicKey.slice(68, 132)}` as Hex
+      const expectedOwnershipData = encodePacked(
+        ["bytes32", "bytes32"],
+        [x, y]
+      )
+
+      const expectedInitData = encodePacked(
+        ["address", "uint8", "bytes"],
+        [mockP256StatelessValidator, 0, expectedOwnershipData]
+      )
+
+      expect(validator.initData).toBe(expectedInitData)
+    })
+
+    test("should use EoaStatelessValidator when signer is not P256", () => {
+      const validator = toStxValidator({
+        walletClient,
+        module: zeroAddress,
+        submodules: {
+          EoaStatelessValidator: mockEoaStatelessValidator,
+          P256StatelessValidator: mockP256StatelessValidator
+        }
+      })
+
+      // initData should contain EOA validator, not P256
+      expect(
+        validator.initData
+          .toLowerCase()
+          .includes(mockEoaStatelessValidator.slice(2).toLowerCase())
+      ).toBe(true)
+    })
+
+    test("should respect custom statelessValidator even with P256 signer", () => {
+      const customValidator =
+        "0x9999999999999999999999999999999999999999" as Address
+      const validator = toStxValidator({
+        walletClient: p256WalletClient,
+        signer: p256Signer,
+        module: zeroAddress,
+        statelessValidator: customValidator,
+        submodules: {
+          P256StatelessValidator: mockP256StatelessValidator
+        }
+      })
+
+      // Should use custom validator, not auto-selected one
+      expect(
+        validator.initData
+          .toLowerCase()
+          .includes(customValidator.slice(2).toLowerCase())
+      ).toBe(true)
+    })
+
+    test("should respect custom ownershipData even with P256 signer", () => {
+      const customOwnershipData = encodePacked(
+        ["address"],
+        ["0x1111111111111111111111111111111111111111"]
+      )
+      const validator = toStxValidator({
+        walletClient: p256WalletClient,
+        signer: p256Signer,
+        module: zeroAddress,
+        statelessValidator: mockP256StatelessValidator,
+        ownershipData: customOwnershipData
+      })
+
+      const expectedInitData = encodePacked(
+        ["address", "uint8", "bytes"],
+        [mockP256StatelessValidator, 0, customOwnershipData]
+      )
+
+      expect(validator.initData).toBe(expectedInitData)
     })
   })
 })
