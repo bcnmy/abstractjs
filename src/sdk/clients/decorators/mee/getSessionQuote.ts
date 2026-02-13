@@ -775,9 +775,7 @@ export const getSessionQuote = async <T extends GetSessionQuoteParams>(
     )
 
     if (relevantIndex === -1) {
-      throw new Error(
-        `No session details found for chainId ${userOp.chainId}`
-      )
+      throw new Error(`No session details found for chainId ${userOp.chainId}`)
     }
 
     userOp.sessionDetails = sessionDetails[relevantIndex]
