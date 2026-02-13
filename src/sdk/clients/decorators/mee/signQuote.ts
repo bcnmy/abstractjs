@@ -1,11 +1,11 @@
 import { type GetEip712DomainReturnType, type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import { SIG_TYPE_SIMPLE_P256 } from "../../../account/utils/Constants"
 import {
   type MeeVersionsWithChainId,
   versionIsAtLeast
 } from "../../../account/utils/getVersion"
 import { isP256Signer } from "../../../account/utils/toP256Signer"
-import { SIG_TYPE_SIMPLE_P256 } from "../../../account/utils/Constants"
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
 import {

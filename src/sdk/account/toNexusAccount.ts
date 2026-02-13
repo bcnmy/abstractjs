@@ -69,9 +69,9 @@ import { toInitData } from "./utils"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
+  SIG_TYPE_NO_STX_P256,
   SIG_TYPE_NO_STX_VANILLA_1271_EOA,
-  SIG_TYPE_NO_STX_VANILLA_1271_P256,
-  SIG_TYPE_NO_STX_P256
+  SIG_TYPE_NO_STX_VANILLA_1271_P256
 } from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
@@ -86,8 +86,8 @@ import {
   type NexusAccountId,
   isVersionOlder
 } from "./utils/getVersion"
-import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { isP256Signer } from "./utils/toP256Signer"
+import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
 
 export type GetInitDataParams = {

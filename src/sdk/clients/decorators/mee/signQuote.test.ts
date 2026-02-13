@@ -1,6 +1,7 @@
 import {
   http,
   type Chain,
+  type Hex,
   type LocalAccount,
   type WalletClient,
   createWalletClient,
@@ -15,7 +16,9 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { SIG_TYPE_SIMPLE_P256 } from "../../../account/utils/Constants"
 import { versionIsAtLeast } from "../../../account/utils/getVersion"
+import { toP256Signer } from "../../../account/utils/toP256Signer"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
@@ -253,5 +256,73 @@ describe("mee.signQuote", () => {
     )
 
     expect(signedQuote.signature).toEqual(manuallySignedQuote.signature)
+  })
+
+  describe("P256 Signer Support", () => {
+    let p256Signer: ReturnType<typeof toP256Signer>
+    let p256McNexus: MultichainSmartAccount
+    let p256MeeClient: MeeClient
+    const p256TestPrivateKey: Hex =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+    beforeAll(async () => {
+      p256Signer = toP256Signer(p256TestPrivateKey)
+
+      p256McNexus = await toMultichainNexusAccount({
+        signer: p256Signer,
+        chainConfigurations: [
+          {
+            chain: chain,
+            transport: http(network.rpcUrl),
+            version: getMEEVersion(MEEVersion.V3_0_0)
+          }
+        ]
+      })
+
+      p256MeeClient = await createMeeClient({
+        account: p256McNexus,
+        apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
+      })
+    })
+
+    test("should sign quote with P256 prefix and correct signature length", async () => {
+      const instructions: Instruction[] = [
+        {
+          calls: [
+            {
+              to: "0x0000000000000000000000000000000000000000",
+              gasLimit: 50000n,
+              value: 0n
+            }
+          ],
+          chainId: chain.id
+        }
+      ]
+
+      const quote = await p256MeeClient.getQuote({
+        instructions: instructions,
+        feeToken: {
+          chainId: chain.id,
+          address: testnetMcTestUSDCP.addressOn(chain.id)
+        }
+      })
+
+      const signedQuote = await signQuote(p256MeeClient, { quote })
+
+      expect(signedQuote).toBeDefined()
+      expect(isHex(signedQuote.signature)).toEqual(true)
+
+      // Verify P256 prefix (0x177eee10)
+      expect(signedQuote.signature.startsWith(SIG_TYPE_SIMPLE_P256)).toBe(true)
+
+      // Total signature length: 4 bytes prefix + 64 bytes P256 sig = 68 bytes
+      // In hex: "0x" + 136 hex chars = 138 chars total
+      expect(signedQuote.signature.length).toBe(138)
+
+      // Extract and verify raw P256 signature (without prefix)
+      const rawSignature = `0x${signedQuote.signature.slice(10)}` as Hex
+      // P256 signature should be 64 bytes (128 hex chars + "0x" = 130)
+      expect(rawSignature.length).toBe(130)
+    })
   })
 })
