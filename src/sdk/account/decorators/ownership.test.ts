@@ -10,7 +10,7 @@ import {
   parseAbi,
   parseUnits
 } from "viem"
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
+import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
 import {
@@ -26,18 +26,11 @@ import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { MEEVersion } from "../../constants"
 import type { AccountConfig } from "../../integration-tests/mee-versions/setupMultiVersion"
 import { setupMultiVersionAccounts } from "../../integration-tests/mee-versions/setupMultiVersion"
-import type { ModularSmartAccount } from "../../modules/utils/Types"
-import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
-import type { MEEVersionConfig } from "../utils/getVersion"
 import { toP256Signer } from "../utils/toP256Signer"
 import {
-  addOwnership,
-  changeOwnership,
-  cleanOwnership,
   deriveOwnershipData,
   filterDeployments,
-  getOwnership,
   resolveStatelessValidator
 } from "./ownership"
 
@@ -87,21 +80,8 @@ async function fundFeeTokenIfNeeded(configs: AccountConfig[]) {
 // Test constants
 // ---------------------------------------------------------------------------
 
-const MOCK_EOA_ADDRESS = "0xdD900Cd95f072eAe396bE0487C2546Bf81d01B48" as Address
-const MOCK_P256_ADDRESS =
-  "0xa7B97e8152aCee107a098F95f691Cd24Cf2f9835" as Address
-const MOCK_SAFE_ADDRESS =
-  "0xa35a716E8e1Df5Fb441bCDdC2357cf9b256AC566" as Address
-const MOCK_VALIDATOR_ADDRESS =
-  "0x8b0Aa5d4c0e06a463bd67CBaF7D00C21c861Ce58" as Address
-const MOCK_CUSTOM_VALIDATOR =
+const CUSTOM_VALIDATOR_ADDRESS =
   "0x1234567890abcdef1234567890abcdef12345678" as Address
-
-const MOCK_SUBMODULES: MEEVersionConfig["submodules"] = {
-  EoaStatelessValidator: MOCK_EOA_ADDRESS,
-  P256StatelessValidator: MOCK_P256_ADDRESS,
-  SafeAccountSubmodule: MOCK_SAFE_ADDRESS
-}
 
 const stxValidatorAbi = parseAbi([
   "function setOwnershipData(address statelessValidatorAddress, bytes ownershipData)",
@@ -110,82 +90,51 @@ const stxValidatorAbi = parseAbi([
 ])
 
 // ---------------------------------------------------------------------------
-// Mock helpers
-// ---------------------------------------------------------------------------
-
-function createMockDeployment(
-  chainId: number,
-  submodules: MEEVersionConfig["submodules"] = MOCK_SUBMODULES,
-  validatorAddress: Address = MOCK_VALIDATOR_ADDRESS,
-  accountAddress: Address = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address
-): ModularSmartAccount {
-  return {
-    client: { chain: { id: chainId } },
-    version: { submodules, validatorAddress },
-    address: accountAddress
-  } as unknown as ModularSmartAccount
-}
-
-function createMockAccount(
-  deployments: ModularSmartAccount[],
-  signerAddress: Address = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address,
-  publicKey?: Hex
-): BaseMultichainSmartAccount {
-  return {
-    deployments,
-    signer: {
-      address: signerAddress,
-      ...(publicKey ? { publicKey, source: "p256" } : {})
-    },
-    deploymentOn: (chainId: number, strictMode?: boolean) => {
-      const dep = deployments.find(
-        (d) => (d.client.chain as any)?.id === chainId
-      )
-      if (!dep && strictMode)
-        throw new Error(`Deployment not found for chainId: ${chainId}`)
-      return dep
-    },
-    addressOn: (chainId: number, strictMode?: boolean) => {
-      const dep = deployments.find(
-        (d) => (d.client.chain as any)?.id === chainId
-      )
-      if (!dep && strictMode)
-        throw new Error(`Deployment not found for chainId: ${chainId}`)
-      return dep?.address
-    }
-  } as unknown as BaseMultichainSmartAccount
-}
-
-// ---------------------------------------------------------------------------
 // UNIT TESTS
 // ---------------------------------------------------------------------------
 
 describe("ownership - unit tests", () => {
+  let mcNexus: MultichainSmartAccount
+
+  beforeAll(async () => {
+    const network = await toNetwork("TESTNET_FROM_ENV_VARS")
+    const configs = await setupMultiVersionAccounts({
+      eoaAccount: network.account!,
+      versions: [MEEVersion.V3_0_0],
+      index: 55n
+    })
+    mcNexus = configs[0].mcNexus
+  })
+
   // -------------------------------------------------------------------------
   // resolveStatelessValidator
   // -------------------------------------------------------------------------
   describe("resolveStatelessValidator", () => {
     test("should resolve 'eoa' to EoaStatelessValidator address", () => {
-      const result = resolveStatelessValidator("eoa", MOCK_SUBMODULES)
-      expect(result).toBe(MOCK_EOA_ADDRESS)
+      const submodules = mcNexus.deployments[0].version.submodules
+      const result = resolveStatelessValidator("eoa", submodules)
+      expect(result).toBe(submodules?.EoaStatelessValidator)
     })
 
     test("should resolve 'p256' to P256StatelessValidator address", () => {
-      const result = resolveStatelessValidator("p256", MOCK_SUBMODULES)
-      expect(result).toBe(MOCK_P256_ADDRESS)
+      const submodules = mcNexus.deployments[0].version.submodules
+      const result = resolveStatelessValidator("p256", submodules)
+      expect(result).toBe(submodules?.P256StatelessValidator)
     })
 
     test("should resolve 'safe' to SafeAccountSubmodule address", () => {
-      const result = resolveStatelessValidator("safe", MOCK_SUBMODULES)
-      expect(result).toBe(MOCK_SAFE_ADDRESS)
+      const submodules = mcNexus.deployments[0].version.submodules
+      const result = resolveStatelessValidator("safe", submodules)
+      expect(result).toBe(submodules?.SafeAccountSubmodule)
     })
 
     test("should pass through a raw address as-is", () => {
+      const submodules = mcNexus.deployments[0].version.submodules
       const result = resolveStatelessValidator(
-        MOCK_CUSTOM_VALIDATOR,
-        MOCK_SUBMODULES
+        CUSTOM_VALIDATOR_ADDRESS,
+        submodules
       )
-      expect(result).toBe(MOCK_CUSTOM_VALIDATOR)
+      expect(result).toBe(CUSTOM_VALIDATOR_ADDRESS)
     })
 
     test("should throw when submodule address is undefined", () => {
@@ -205,17 +154,15 @@ describe("ownership - unit tests", () => {
   // deriveOwnershipData
   // -------------------------------------------------------------------------
   describe("deriveOwnershipData", () => {
-    const eoaAccount = privateKeyToAccount(generatePrivateKey())
-
     test("should derive EOA ownership data from signer address", () => {
-      const result = deriveOwnershipData(eoaAccount, "eoa")
-      const expected = encodePacked(["address"], [eoaAccount.address])
+      const result = deriveOwnershipData(mcNexus.signer, "eoa")
+      const expected = encodePacked(["address"], [mcNexus.signer.address])
       expect(result).toBe(expected)
     })
 
     test("should derive safe ownership data from signer address (same as EOA)", () => {
-      const result = deriveOwnershipData(eoaAccount, "safe")
-      const expected = encodePacked(["address"], [eoaAccount.address])
+      const result = deriveOwnershipData(mcNexus.signer, "safe")
+      const expected = encodePacked(["address"], [mcNexus.signer.address])
       expect(result).toBe(expected)
     })
 
@@ -230,15 +177,15 @@ describe("ownership - unit tests", () => {
 
     test("should use override when provided regardless of type", () => {
       const override = "0xdeadbeef" as Hex
-      const result = deriveOwnershipData(eoaAccount, "eoa", override)
+      const result = deriveOwnershipData(mcNexus.signer, "eoa", override)
       expect(result).toBe(override)
     })
 
     test("should use override for custom validator type", () => {
       const override = "0xcafebabe" as Hex
       const result = deriveOwnershipData(
-        eoaAccount,
-        MOCK_CUSTOM_VALIDATOR,
+        mcNexus.signer,
+        CUSTOM_VALIDATOR_ADDRESS,
         override
       )
       expect(result).toBe(override)
@@ -246,14 +193,17 @@ describe("ownership - unit tests", () => {
 
     test("should throw for custom validator address without ownershipData", () => {
       expect(() =>
-        deriveOwnershipData(eoaAccount, MOCK_CUSTOM_VALIDATOR)
+        deriveOwnershipData(mcNexus.signer, CUSTOM_VALIDATOR_ADDRESS)
       ).toThrow(
         "ownershipData must be provided when using a custom stateless validator address"
       )
     })
 
     test("should throw for P256 signer without publicKey", () => {
-      const signerWithoutPubKey = { ...eoaAccount, publicKey: undefined } as any
+      const signerWithoutPubKey = {
+        ...mcNexus.signer,
+        publicKey: undefined
+      } as any
       expect(() => deriveOwnershipData(signerWithoutPubKey, "p256")).toThrow(
         "P256 signer must have a publicKey to derive ownership data"
       )
@@ -264,39 +214,33 @@ describe("ownership - unit tests", () => {
   // filterDeployments
   // -------------------------------------------------------------------------
   describe("filterDeployments", () => {
-    const deployments = [
-      createMockDeployment(10),
-      createMockDeployment(8453),
-      createMockDeployment(42161)
-    ]
-
     test("should return all deployments when chainIds is undefined", () => {
-      const result = filterDeployments(deployments)
-      expect(result).toHaveLength(3)
+      const result = filterDeployments(mcNexus.deployments)
+      expect(result).toHaveLength(mcNexus.deployments.length)
     })
 
     test("should return all deployments when chainIds is empty", () => {
-      const result = filterDeployments(deployments, [])
-      expect(result).toHaveLength(3)
+      const result = filterDeployments(mcNexus.deployments, [])
+      expect(result).toHaveLength(mcNexus.deployments.length)
     })
 
     test("should filter to requested chainIds", () => {
-      const result = filterDeployments(deployments, [10, 42161])
-      expect(result).toHaveLength(2)
-      expect(result[0].client.chain?.id).toBe(10)
-      expect(result[1].client.chain?.id).toBe(42161)
+      const firstChainId = mcNexus.deployments[0].client.chain!.id
+      const result = filterDeployments(mcNexus.deployments, [firstChainId])
+      expect(result).toHaveLength(1)
+      expect(result[0].client.chain?.id).toBe(firstChainId)
     })
 
     test("should throw when a requested chainId is not in deployments", () => {
-      expect(() => filterDeployments(deployments, [10, 99999])).toThrow(
-        "No deployments found for chainIds: 99999"
-      )
+      expect(() =>
+        filterDeployments(mcNexus.deployments, [99999])
+      ).toThrow("No deployments found for chainIds: 99999")
     })
 
     test("should include available chainIds in error message", () => {
-      expect(() => filterDeployments(deployments, [99999])).toThrow(
-        "Available chainIds:"
-      )
+      expect(() =>
+        filterDeployments(mcNexus.deployments, [99999])
+      ).toThrow("Available chainIds:")
     })
   })
 
@@ -304,42 +248,45 @@ describe("ownership - unit tests", () => {
   // addOwnership
   // -------------------------------------------------------------------------
   describe("addOwnership", () => {
-    const eoaAccount = privateKeyToAccount(generatePrivateKey())
-    const deployments = [createMockDeployment(10), createMockDeployment(8453)]
-    const mockAccount = createMockAccount(deployments, eoaAccount.address)
-
     test("should return one instruction per deployment", () => {
-      const instructions = addOwnership(mockAccount, {
+      const instructions = mcNexus.addOwnership({
         coreOwnershipParams: { ownershipType: "eoa" }
       })
-      expect(instructions).toHaveLength(2)
-      expect(instructions[0].chainId).toBe(10)
-      expect(instructions[1].chainId).toBe(8453)
+      expect(instructions).toHaveLength(mcNexus.deployments.length)
+      expect(instructions[0].chainId).toBe(
+        mcNexus.deployments[0].client.chain!.id
+      )
+      expect(instructions[1].chainId).toBe(
+        mcNexus.deployments[1].client.chain!.id
+      )
     })
 
     test("should target validatorAddress in each instruction", () => {
-      const instructions = addOwnership(mockAccount, {
+      const instructions = mcNexus.addOwnership({
         coreOwnershipParams: { ownershipType: "eoa" }
       })
-      for (const ix of instructions) {
-        expect(ix.calls).toHaveLength(1)
-        expect(ix.calls[0].to).toBe(MOCK_VALIDATOR_ADDRESS)
+      for (let i = 0; i < instructions.length; i++) {
+        expect(instructions[i].calls).toHaveLength(1)
+        expect(instructions[i].calls[0].to).toBe(
+          mcNexus.deployments[i].version.validatorAddress
+        )
       }
     })
 
     test("should encode setOwnershipData calldata correctly", () => {
-      const instructions = addOwnership(mockAccount, {
+      const instructions = mcNexus.addOwnership({
         coreOwnershipParams: { ownershipType: "eoa" }
       })
 
+      const submodules = mcNexus.deployments[0].version.submodules
       const expectedOwnershipData = encodePacked(
         ["address"],
-        [eoaAccount.address]
+        [mcNexus.signer.address]
       )
       const expectedCalldata = encodeFunctionData({
         abi: stxValidatorAbi,
         functionName: "setOwnershipData",
-        args: [MOCK_EOA_ADDRESS, expectedOwnershipData]
+        args: [submodules?.EoaStatelessValidator!, expectedOwnershipData]
       })
 
       expect((instructions[0].calls[0] as { data: Hex }).data).toBe(
@@ -348,24 +295,29 @@ describe("ownership - unit tests", () => {
     })
 
     test("should respect chainIds filter", () => {
-      const instructions = addOwnership(mockAccount, {
-        coreOwnershipParams: { ownershipType: "eoa", chainIds: [8453] }
+      const firstChainId = mcNexus.deployments[0].client.chain!.id
+      const instructions = mcNexus.addOwnership({
+        coreOwnershipParams: {
+          ownershipType: "eoa",
+          chainIds: [firstChainId]
+        }
       })
       expect(instructions).toHaveLength(1)
-      expect(instructions[0].chainId).toBe(8453)
+      expect(instructions[0].chainId).toBe(firstChainId)
     })
 
     test("should use ownershipData override when provided", () => {
       const customData = "0xdeadbeefcafebabe" as Hex
-      const instructions = addOwnership(mockAccount, {
+      const instructions = mcNexus.addOwnership({
         coreOwnershipParams: { ownershipType: "eoa" },
         ownershipData: customData
       })
 
+      const submodules = mcNexus.deployments[0].version.submodules
       const expectedCalldata = encodeFunctionData({
         abi: stxValidatorAbi,
         functionName: "setOwnershipData",
-        args: [MOCK_EOA_ADDRESS, customData]
+        args: [submodules?.EoaStatelessValidator!, customData]
       })
 
       expect((instructions[0].calls[0] as { data: Hex }).data).toBe(
@@ -378,26 +330,23 @@ describe("ownership - unit tests", () => {
   // cleanOwnership
   // -------------------------------------------------------------------------
   describe("cleanOwnership", () => {
-    const eoaAccount = privateKeyToAccount(generatePrivateKey())
-    const deployments = [createMockDeployment(10), createMockDeployment(8453)]
-    const mockAccount = createMockAccount(deployments, eoaAccount.address)
-
     test("should return one instruction per deployment", () => {
-      const instructions = cleanOwnership(mockAccount, {
+      const instructions = mcNexus.cleanOwnership({
         ownershipType: "eoa"
       })
-      expect(instructions).toHaveLength(2)
+      expect(instructions).toHaveLength(mcNexus.deployments.length)
     })
 
     test("should encode cleanOwnershipData calldata correctly", () => {
-      const instructions = cleanOwnership(mockAccount, {
+      const instructions = mcNexus.cleanOwnership({
         ownershipType: "eoa"
       })
 
+      const submodules = mcNexus.deployments[0].version.submodules
       const expectedCalldata = encodeFunctionData({
         abi: stxValidatorAbi,
         functionName: "cleanOwnershipData",
-        args: [MOCK_EOA_ADDRESS]
+        args: [submodules?.EoaStatelessValidator!]
       })
 
       expect((instructions[0].calls[0] as { data: Hex }).data).toBe(
@@ -406,12 +355,13 @@ describe("ownership - unit tests", () => {
     })
 
     test("should respect chainIds filter", () => {
-      const instructions = cleanOwnership(mockAccount, {
+      const firstChainId = mcNexus.deployments[0].client.chain!.id
+      const instructions = mcNexus.cleanOwnership({
         ownershipType: "eoa",
-        chainIds: [10]
+        chainIds: [firstChainId]
       })
       expect(instructions).toHaveLength(1)
-      expect(instructions[0].chainId).toBe(10)
+      expect(instructions[0].chainId).toBe(firstChainId)
     })
   })
 })
@@ -438,7 +388,10 @@ describe("ownership - integration tests", () => {
   const changedP256Signer = toP256Signer(
     "0xbb22222222222222222222222222222222222222222222222222222222222222"
   )
-  const changedP256OwnershipData = deriveOwnershipData(changedP256Signer, "p256")
+  const changedP256OwnershipData = deriveOwnershipData(
+    changedP256Signer,
+    "p256"
+  )
 
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
