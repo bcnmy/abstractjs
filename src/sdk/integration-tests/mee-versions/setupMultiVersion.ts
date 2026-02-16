@@ -9,7 +9,10 @@ import type { LocalAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import type { MultichainSmartAccount } from "../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../account/toMultiChainNexusAccount"
-import { isP256Signer, toP256Signer } from "../../account/utils/toP256Signer"
+import {
+  isP256Signer,
+  type toP256Signer
+} from "../../account/utils/toP256Signer"
 import type { MeeClient } from "../../clients/createMeeClient"
 import { createMeeClient } from "../../clients/createMeeClient"
 import { MEEVersion } from "../../constants"

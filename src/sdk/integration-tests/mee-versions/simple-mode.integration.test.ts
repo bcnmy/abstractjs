@@ -36,8 +36,12 @@ import {
 } from "../../clients/createMeeClient"
 import type { GetQuoteParams } from "../../clients/decorators/mee/getQuote"
 import { MEEVersion } from "../../constants"
+import { toP256Signer } from "../../account/utils/toP256Signer"
 import type { AccountConfig } from "./setupMultiVersion"
-import { setupMultiVersionAccounts } from "./setupMultiVersion"
+import {
+  setupAccountsWithSigner,
+  setupMultiVersionAccounts
+} from "./setupMultiVersion"
 
 const versions = [
   { version: MEEVersion.V2_0_0, label: "V2.0.0" },
@@ -141,6 +145,7 @@ function buildGetQuoteParams(
 
 describe("Simple Mode (Smart-Account) Integration Tests", () => {
   const accountConfigMap = new Map<MEEVersion, AccountConfig>()
+  let p256AccountConfig: AccountConfig
 
   beforeAll(async () => {
     const network = await toNetwork("TESTNET_FROM_ENV_VARS")
@@ -153,6 +158,19 @@ describe("Simple Mode (Smart-Account) Integration Tests", () => {
     for (const config of configs) {
       accountConfigMap.set(config.version, config)
     }
+
+    // Setup P256 account for V3.0.0 only
+    const p256PrivateKey =
+      "0x1234567890123456789012345678901234567890123456789012345678901234"
+    const p256Signer = toP256Signer(p256PrivateKey)
+    const p256Configs = await setupAccountsWithSigner({
+      signer: p256Signer,
+      eoaAccount: network.account!,
+      versions: [MEEVersion.V3_0_0],
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+    await fundFeeTokenIfNeeded(p256Configs)
+    p256AccountConfig = p256Configs[0]
   })
 
   describe.each(versions)("$label", ({ version }) => {
@@ -164,6 +182,37 @@ describe("Simple Mode (Smart-Account) Integration Tests", () => {
         const config = getConfig()
         if (!config) return // skip versions not set up
         const { meeClient, eoaAccount } = config
+
+        const quoteParams = buildGetQuoteParams(eoaAccount.address, {
+          sponsored,
+          simulated
+        })
+
+        const quote = await meeClient.getQuote(quoteParams)
+
+        expect(quote).toBeDefined()
+        expect(quote.hash).toBeDefined()
+
+        const { hash } = await meeClient.executeQuote({ quote })
+        expect(hash).toBeDefined()
+
+        const receipt = await meeClient.waitForSupertransactionReceipt({
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+
+        expect(receipt).toBeDefined()
+        expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+      }
+    )
+  })
+
+  // P256 Signer Tests (V3.0.0 only)
+  describe("V3.0.0 with P256 Signer", () => {
+    test.each(modes)(
+      "multi-chain simple mode STX with P256 ($label)",
+      async ({ sponsored, simulated }) => {
+        const { meeClient, eoaAccount } = p256AccountConfig
 
         const quoteParams = buildGetQuoteParams(eoaAccount.address, {
           sponsored,

@@ -24,6 +24,7 @@ import {
   parseEther,
   toBytes
 } from "viem"
+import { getUserOperationHash } from "viem/account-abstraction"
 import { generatePrivateKey } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
@@ -45,7 +46,6 @@ import {
   setupAccountsWithSigner,
   setupMultiVersionAccounts
 } from "./setupMultiVersion"
-import { getUserOperationHash } from "viem/account-abstraction"
 
 const versions = [
   { version: MEEVersion.V2_0_0, label: "V2.0.0" },
@@ -69,7 +69,8 @@ describe("No-STX Mode Integration Tests", () => {
     }
 
     // Setup P256 account for V3.0.0 only (P256 is only supported in V3.0.0+)
-    const p256PrivateKey = "0x1234567890123456789012345678901234567890123456789012345678901234"
+    const p256PrivateKey =
+      "0x1234567890123456789012345678901234567890123456789012345678901234"
     const p256Signer = toP256Signer(p256PrivateKey)
 
     const p256Configs = await setupAccountsWithSigner({
@@ -306,11 +307,11 @@ describe("No-STX Mode Integration Tests", () => {
             to: recipientAddress,
             value: transferAmount
           }
-        ],
+        ]
       })
 
       const userOpHash = deployment.getUserOpHash(userOp)
-      console.log("userOpHash" , userOpHash)
+      console.log("userOpHash", userOpHash)
 
       const rawSignature = await deployment.signUserOperation(userOp)
 
@@ -357,7 +358,9 @@ describe("No-STX Mode Integration Tests", () => {
       expect(signature.length).toBe(178)
 
       // Verify P256 prefix (0x177eee11) - skip module address (20 bytes = 42 chars including "0x")
-      expect(`0x${signature.slice(42, 50)}`).toBe(SIG_TYPE_NO_STX_VANILLA_1271_P256)
+      expect(`0x${signature.slice(42, 50)}`).toBe(
+        SIG_TYPE_NO_STX_VANILLA_1271_P256
+      )
 
       // Verify on-chain
       const result = await publicClient.readContract({
