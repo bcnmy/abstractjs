@@ -25,7 +25,7 @@ import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import { getBalance, type NetworkConfig } from "../../../../test/testUtils"
+import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import type { SessionAction } from "../../../account/decorators/buildAction"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import {
@@ -47,7 +47,11 @@ import {
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
 } from "../../../constants"
-import { AnyData, getMEEVersion, meeSessionActions } from "../../../modules"
+import {
+  type AnyData,
+  getMEEVersion,
+  meeSessionActions
+} from "../../../modules"
 import { isModuleInstalled } from "../erc7579"
 
 describe("mee.getSessionQuote", () => {
