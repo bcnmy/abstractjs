@@ -67,7 +67,7 @@ describe("No-STX Mode Integration Tests", () => {
       const recipientAddress = "0x1234567890123456789012345678901234567890"
       const transferAmount = parseEther("0.001")
 
-      const userOpHash = await nexusClient.sendUserOperation({
+      const userOp = await nexusClient.prepareUserOperation({
         account: deployment,
         calls: [
           {
@@ -75,6 +75,15 @@ describe("No-STX Mode Integration Tests", () => {
             value: transferAmount
           }
         ]
+      })
+      
+      const signature = await deployment.signUserOperation(userOp as any)
+      // good palce for v3.0.0 with p256 signer to attach the prefix
+      // const customSig = hexConcat([prefix, signature])
+      
+      const userOpHash = await nexusClient.sendUserOperation({
+        ...userOp,
+        signature: signature
       })
 
       const userOpReceipt = await nexusClient.waitForUserOperationReceipt({
@@ -119,8 +128,34 @@ describe("No-STX Mode Integration Tests", () => {
 
       expect(result).toBe(eip1271MagicValue)
     })
+
+    test("should validate .signMessage() result with isValidSignature for all MEE versions", async () => {
+      const { mcNexus } = getConfig()
+
+      const deployment = mcNexus.deploymentOn(
+        mcNexus.deployments[0].client.chain!.id,
+        true
+      )
+      const accountAddress = await deployment.getAddress()
+      const publicClient = deployment.client as PublicClient
+      const message = "Hello from .signMessage()"
+  
+      const signature: Hex = await deployment.signMessage({ message })
+  
+      const result = await publicClient.readContract({
+        address: accountAddress,
+        abi: parseAbi([
+          "function isValidSignature(bytes32,bytes) external view returns (bytes4)"
+        ]),
+        functionName: "isValidSignature",
+        args: [hashMessage(message), signature]
+      })
+  
+      expect(result).toBe(eip1271MagicValue)
+    })
   })
 
+  /*
   test("should validate ERC-7739 signature by default for v3.0.0", async () => {
     const accountConfig = accountConfigMap.get(MEEVersion.V3_0_0)
     if (!accountConfig) {
@@ -148,4 +183,5 @@ describe("No-STX Mode Integration Tests", () => {
 
     expect(result).toBe(eip1271MagicValue)
   })
+    */
 })
