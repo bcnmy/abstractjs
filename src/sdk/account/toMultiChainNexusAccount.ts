@@ -54,6 +54,15 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
+import {
+  type OwnershipParams,
+  type OwnershipParamsWithData,
+  type OwnershipResult,
+  addOwnership as addOwnershipDecorator,
+  changeOwnership as changeOwnershipDecorator,
+  cleanOwnership as cleanOwnershipDecorator,
+  getOwnership as getOwnershipDecorator
+} from "./decorators/ownership"
 import type { MultichainToken } from "./utils/Types"
 
 /**
@@ -226,6 +235,32 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * const delegation = await mcAccount.toDelegation()
    */
   toDelegation: (params?: DelegationParams) => Promise<MeeAuthorization>
+  /**
+   * Creates instructions to set ownership data on the StxValidator across all chains.
+   * Use this when no ownership data exists yet for the given ownership type.
+   * @param params - Ownership type and optional ownership data override
+   * @returns Instructions calling setOwnershipData on every configured chain
+   */
+  addOwnership: (params: OwnershipParamsWithData) => Instruction[]
+  /**
+   * Creates instructions to change existing ownership data on the StxValidator across all chains.
+   * Reads current ownership data first and throws if none exists (use addOwnership instead).
+   * @param params - Ownership type and optional ownership data override
+   * @returns Instructions calling setOwnershipData on every configured chain
+   */
+  changeOwnership: (params: OwnershipParamsWithData) => Promise<Instruction[]>
+  /**
+   * Creates instructions to remove ownership data from the StxValidator across all chains.
+   * @param params - Ownership type to clean, with optional chainIds filter
+   * @returns Instructions calling cleanOwnershipData on every configured chain
+   */
+  cleanOwnership: (params: OwnershipParams) => Instruction[]
+  /**
+   * Reads ownership data from the StxValidator across all chains.
+   * @param params - Ownership type to query, with optional chainIds filter
+   * @returns Ownership data per chain
+   */
+  getOwnership: (params: OwnershipParams) => Promise<OwnershipResult[]>
 }
 
 /**
@@ -412,6 +447,18 @@ export async function toMultichainNexusAccount(
   const toDelegation = async () =>
     await deployments[0].toDelegation({ multiChain: true })
 
+  const addOwnership = (params: OwnershipParamsWithData) =>
+    addOwnershipDecorator(baseAccount, params)
+
+  const changeOwnership = (params: OwnershipParamsWithData) =>
+    changeOwnershipDecorator(baseAccount, params)
+
+  const cleanOwnership = (params: OwnershipParams) =>
+    cleanOwnershipDecorator(baseAccount, params)
+
+  const getOwnership = (params: OwnershipParams) =>
+    getOwnershipDecorator(baseAccount, params)
+
   return {
     ...baseAccount,
     getUnifiedERC20Balance,
@@ -425,6 +472,10 @@ export async function toMultichainNexusAccount(
     unDelegate,
     waitForTransactionReceipts,
     read,
-    toDelegation
+    toDelegation,
+    addOwnership,
+    changeOwnership,
+    cleanOwnership,
+    getOwnership
   }
 }

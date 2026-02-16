@@ -30,13 +30,13 @@ import {
   toNetwork
 } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
+import { toP256Signer } from "../../account/utils/toP256Signer"
 import {
   getDefaultMEENetworkUrl,
   getDefaultMeeGasTank
 } from "../../clients/createMeeClient"
 import type { GetQuoteParams } from "../../clients/decorators/mee/getQuote"
 import { MEEVersion } from "../../constants"
-import { toP256Signer } from "../../account/utils/toP256Signer"
 import type { AccountConfig } from "./setupMultiVersion"
 import {
   setupAccountsWithSigner,
