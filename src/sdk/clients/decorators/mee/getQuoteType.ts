@@ -32,7 +32,11 @@ export const isPermitTokenInfo = async (
   } else {
     const { walletClient } = client.account.deploymentOn(trigger.chainId, true)
     // detect via RPCcall
-    permitEnabled = await isPermitSupported(walletClient, trigger.tokenAddress)
+    permitEnabled = await isPermitSupported(
+      walletClient,
+      trigger.tokenAddress,
+      client.info.isDebugMode
+    )
   }
 
   return permitEnabled

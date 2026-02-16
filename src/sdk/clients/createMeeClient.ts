@@ -83,6 +83,8 @@ export type CreateMeeClientParams = {
   account: MultichainSmartAccount
   /** Auth key for the Mee client */
   apiKey?: string
+  /** Debug mode which prints some useful console logs for errors */
+  isDebugMode?: boolean
 }
 
 export type BaseMeeClient = Prettify<
@@ -100,10 +102,15 @@ export const createMeeClient = async (params: CreateMeeClientParams) => {
     account,
     pollingInterval = 250,
     url = DEFAULT_PATHFINDER_URL,
-    apiKey = DEFAULT_PATHFINDER_API_KEY
+    apiKey = DEFAULT_PATHFINDER_API_KEY,
+    // By default: its false.
+    // If staging or testing suite, its true by default
+    isDebugMode = !!isStagingOrTesting
   } = params
-  const httpClient = createHttpClient(url, apiKey)
+  const httpClient = createHttpClient(url, apiKey, isDebugMode)
   const info = await getInfo(httpClient)
+  info.isDebugMode = isDebugMode
+
   const baseMeeClient = Object.assign(httpClient, {
     pollingInterval,
     account,

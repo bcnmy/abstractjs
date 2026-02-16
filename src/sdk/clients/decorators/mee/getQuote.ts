@@ -1147,7 +1147,11 @@ export const getQuote = async (
     ].includes(sponsorshipOptions.url)
 
     if (isSelfHostedSponsorship) {
-      const selfHostedClient = createHttpClient(sponsorshipOptions.url)
+      const selfHostedClient = createHttpClient(
+        sponsorshipOptions.url,
+        undefined,
+        client.info.isDebugMode
+      )
 
       quote = await selfHostedClient.request<GetQuotePayload>({
         path: `sponsorship/sign/${sponsorshipOptions.gasTank.chainId}/${sponsorshipOptions.gasTank.address}`,
@@ -1220,7 +1224,11 @@ const preparePaymentInfo = async (
 
     // If it is not an trusted sponsorship ? The nonce will be fetched from third party sponsorship backend
     if (!isTrustedSponsorship) {
-      const sponsorshipClient = createHttpClient(sponsorshipUrl)
+      const sponsorshipClient = createHttpClient(
+        sponsorshipUrl,
+        undefined,
+        client.info.isDebugMode
+      )
 
       const nonceInfo = await sponsorshipClient.request<{
         nonce: string
