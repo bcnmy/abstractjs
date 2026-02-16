@@ -18,19 +18,21 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { assert, beforeAll, describe, expect, test } from "vitest"
 import { generateNewTestnetMcNexusAccountAndMeeClient } from "../../../../test/mee-utils/generate-mc-nexus"
 import { TESTNET_RPC_URLS, toNetwork } from "../../../../test/testSetup"
 import {
   testnetMcTestUSDC,
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
-import type { NetworkConfig } from "../../../../test/testUtils"
+import { getBalance, type NetworkConfig } from "../../../../test/testUtils"
 import type { SessionAction } from "../../../account/decorators/buildAction"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import {
   type MeeClient,
-  createMeeClient
+  createMeeClient,
+  getDefaultMEENetworkUrl,
+  getDefaultMeeGasTank
 } from "../../../clients/createMeeClient"
 import type {
   BaseGetSupertransactionReceiptPayload,
@@ -39,8 +41,14 @@ import type {
   SessionDetail,
   TokenTrigger
 } from "../../../clients/decorators/mee"
-import { CounterAbi, DEFAULT_MEE_VERSION } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
+import {
+  CounterAbi,
+  DEFAULT_MEE_VERSION,
+  SMART_SESSIONS_ADDRESS,
+  SmartSessionMode
+} from "../../../constants"
+import { AnyData, getMEEVersion, meeSessionActions } from "../../../modules"
+import { isModuleInstalled } from "../erc7579"
 
 describe("mee.getSessionQuote", () => {
   let network: NetworkConfig
@@ -102,6 +110,7 @@ describe("mee.getSessionQuote", () => {
 
   const getNewUserMcNexusAndMeeClient = async (options?: {
     use7702Auth?: boolean
+    useSponsorship?: boolean
   }) => {
     // New orchestrator account
     const { mcNexus, meeClient } =
@@ -112,9 +121,13 @@ describe("mee.getSessionQuote", () => {
         paymentChainWalletClient,
         eoaAccount,
         {
-          fundEoa: true,
-          tokenType: "permit",
-          amount: parseUnits("2", 6),
+          ...(options?.useSponsorship
+            ? { sponsorship: true }
+            : {
+                fundEoa: true,
+                tokenType: "permit",
+                amount: parseUnits("2", 6)
+              }),
           ...(options?.use7702Auth ? { walletMode: "7702" } : {})
         }
       )
@@ -148,6 +161,7 @@ describe("mee.getSessionQuote", () => {
     options?: {
       batchActions?: boolean
       use7702Auth?: boolean
+      useSponsorship?: boolean
     }
   ) => {
     const prepareAndEnableSessionQuote = await meeClient.getSessionQuote({
@@ -160,10 +174,21 @@ describe("mee.getSessionQuote", () => {
       simulation: {
         simulate: true
       },
-      delegate: options?.use7702Auth,
-      authorization: [],
-      feeToken,
-      trigger
+      ...(options?.use7702Auth
+        ? {
+            delegate: true,
+            authorizations: []
+          }
+        : { delegate: false }),
+      ...(options?.useSponsorship
+        ? {
+            sponsorship: true,
+            sponsorshipOptions: {
+              url: getDefaultMEENetworkUrl(true),
+              gasTank: getDefaultMeeGasTank(true)
+            }
+          }
+        : { feeToken, trigger })
     })
 
     let sessionDetails: SessionDetail[] = []
@@ -187,7 +212,7 @@ describe("mee.getSessionQuote", () => {
       })
 
       if (!prepareAndEnableSessionQuote.sessionDetails) {
-        throw new Error("Missing session details")
+        assert(false, "Missing session details")
       }
 
       sessionDetails = prepareAndEnableSessionQuote.sessionDetails
@@ -202,7 +227,10 @@ describe("mee.getSessionQuote", () => {
   const useSession = async (
     redeemerSignerMeeClient: MeeClient,
     instructions: Instruction[],
-    sessionDetails: SessionDetail[]
+    sessionDetails: SessionDetail[],
+    options?: {
+      useSponsorship?: boolean
+    }
   ) => {
     const useSessionQuote = await redeemerSignerMeeClient.getSessionQuote({
       mode: "USE",
@@ -210,7 +238,15 @@ describe("mee.getSessionQuote", () => {
       simulation: {
         simulate: true
       },
-      feeToken,
+      ...(options?.useSponsorship
+        ? {
+            sponsorship: true,
+            sponsorshipOptions: {
+              url: getDefaultMEENetworkUrl(true),
+              gasTank: getDefaultMeeGasTank(true)
+            }
+          }
+        : { feeToken }),
       instructions
     })
 
@@ -232,6 +268,135 @@ describe("mee.getSessionQuote", () => {
 
     return hash
   }
+
+  test("Smart sessions (New): Should SS validator module installed, SCA deployed, SCA funded and permissions are enabled", async () => {
+    // New orchestrator account
+    const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
+
+    const sessionsClient = meeClient.extend(meeSessionActions)
+
+    const actions = [
+      mcNexus.buildAction({
+        type: "transfer",
+        data: {
+          chainIds: [paymentChain.id],
+          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+          policies: [{ type: "sudo" }]
+        }
+      })
+    ].flat()
+
+    const { sessionDetails } = await prepareAndEnableSession(meeClient, actions)
+
+    for (const deployment of mcNexus.deployments) {
+      expect(await deployment.isDeployed()).toBe(true)
+
+      const isInstalled = await isModuleInstalled(undefined as AnyData, {
+        account: deployment,
+        module: {
+          address: SMART_SESSIONS_ADDRESS,
+          initData: "0x",
+          type: "validator"
+        }
+      })
+
+      expect(isInstalled).toBe(true)
+    }
+
+    const balance = await getBalance(
+      paymentChainPublicClient,
+      mcNexus.addressOn(paymentChain.id, true),
+      testnetMcTestUSDCP.addressOn(paymentChain.id)
+    )
+
+    expect(balance).to.eq(trigger.amount)
+
+    const enabledPermissionDetails = sessionDetails.map((permission) => {
+      return {
+        permissionId: permission.permissionId,
+        chainId: Number(
+          permission.enableSessionData.enableSession.sessionToEnable.chainId
+        )
+      }
+    })
+
+    for (const { permissionId, chainId } of enabledPermissionDetails) {
+      const isEnabled = await sessionsClient.isPermissionEnabled({
+        permissionId,
+        chainId
+      })
+
+      expect(isEnabled).toBe(true)
+    }
+
+    const enabledPermissionsDetailsResult =
+      await sessionsClient.checkEnabledPermissions(sessionDetails)
+
+    for (const { permissionId, chainId } of enabledPermissionDetails) {
+      expect(enabledPermissionsDetailsResult[permissionId][chainId]).toBe(true)
+    }
+  })
+
+  test("Smart sessions (New): Should not prepare a session quote if SCA and SS module are already deployed/installed, with no additional instructions or funding request", async () => {
+    // New orchestrator account
+    const { meeClient } = await getNewUserMcNexusAndMeeClient()
+
+    const quote = await meeClient.getSessionQuote({
+      mode: "PREPARE",
+      simulation: {
+        simulate: true
+      },
+      feeToken,
+      trigger
+    })
+
+    if (!quote) {
+      assert(false, "Failed to fetch prepare session quote")
+    }
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeSessionQuote(quote)
+
+    expect(hash).toBeDefined()
+
+    await meeClient.waitForSupertransactionReceipt({
+      hash
+    })
+
+    expect(
+      await meeClient.getSessionQuote({
+        mode: "PREPARE",
+        simulation: {
+          simulate: true
+        },
+        feeToken
+      })
+    ).toBeUndefined()
+  })
+
+  test("Smart sessions (New): Should ENABLE_AND_USE mode fails", async () => {
+    // New orchestrator account
+    const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
+
+    const redeemerMcNexus = await getRedeemerMcNexus(
+      mcNexus.addressOn(paymentChain.id, true)
+    )
+
+    const redeemerSignerMeeClient = await createMeeClient({
+      account: redeemerMcNexus
+    })
+
+    await expect(
+      useSession(
+        redeemerSignerMeeClient,
+        [],
+        [{ mode: SmartSessionMode.UNSAFE_ENABLE } as SessionDetail]
+      )
+    ).rejects.toThrowError(
+      "ENABLE_AND_USE mode is not supported, session details is invalid."
+    )
+  })
 
   test("Smart sessions (New): should enable and use session with permissions across multiple chains", async () => {
     // New orchestrator account
@@ -307,7 +472,7 @@ describe("mee.getSessionQuote", () => {
     )
   })
 
-  test("Smart sessions (New): Should enable and use session with permissions", async () => {
+  test("Smart sessions (New): Should enable and use session with permissions in single chain", async () => {
     // New orchestrator account
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
 
@@ -349,7 +514,7 @@ describe("mee.getSessionQuote", () => {
     )
   })
 
-  test("Smart sessions (New): Should enable and use session with permissions with 7702 authorization", async () => {
+  test("Smart sessions (New): Should enable and use session with permissions with 7702 authorizations and delegation", async () => {
     // New orchestrator account
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient({
       use7702Auth: true
@@ -500,5 +665,55 @@ describe("mee.getSessionQuote", () => {
       // Enable permission userOps - 2
       expect(userOps.length).to.be.eq(5)
     }
+  })
+
+  test("Smart sessions (New): Should enable and use session works with sponshorship", async () => {
+    // New orchestrator account
+    const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient({
+      useSponsorship: true
+    })
+
+    const actions = [
+      mcNexus.buildAction({
+        type: "transfer",
+        data: {
+          chainIds: [paymentChain.id],
+          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+          policies: [{ type: "sudo" }]
+        }
+      })
+    ].flat()
+
+    const { sessionDetails } = await prepareAndEnableSession(
+      meeClient,
+      actions,
+      { useSponsorship: true }
+    )
+
+    const redeemerMcNexus = await getRedeemerMcNexus(
+      mcNexus.addressOn(paymentChain.id, true)
+    )
+
+    const redeemerSignerMeeClient = await createMeeClient({
+      account: redeemerMcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const tokenTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        recipient: eoaAccount.address,
+        amount: 0n,
+        chainId: paymentChain.id
+      }
+    })
+
+    await useSession(
+      redeemerSignerMeeClient,
+      [...tokenTransfer],
+      sessionDetails,
+      { useSponsorship: true }
+    )
   })
 })
