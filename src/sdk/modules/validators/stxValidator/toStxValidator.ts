@@ -239,6 +239,15 @@ export const toStxValidator = (
     })
   }
 
+  // For P256 signers, override signUserOperationHash to use signer.sign() directly.
+  // The P256 on-chain validator verifies against the raw userOpHash, unlike the K1
+  // validator which wraps with toEthSignedMessageHash().
+  const signer = parameters.signer
+  const signUserOperationHash =
+    isP256 && signer?.sign
+      ? async (hash: Hex): Promise<Hex> => await signer.sign!({ hash })
+      : undefined
+
   // Destructure signer out to avoid OneOf<{signer} | {walletClient}> type conflict
   // The walletClient already wraps the signer, so signing works correctly through it
   const { signer: _signer, ...restParameters } = parameters
@@ -253,6 +262,7 @@ export const toStxValidator = (
     type: "validator",
     signMessageErc7739,
     signTypedDataErc7739,
+    ...(signUserOperationHash ? { signUserOperationHash } : {}),
     getStubSignature: async () =>
       getStxValidatorStubSignature(signatureType, superTxEntriesCount),
     erc7739VersionSupported_: 1

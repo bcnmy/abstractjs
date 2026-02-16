@@ -3,6 +3,7 @@ import {
   type Hex,
   type LocalAccount,
   type SignableMessage,
+  concatHex,
   hashMessage,
   hashTypedData,
   hexToBytes,
@@ -52,11 +53,22 @@ export const toP256Signer = (privateKey: Hex): P256Signer => {
     const sigBytes = p256.sign(hashBytesArray, privateKeyBytesArray, {
       prehash: false
     })
+
+console.log("prepared data for precompile", concatHex([hash, toHex(sigBytes), xyHex]))
+
+//caca39dd1428f8f670d775636aa88350467ef5dc869cbd78a8471d1a3d3ee0153dcdc9e86663cf433517c7d6a4fb3a539d75dcf13ec0f49a92a971f3abb95721
+
+// verifies succesfully via direct call to precompile using:
+// 0xab050c3826b77040c637675f3d80951c5c79791e07903e997d99ea82b730ebfdcdefaea4060e31c0639cf04a9fbe1edb044298b3df3a7da706b20a39ad7dd8cf0cfe0afbe68a093ba9fbf5bc2b4191afd90cada07dc9f331b75748879240e620caca39dd1428f8f670d775636aa88350467ef5dc869cbd78a8471d1a3d3ee0153dcdc9e86663cf433517c7d6a4fb3a539d75dcf13ec0f49a92a971f3abb95721
+
     return toHex(sigBytes)
   }
 
   const account = toAccount({
     address,
+    async sign({ hash }: { hash: Hex }): Promise<Hex> {
+      return signP256(hash)
+    },
     async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
       const hash = hashMessage(message)
       return signP256(hash)
@@ -72,6 +84,7 @@ export const toP256Signer = (privateKey: Hex): P256Signer => {
 
   return {
     ...account,
+    signP256,
     publicKey,
     source: "p256"
   } as P256Signer

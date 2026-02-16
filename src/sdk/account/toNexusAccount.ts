@@ -1066,7 +1066,7 @@ export const toNexusAccount = async (
         entryPointVersion: "0.7",
         userOperation
       })
-      return await module.signMessage({ raw: hash })
+      return await module.signUserOperationHash(hash)
     },
     getNonce,
 

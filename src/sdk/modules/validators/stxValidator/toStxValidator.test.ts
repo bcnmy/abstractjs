@@ -501,6 +501,7 @@ describe("modules.toStxValidator", () => {
       expect(validator).toHaveProperty("deInitData")
       expect(validator).toHaveProperty("address")
       expect(validator).toHaveProperty("signMessage")
+      expect(validator).toHaveProperty("signUserOperationHash")
       expect(validator).toHaveProperty("signTypedData")
       expect(validator).toHaveProperty("signMessageErc7739")
       expect(validator).toHaveProperty("signTypedDataErc7739")

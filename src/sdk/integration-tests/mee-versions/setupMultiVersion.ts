@@ -9,6 +9,7 @@ import type { LocalAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import type { MultichainSmartAccount } from "../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../account/toMultiChainNexusAccount"
+import { isP256Signer, toP256Signer } from "../../account/utils/toP256Signer"
 import type { MeeClient } from "../../clients/createMeeClient"
 import { createMeeClient } from "../../clients/createMeeClient"
 import { MEEVersion } from "../../constants"
@@ -146,4 +147,75 @@ export async function setupSingleVersion(
     chains
   })
   return configs[0]
+}
+
+/**
+ * Creates multi-version account configurations with a custom signer
+ * Universal method that works with any signer type (EOA, P256, etc.)
+ * @param options Setup options with custom signer
+ * @returns Array of account configs for each version
+ *
+ * @example
+ * // Create P256 account for V3.0.0
+ * const p256Signer = toP256Signer(privateKey)
+ * const configs = await setupAccountsWithSigner({
+ *   signer: p256Signer,
+ *   eoaAccount: network.account,
+ *   versions: [MEEVersion.V3_0_0]
+ * })
+ */
+export async function setupAccountsWithSigner(
+  options: SetupMultiVersionOptions & {
+    signer: ReturnType<typeof toP256Signer> | LocalAccount
+  }
+): Promise<AccountConfig[]> {
+  const {
+    signer,
+    eoaAccount,
+    versions = [MEEVersion.V3_0_0],
+    chains = [baseSepolia, optimismSepolia],
+    index = 1n,
+    apiKey
+  } = options
+
+  const accountConfigs: AccountConfig[] = []
+
+  for (const version of versions) {
+    const mcNexus = await toMultichainNexusAccount({
+      signer,
+      index,
+      chainConfigurations: chains.map((chain: Chain) => ({
+        chain,
+        transport: http(TESTNET_RPC_URLS[chain.id]),
+        version: getMEEVersion(version)
+      }))
+    })
+
+    await fundAccountsIfNeeded(mcNexus, eoaAccount)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      ...(apiKey && { apiKey })
+    })
+
+    const signerType = isP256Signer(signer) ? " with P256" : ""
+    const versionName =
+      version === MEEVersion.V2_0_0
+        ? `V2.0.0 (MeeK1, no 712 for simple mode)${signerType}`
+        : version === MEEVersion.V2_2_1
+          ? `V2.2.1 (MeeK1, TypedData for simple mode)${signerType}`
+          : version === MEEVersion.V3_0_0
+            ? `V3.0.0 (StxValidator)${signerType}`
+            : version
+
+    accountConfigs.push({
+      name: versionName,
+      version,
+      mcNexus,
+      meeClient,
+      eoaAccount
+    })
+  }
+
+  return accountConfigs
 }
