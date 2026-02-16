@@ -35,7 +35,7 @@ export type OwnershipResult = {
   data: Hex
 }
 
-function filterDeployments(
+export function filterDeployments(
   deployments: ModularSmartAccount[],
   chainIds?: number[]
 ): ModularSmartAccount[] {
@@ -57,7 +57,7 @@ function filterDeployments(
   })
 }
 
-function resolveStatelessValidator(
+export function resolveStatelessValidator(
   ownershipType: OwnershipType,
   submodules: MEEVersionConfig["submodules"]
 ): Address {
@@ -84,7 +84,7 @@ function resolveStatelessValidator(
   return address
 }
 
-function deriveOwnershipData(
+export function deriveOwnershipData(
   signer: Signer,
   ownershipType: OwnershipType,
   ownershipDataOverride?: Hex

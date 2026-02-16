@@ -90,7 +90,7 @@ export async function setupMultiVersionAccounts(
     eoaAccount,
     versions = [MEEVersion.V2_0_0, MEEVersion.V2_2_1, MEEVersion.V3_0_0],
     chains = [baseSepolia, optimismSepolia],
-    index = 1n,
+    index = 333n,
     apiKey
   } = options
 

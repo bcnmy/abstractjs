@@ -40,6 +40,15 @@ import multichainRead, {
   type MultiChainReadPayload
 } from "./decorators/multichainRead"
 import {
+  type OwnershipParams,
+  type OwnershipParamsWithData,
+  type OwnershipResult,
+  addOwnership as addOwnershipDecorator,
+  changeOwnership as changeOwnershipDecorator,
+  cleanOwnership as cleanOwnershipDecorator,
+  getOwnership as getOwnershipDecorator
+} from "./decorators/ownership"
+import {
   type BridgeQueryResult,
   type QueryBridgeParams,
   queryBridge as queryBridgeDecorator
@@ -54,15 +63,6 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
-import {
-  type OwnershipParams,
-  type OwnershipParamsWithData,
-  type OwnershipResult,
-  addOwnership as addOwnershipDecorator,
-  changeOwnership as changeOwnershipDecorator,
-  cleanOwnership as cleanOwnershipDecorator,
-  getOwnership as getOwnershipDecorator
-} from "./decorators/ownership"
 import type { MultichainToken } from "./utils/Types"
 
 /**
