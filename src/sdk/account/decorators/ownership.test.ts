@@ -1,4 +1,5 @@
 import {
+  http,
   type Address,
   type Hex,
   type PublicClient,
@@ -6,7 +7,6 @@ import {
   encodeFunctionData,
   encodePacked,
   erc20Abi,
-  http,
   parseAbi,
   parseUnits
 } from "viem"
@@ -24,13 +24,13 @@ import type { MeeClient } from "../../clients/createMeeClient"
 import type { GetQuoteParams } from "../../clients/decorators/mee/getQuote"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { MEEVersion } from "../../constants"
-import type { MEEVersionConfig } from "../utils/getVersion"
+import type { AccountConfig } from "../../integration-tests/mee-versions/setupMultiVersion"
+import { setupMultiVersionAccounts } from "../../integration-tests/mee-versions/setupMultiVersion"
 import type { ModularSmartAccount } from "../../modules/utils/Types"
 import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
+import type { MEEVersionConfig } from "../utils/getVersion"
 import { toP256Signer } from "../utils/toP256Signer"
-import type { AccountConfig } from "../../integration-tests/mee-versions/setupMultiVersion"
-import { setupMultiVersionAccounts } from "../../integration-tests/mee-versions/setupMultiVersion"
 import {
   addOwnership,
   changeOwnership,
@@ -88,10 +88,14 @@ async function fundFeeTokenIfNeeded(configs: AccountConfig[]) {
 // ---------------------------------------------------------------------------
 
 const MOCK_EOA_ADDRESS = "0xdD900Cd95f072eAe396bE0487C2546Bf81d01B48" as Address
-const MOCK_P256_ADDRESS = "0xa7B97e8152aCee107a098F95f691Cd24Cf2f9835" as Address
-const MOCK_SAFE_ADDRESS = "0xa35a716E8e1Df5Fb441bCDdC2357cf9b256AC566" as Address
-const MOCK_VALIDATOR_ADDRESS = "0x8b0Aa5d4c0e06a463bd67CBaF7D00C21c861Ce58" as Address
-const MOCK_CUSTOM_VALIDATOR = "0x1234567890abcdef1234567890abcdef12345678" as Address
+const MOCK_P256_ADDRESS =
+  "0xa7B97e8152aCee107a098F95f691Cd24Cf2f9835" as Address
+const MOCK_SAFE_ADDRESS =
+  "0xa35a716E8e1Df5Fb441bCDdC2357cf9b256AC566" as Address
+const MOCK_VALIDATOR_ADDRESS =
+  "0x8b0Aa5d4c0e06a463bd67CBaF7D00C21c861Ce58" as Address
+const MOCK_CUSTOM_VALIDATOR =
+  "0x1234567890abcdef1234567890abcdef12345678" as Address
 
 const MOCK_SUBMODULES: MEEVersionConfig["submodules"] = {
   EoaStatelessValidator: MOCK_EOA_ADDRESS,
@@ -134,13 +138,19 @@ function createMockAccount(
       ...(publicKey ? { publicKey, source: "p256" } : {})
     },
     deploymentOn: (chainId: number, strictMode?: boolean) => {
-      const dep = deployments.find((d) => (d.client.chain as any)?.id === chainId)
-      if (!dep && strictMode) throw new Error(`Deployment not found for chainId: ${chainId}`)
+      const dep = deployments.find(
+        (d) => (d.client.chain as any)?.id === chainId
+      )
+      if (!dep && strictMode)
+        throw new Error(`Deployment not found for chainId: ${chainId}`)
       return dep
     },
     addressOn: (chainId: number, strictMode?: boolean) => {
-      const dep = deployments.find((d) => (d.client.chain as any)?.id === chainId)
-      if (!dep && strictMode) throw new Error(`Deployment not found for chainId: ${chainId}`)
+      const dep = deployments.find(
+        (d) => (d.client.chain as any)?.id === chainId
+      )
+      if (!dep && strictMode)
+        throw new Error(`Deployment not found for chainId: ${chainId}`)
       return dep?.address
     }
   } as unknown as BaseMultichainSmartAccount
@@ -171,7 +181,10 @@ describe("ownership - unit tests", () => {
     })
 
     test("should pass through a raw address as-is", () => {
-      const result = resolveStatelessValidator(MOCK_CUSTOM_VALIDATOR, MOCK_SUBMODULES)
+      const result = resolveStatelessValidator(
+        MOCK_CUSTOM_VALIDATOR,
+        MOCK_SUBMODULES
+      )
       expect(result).toBe(MOCK_CUSTOM_VALIDATOR)
     })
 
@@ -223,12 +236,18 @@ describe("ownership - unit tests", () => {
 
     test("should use override for custom validator type", () => {
       const override = "0xcafebabe" as Hex
-      const result = deriveOwnershipData(eoaAccount, MOCK_CUSTOM_VALIDATOR, override)
+      const result = deriveOwnershipData(
+        eoaAccount,
+        MOCK_CUSTOM_VALIDATOR,
+        override
+      )
       expect(result).toBe(override)
     })
 
     test("should throw for custom validator address without ownershipData", () => {
-      expect(() => deriveOwnershipData(eoaAccount, MOCK_CUSTOM_VALIDATOR)).toThrow(
+      expect(() =>
+        deriveOwnershipData(eoaAccount, MOCK_CUSTOM_VALIDATOR)
+      ).toThrow(
         "ownershipData must be provided when using a custom stateless validator address"
       )
     })
@@ -286,10 +305,7 @@ describe("ownership - unit tests", () => {
   // -------------------------------------------------------------------------
   describe("addOwnership", () => {
     const eoaAccount = privateKeyToAccount(generatePrivateKey())
-    const deployments = [
-      createMockDeployment(10),
-      createMockDeployment(8453)
-    ]
+    const deployments = [createMockDeployment(10), createMockDeployment(8453)]
     const mockAccount = createMockAccount(deployments, eoaAccount.address)
 
     test("should return one instruction per deployment", () => {
@@ -316,14 +332,19 @@ describe("ownership - unit tests", () => {
         coreOwnershipParams: { ownershipType: "eoa" }
       })
 
-      const expectedOwnershipData = encodePacked(["address"], [eoaAccount.address])
+      const expectedOwnershipData = encodePacked(
+        ["address"],
+        [eoaAccount.address]
+      )
       const expectedCalldata = encodeFunctionData({
         abi: stxValidatorAbi,
         functionName: "setOwnershipData",
         args: [MOCK_EOA_ADDRESS, expectedOwnershipData]
       })
 
-      expect((instructions[0].calls[0] as { data: Hex }).data).toBe(expectedCalldata)
+      expect((instructions[0].calls[0] as { data: Hex }).data).toBe(
+        expectedCalldata
+      )
     })
 
     test("should respect chainIds filter", () => {
@@ -347,7 +368,9 @@ describe("ownership - unit tests", () => {
         args: [MOCK_EOA_ADDRESS, customData]
       })
 
-      expect((instructions[0].calls[0] as { data: Hex }).data).toBe(expectedCalldata)
+      expect((instructions[0].calls[0] as { data: Hex }).data).toBe(
+        expectedCalldata
+      )
     })
   })
 
@@ -356,10 +379,7 @@ describe("ownership - unit tests", () => {
   // -------------------------------------------------------------------------
   describe("cleanOwnership", () => {
     const eoaAccount = privateKeyToAccount(generatePrivateKey())
-    const deployments = [
-      createMockDeployment(10),
-      createMockDeployment(8453)
-    ]
+    const deployments = [createMockDeployment(10), createMockDeployment(8453)]
     const mockAccount = createMockAccount(deployments, eoaAccount.address)
 
     test("should return one instruction per deployment", () => {
@@ -380,7 +400,9 @@ describe("ownership - unit tests", () => {
         args: [MOCK_EOA_ADDRESS]
       })
 
-      expect((instructions[0].calls[0] as { data: Hex }).data).toBe(expectedCalldata)
+      expect((instructions[0].calls[0] as { data: Hex }).data).toBe(
+        expectedCalldata
+      )
     })
 
     test("should respect chainIds filter", () => {
@@ -407,22 +429,16 @@ describe("ownership - integration tests", () => {
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
-  // Arbitrary p256 ownership data (x || y coordinates)
-  const p256OwnershipData = encodePacked(
-    ["bytes32", "bytes32"],
-    [
-      "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as Hex,
-      "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" as Hex
-    ]
+  // Create P256 signers to derive ownership data from
+  const p256Signer = toP256Signer(
+    "0xaa11111111111111111111111111111111111111111111111111111111111111"
   )
+  const p256OwnershipData = deriveOwnershipData(p256Signer, "p256")
 
-  const changedP256OwnershipData = encodePacked(
-    ["bytes32", "bytes32"],
-    [
-      "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" as Hex,
-      "0xcafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe" as Hex
-    ]
+  const changedP256Signer = toP256Signer(
+    "0xbb22222222222222222222222222222222222222222222222222222222222222"
   )
+  const changedP256OwnershipData = deriveOwnershipData(changedP256Signer, "p256")
 
   beforeAll(async () => {
     network = await toNetwork("TESTNET_FROM_ENV_VARS")
@@ -468,7 +484,8 @@ describe("ownership - integration tests", () => {
       // Also verify with direct readContract
       const deployment = mcNexus.deploymentOn(result.chainId, true)
       const publicClient = deployment.client as PublicClient
-      const statelessValidator = deployment.version.submodules?.P256StatelessValidator
+      const statelessValidator =
+        deployment.version.submodules?.P256StatelessValidator
 
       const directResult = await publicClient.readContract({
         address: deployment.version.validatorAddress,
@@ -536,9 +553,7 @@ describe("ownership - integration tests", () => {
 
     for (const result of ownershipResults) {
       expect(
-        result.data === "0x" ||
-          result.data === "0x0" ||
-          result.data.length <= 4
+        result.data === "0x" || result.data === "0x0" || result.data.length <= 4
       ).toBe(true)
     }
   })
