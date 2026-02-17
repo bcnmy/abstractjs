@@ -65,6 +65,7 @@ import {
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
 import { toP256Signer } from "./utils/toP256Signer"
+import { unwrapSignature6492 } from "./utils/Utils"
 
 describe("nexus.account", async () => {
   let network: NetworkConfig
@@ -536,13 +537,16 @@ describe("nexus.account - signing methods", async () => {
           message
         })
 
+        const result = unwrapSignature6492(signature)
+        const unwrappedSignature = result.originalSignature
+
         // Signature format validation
-        expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
-        expect(signature.startsWith("0x")).toBe(true)
+        expect(unwrappedSignature).toMatch(/^0x[0-9a-fA-F]+$/)
+        expect(unwrappedSignature.startsWith("0x")).toBe(true)
 
         // For 7739, signature is longer than vanilla (includes appended domain/type data)
         // Vanilla would be: 42 (module) + 130 (ECDSA) = 172 chars
-        expect(signature.length).toBeGreaterThan(172)
+        expect(unwrappedSignature.length).toBeGreaterThan(172)
       })
     }
   )
@@ -561,13 +565,15 @@ describe("nexus.account - signing methods", async () => {
       const message = "test message for 7739"
       const signature = await account.signMessage({ message })
 
-      // Signature format validation
-      expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
-      expect(signature.startsWith("0x")).toBe(true)
+      const result = unwrapSignature6492(signature)
+      const unwrappedSignature = result.originalSignature
 
-      // For 7739 PersonalSign, signature is longer than vanilla
-      // Vanilla would be: 42 (module) + 130 (ECDSA) = 172 chars
-      expect(signature.length).toBeGreaterThan(172)
+      // Signature format validation
+      expect(unwrappedSignature).toMatch(/^0x[0-9a-fA-F]+$/)
+      expect(unwrappedSignature.startsWith("0x")).toBe(true)
+
+      // for personal sign, the signature is jusr r | s | v as per erc-7739
+      expect(unwrappedSignature.length).toBe(172)
     })
   })
 
@@ -593,6 +599,7 @@ describe("nexus.account - signing methods", async () => {
         ).toBe(true)
 
         // Version-specific assertions
+        // no 6492 wrapping for the vanilla 1271 flow is made by the sdk
         if (version === MEEVersion.V3_0_0) {
           // V3.0.0: module (20) + prefix (4) + signature (65) = 89 bytes = 180 hex chars
           expect(signature.length).toBe(180)
@@ -633,30 +640,37 @@ describe("nexus.account - signing methods", async () => {
         message
       })
 
+      const result = unwrapSignature6492(signature)
+      const unwrappedSignature = result.originalSignature
+
       // Signature format validation
-      expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
+      expect(unwrappedSignature).toMatch(/^0x[0-9a-fA-F]+$/)
 
       // V3.0.0 P256 with ERC-7739: signature is longer than vanilla due to 7739 data
-      expect(signature.length).toBeGreaterThan(178)
+      expect(unwrappedSignature.length).toBeGreaterThan(178)
 
       // Verify the P256 prefix (0x177eee12) is embedded in the signature
-      // For ERC-7739, the prefix is part of the complex signature structure, not at a fixed position
-      expect(signature.includes(SIG_TYPE_NO_STX_P256.slice(2))).toBe(true)
+      const prefix = `0x${unwrappedSignature.slice(42, 50)}`
+      expect(prefix).toBe(SIG_TYPE_NO_STX_P256)
     })
 
     test("signMessage should include SIG_TYPE_NO_STX_P256 prefix", async () => {
       const message = "test P256 message"
       const signature = await p256Account.signMessage({ message })
 
+      const result = unwrapSignature6492(signature)
+      const unwrappedSignature = result.originalSignature
+
       // Signature format validation
-      expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
+      expect(unwrappedSignature).toMatch(/^0x[0-9a-fA-F]+$/)
 
       // V3.0.0 P256 with ERC-7739: signature is longer than vanilla due to 7739 data
-      expect(signature.length).toBeGreaterThan(178)
+      expect(unwrappedSignature.length).toBe(178)
 
       // Verify the P256 prefix (0x177eee12) is embedded in the signature
       // For ERC-7739, the prefix is part of the complex signature structure, not at a fixed position
-      expect(signature.includes(SIG_TYPE_NO_STX_P256.slice(2))).toBe(true)
+      const prefix = `0x${unwrappedSignature.slice(42, 50)}`
+      expect(prefix).toBe(SIG_TYPE_NO_STX_P256)
     })
 
     test("signMessage1271 should use SIG_TYPE_NO_STX_VANILLA_1271_P256 prefix", async () => {
@@ -673,6 +687,7 @@ describe("nexus.account - signing methods", async () => {
 
       // Verify prefix is SIG_TYPE_NO_STX_VANILLA_1271_P256 (0x177eee11)
       // Note: Different prefix from signMessage/signTypedData!
+      // no 6492 wrapping for the vanilla 1271 flow is made by the sdk
       const prefix = `0x${signature.slice(42, 50)}`
       expect(prefix).toBe(SIG_TYPE_NO_STX_VANILLA_1271_P256)
     })

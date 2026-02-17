@@ -3,7 +3,6 @@ import {
   type Hex,
   type LocalAccount,
   type SignableMessage,
-  concatHex,
   hashMessage,
   hashTypedData,
   hexToBytes,
