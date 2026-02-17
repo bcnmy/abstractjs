@@ -5,7 +5,8 @@ import {
   erc721Abi,
   getAbiItem,
   toFunctionSelector,
-  zeroAddress
+  zeroAddress,
+  stringify
 } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
@@ -433,5 +434,43 @@ describe("mee.buildAction", () => {
         }
       })
     ).to.throw("A Batch must contain at least 2 actions")
+  })
+
+  it("Should resolves action policies equivalently for pre-built and builder policy types", async () => {
+    const sudoPolicy = mcNexus.buildActionPolicy({ type: "sudo" })
+    const usagePolicy = mcNexus.buildActionPolicy({
+      type: "usageLimit",
+      limit: 5n
+    })
+
+    const [transferActionWithExternalPolicyBuild] = mcNexus.buildAction({
+      type: "transfer",
+      data: {
+        chainIds: [network.chain.id],
+        contractAddress: zeroAddress,
+        policies: [sudoPolicy, usagePolicy]
+      }
+    })
+
+    const [transferActionWithInternalPolicyBuild] = mcNexus.buildAction({
+      type: "transfer",
+      data: {
+        chainIds: [network.chain.id],
+        contractAddress: zeroAddress,
+        policies: [
+          {
+            type: "sudo"
+          },
+          {
+            type: "usageLimit",
+            limit: 5n
+          }
+        ]
+      }
+    })
+
+    expect(stringify(transferActionWithExternalPolicyBuild)).to.eq(
+      stringify(transferActionWithInternalPolicyBuild)
+    )
   })
 })

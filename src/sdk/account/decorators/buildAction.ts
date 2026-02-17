@@ -27,7 +27,7 @@ export type SessionAction = {
 type BaseBuildActionParams = {
   chainIds: number[]
   contractAddress: Address
-  policies?: BuildActionPolicyTypes[]
+  policies?: BuildActionPolicyTypes[] | PolicyData[]
 }
 
 /** Build 'transfer' ERC20 action. */
@@ -92,12 +92,17 @@ export type BuildActionTypes =
   | BuildBatchActions
 
 const resolvePoliciesOrApplyUnrestrictedPolicy = (
-  policies?: BuildActionPolicyTypes[]
+  policies?: BuildActionPolicyTypes[] | PolicyData[]
 ): PolicyData[] => {
   const actionPolicies =
     policies && policies.length > 0
-      ? policies.map((policy) => {
-          return buildActionPolicy(policy)
+      ? policies.map((policy: BuildActionPolicyTypes | PolicyData) => {
+          // If it's a PolicyData object (already built), return as is
+          if ("policy" in policy && "initData" in policy) {
+            return policy as PolicyData
+          }
+          // If it's a builder type, build into PolicyData
+          return buildActionPolicy(policy as BuildActionPolicyTypes)
         })
       : [buildActionPolicy({ type: "sudo" })]
 

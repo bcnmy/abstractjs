@@ -177,6 +177,10 @@ export const calldataArgument = (value: number) => {
 const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
   const { rules, valueLimitPerUse } = params
 
+  if (rules.length > 16) {
+    throw new Error("Universal policy only supports 16 rules")
+  }
+
   const paramRules: ParamRule[] = []
 
   const defaultParamRule: ParamRule = {

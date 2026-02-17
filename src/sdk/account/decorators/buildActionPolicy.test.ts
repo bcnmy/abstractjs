@@ -102,4 +102,19 @@ describe("mee.buildActionPolicy", () => {
     expect(universalPolicy).toBeDefined()
     expect(universalPolicy.policy).to.eq(UNIVERSAL_ACTION_POLICY_ADDRESS)
   })
+
+  it("Should fail if more than 16 rules are added for universal policy", async () => {
+    expect(() =>
+      mcNexus.buildActionPolicy({
+        type: "universal",
+        rules: new Array(17).fill(0).map(() => {
+          return {
+            condition: "equal",
+            calldataOffset: calldataArgument(2),
+            comparisonValue: parseUnits("10", 6)
+          }
+        })
+      })
+    ).to.throw("Universal policy only supports 16 rules")
+  })
 })
