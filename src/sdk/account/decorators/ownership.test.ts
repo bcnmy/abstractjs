@@ -33,6 +33,7 @@ import {
   filterDeployments,
   resolveStatelessValidator
 } from "./ownership"
+import type { P256Signer } from "../utils/toP256Signer"
 
 const FEE_TOKEN_ADDRESS = testnetMcTestUSDCP.addressOn(baseSepolia.id)
 const MIN_FEE_TOKEN_BALANCE = parseUnits("0.3", 6)
@@ -208,7 +209,7 @@ describe("ownership - unit tests", () => {
       const signerWithoutPubKey = {
         ...mcNexus.signer,
         publicKey: undefined
-      } as any
+      } as unknown as P256Signer
       expect(() => deriveOwnershipData(signerWithoutPubKey, "p256")).toThrow(
         "P256 signer must have a publicKey to derive ownership data"
       )
