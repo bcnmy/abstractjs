@@ -53,7 +53,6 @@ import {
   getAccountDomainStructFields,
   getAccountMeta
 } from "./utils"
-import { toP256Signer } from "./utils/toP256Signer"
 import {
   NEXUS_DOMAIN_NAME,
   NEXUS_DOMAIN_TYPEHASH,
@@ -65,6 +64,7 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
+import { toP256Signer } from "./utils/toP256Signer"
 
 describe("nexus.account", async () => {
   let network: NetworkConfig
@@ -356,7 +356,6 @@ describe("nexus.account", async () => {
     expect(contractResponse).toBe(eip1271MagicValue)
   })
 
-
   test("check that ethers makeNonceKey creates the same key as the SDK", async () => {
     function makeNonceKey(
       vMode: BytesLike,
@@ -500,50 +499,53 @@ describe("nexus.account - signing methods", async () => {
     await killNetwork([network?.rpcPort, network?.bundlerPort])
   })
 
-  describe.each(versions)("$label - signTypedData unit tests", ({ version }) => {
-    let account: NexusAccount
-    let accountAddress: Address
+  describe.each(versions)(
+    "$label - signTypedData unit tests",
+    ({ version }) => {
+      let account: NexusAccount
+      let accountAddress: Address
 
-    beforeAll(() => {
-      account = accountsByVersion.get(version)!
-      accountAddress = addressesByVersion.get(version)!
-    })
-
-    test("should use ERC-7739 flow when module supports 7739", async () => {
-      // Verify default module supports 7739
-      expect(await account.getModule().erc7739VersionSupported()).not.toBe(0)
-
-      const appDomain = {
-        chainId: chain.id,
-        name: "Test",
-        verifyingContract: accountAddress,
-        version: "1"
-      }
-
-      const types = {
-        Message: [{ name: "content", type: "string" }]
-      }
-
-      const message = {
-        content: "Hello ERC-7739"
-      }
-
-      const signature = await account.signTypedData({
-        domain: appDomain,
-        primaryType: "Message",
-        types,
-        message
+      beforeAll(() => {
+        account = accountsByVersion.get(version)!
+        accountAddress = addressesByVersion.get(version)!
       })
 
-      // Signature format validation
-      expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
-      expect(signature.startsWith("0x")).toBe(true)
+      test("should use ERC-7739 flow when module supports 7739", async () => {
+        // Verify default module supports 7739
+        expect(await account.getModule().erc7739VersionSupported()).not.toBe(0)
 
-      // For 7739, signature is longer than vanilla (includes appended domain/type data)
-      // Vanilla would be: 42 (module) + 130 (ECDSA) = 172 chars
-      expect(signature.length).toBeGreaterThan(172)
-    })
-  })
+        const appDomain = {
+          chainId: chain.id,
+          name: "Test",
+          verifyingContract: accountAddress,
+          version: "1"
+        }
+
+        const types = {
+          Message: [{ name: "content", type: "string" }]
+        }
+
+        const message = {
+          content: "Hello ERC-7739"
+        }
+
+        const signature = await account.signTypedData({
+          domain: appDomain,
+          primaryType: "Message",
+          types,
+          message
+        })
+
+        // Signature format validation
+        expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
+        expect(signature.startsWith("0x")).toBe(true)
+
+        // For 7739, signature is longer than vanilla (includes appended domain/type data)
+        // Vanilla would be: 42 (module) + 130 (ECDSA) = 172 chars
+        expect(signature.length).toBeGreaterThan(172)
+      })
+    }
+  )
 
   describe.each(versions)("$label - signMessage unit tests", ({ version }) => {
     let account: NexusAccount
@@ -605,8 +607,59 @@ describe("nexus.account - signing methods", async () => {
     }
   )
 
-  describe("V3.0.0 - signMessage1271 with P256 signer", () => {
-    test("should add correct P256 prefix for V3.0.0", async () => {
+  describe("V3.0.0 with P256 signer", () => {
+    test("signTypedData should include SIG_TYPE_NO_STX_P256 prefix", async () => {
+      const accountAddress = await p256Account.getAddress()
+
+      const appDomain = {
+        chainId: chain.id,
+        name: "Test",
+        verifyingContract: accountAddress,
+        version: "1"
+      }
+
+      const types = {
+        Message: [{ name: "content", type: "string" }]
+      }
+
+      const message = {
+        content: "Hello P256 ERC-7739"
+      }
+
+      const signature = await p256Account.signTypedData({
+        domain: appDomain,
+        primaryType: "Message",
+        types,
+        message
+      })
+
+      // Signature format validation
+      expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
+
+      // V3.0.0 P256 with ERC-7739: signature is longer than vanilla due to 7739 data
+      expect(signature.length).toBeGreaterThan(178)
+
+      // Verify the P256 prefix (0x177eee12) is embedded in the signature
+      // For ERC-7739, the prefix is part of the complex signature structure, not at a fixed position
+      expect(signature.includes(SIG_TYPE_NO_STX_P256.slice(2))).toBe(true)
+    })
+
+    test("signMessage should include SIG_TYPE_NO_STX_P256 prefix", async () => {
+      const message = "test P256 message"
+      const signature = await p256Account.signMessage({ message })
+
+      // Signature format validation
+      expect(signature).toMatch(/^0x[0-9a-fA-F]+$/)
+
+      // V3.0.0 P256 with ERC-7739: signature is longer than vanilla due to 7739 data
+      expect(signature.length).toBeGreaterThan(178)
+
+      // Verify the P256 prefix (0x177eee12) is embedded in the signature
+      // For ERC-7739, the prefix is part of the complex signature structure, not at a fixed position
+      expect(signature.includes(SIG_TYPE_NO_STX_P256.slice(2))).toBe(true)
+    })
+
+    test("signMessage1271 should use SIG_TYPE_NO_STX_VANILLA_1271_P256 prefix", async () => {
       const message = "test P256 vanilla 1271"
       const signature = await p256Account.signMessage1271({ message })
 
@@ -619,6 +672,7 @@ describe("nexus.account - signing methods", async () => {
       expect(signature.length).toBe(178)
 
       // Verify prefix is SIG_TYPE_NO_STX_VANILLA_1271_P256 (0x177eee11)
+      // Note: Different prefix from signMessage/signTypedData!
       const prefix = `0x${signature.slice(42, 50)}`
       expect(prefix).toBe(SIG_TYPE_NO_STX_VANILLA_1271_P256)
     })
