@@ -28,12 +28,12 @@ import type { AccountConfig } from "../../integration-tests/mee-versions/setupMu
 import { setupMultiVersionAccounts } from "../../integration-tests/mee-versions/setupMultiVersion"
 import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
 import { toP256Signer } from "../utils/toP256Signer"
+import type { P256Signer } from "../utils/toP256Signer"
 import {
   deriveOwnershipData,
   filterDeployments,
   resolveStatelessValidator
 } from "./ownership"
-import type { P256Signer } from "../utils/toP256Signer"
 
 const FEE_TOKEN_ADDRESS = testnetMcTestUSDCP.addressOn(baseSepolia.id)
 const MIN_FEE_TOKEN_BALANCE = parseUnits("0.3", 6)
