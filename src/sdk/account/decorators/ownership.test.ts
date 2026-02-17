@@ -128,12 +128,17 @@ describe("ownership - unit tests", () => {
       expect(result).toBe(submodules?.SafeAccountSubmodule)
     })
 
-    test("should pass through a raw address as-is", () => {
+    test("should pass through a raw address as-is with submodules", () => {
       const submodules = mcNexus.deployments[0].version.submodules
       const result = resolveStatelessValidator(
         CUSTOM_VALIDATOR_ADDRESS,
         submodules
       )
+      expect(result).toBe(CUSTOM_VALIDATOR_ADDRESS)
+    })
+
+    test("should pass through a custom address even without submodules", () => {
+      const result = resolveStatelessValidator(CUSTOM_VALIDATOR_ADDRESS)
       expect(result).toBe(CUSTOM_VALIDATOR_ADDRESS)
     })
 
@@ -232,15 +237,15 @@ describe("ownership - unit tests", () => {
     })
 
     test("should throw when a requested chainId is not in deployments", () => {
-      expect(() =>
-        filterDeployments(mcNexus.deployments, [99999])
-      ).toThrow("No deployments found for chainIds: 99999")
+      expect(() => filterDeployments(mcNexus.deployments, [99999])).toThrow(
+        "No deployments found for chainIds: 99999"
+      )
     })
 
     test("should include available chainIds in error message", () => {
-      expect(() =>
-        filterDeployments(mcNexus.deployments, [99999])
-      ).toThrow("Available chainIds:")
+      expect(() => filterDeployments(mcNexus.deployments, [99999])).toThrow(
+        "Available chainIds:"
+      )
     })
   })
 

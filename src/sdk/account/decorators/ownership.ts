@@ -59,7 +59,7 @@ export function filterDeployments(
 
 export function resolveStatelessValidator(
   ownershipType: OwnershipType,
-  submodules: MEEVersionConfig["submodules"]
+  submodules?: MEEVersionConfig["submodules"]
 ): Address {
   if (
     ownershipType !== "eoa" &&
