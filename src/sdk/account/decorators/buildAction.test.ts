@@ -4,9 +4,9 @@ import {
   erc20Abi,
   erc721Abi,
   getAbiItem,
+  stringify,
   toFunctionSelector,
-  zeroAddress,
-  stringify
+  zeroAddress
 } from "viem"
 import { beforeAll, describe, expect, it } from "vitest"
 import { toNetwork } from "../../../test/testSetup"
