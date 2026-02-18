@@ -314,7 +314,17 @@ describe("mee.executeQuote", () => {
     const quoteType = await getQuoteType(meeClientV2_2_1, quote)
     expect(quoteType).toBe("permit")
 
+    console.log({ quote: quote.quote })
+
     const { hash } = await meeClientV2_2_1.executeQuote({ quote: quote.quote })
     expect(hash).toBeDefined()
+
+    const receipt = await meeClientV2_2_1.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })

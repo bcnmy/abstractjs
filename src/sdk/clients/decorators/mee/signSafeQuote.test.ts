@@ -2,23 +2,27 @@ import Safe from "@safe-global/protocol-kit"
 import { OperationType } from "@safe-global/types-kit"
 import {
   http,
+  type Account,
   type Address,
   type Chain,
   type Hex,
+  type LocalAccount,
+  type Transport,
+  createPublicClient,
+  createWalletClient,
   decodeFunctionData,
   encodePacked,
   erc20Abi,
-  zeroAddress,
-  type LocalAccount,
-  createPublicClient,
-  createWalletClient,
-  type Transport,
-  type Account
+  zeroAddress
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import { NetworkConfig, TESTNET_RPC_URLS, toNetwork } from "../../../../test/testSetup"
+import {
+  type NetworkConfig,
+  TESTNET_RPC_URLS,
+  toNetwork
+} from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type MultichainSmartAccount,
@@ -528,8 +532,7 @@ describe("mee.signSafeQuote", () => {
       predictedSafe
     })
 
-    predictedSafeAddress =
-      (await protocolKitOwner1.getAddress()) as Address
+    predictedSafeAddress = (await protocolKitOwner1.getAddress()) as Address
 
     // Check if the Safe is already deployed
     const safeCode = await baseSepoliaPublicClient.getCode({
@@ -600,7 +603,7 @@ describe("mee.signSafeQuote", () => {
         hash: txHashOpSepolia
       })
       console.log("Safe deployed on OP Sepolia at:", predictedSafeAddress)
-    } 
+    }
     // Re-initialize protocol kit with the deployed Safe address
     protocolKitOwner1 = await Safe.init({
       provider: baseSepoliaRpcUrl,

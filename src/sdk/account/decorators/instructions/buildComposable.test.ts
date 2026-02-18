@@ -1553,7 +1553,8 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
           args: [testMcNexus.addressOn(chain.id, true)]
         })
 
-        const nexusUSDCBalanceDelta = nexusUSDCBalanceAfter - nexusUSDCBalanceBefore
+        const nexusUSDCBalanceDelta =
+          nexusUSDCBalanceAfter - nexusUSDCBalanceBefore
         console.log({ nexusUSDCBalanceDelta })
         // nothing ever get executed
         expect(nexusUSDCBalanceDelta).to.be.eq(0n)

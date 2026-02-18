@@ -50,7 +50,7 @@ import {
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import { type FeeTokenInfo, getQuote } from "./getQuote"
-import { getQuoteType } from "./getQuoteType"
+import { getQuoteType, QuoteType } from "./getQuoteType"
 import signOnChainQuote from "./signOnChainQuote"
 import {
   type TokenTrigger,
@@ -684,7 +684,8 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     const signedQuoteFull = {
       ...signedQuote,
       meeVersions,
-      isEIP712TrustedSponsorshipSupported: true
+      isEIP712TrustedSponsorshipSupported: true,
+      quoteType: "onchain" as QuoteType
     }
 
     // Execute the quote
@@ -693,7 +694,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
         ...signedQuoteFull,
         trigger
       }
-    })
+    })   
 
     // Wait for the transaction to complete
     const executeReceipt = await meeClient.waitForSupertransactionReceipt({
