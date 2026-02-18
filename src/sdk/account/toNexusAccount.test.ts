@@ -547,6 +547,17 @@ describe("nexus.account - signing methods", async () => {
         // For 7739, signature is longer than vanilla (includes appended domain/type data)
         // Vanilla would be: 42 (module) + 130 (ECDSA) = 172 chars
         expect(unwrappedSignature.length).toBeGreaterThan(172)
+
+        // verify signature via 6492
+        const valid = await account.publicClient.verifyTypedData({
+          address: await account.getAddress(),
+          signature: signature,
+          domain: appDomain,
+          primaryType: "Message",
+          types,
+          message: message
+        })
+        expect(valid).toBe(true)
       })
     }
   )
@@ -574,6 +585,14 @@ describe("nexus.account - signing methods", async () => {
 
       // for personal sign, the signature is jusr r | s | v as per erc-7739
       expect(unwrappedSignature.length).toBe(172)
+
+      // verify signature via 6492
+      const valid = await account.publicClient.verifyMessage({
+        address: await account.getAddress(),
+        message: message,
+        signature: signature
+      })
+      expect(valid).toBe(true)
     })
   })
 
@@ -599,7 +618,9 @@ describe("nexus.account - signing methods", async () => {
 
         // Should start with module address
         expect(
-          unwrappedSignature.startsWith(account.getModule().module.toLowerCase())
+          unwrappedSignature.startsWith(
+            account.getModule().module.toLowerCase()
+          )
         ).toBe(true)
 
         // Version-specific assertions
@@ -613,6 +634,14 @@ describe("nexus.account - signing methods", async () => {
           // V2.x.x: module (20) + signature (65) = 85 bytes = 172 hex chars (no prefix)
           expect(unwrappedSignature.length).toBe(172)
         }
+
+        // verify signature via 6492
+        const valid = await account.publicClient.verifyMessage({
+          address: await account.getAddress(),
+          message: message,
+          signature: signature
+        })
+        expect(valid).toBe(true)
       })
     }
   )
@@ -686,7 +715,9 @@ describe("nexus.account - signing methods", async () => {
 
       // Should start with module address
       expect(
-        unwrappedSignature.startsWith(p256Account.getModule().module.toLowerCase())
+        unwrappedSignature.startsWith(
+          p256Account.getModule().module.toLowerCase()
+        )
       ).toBe(true)
 
       // V3.0.0 P256: module (20) + prefix (4) + P256 signature (64) = 88 bytes = 178 hex chars

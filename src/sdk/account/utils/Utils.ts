@@ -127,7 +127,6 @@ export type SignWith6492Params = {
 export const ERC6492_MAGIC_BYTES: Hex =
   "0x6492649264926492649264926492649264926492649264926492649264926492"
 
-
 /**
  * Wraps a signature according to EIP-6492 specification.
  *
