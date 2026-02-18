@@ -122,6 +122,13 @@ export type SignWith6492Params = {
 }
 
 /**
+ * The EIP-6492 magic suffix used to identify wrapped signatures.
+ */
+export const ERC6492_MAGIC_BYTES: Hex =
+  "0x6492649264926492649264926492649264926492649264926492649264926492"
+
+
+/**
  * Wraps a signature according to EIP-6492 specification.
  *
  * @param params - Parameters including factory address, calldata, and signature
@@ -145,15 +152,9 @@ export const wrapSignatureWith6492 = ({
       factoryCalldata,
       signature
     ]),
-    "0x6492649264926492649264926492649264926492649264926492649264926492"
+    ERC6492_MAGIC_BYTES
   ])
 }
-
-/**
- * The EIP-6492 magic suffix used to identify wrapped signatures.
- */
-export const ERC6492_MAGIC_BYTES: Hex =
-  "0x6492649264926492649264926492649264926492649264926492649264926492"
 
 /**
  * Result of unwrapping an EIP-6492 signature.

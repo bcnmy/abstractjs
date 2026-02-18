@@ -79,7 +79,8 @@ import {
   type EthersWallet,
   addressEquals,
   isNullOrUndefined,
-  supportsCancun
+  supportsCancun,
+  wrapSignatureWith6492
 } from "./utils/Utils"
 import {
   type MEEVersionConfig,
@@ -939,7 +940,26 @@ export const toNexusAccount = async (
       signature = encodePacked(["bytes4", "bytes"], [prefix, signature])
     }
 
-    return encodePacked(["address", "bytes"], [module.module, signature])
+    const wrappedSignature = encodePacked(
+      ["address", "bytes"],
+      [module.module, signature]
+    )
+
+    // Check if account is deployed, if not wrap with ERC-6492
+    const accountAddress = await getAddress()
+    const code = await publicClient.getCode({ address: accountAddress })
+    const isDeployed = Boolean(code)
+
+    if (!isDeployed) {
+      // Wrap signature with ERC-6492 for undeployed accounts
+      return wrapSignatureWith6492({
+        factoryAddress: meeConfig.factoryAddress,
+        factoryCalldata: factoryData,
+        signature: wrappedSignature
+      })
+    }
+
+    return wrappedSignature
   }
 
   /**

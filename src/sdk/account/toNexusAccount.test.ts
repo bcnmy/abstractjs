@@ -64,8 +64,8 @@ import {
   eip1271MagicValue
 } from "./utils/Constants"
 import type { BytesLike } from "./utils/Types"
-import { toP256Signer } from "./utils/toP256Signer"
 import { unwrapSignature6492 } from "./utils/Utils"
+import { toP256Signer } from "./utils/toP256Signer"
 
 describe("nexus.account", async () => {
   let network: NetworkConfig
@@ -593,22 +593,25 @@ describe("nexus.account - signing methods", async () => {
         const message = `test vanilla 1271 explicit ${label}`
         const signature = await account.signMessage1271({ message })
 
+        const result = unwrapSignature6492(signature)
+        const unwrappedSignature = result.originalSignature
+        expect(result.isWrapped).toBe(true)
+
         // Should start with module address
         expect(
-          signature.startsWith(account.getModule().module.toLowerCase())
+          unwrappedSignature.startsWith(account.getModule().module.toLowerCase())
         ).toBe(true)
 
         // Version-specific assertions
-        // no 6492 wrapping for the vanilla 1271 flow is made by the sdk
         if (version === MEEVersion.V3_0_0) {
           // V3.0.0: module (20) + prefix (4) + signature (65) = 89 bytes = 180 hex chars
-          expect(signature.length).toBe(180)
+          expect(unwrappedSignature.length).toBe(180)
           // Verify prefix is SIG_TYPE_NO_STX_VANILLA_1271_EOA (0x177eee05)
-          const prefix = `0x${signature.slice(42, 50)}`
+          const prefix = `0x${unwrappedSignature.slice(42, 50)}`
           expect(prefix).toBe(SIG_TYPE_NO_STX_VANILLA_1271_EOA)
         } else {
           // V2.x.x: module (20) + signature (65) = 85 bytes = 172 hex chars (no prefix)
-          expect(signature.length).toBe(172)
+          expect(unwrappedSignature.length).toBe(172)
         }
       })
     }
@@ -677,18 +680,21 @@ describe("nexus.account - signing methods", async () => {
       const message = "test P256 vanilla 1271"
       const signature = await p256Account.signMessage1271({ message })
 
+      const result = unwrapSignature6492(signature)
+      const unwrappedSignature = result.originalSignature
+      expect(result.isWrapped).toBe(true)
+
       // Should start with module address
       expect(
-        signature.startsWith(p256Account.getModule().module.toLowerCase())
+        unwrappedSignature.startsWith(p256Account.getModule().module.toLowerCase())
       ).toBe(true)
 
       // V3.0.0 P256: module (20) + prefix (4) + P256 signature (64) = 88 bytes = 178 hex chars
-      expect(signature.length).toBe(178)
+      expect(unwrappedSignature.length).toBe(178)
 
       // Verify prefix is SIG_TYPE_NO_STX_VANILLA_1271_P256 (0x177eee11)
       // Note: Different prefix from signMessage/signTypedData!
-      // no 6492 wrapping for the vanilla 1271 flow is made by the sdk
-      const prefix = `0x${signature.slice(42, 50)}`
+      const prefix = `0x${unwrappedSignature.slice(42, 50)}`
       expect(prefix).toBe(SIG_TYPE_NO_STX_VANILLA_1271_P256)
     })
   })
