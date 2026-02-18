@@ -8,12 +8,17 @@ import {
   decodeFunctionData,
   encodePacked,
   erc20Abi,
-  zeroAddress
+  zeroAddress,
+  type LocalAccount,
+  createPublicClient,
+  createWalletClient,
+  type Transport,
+  type Account
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, test } from "vitest"
-import { TESTNET_RPC_URLS } from "../../../../test/testSetup"
+import { NetworkConfig, TESTNET_RPC_URLS, toNetwork } from "../../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type MultichainSmartAccount,
@@ -426,13 +431,18 @@ describe("validateSafeDeployment", () => {
 
 describe("mee.signSafeQuote", () => {
   // Predeployed Safe on Base Sepolia and OP Sepolia
-  const safeAddress: Address = "0x8BC5CcE359467E55632acBdb242A1b1D66C5B827"
+  let predictedSafeAddress: Address
 
   let protocolKitOwner1: Safe
   let protocolKitOwner2: Safe
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
   let recipientAddress: Address
+
+  let eoaAccount: LocalAccount
+  let eoaAccountTwo: LocalAccount
+
+  let network: NetworkConfig
 
   const triggerChainId = baseSepolia.id
   const baseSepoliaRpcUrl = TESTNET_RPC_URLS[baseSepolia.id]
@@ -442,8 +452,17 @@ describe("mee.signSafeQuote", () => {
   const transferAmount = 10000n
 
   beforeAll(async () => {
+    //random
+    recipientAddress = privateKeyToAccount(generatePrivateKey()).address
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
+
+    eoaAccount = network.account!
+    eoaAccountTwo = network.accountTwo!
+
+    // Generate a random recipient address for the USDCP transfer
     recipientAddress = privateKeyToAccount(generatePrivateKey()).address
 
+    // Get private keys from environment
     const privateKey = process.env.PRIVATE_KEY as Hex
     const privateKeyTwo = process.env.PRIVATE_KEY_TWO as Hex
 
@@ -458,21 +477,145 @@ describe("mee.signSafeQuote", () => {
       ? privateKeyTwo
       : (`0x${privateKeyTwo}` as Hex)
 
-    // Initialize protocol kits with the predeployed Safe address
+    const baseSepoliaPublicClient = createPublicClient({
+      chain: baseSepolia,
+      transport: http(baseSepoliaRpcUrl)
+    })
+
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(baseSepoliaRpcUrl)
+    }) as ReturnType<typeof createWalletClient<Transport, Chain, Account>>
+
+    const opSepoliaPublicClient = createPublicClient({
+      chain: optimismSepolia,
+      transport: http(opSepoliaRpcUrl)
+    })
+
+    const opSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(opSepoliaRpcUrl)
+    }) as ReturnType<typeof createWalletClient<Transport, Chain, Account>>
+
+    // Step 1: Setup Safe account with 2 signers and threshold 2
+    // First, predict the Safe address using a deterministic configuration
+    // To ensure the same address across chains, we must use the same:
+    // - safeAccountConfig (owners, threshold)
+    // - saltNonce
+    // - safeVersion
+    const safeAccountConfig = {
+      owners: [eoaAccount.address, eoaAccountTwo.address],
+      threshold: 2
+    }
+
+    // Use explicit saltNonce and safeVersion for consistent multichain deployment
+    const safeDeploymentConfig = {
+      saltNonce: "0", // Use consistent salt nonce across chains
+      safeVersion: "1.4.1" as const // Use explicit version for consistency
+    }
+
+    const predictedSafe = {
+      safeAccountConfig,
+      safeDeploymentConfig
+    }
+
+    // Initialize protocol kit with owner 1 to predict the Safe address
     protocolKitOwner1 = await Safe.init({
       provider: baseSepoliaRpcUrl,
       signer: formattedPrivateKey,
-      safeAddress
+      predictedSafe
+    })
+
+    predictedSafeAddress =
+      (await protocolKitOwner1.getAddress()) as Address
+
+    // Check if the Safe is already deployed
+    const safeCode = await baseSepoliaPublicClient.getCode({
+      address: predictedSafeAddress
+    })
+    const isDeployed = safeCode !== undefined && safeCode !== "0x"
+
+    if (!isDeployed) {
+      console.log("Predicted Safe address:", predictedSafeAddress)
+      console.log("Deploying new Safe...")
+
+      // Deploy the Safe
+      const deploymentTransaction =
+        await protocolKitOwner1.createSafeDeploymentTransaction()
+
+      const txHash = await baseSepoliaWalletClient.sendTransaction({
+        to: deploymentTransaction.to as Address,
+        data: deploymentTransaction.data as Hex,
+        value: BigInt(deploymentTransaction.value),
+        chain: baseSepolia
+      })
+
+      await baseSepoliaPublicClient.waitForTransactionReceipt({ hash: txHash })
+      console.log("Safe deployed on Base Sepolia at:", predictedSafeAddress)
+    }
+
+    // Deploy Safe on OP Sepolia as well (Safe uses deterministic deployment)
+    const safeCodeOpSepolia = await opSepoliaPublicClient.getCode({
+      address: predictedSafeAddress
+    })
+    const isDeployedOnOpSepolia =
+      safeCodeOpSepolia !== undefined && safeCodeOpSepolia !== "0x"
+
+    if (!isDeployedOnOpSepolia) {
+      console.log("Deploying Safe on OP Sepolia...")
+
+      // Initialize protocol kit for OP Sepolia deployment
+      // Use the same predictedSafe config to ensure same address
+      const protocolKitOpSepolia = await Safe.init({
+        provider: opSepoliaRpcUrl,
+        signer: formattedPrivateKey,
+        predictedSafe
+      })
+
+      // Verify predicted address matches
+      const predictedAddressOpSepolia = await protocolKitOpSepolia.getAddress()
+      console.log(
+        "Predicted Safe address on OP Sepolia:",
+        predictedAddressOpSepolia
+      )
+      if (predictedAddressOpSepolia !== predictedSafeAddress) {
+        throw new Error(
+          `Safe address mismatch! Base Sepolia: ${predictedSafeAddress}, OP Sepolia: ${predictedAddressOpSepolia}`
+        )
+      }
+
+      const deploymentTransactionOpSepolia =
+        await protocolKitOpSepolia.createSafeDeploymentTransaction()
+
+      const txHashOpSepolia = await opSepoliaWalletClient.sendTransaction({
+        to: deploymentTransactionOpSepolia.to as Address,
+        data: deploymentTransactionOpSepolia.data as Hex,
+        value: BigInt(deploymentTransactionOpSepolia.value),
+        chain: optimismSepolia
+      })
+
+      await opSepoliaPublicClient.waitForTransactionReceipt({
+        hash: txHashOpSepolia
+      })
+      console.log("Safe deployed on OP Sepolia at:", predictedSafeAddress)
+    } 
+    // Re-initialize protocol kit with the deployed Safe address
+    protocolKitOwner1 = await Safe.init({
+      provider: baseSepoliaRpcUrl,
+      signer: formattedPrivateKey,
+      predictedSafe
     })
 
     protocolKitOwner2 = await Safe.init({
       provider: baseSepoliaRpcUrl,
       signer: formattedPrivateKeyTwo,
-      safeAddress
+      predictedSafe
     })
 
     // Create Nexus orchestrator owned by Safe (V3.0.0)
-    const safeSigner = getMockSafeSigner(safeAddress)
+    const safeSigner = getMockSafeSigner(predictedSafeAddress)
 
     mcNexus = await toMultichainNexusAccount({
       signer: safeSigner,
@@ -491,7 +634,7 @@ describe("mee.signSafeQuote", () => {
       defaultModuleParameters: {
         statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules
           ?.SafeAccountSubmodule as Address,
-        ownershipData: encodePacked(["address"], [safeAddress])
+        ownershipData: encodePacked(["address"], [predictedSafeAddress])
       }
     })
 
@@ -546,7 +689,7 @@ describe("mee.signSafeQuote", () => {
         address: usdcpAddressBaseSepolia,
         chainId: triggerChainId
       },
-      safeAccount: safeAddress
+      safeAccount: predictedSafeAddress
     })
 
     expect(safeQuote).toBeDefined()
@@ -586,7 +729,7 @@ describe("mee.signSafeQuote", () => {
     const signedSafeQuote = await meeClient.signSafeQuote({
       fusionQuote: safeQuote,
       signedSafeTxn,
-      safeAccount: safeAddress
+      safeAccount: predictedSafeAddress
     })
 
     expect(signedSafeQuote).toBeDefined()

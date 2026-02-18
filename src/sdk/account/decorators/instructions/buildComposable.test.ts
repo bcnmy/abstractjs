@@ -1519,6 +1519,13 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         const minBalanceRequired = await getMinRequiredBalance(testMcNexus)
         const triggerAmount = 1n // not enough
 
+        const nexusUSDCBalanceBefore = await publicClient.readContract({
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [testMcNexus.addressOn(chain.id, true)]
+        })
+
         const { getFusionQuote } = await setupConditionalTest(
           testMcNexus,
           testMeeClient,
@@ -1533,22 +1540,23 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
 
         console.log("waiting for supertransaction receipt")
-        await new Promise((resolve) => setTimeout(resolve, 65_000)) // 60s timeout
+        await new Promise((resolve) => setTimeout(resolve, 75_000)) // 75s timeout
         // should fail since condition not met
         const stxStatus = await getStxStatus(testMeeClient, hash)
         expect(stxStatus).to.be.eq("FAILED")
         console.log("transaction reverted as expected:", hash)
 
-        const nexusUSDCBalance = await publicClient.readContract({
+        const nexusUSDCBalanceAfter = await publicClient.readContract({
           address: tokenAddress,
           abi: erc20Abi,
           functionName: "balanceOf",
           args: [testMcNexus.addressOn(chain.id, true)]
         })
 
-        console.log({ nexusUSDCBalance })
+        const nexusUSDCBalanceDelta = nexusUSDCBalanceAfter - nexusUSDCBalanceBefore
+        console.log({ nexusUSDCBalanceDelta })
         // nothing ever get executed
-        expect(nexusUSDCBalance).to.be.eq(0n)
+        expect(nexusUSDCBalanceDelta).to.be.eq(0n)
       }
     })
 
