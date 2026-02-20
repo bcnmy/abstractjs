@@ -71,10 +71,10 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   [MEEVersion.V3_0_0]: {
     version: MEEVersion.V3_0_0,
     accountId: "biconomy.nexus.1.3.1",
-    factoryAddress: "0xA1f6592d6126132a56835d4897488D59CE04A9Df",
-    bootStrapAddress: "0x0daBF8daeE4bFB28eD9EEe3d39B5C4deb8235D60",
-    implementationAddress: "0xE8Dfe6696b2c1137F64810368049F44b5832beec",
-    validatorAddress: "0x8b0Aa5d4c0e06a463bd67CBaF7D00C21c861Ce58", // Stx Validator Address
+    factoryAddress: "0x75Eb8D1621D193010425D34b4Ae81835E2409660",
+    bootStrapAddress: "0x33A8F72F236e02eD62B0312f48105AcBD651Cd17",
+    implementationAddress: "0x37DF3014c8B72372F2783aAF517bcdC6B516c8Df",
+    validatorAddress: "0x5e2181ccC1550f5e86F14298A12a7a9A04536F58", // Stx Validator Address
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
     composabilityVersion: ComposabilityVersion.V1_1_0,
