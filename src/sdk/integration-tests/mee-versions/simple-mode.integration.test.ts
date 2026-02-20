@@ -214,7 +214,9 @@ describe("Simple Mode (Smart-Account) Integration Tests", () => {
       async ({ sponsored, simulated }) => {
         const { meeClient, eoaAccount } = p256AccountConfig
 
-        const quoteParams = buildGetQuoteParams(eoaAccount.address, {
+        const mockAddress = "0x1234567890123456789012345678901234567890"
+
+        const quoteParams = buildGetQuoteParams(mockAddress, {
           sponsored,
           simulated
         })

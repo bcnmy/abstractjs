@@ -9,8 +9,8 @@ import {
   encodePacked,
   validateTypedData
 } from "viem"
-import { deriveOwnershipData } from "../../../account/decorators/ownership"
 import { erc7739Actions } from "viem/experimental"
+import { deriveOwnershipData } from "../../../account/decorators/ownership"
 import type { MEEVersionConfig } from "../../../account/utils/getVersion"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
