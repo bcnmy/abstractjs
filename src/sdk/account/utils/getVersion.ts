@@ -213,13 +213,15 @@ export type MEEVersionConfig = {
   /** The composable module address for the account */
   composableModuleAddress?: Address
   /** Submodules for the stx validator */
+  // see this PR description to learn about different kind of submodules
+  // https://github.com/bcnmy/stx-contracts/pull/18
   submodules?: {
-    noStxModeVerifier?: Address
-    SimpleModeSubmodule?: Address
-    PermitSubmodule?: Address
-    TxSubmodule?: Address
-    SafeAccountSubmodule?: Address
-    EoaStatelessValidator?: Address
-    P256StatelessValidator?: Address
+    noStxModeVerifier?: Address // Mode Verifier for No STX Mode
+    SimpleModeSubmodule?: Address // Stx Mode Verifier for Simple fusion Mode
+    PermitSubmodule?: Address // Stx Mode Verifier for Permit fusion Mode
+    TxSubmodule?: Address // Stx Mode Verifier for On-chain Tx fusion Mode
+    SafeAccountSubmodule?: Address // Safe Account Submodule for Safe fusion Mode (Stx Mode verifier + Stateless Validator)
+    EoaStatelessValidator?: Address // secp256k1 stateless validator
+    P256StatelessValidator?: Address // pure p256 (secp256r1) stateless validator. no webauthn!
   }
 }
