@@ -9,6 +9,7 @@ import {
   encodePacked,
   validateTypedData
 } from "viem"
+import { deriveOwnershipData } from "../../../account/decorators/ownership"
 import { erc7739Actions } from "viem/experimental"
 import type { MEEVersionConfig } from "../../../account/utils/getVersion"
 import { DUMMY_SIGNATURE } from "../smartSessions"
@@ -102,10 +103,7 @@ export const toStxValidator = (
   if (parameters.ownershipData) {
     ownershipData = parameters.ownershipData
   } else if (isP256 && parameters.signer) {
-    // P256: ownership data is x || y (64 bytes) extracted from uncompressed public key (04 || x || y)
-    const x = `0x${parameters.signer.publicKey.slice(4, 68)}` as Hex
-    const y = `0x${parameters.signer.publicKey.slice(68, 132)}` as Hex
-    ownershipData = encodePacked(["bytes32", "bytes32"], [x, y])
+    ownershipData = deriveOwnershipData(parameters.signer, "p256")
   } else {
     // EOA: ownership data is the account address
     ownershipData = encodePacked(

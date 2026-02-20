@@ -427,7 +427,7 @@ describe("No-STX Mode Integration Tests", () => {
         message
       })
 
-      // no length assertion since as per erc-7739, thw signature is appended with plenty of
+      // no length assertion since as per erc-7739, the signature is appended with plenty of
       // additional data required to rehash the data hash on-chain
 
       // Verify P256 prefix for signTypedData (uses ERC-7739, so prefix is 0x177eee12)
