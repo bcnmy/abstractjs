@@ -849,6 +849,9 @@ export const toNexusAccount = async (
 
   /**
    * @description Signs typed data. Uses ERC-7739 TypedDataSign flow for modules that support it.
+   * Supports both EOA and P256 signers.
+   * P256 signers are supported only for MEE Version 3.0.0 and above and require a dedicated prefix
+   * to be passed to the validator module to let it know that the signer is a P256 signer.
    * @param parameters - The typed data parameters
    * @returns The signature with module address prepended (Nexus-specific format)
    */
@@ -928,7 +931,14 @@ export const toNexusAccount = async (
     message: SignableMessage
   }): Promise<Hex> => {
     const { message } = parameters
-    let signature = await module.signMessage(message)
+
+    // Run signing concurrently with address + deployed check
+    const [rawSignature, code] = await Promise.all([
+      module.signMessage(message),
+      getAddress().then((addr) => publicClient.getCode({ address: addr }))
+    ])
+
+    let signature = rawSignature
 
     // for Stx Validator, we need to explicitly mention
     // we want vanilla 1271 flow by using the according mode,
@@ -945,9 +955,6 @@ export const toNexusAccount = async (
       [module.module, signature]
     )
 
-    // Check if account is deployed, if not wrap with ERC-6492
-    const accountAddress = await getAddress()
-    const code = await publicClient.getCode({ address: accountAddress })
     const isDeployed = Boolean(code)
 
     if (!isDeployed) {
