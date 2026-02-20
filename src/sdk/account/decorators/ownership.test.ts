@@ -6,9 +6,9 @@ import {
   createWalletClient,
   encodeFunctionData,
   encodePacked,
-  erc20Abi,
   parseAbi,
-  parseUnits
+  parseUnits,
+  publicActions
 } from "viem"
 import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
@@ -19,7 +19,7 @@ import {
   toNetwork
 } from "../../../test/testSetup"
 import { testnetMcTestUSDCP } from "../../../test/testTokens"
-import type { NetworkConfig } from "../../../test/testUtils"
+import { type NetworkConfig, safeTopUp } from "../../../test/testUtils"
 import type { MeeClient } from "../../clients/createMeeClient"
 import type { GetQuoteParams } from "../../clients/decorators/mee/getQuote"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
@@ -37,7 +37,6 @@ import {
 
 const FEE_TOKEN_ADDRESS = testnetMcTestUSDCP.addressOn(baseSepolia.id)
 const MIN_FEE_TOKEN_BALANCE = parseUnits("0.3", 6)
-const FEE_TOKEN_FUNDING_AMOUNT = parseUnits("1", 6)
 
 const FEE_TOKEN = {
   address: FEE_TOKEN_ADDRESS,
@@ -51,29 +50,18 @@ function quoteParams(instructions: Instruction[]): GetQuoteParams {
 async function fundFeeTokenIfNeeded(configs: AccountConfig[]) {
   for (const { mcNexus, eoaAccount } of configs) {
     const deployment = mcNexus.deploymentOn(baseSepolia.id, true)
-    const publicClient = deployment.client as PublicClient
+    const walletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
 
-    const balance = await publicClient.readContract({
-      address: FEE_TOKEN_ADDRESS,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [deployment.address]
-    })
-
-    if (balance < MIN_FEE_TOKEN_BALANCE) {
-      const walletClient = createWalletClient({
-        account: eoaAccount,
-        chain: baseSepolia,
-        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
-      })
-      const hash = await walletClient.writeContract({
-        address: FEE_TOKEN_ADDRESS,
-        abi: erc20Abi,
-        functionName: "transfer",
-        args: [deployment.address, FEE_TOKEN_FUNDING_AMOUNT]
-      })
-      await publicClient.waitForTransactionReceipt({ hash })
-    }
+    await safeTopUp(
+      walletClient,
+      deployment.address,
+      MIN_FEE_TOKEN_BALANCE,
+      FEE_TOKEN_ADDRESS
+    )
   }
 }
 
