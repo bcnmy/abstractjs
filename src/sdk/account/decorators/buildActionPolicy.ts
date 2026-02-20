@@ -13,7 +13,7 @@ import { toBytes32 } from "../utils"
 /**
  * Sudo policy type — allows unrestricted action.
  */
-export type BuildSudoActionPolicy = {
+export type BuildSudoActionPolicyParams = {
   type: "sudo"
 }
 
@@ -22,7 +22,7 @@ export type BuildSudoActionPolicy = {
  * - rules: The array of parameter rules to apply per calldata parameter.
  * - valueLimitPerUse: Max value allowed for each action execution.
  */
-export type BuildUniversalActionPolicy = {
+export type BuildUniversalActionPolicyParams = {
   type: "universal"
   rules: {
     /**
@@ -58,7 +58,7 @@ export type BuildUniversalActionPolicy = {
  * - validAfter: Unix timestamp in seconds after which valid.
  * - validUntil: Unix timestamp in seconds until which valid.
  */
-export type BuildTimeFrameActionPolicy = {
+export type BuildTimeFrameActionPolicyParams = {
   type: "timeframe"
   validAfter: number
   validUntil: number
@@ -68,7 +68,7 @@ export type BuildTimeFrameActionPolicy = {
  * Usage Limit Policy parameters.
  * - limit: Maximum number of allowed usages.
  */
-export type BuildUsageLimitActionPolicy = {
+export type BuildUsageLimitActionPolicyParams = {
   type: "usageLimit"
   limit: bigint
 }
@@ -77,20 +77,42 @@ export type BuildUsageLimitActionPolicy = {
  * Spending Limits Policy parameters
  * - data: Array of per-token spending limits.
  */
-export type BuildSpendingLimitsActionPolicy = {
+export type BuildSpendingLimitsActionPolicyParams = {
   type: "spendingLimits"
   tokenLimits: { token: Address; limit: bigint }[]
 }
 
 /**
+ * Abstracted Spending Limits Policy parameters
+ * - data: Array of per-token spending limits.
+ */
+export type AbstractedBuildSpendingLimitsActionPolicyParams = {
+  type: "spendingLimits"
+  tokenLimits: { limit: bigint }[]
+}
+
+type BaseBuildActionPolicyParamTypes =
+  | BuildSudoActionPolicyParams
+  | BuildUniversalActionPolicyParams
+  | BuildTimeFrameActionPolicyParams
+  | BuildUsageLimitActionPolicyParams
+
+/**
+ * All abstracted action policy build types supported by this builder.
+ */
+export type AbstractedBuildActionPolicyParamTypes =
+  | BuildSudoActionPolicyParams
+  | BuildUniversalActionPolicyParams
+  | BuildTimeFrameActionPolicyParams
+  | BuildUsageLimitActionPolicyParams
+  | AbstractedBuildSpendingLimitsActionPolicyParams
+
+/**
  * All action policy build types supported by this builder.
  */
-export type BuildActionPolicyTypes =
-  | BuildSudoActionPolicy
-  | BuildUniversalActionPolicy
-  | BuildTimeFrameActionPolicy
-  | BuildUsageLimitActionPolicy
-  | BuildSpendingLimitsActionPolicy
+export type BuildActionPolicyParamTypes =
+  | BaseBuildActionPolicyParamTypes
+  | BuildSpendingLimitsActionPolicyParams
 
 /**
  * Supported universal policy rule conditions.
@@ -174,7 +196,7 @@ export const calldataArgument = (value: number) => {
 /**
  * Prepares data for the Universal Action Policy, including parameter rules and per-action value limits.
  */
-const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
+const getUniversalPolicy = (params: BuildUniversalActionPolicyParams) => {
   const { rules, valueLimitPerUse } = params
 
   if (rules.length > 16) {
@@ -222,7 +244,7 @@ const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
  * Builds and returns the appropriate action policy based on the provided parameters (type and data).
  */
 export const buildActionPolicy = (
-  parameters: BuildActionPolicyTypes
+  parameters: BuildActionPolicyParamTypes
 ): PolicyData => {
   const { type } = parameters
 

@@ -26,7 +26,7 @@ import {
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
-import type { SessionAction } from "../../../account/decorators/buildAction"
+import type { SessionActionLike } from "../../../account/decorators/buildSessionAction"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import {
   type MeeClient,
@@ -161,7 +161,7 @@ describe("mee.getSessionQuote", () => {
 
   const prepareAndEnableSession = async (
     meeClient: MeeClient,
-    actions: SessionAction[],
+    actions: SessionActionLike[],
     options?: {
       batchActions?: boolean
       use7702Auth?: boolean
@@ -280,7 +280,7 @@ describe("mee.getSessionQuote", () => {
     const sessionsClient = meeClient.extend(meeSessionActions)
 
     const actions = [
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "transfer",
         data: {
           chainIds: [paymentChain.id],
@@ -288,7 +288,7 @@ describe("mee.getSessionQuote", () => {
           policies: [{ type: "sudo" }]
         }
       })
-    ].flat()
+    ]
 
     const { sessionDetails } = await prepareAndEnableSession(meeClient, actions)
 
@@ -411,7 +411,7 @@ describe("mee.getSessionQuote", () => {
     )
 
     const actions = [
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "custom",
         data: {
           chainIds: [paymentChain.id],
@@ -419,7 +419,7 @@ describe("mee.getSessionQuote", () => {
           functionSignature
         }
       }),
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "custom",
         data: {
           chainIds: [targetChain.id],
@@ -427,7 +427,7 @@ describe("mee.getSessionQuote", () => {
           functionSignature
         }
       })
-    ].flat()
+    ]
 
     const { sessionDetails } = await prepareAndEnableSession(meeClient, actions)
 
@@ -481,7 +481,7 @@ describe("mee.getSessionQuote", () => {
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
 
     const actions = [
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "transfer",
         data: {
           chainIds: [paymentChain.id],
@@ -489,7 +489,7 @@ describe("mee.getSessionQuote", () => {
           policies: [{ type: "sudo" }]
         }
       })
-    ].flat()
+    ]
 
     const { sessionDetails } = await prepareAndEnableSession(meeClient, actions)
 
@@ -525,7 +525,7 @@ describe("mee.getSessionQuote", () => {
     })
 
     const actions = [
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "transfer",
         data: {
           chainIds: [paymentChain.id],
@@ -533,7 +533,7 @@ describe("mee.getSessionQuote", () => {
           policies: [{ type: "sudo" }]
         }
       })
-    ].flat()
+    ]
 
     const { sessionDetails } = await prepareAndEnableSession(
       meeClient,
@@ -571,28 +571,28 @@ describe("mee.getSessionQuote", () => {
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
 
     const actions = [
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "transfer",
         data: {
           chainIds: [paymentChain.id],
           contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id)
         }
       }),
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "approve",
         data: {
           chainIds: [paymentChain.id],
           contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id)
         }
       }),
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "transferFrom",
         data: {
           chainIds: [paymentChain.id],
           contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id)
         }
       })
-    ].flat()
+    ]
 
     const { txHash } = await prepareAndEnableSession(meeClient, actions, {
       batchActions: false
@@ -618,7 +618,7 @@ describe("mee.getSessionQuote", () => {
     // New orchestrator account
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
 
-    const approveAction = mcNexus.buildAction({
+    const approveAction = mcNexus.buildSessionAction({
       type: "approve",
       data: {
         chainIds: [paymentChain.id],
@@ -626,7 +626,7 @@ describe("mee.getSessionQuote", () => {
       }
     })
 
-    const transferAction = mcNexus.buildAction({
+    const transferAction = mcNexus.buildSessionAction({
       type: "transfer",
       data: {
         chainIds: [paymentChain.id],
@@ -634,7 +634,7 @@ describe("mee.getSessionQuote", () => {
       }
     })
 
-    const transferFromAction = mcNexus.buildAction({
+    const transferFromAction = mcNexus.buildSessionAction({
       type: "transferFrom",
       data: {
         chainIds: [paymentChain.id],
@@ -642,7 +642,7 @@ describe("mee.getSessionQuote", () => {
       }
     })
 
-    const batchOne = mcNexus.buildAction({
+    const batchOne = mcNexus.buildSessionAction({
       type: "batch",
       data: {
         actions: [...approveAction, ...transferFromAction]
@@ -678,7 +678,7 @@ describe("mee.getSessionQuote", () => {
     })
 
     const actions = [
-      mcNexus.buildAction({
+      mcNexus.buildSessionAction({
         type: "transfer",
         data: {
           chainIds: [paymentChain.id],
@@ -686,7 +686,7 @@ describe("mee.getSessionQuote", () => {
           policies: [{ type: "sudo" }]
         }
       })
-    ].flat()
+    ]
 
     const { sessionDetails } = await prepareAndEnableSession(
       meeClient,

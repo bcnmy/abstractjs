@@ -13,8 +13,15 @@ import {
   toFunctionSelector,
   zeroAddress
 } from "viem"
-import { batchInstructions, resolveInstructions } from "../../../account"
-import type { SessionAction } from "../../../account/decorators/buildAction"
+import {
+  batchInstructions,
+  resolveInstructions,
+  resolveSessionActions
+} from "../../../account"
+import type {
+  SessionAction,
+  SessionActionLike
+} from "../../../account/decorators/buildSessionAction"
 import { toBytes32 } from "../../../account/utils/Utils"
 import {
   type AccountType,
@@ -63,7 +70,7 @@ export type SessionDetail = GrantMeePermissionPayload[0]
 
 export type EnableSession = {
   redeemer: Address
-  actions: SessionAction[]
+  actions: SessionActionLike[]
   maxPaymentAmount?: bigint
   batchActions?: boolean
 }
@@ -122,7 +129,7 @@ export type GetSessionQuoteResponse<T extends GetSessionQuoteParams> =
       ? GetSessionQuoteResponseConfig["USE"]
       : never
 
-export const prepareInstallSessionValidator = async (
+export const prepareInstallSmartSessions = async (
   client: BaseMeeClient,
   smartSessionValidatorAddress = SMART_SESSIONS_ADDRESS
 ): Promise<Instruction[]> => {
@@ -209,10 +216,12 @@ export const prepareEnableSessions = async (
   const {
     redeemer,
     maxPaymentAmount: maxPaymentAmount_,
-    actions: sessionActions,
+    actions: unresolvedSessionActions,
     // Actions are batched by default
     batchActions = true
   } = enableSession
+
+  const sessionActions = resolveSessionActions(unresolvedSessionActions)
 
   if (!redeemer) {
     throw new Error("Smart session redeemer address is missing")
@@ -277,12 +286,13 @@ export const prepareEnableSessions = async (
 
       const defaultVersionConfig = getMEEVersion(DEFAULT_MEE_VERSION)
 
-      const meeValidatorAddress =
+      // MEE K1 validator or Stateless stx vaidator is our session validator based on version
+      const validatorAddress =
         deployment.version.validatorAddress ||
         defaultVersionConfig.validatorAddress
 
       if (batchActions && sessionActionsForChain.length > 1) {
-        sessionActionsForChain = client.account.buildAction({
+        sessionActionsForChain = client.account.buildSessionAction({
           type: "batch",
           data: {
             actions: sessionActionsForChain
@@ -291,8 +301,8 @@ export const prepareEnableSessions = async (
       }
 
       const session: Session = {
-        // MEE K1 validator is our session validator
-        sessionValidator: meeValidatorAddress,
+        sessionValidator: validatorAddress,
+        // TODO: NEED TO SUPPORT STX VALIDATOR HERE
         // Initdata for the MEE K1 validator is just the signer address
         sessionValidatorInitData: redeemer,
         salt: generateSalt(),
@@ -619,7 +629,7 @@ export const getSessionQuote = async <T extends GetSessionQuoteParams>(
 
     // Prepare session validator install instructions
     const sessionValidatorInstallInstructions =
-      await prepareInstallSessionValidator(client, smartSessionValidatorAddress)
+      await prepareInstallSmartSessions(client, smartSessionValidatorAddress)
 
     const hasSessionValidatorInstallInstructions =
       sessionValidatorInstallInstructions.length > 0

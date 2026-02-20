@@ -13,12 +13,12 @@ import {
   build as buildDecorator
 } from "./decorators/build"
 import {
-  type BuildActionTypes,
+  type BuildSessionActionTypes,
   type SessionAction,
-  buildAction as buildActionDecorator
-} from "./decorators/buildAction"
+  buildSessionAction as buildSessionActionDecorator
+} from "./decorators/buildSessionAction"
 import {
-  type BuildActionPolicyTypes,
+  type BuildActionPolicyParamTypes,
   buildActionPolicy as buildActionPolicyDecorator
 } from "./decorators/buildActionPolicy"
 import {
@@ -159,19 +159,19 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    *   type: "sudo"
    * })
    */
-  buildActionPolicy: (params: BuildActionPolicyTypes) => PolicyData
+  buildActionPolicy: (params: BuildActionPolicyParamTypes) => PolicyData
 
   /**
    * Function to build actions for smart sessions
    * @param params - The parameters for the smart session actions
    * @returns Action
    * @example
-   * const action = await mcAccount.buildAction({
+   * const action = await mcAccount.buildSessionAction({
    *   type: "transfer",
    *   data: { chainIds: [1, 10], contractAddress: "0x...", policies: [{ type: "sudo" }] }
    * })
    */
-  buildAction: (params: BuildActionTypes) => SessionAction[]
+  buildSessionAction: (params: BuildSessionActionTypes) => SessionAction[]
 
   /**
    * Function to build instructions for bridging a token across all deployments
@@ -369,12 +369,16 @@ export async function toMultichainNexusAccount(
       params
     )
 
-  const buildActionPolicy = (params: BuildActionPolicyTypes): PolicyData => {
+  const buildActionPolicy = (
+    params: BuildActionPolicyParamTypes
+  ): PolicyData => {
     return buildActionPolicyDecorator(params)
   }
 
-  const buildAction = (params: BuildActionTypes): SessionAction[] => {
-    return buildActionDecorator(params)
+  const buildSessionAction = (
+    params: BuildSessionActionTypes
+  ): SessionAction[] => {
+    return buildSessionActionDecorator(params)
   }
 
   const buildComposable = (
@@ -457,7 +461,7 @@ export async function toMultichainNexusAccount(
     build,
     buildComposable,
     buildActionPolicy,
-    buildAction,
+    buildSessionAction,
     buildBridgeInstructions,
     queryBridge,
     isDelegated,

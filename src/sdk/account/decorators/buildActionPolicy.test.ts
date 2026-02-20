@@ -48,9 +48,9 @@ describe("mee.buildActionPolicy", () => {
   })
 
   it("Build timeframe policy", async () => {
-    const now = Math.floor(Date.now() / 1000)
+    const now = Date.now()
     const validAfter = now
-    const validUntil = now + 3600
+    const validUntil = now + 1000 * 60 * 60 * 24
 
     const timeframePolicy = mcNexus.buildActionPolicy({
       type: "timeframe",

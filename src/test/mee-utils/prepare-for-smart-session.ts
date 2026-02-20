@@ -16,7 +16,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
-import type { SessionAction } from "../../sdk/account/decorators/buildAction"
+import type { SessionAction } from "../../sdk/account/decorators/buildSessionAction"
 import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
@@ -69,7 +69,7 @@ export const prepareForTestnetSmartSessions = async (
     customActions && customActions.length > 0
       ? customActions
       : [
-          mcNexus.buildAction({
+          mcNexus.buildSessionAction({
             type: "transfer",
             data: {
               chainIds: [paymentChain.id],
@@ -81,7 +81,6 @@ export const prepareForTestnetSmartSessions = async (
                   type: "spendingLimits",
                   tokenLimits: [
                     {
-                      token: testnetMcTestUSDC.addressOn(paymentChain.id),
                       limit: parseUnits("100", 6)
                     }
                   ]
@@ -105,7 +104,7 @@ export const prepareForTestnetSmartSessions = async (
               ]
             }
           }),
-          mcNexus.buildAction({
+          mcNexus.buildSessionAction({
             type: "custom",
             data: {
               chainIds: [paymentChain.id],
@@ -120,7 +119,6 @@ export const prepareForTestnetSmartSessions = async (
                   type: "spendingLimits",
                   tokenLimits: [
                     {
-                      token: testnetMcUSDC.addressOn(paymentChain.id),
                       limit: parseUnits("100", 6)
                     }
                   ]
@@ -144,7 +142,7 @@ export const prepareForTestnetSmartSessions = async (
               ]
             }
           }),
-          mcNexus.buildAction({
+          mcNexus.buildSessionAction({
             type: "custom",
             data: {
               chainIds: [paymentChain.id],

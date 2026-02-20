@@ -8,7 +8,7 @@ import {
 import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
 import type { MEEVersionConfig } from "../../../../../account"
-import type { SessionAction } from "../../../../../account/decorators/buildAction"
+import type { SessionAction } from "../../../../../account/decorators/buildSessionAction"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
