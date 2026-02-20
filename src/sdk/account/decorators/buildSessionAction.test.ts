@@ -1,3 +1,4 @@
+import { TIME_FRAME_POLICY_ADDRESS } from "@biconomy/ecosystem"
 import {
   http,
   type LocalAccount,
@@ -23,7 +24,6 @@ import {
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
 import { calldataArgument } from "./buildActionPolicy"
-import { TIME_FRAME_POLICY_ADDRESS } from "@biconomy/ecosystem"
 
 describe("mee.buildSessionAction", () => {
   let network: NetworkConfig

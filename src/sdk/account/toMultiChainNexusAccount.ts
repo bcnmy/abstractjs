@@ -13,11 +13,6 @@ import {
   build as buildDecorator
 } from "./decorators/build"
 import {
-  type BuildSessionActionTypes,
-  type SessionAction,
-  buildSessionAction as buildSessionActionDecorator
-} from "./decorators/buildSessionAction"
-import {
   type BuildActionPolicyParamTypes,
   buildActionPolicy as buildActionPolicyDecorator
 } from "./decorators/buildActionPolicy"
@@ -26,6 +21,11 @@ import {
   type MultichainBridgingParams,
   buildBridgeInstructions as buildBridgeInstructionsDecorator
 } from "./decorators/buildBridgeInstructions"
+import {
+  type BuildSessionActionTypes,
+  type SessionAction,
+  buildSessionAction as buildSessionActionDecorator
+} from "./decorators/buildSessionAction"
 import {
   type UnifiedERC20Balance,
   getUnifiedERC20Balance as getUnifiedERC20BalanceDecorator

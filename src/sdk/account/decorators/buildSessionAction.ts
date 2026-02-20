@@ -7,14 +7,14 @@ import {
   isAddress,
   toFunctionSelector
 } from "viem"
+import type { BuildUniversalActionPolicy } from "../../../../dist/_types"
 import type { ActionData, PolicyData } from "../../constants"
 import {
   type AbstractedBuildActionPolicyParamTypes,
+  type BuildActionPolicyParamTypes,
   buildActionPolicy,
-  BuildActionPolicyParamTypes,
   calldataArgument
 } from "./buildActionPolicy"
-import { type BuildUniversalActionPolicy } from "../../../../dist/_types"
 
 export type SessionAction = {
   actions: ActionData[]

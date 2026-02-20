@@ -16,8 +16,8 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
-import type { SessionAction } from "../../sdk/account/decorators/buildSessionAction"
 import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
+import type { SessionAction } from "../../sdk/account/decorators/buildSessionAction"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
   type AnyData,
