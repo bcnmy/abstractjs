@@ -12,6 +12,8 @@ import {
   http,
   createPublicClient,
   createWalletClient,
+  decodeAbiParameters,
+  erc20Abi,
   getAbiItem,
   parseUnits,
   toFunctionSelector
@@ -26,7 +28,16 @@ import {
   testnetMcTestUSDCP
 } from "../../../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
-import type { SessionActionLike } from "../../../account/decorators/buildSessionAction"
+import {
+  UniversalPolicyAbi,
+  type UniversalPolicyData,
+  calldataArgument,
+  getUniversalActionPolicyConditionType
+} from "../../../account"
+import type {
+  SessionAction,
+  SessionActionLike
+} from "../../../account/decorators/buildSessionAction"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import {
   type MeeClient,
@@ -34,18 +45,20 @@ import {
   getDefaultMEENetworkUrl,
   getDefaultMeeGasTank
 } from "../../../clients/createMeeClient"
-import type {
-  BaseGetSupertransactionReceiptPayload,
-  FeeTokenInfo,
-  Instruction,
-  SessionDetail,
-  TokenTrigger
+import {
+  type BaseGetSupertransactionReceiptPayload,
+  type FeeTokenInfo,
+  type Instruction,
+  type SessionDetail,
+  type TokenTrigger,
+  addPaymentPolicyForActions
 } from "../../../clients/decorators/mee"
 import {
   CounterAbi,
   DEFAULT_MEE_VERSION,
   SMART_SESSIONS_ADDRESS,
-  SmartSessionMode
+  SmartSessionMode,
+  UNIVERSAL_ACTION_POLICY_ADDRESS
 } from "../../../constants"
 import {
   type AnyData,
@@ -273,22 +286,56 @@ describe("mee.getSessionQuote", () => {
     return hash
   }
 
+  const resolveUniversalActionPolicyData = (
+    sessionActions: SessionAction[]
+  ) => {
+    const transferSelector = toFunctionSelector(
+      getAbiItem({ abi: erc20Abi, name: "transfer" })
+    )
+
+    for (const { actions } of sessionActions) {
+      for (const action of actions) {
+        if (
+          action.actionTargetSelector.toLowerCase() ===
+            transferSelector.toLowerCase() &&
+          action.actionTarget.toLowerCase() === feeToken.address.toLowerCase()
+        ) {
+          for (const actionPolicy of action.actionPolicies) {
+            if (
+              actionPolicy.policy.toLowerCase() ===
+              UNIVERSAL_ACTION_POLICY_ADDRESS.toLowerCase()
+            ) {
+              const policyData = decodeAbiParameters(
+                UniversalPolicyAbi,
+                actionPolicy.initData
+              )
+
+              const universalPolicyData = policyData[0] as UniversalPolicyData
+
+              return universalPolicyData
+            }
+          }
+        }
+      }
+    }
+
+    return undefined
+  }
+
   test("Smart sessions (New): Should SS validator module installed, SCA deployed, SCA funded and permissions are enabled", async () => {
     // New orchestrator account
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
 
     const sessionsClient = meeClient.extend(meeSessionActions)
 
-    const actions = [
-      mcNexus.buildSessionAction({
-        type: "transfer",
-        data: {
-          chainIds: [paymentChain.id],
-          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
-          policies: [{ type: "sudo" }]
-        }
-      })
-    ]
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        policies: [{ type: "sudo" }]
+      }
+    })
 
     const { sessionDetails } = await prepareAndEnableSession(meeClient, actions)
 
@@ -480,16 +527,14 @@ describe("mee.getSessionQuote", () => {
     // New orchestrator account
     const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient()
 
-    const actions = [
-      mcNexus.buildSessionAction({
-        type: "transfer",
-        data: {
-          chainIds: [paymentChain.id],
-          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
-          policies: [{ type: "sudo" }]
-        }
-      })
-    ]
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        policies: [{ type: "sudo" }]
+      }
+    })
 
     const { sessionDetails } = await prepareAndEnableSession(meeClient, actions)
 
@@ -524,16 +569,14 @@ describe("mee.getSessionQuote", () => {
       use7702Auth: true
     })
 
-    const actions = [
-      mcNexus.buildSessionAction({
-        type: "transfer",
-        data: {
-          chainIds: [paymentChain.id],
-          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
-          policies: [{ type: "sudo" }]
-        }
-      })
-    ]
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        policies: [{ type: "sudo" }]
+      }
+    })
 
     const { sessionDetails } = await prepareAndEnableSession(
       meeClient,
@@ -677,16 +720,14 @@ describe("mee.getSessionQuote", () => {
       useSponsorship: true
     })
 
-    const actions = [
-      mcNexus.buildSessionAction({
-        type: "transfer",
-        data: {
-          chainIds: [paymentChain.id],
-          contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
-          policies: [{ type: "sudo" }]
-        }
-      })
-    ]
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        policies: [{ type: "sudo" }]
+      }
+    })
 
     const { sessionDetails } = await prepareAndEnableSession(
       meeClient,
@@ -719,5 +760,108 @@ describe("mee.getSessionQuote", () => {
       sessionDetails,
       { useSponsorship: true }
     )
+  })
+
+  test("Smart sessions (New): Should payment policy should be added if missing", async () => {
+    // New orchestrator account
+    const { mcNexus } = await getNewUserMcNexusAndMeeClient()
+
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id)
+      }
+    })
+
+    const resolvedActions = addPaymentPolicyForActions(
+      actions,
+      feeToken,
+      parseUnits("5", 6)
+    )
+
+    const policyData = resolveUniversalActionPolicyData(resolvedActions)
+
+    if (!policyData) {
+      assert(false, "Payment policy not added")
+    }
+
+    expect(policyData.paramRules.length).to.eq(1n)
+    expect(policyData.paramRules.rules[0].offset).to.eq(calldataArgument(2))
+    expect(policyData.paramRules.rules[0].condition).to.eq(
+      getUniversalActionPolicyConditionType("lessThanOrEqual")
+    )
+    expect(BigInt(policyData.paramRules.rules[0].ref)).to.eq(parseUnits("5", 6))
+  })
+
+  test("Smart sessions (New): Should payment policy amount updated in existing universal policy rule", async () => {
+    // New orchestrator account
+    const { mcNexus } = await getNewUserMcNexusAndMeeClient()
+
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id),
+        maxAmountLimit: parseUnits("1", 6),
+        amountLimitPerAction: parseUnits("1", 6)
+      }
+    })
+
+    const resolvedActions = addPaymentPolicyForActions(
+      actions,
+      feeToken,
+      parseUnits("5", 6)
+    )
+
+    const policyData = resolveUniversalActionPolicyData(resolvedActions)
+
+    if (!policyData) {
+      assert(false, "Payment policy not added")
+    }
+
+    expect(policyData.paramRules.length).to.eq(1n)
+    expect(policyData.paramRules.rules[0].offset).to.eq(calldataArgument(2))
+    expect(policyData.paramRules.rules[0].condition).to.eq(
+      getUniversalActionPolicyConditionType("lessThanOrEqual")
+    )
+    expect(BigInt(policyData.paramRules.rules[0].ref)).to.eq(parseUnits("6", 6))
+    expect(policyData.paramRules.rules[0].isLimited).to.eq(true)
+    expect(policyData.paramRules.rules[0].usage.limit).to.eq(parseUnits("6", 6))
+  })
+
+  test("Smart sessions (New): Should payment policy amount rule to be added in existing universal policy rules", async () => {
+    // New orchestrator account
+    const { mcNexus } = await getNewUserMcNexusAndMeeClient()
+
+    const actions = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id),
+        recipientAddress: "0x0000000000000000000000000000000000000123"
+      }
+    })
+
+    const resolvedActions = addPaymentPolicyForActions(
+      actions,
+      feeToken,
+      parseUnits("5", 6)
+    )
+
+    const policyData = resolveUniversalActionPolicyData(resolvedActions)
+
+    if (!policyData) {
+      assert(false, "Payment policy not added")
+    }
+
+    expect(policyData.paramRules.length).to.eq(2n)
+    expect(policyData.paramRules.rules[1].offset).to.eq(calldataArgument(2))
+    expect(policyData.paramRules.rules[1].condition).to.eq(
+      getUniversalActionPolicyConditionType("lessThanOrEqual")
+    )
+    expect(BigInt(policyData.paramRules.rules[1].ref)).to.eq(parseUnits("5", 6))
+    expect(policyData.paramRules.rules[1].isLimited).to.eq(false)
+    expect(policyData.paramRules.rules[1].usage.limit).to.eq(0n)
   })
 })

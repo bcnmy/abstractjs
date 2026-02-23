@@ -10,6 +10,79 @@ import {
 import { type LimitUsage, ParamCondition, type ParamRule } from "../../modules"
 import { toBytes32 } from "../utils"
 
+export const UniversalPolicyAbi = [
+  {
+    components: [
+      {
+        name: "valueLimitPerUse",
+        type: "uint256"
+      },
+      {
+        components: [
+          {
+            name: "length",
+            type: "uint256"
+          },
+          {
+            components: [
+              {
+                name: "condition",
+                type: "uint8"
+              },
+              {
+                name: "offset",
+                type: "uint64"
+              },
+              {
+                name: "isLimited",
+                type: "bool"
+              },
+              {
+                name: "ref",
+                type: "bytes32"
+              },
+              {
+                components: [
+                  {
+                    name: "limit",
+                    type: "uint256"
+                  },
+                  {
+                    name: "used",
+                    type: "uint256"
+                  }
+                ],
+                name: "usage",
+                type: "tuple"
+              }
+            ],
+            name: "rules",
+            type: "tuple[16]"
+          }
+        ],
+        name: "paramRules",
+        type: "tuple"
+      }
+    ],
+    name: "ActionConfig",
+    type: "tuple"
+  }
+]
+
+export type UniversalPolicyData = {
+  valueLimitPerUse: bigint
+  paramRules: {
+    length: bigint
+    rules: {
+      condition: number
+      offset: bigint
+      isLimited: boolean
+      ref: Hex
+      usage: { limit: bigint; used: bigint }
+    }[]
+  }
+}
+
 /**
  * Sudo policy type — allows unrestricted action.
  */
@@ -128,7 +201,7 @@ type UniversalActionPolicyConditionType =
 /**
  * Tuple type for a fixed-length ParamRule array (length required by ABI).
  */
-type ParamRule16 = [
+export type ParamRule16 = [
   ParamRule,
   ParamRule,
   ParamRule,
@@ -152,7 +225,7 @@ type ParamRule16 = [
  * @param conditionType Human-readable condition string.
  * @returns ParamCondition enum value.
  */
-const getUniversalActionPolicyConditionType = (
+export const getUniversalActionPolicyConditionType = (
   conditionType: UniversalActionPolicyConditionType
 ) => {
   let condition: ParamRule["condition"] = ParamCondition.EQUAL
