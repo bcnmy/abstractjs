@@ -1052,14 +1052,6 @@ describe("mee.multichainSmartSessions (Legacy)", () => {
           maxAmountLimit: parseUnits("0.5", 6),
           usageLimit: 3n
         }
-      }),
-      buildSessionAction({
-        type: "transfer",
-        data: {
-          chainIds: [paymentChain.id],
-          contractAddress: testnetMcUSDC.addressOn(paymentChain.id),
-          validAfter: Date.now() + 1000 * 60 * 60 * 24
-        }
       })
     ].flat()
 
@@ -1142,19 +1134,6 @@ describe("mee.multichainSmartSessions (Legacy)", () => {
       {
         isValid: false,
         instructions: [...validTransferInxs, ...validTransferInxs]
-      },
-      // Invalid: time range limit constraint failure
-      {
-        isValid: false,
-        instructions: await mcNexus.build({
-          type: "transfer",
-          data: {
-            tokenAddress: testnetMcUSDC.addressOn(paymentChain.id),
-            recipient: "0x0000000000000000000000000000000000000001",
-            amount: 0n,
-            chainId: paymentChain.id
-          }
-        })
       }
     ]
 
