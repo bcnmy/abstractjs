@@ -14,14 +14,27 @@ import {
 } from "viem"
 import { multicall } from "viem/actions"
 import type { EIP712DomainReturn } from "../../../account"
-import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import { versionIsAtLeast } from "../../../account/utils/getVersion"
 import { MEEVersion, PERMIT_TYPEHASH } from "../../../constants"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
-import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetPermitQuotePayload } from "./getPermitQuote"
 import type { AbstractCall, GetQuotePayload } from "./getQuote"
-import { getMeeVersionsForQuote } from "./signQuote"
+
+/**
+ * Minimal set of fields extracted from MultichainSmartAccount needed for signing permit quotes.
+ * This avoids a dependency on the full MultichainSmartAccount object.
+ */
+export type MultichainSmartAccountParams = {
+  /** The EOA signer/owner address */
+  owner: Address
+  /** The SCA address on the trigger chain (spender) */
+  spender: Address
+  /** The wallet client for the trigger chain */
+  walletClient: WalletClient
+  /** MEE versions for the chains involved in the quote */
+  meeVersions: MeeVersionsWithChainId
+}
 
 /**
  * Represents the payload for a signable permit quote, omitting the "account" field from SignTypedDataParameters.
@@ -133,10 +146,9 @@ export type SignPermitQuoteParams = {
    */
   fusionQuote: GetPermitQuotePayload
   /**
-   * Optional companion smart account to execute the superTxn
-   * If not provided, uses the client's default account
+   * Account params extracted from MultichainSmartAccount, needed for signing.
    */
-  companionAccount?: MultichainSmartAccount
+  account: MultichainSmartAccountParams
 }
 
 /**
@@ -622,18 +634,12 @@ export const prepareSignablePermitQuotePayload = async (
  * ```
  */
 export const formatSignedPermitQuotePayload = (
-  account_: MultichainSmartAccount,
+  meeVersions: MeeVersionsWithChainId,
   quoteParams: GetPermitQuotePayload,
   metadata: PermitMetadata,
   signature: Hex
 ): SignPermitQuotePayload => {
   const { quote, trigger } = quoteParams
-
-  const startIndex = quote.paymentInfo.sponsored ? 1 : 0
-  const meeVersions = getMeeVersionsForQuote(
-    account_,
-    quote.userOps.slice(startIndex)
-  )
 
   let encodedSignature: `0x${string}`
 
@@ -722,7 +728,6 @@ export const formatSignedPermitQuotePayload = (
  * ```
  */
 export const signPermitQuote = async (
-  client: BaseMeeClient,
   parameters: SignPermitQuoteParams
 ): Promise<
   OneOf<
@@ -730,19 +735,7 @@ export const signPermitQuote = async (
     | { fallbackToOnchainMode: true }
   >
 > => {
-  const {
-    companionAccount: account_ = client.account,
-    fusionQuote: { trigger }
-  } = parameters
-
-  const signer = account_.signer
-
-  const { walletClient, address: spender } = account_.deploymentOn(
-    trigger.chainId,
-    true
-  )
-
-  const owner = signer.address
+  const { owner, spender, walletClient, meeVersions } = parameters.account
 
   const { fallbackToOnchainMode, signablePayload, metadata } =
     await prepareSignablePermitQuotePayload(
@@ -762,7 +755,7 @@ export const signPermitQuote = async (
   })
 
   const signedPermitQuotePayload = formatSignedPermitQuotePayload(
-    account_,
+    meeVersions,
     parameters.fusionQuote,
     metadata,
     signature
