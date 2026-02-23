@@ -88,7 +88,7 @@ export const prepareForTestnetSmartSessions = async (
                 {
                   type: "timeframe",
                   validAfter: 0,
-                  validUntil: Date.now() + 60 * 60 * 24
+                  validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
                 },
                 {
                   type: "universal",
@@ -126,7 +126,7 @@ export const prepareForTestnetSmartSessions = async (
                 {
                   type: "timeframe",
                   validAfter: 0,
-                  validUntil: Date.now() + 60 * 60 * 24
+                  validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
                 },
                 {
                   type: "universal",

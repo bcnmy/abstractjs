@@ -218,8 +218,9 @@ const preparePoliciesForERC20Actions = (
 
   // Restrict by per-action time range limit
   if (validAfter || validUntil) {
-    const currentTime = Date.now()
-    const oneDayInSecs = 1000 * 60 * 60 * 24
+    // In unix timestamp (Seconds)
+    const currentTime = Math.floor(Date.now() / 1000)
+    const oneDayInSecs = 60 * 60 * 24
 
     actionsPolicies.push(
       buildActionPolicy({

@@ -82,8 +82,8 @@ describe("mee.buildSessionAction", () => {
         policies: [
           {
             type: "timeframe",
-            validAfter: Date.now(),
-            validUntil: Date.now() + 3600
+            validAfter: Math.floor(Date.now() / 1000),
+            validUntil: Math.floor(Date.now() / 1000) + 60 * 60
           },
           { type: "usageLimit", limit: 10n }
         ]
@@ -119,8 +119,8 @@ describe("mee.buildSessionAction", () => {
         maxAmountLimit: 1n,
         amountLimitPerAction: 1n,
         usageLimit: 1n,
-        validAfter: Date.now(),
-        validUntil: Date.now() + 100
+        validAfter: Math.floor(Date.now() / 1000),
+        validUntil: Math.floor(Date.now() / 1000) + 60 * 60
       }
     })
 
@@ -180,8 +180,8 @@ describe("mee.buildSessionAction", () => {
         policies: [
           {
             type: "timeframe",
-            validAfter: Date.now(),
-            validUntil: Date.now() + 3600
+            validAfter: Math.floor(Date.now() / 1000),
+            validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
           },
           {
             type: "spendingLimits",
@@ -220,8 +220,8 @@ describe("mee.buildSessionAction", () => {
         maxAmountLimit: 1n,
         amountLimitPerAction: 1n,
         usageLimit: 1n,
-        validAfter: Date.now(),
-        validUntil: Date.now() + 100
+        validAfter: Math.floor(Date.now() / 1000),
+        validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
       }
     })
 
@@ -281,8 +281,8 @@ describe("mee.buildSessionAction", () => {
         policies: [
           {
             type: "timeframe",
-            validAfter: Date.now(),
-            validUntil: Date.now() + 3600
+            validAfter: Math.floor(Date.now() / 1000),
+            validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
           },
           {
             type: "universal",
@@ -327,8 +327,8 @@ describe("mee.buildSessionAction", () => {
         maxAmountLimit: 1n,
         amountLimitPerAction: 1n,
         usageLimit: 1n,
-        validAfter: Date.now(),
-        validUntil: Date.now() + 100
+        validAfter: Math.floor(Date.now() / 1000),
+        validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
       }
     })
 
@@ -394,8 +394,8 @@ describe("mee.buildSessionAction", () => {
         policies: [
           {
             type: "timeframe",
-            validAfter: Date.now(),
-            validUntil: Date.now() + 3600
+            validAfter: Math.floor(Date.now() / 1000),
+            validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
           },
           {
             type: "universal",
@@ -440,8 +440,8 @@ describe("mee.buildSessionAction", () => {
         policies: [
           {
             type: "timeframe",
-            validAfter: Date.now(),
-            validUntil: Date.now() + 3600
+            validAfter: Math.floor(Date.now() / 1000),
+            validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
           },
           {
             type: "universal",
@@ -517,8 +517,8 @@ describe("mee.buildSessionAction", () => {
   it("Should resolves action policies equivalently for pre-built and builder policy types", async () => {
     const timeframePolicy = mcNexus.buildActionPolicy({
       type: "timeframe",
-      validAfter: Date.now(),
-      validUntil: Date.now() + 3600
+      validAfter: Math.floor(Date.now() / 1000),
+      validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
     })
     const usagePolicy = mcNexus.buildActionPolicy({
       type: "usageLimit",
@@ -542,8 +542,8 @@ describe("mee.buildSessionAction", () => {
         policies: [
           {
             type: "timeframe",
-            validAfter: Date.now(),
-            validUntil: Date.now() + 3600
+            validAfter: Math.floor(Date.now() / 1000),
+            validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
           },
           {
             type: "usageLimit",
