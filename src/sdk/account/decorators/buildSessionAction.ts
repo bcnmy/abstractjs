@@ -7,11 +7,11 @@ import {
   isAddress,
   toFunctionSelector
 } from "viem"
-import type { BuildUniversalActionPolicy } from "../../../../dist/_types"
 import type { ActionData, PolicyData } from "../../constants"
 import {
   type AbstractedBuildActionPolicyParamTypes,
   type BuildActionPolicyParamTypes,
+  type BuildUniversalActionPolicyParams,
   buildActionPolicy,
   calldataArgument
 } from "./buildActionPolicy"
@@ -164,7 +164,7 @@ const preparePoliciesForERC20Actions = (
     validUntil
   } = params
 
-  const rules: BuildUniversalActionPolicy["rules"] = []
+  const rules: BuildUniversalActionPolicyParams["rules"] = []
 
   // Restrict recipient if provided, using a universal policy by checking calldata offset 0
   if (recipientAddress && isAddress(recipientAddress)) {
