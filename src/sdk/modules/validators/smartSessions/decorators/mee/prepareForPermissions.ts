@@ -1,6 +1,6 @@
 import type { Address } from "viem"
 import { batchInstructions, resolveInstructions } from "../../../../../account"
-import type { SessionAction } from "../../../../../account/decorators/buildAction"
+import type { SessionActionLike } from "../../../../../account/decorators/buildSessionAction"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import {
   type EnableSession,
@@ -9,7 +9,7 @@ import {
   type Instruction,
   type Trigger,
   prepareEnableSessions,
-  prepareInstallSessionValidator
+  prepareInstallSmartSessions
 } from "../../../../../clients/decorators/mee"
 import { execute } from "../../../../../clients/decorators/mee/execute"
 import { executeFusionQuote } from "../../../../../clients/decorators/mee/executeFusionQuote"
@@ -33,7 +33,8 @@ export type PrepareForPermissionsParams = Omit<
   trigger?: Trigger
   maxPaymentAmount?: bigint
   redeemer?: Address
-  actions?: SessionAction[]
+  /** Actions can be a single SessionAction or array of SessionAction (Will be flattened) */
+  actions?: SessionActionLike[]
   batchActions?: boolean
 } & FeePaymentParams &
   EIP7702AuthorizationParams
@@ -62,7 +63,7 @@ export const prepareForPermissions = async (
   }))
 
   // Prepare session validator install instructions
-  const installInstructions = await prepareInstallSessionValidator(
+  const installInstructions = await prepareInstallSmartSessions(
     client,
     parameters.smartSessionsValidator.address
   )

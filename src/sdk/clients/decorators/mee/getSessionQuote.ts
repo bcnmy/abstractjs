@@ -13,23 +13,35 @@ import {
   toFunctionSelector,
   zeroAddress
 } from "viem"
-import { batchInstructions, resolveInstructions } from "../../../account"
-import type { SessionAction } from "../../../account/decorators/buildAction"
+import {
+  type ParamRule16,
+  UniversalPolicyAbi,
+  type UniversalPolicyData,
+  batchInstructions,
+  buildActionPolicy,
+  buildSessionAction,
+  calldataArgument,
+  getUniversalActionPolicyConditionType,
+  resolveInstructions,
+  resolveSessionActions
+} from "../../../account"
+import type {
+  SessionAction,
+  SessionActionLike
+} from "../../../account/decorators/buildSessionAction"
 import { toBytes32 } from "../../../account/utils/Utils"
 import {
   type AccountType,
-  type ActionData,
   DEFAULT_MEE_VERSION,
   NexusImplementationAbi,
   SMART_SESSIONS_ADDRESS,
-  SPENDING_LIMITS_POLICY_ADDRESS,
   type Session,
   SmartSessionAbi,
   SmartSessionMode,
+  UNIVERSAL_ACTION_POLICY_ADDRESS,
   getOwnableValidatorMockSignature,
   getPermissionId,
-  getSpendingLimitsPolicy,
-  getSudoPolicy
+  getUniversalActionPolicy
 } from "../../../constants"
 import {
   type AnyData,
@@ -63,7 +75,8 @@ export type SessionDetail = GrantMeePermissionPayload[0]
 
 export type EnableSession = {
   redeemer: Address
-  actions: SessionAction[]
+  /** Actions can be a single SessionAction or array of SessionAction (Will be flattened) */
+  actions: SessionActionLike[]
   maxPaymentAmount?: bigint
   batchActions?: boolean
 }
@@ -122,7 +135,7 @@ export type GetSessionQuoteResponse<T extends GetSessionQuoteParams> =
       ? GetSessionQuoteResponseConfig["USE"]
       : never
 
-export const prepareInstallSessionValidator = async (
+export const prepareInstallSmartSessions = async (
   client: BaseMeeClient,
   smartSessionValidatorAddress = SMART_SESSIONS_ADDRESS
 ): Promise<Instruction[]> => {
@@ -209,10 +222,12 @@ export const prepareEnableSessions = async (
   const {
     redeemer,
     maxPaymentAmount: maxPaymentAmount_,
-    actions: sessionActions,
+    actions: unresolvedSessionActions,
     // Actions are batched by default
     batchActions = true
   } = enableSession
+
+  const sessionActions = resolveSessionActions(unresolvedSessionActions)
 
   if (!redeemer) {
     throw new Error("Smart session redeemer address is missing")
@@ -277,12 +292,13 @@ export const prepareEnableSessions = async (
 
       const defaultVersionConfig = getMEEVersion(DEFAULT_MEE_VERSION)
 
-      const meeValidatorAddress =
+      // MEE K1 validator or Stateless stx vaidator is our session validator based on version
+      const validatorAddress =
         deployment.version.validatorAddress ||
         defaultVersionConfig.validatorAddress
 
       if (batchActions && sessionActionsForChain.length > 1) {
-        sessionActionsForChain = client.account.buildAction({
+        sessionActionsForChain = client.account.buildSessionAction({
           type: "batch",
           data: {
             actions: sessionActionsForChain
@@ -291,12 +307,14 @@ export const prepareEnableSessions = async (
       }
 
       const session: Session = {
-        // MEE K1 validator is our session validator
-        sessionValidator: meeValidatorAddress,
+        sessionValidator: validatorAddress,
+        // TODO: NEED TO SUPPORT STX VALIDATOR HERE
         // Initdata for the MEE K1 validator is just the signer address
         sessionValidatorInitData: redeemer,
         salt: generateSalt(),
-        userOpPolicies: permitERC4337Paymaster ? [getSudoPolicy()] : [],
+        userOpPolicies: permitERC4337Paymaster
+          ? [buildActionPolicy({ type: "sudo" })]
+          : [],
         erc7739Policies: { allowedERC7739Content: [], erc1271Policies: [] },
         // If the actions are batched ? all the actions will be available in first elements itself
         // If its unbatched ? It will be reassigned below
@@ -471,33 +489,101 @@ export const addPaymentPolicyForActions = (
             (actionPolicy) => {
               if (
                 actionPolicy.policy.toLowerCase() ===
-                SPENDING_LIMITS_POLICY_ADDRESS.toLowerCase()
+                UNIVERSAL_ACTION_POLICY_ADDRESS.toLowerCase()
               ) {
-                const [tokens, limits] = decodeAbiParameters(
-                  [{ type: "address[]" }, { type: "uint256[]" }],
+                const policyData = decodeAbiParameters(
+                  UniversalPolicyAbi,
                   actionPolicy.initData
                 )
 
-                const updatedTokensAndLimits: {
-                  limit: bigint
-                  token: Address
-                }[] = []
+                const universalPolicyData = policyData[0] as UniversalPolicyData
 
-                for (let index = 0; index < tokens.length; index++) {
-                  const token = tokens[index]
-                  const limit = limits[index]
+                // greaterThan and greaterThanOrEqual conditions already cover the gas payment amount so no need to
+                // modify the amount to include payment amount.
+                const conditions: number[] = [
+                  getUniversalActionPolicyConditionType("equal"),
+                  getUniversalActionPolicyConditionType("lessThan"),
+                  getUniversalActionPolicyConditionType("lessThanOrEqual")
+                ]
 
-                  if (token.toLowerCase() === feeToken.address.toLowerCase()) {
-                    updatedTokensAndLimits.push({
-                      token,
-                      limit: limit + maxPaymentAmount
-                    })
-                  } else {
-                    updatedTokensAndLimits.push({ token, limit })
+                let isPaymentPolicyRuleAdded = false
+
+                const updatedRules = universalPolicyData.paramRules.rules.map(
+                  (rule) => {
+                    if (
+                      !isPaymentPolicyRuleAdded &&
+                      rule.offset === calldataArgument(2)
+                    ) {
+                      isPaymentPolicyRuleAdded = true
+                    }
+
+                    // If calldata argument is amount field + expected conditions, add payment amount
+                    if (
+                      rule.offset === calldataArgument(2) &&
+                      conditions.includes(rule.condition)
+                    ) {
+                      let updatedRule: UniversalPolicyData["paramRules"]["rules"][0] =
+                        {
+                          ...rule,
+                          ref: toBytes32(BigInt(rule.ref) + maxPaymentAmount)
+                        }
+
+                      // Is cumulative tracking is configured ? Increase the max amount limit as well
+                      if (
+                        updatedRule.isLimited !== undefined &&
+                        updatedRule.usage !== undefined
+                      ) {
+                        updatedRule = {
+                          ...updatedRule,
+                          usage: {
+                            ...updatedRule.usage,
+                            limit: updatedRule.usage.limit + maxPaymentAmount
+                          }
+                        }
+                      }
+
+                      return updatedRule
+                    }
+
+                    return rule
                   }
+                )
+
+                if (isPaymentPolicyRuleAdded) {
+                  return getUniversalActionPolicy({
+                    valueLimitPerUse: universalPolicyData.valueLimitPerUse,
+                    paramRules: {
+                      length: universalPolicyData.paramRules.length,
+                      rules: updatedRules as ParamRule16
+                    }
+                  })
                 }
 
-                return getSpendingLimitsPolicy(updatedTokensAndLimits)
+                // If the rules are already 16 in length, The payment policy rule cannot be added to an existing universal policy
+                if (universalPolicyData.paramRules.length >= 16) {
+                  throw new Error(
+                    "Failed to add payment policy for the supertransaction. There is policy conflicts within the defined universal action policies"
+                  )
+                }
+
+                // New payment policy rule is added in the next free rule slot
+                updatedRules[Number(universalPolicyData.paramRules.length)] = {
+                  condition:
+                    getUniversalActionPolicyConditionType("lessThanOrEqual"),
+                  offset: calldataArgument(2),
+                  ref: toBytes32(maxPaymentAmount),
+                  isLimited: false,
+                  usage: { used: 0n, limit: 0n }
+                }
+
+                return getUniversalActionPolicy({
+                  valueLimitPerUse: universalPolicyData.valueLimitPerUse,
+                  paramRules: {
+                    // Payment policy rule is not added, so increasing a rule
+                    length: universalPolicyData.paramRules.length + 1n,
+                    rules: updatedRules as ParamRule16
+                  }
+                })
               }
 
               return actionPolicy
@@ -519,11 +605,27 @@ export const addPaymentPolicyForActions = (
   const isPolicyForPaymentTokenExists = updatedSessionActionsForChain.some(
     (sessionAction) => {
       return sessionAction.actions.some((action) => {
-        return (
+        const isFeeTokenTransferAction =
           action.actionTargetSelector.toLowerCase() ===
             transferSelector.toLowerCase() &&
           action.actionTarget.toLowerCase() === feeToken.address.toLowerCase()
-        )
+
+        if (isFeeTokenTransferAction) {
+          return action.actionPolicies.some((actionPolicy) => {
+            if (
+              actionPolicy.policy.toLowerCase() ===
+              UNIVERSAL_ACTION_POLICY_ADDRESS.toLowerCase()
+            ) {
+              // At this place, the existing universal policy should be updated to include the payment amount in transfer action
+              return true
+            }
+
+            // We have to add a new universal policy for payment
+            return false
+          })
+        }
+
+        return false
       })
     }
   )
@@ -531,19 +633,19 @@ export const addPaymentPolicyForActions = (
   if (!isPolicyForPaymentTokenExists) {
     let isPaymentPolicyAdded = false
 
-    const paymentAction: ActionData = {
-      actionTarget: feeToken.address,
-      actionTargetSelector: transferSelector,
-      actionPolicies: [
-        getSpendingLimitsPolicy([
-          { limit: maxPaymentAmount, token: feeToken.address }
-        ])
-      ]
-    }
+    const [paymentAction] = buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [feeToken.chainId],
+        contractAddress: feeToken.address,
+        amountLimitPerAction: maxPaymentAmount,
+        maxAmountLimit: maxPaymentAmount
+      }
+    })
 
     updatedSessionActionsForChain = updatedSessionActionsForChain.map(
       (sessionAction) => {
-        // Payment policy will be added into the first session action for the payment chain
+        // Payment policy will be added into the first session action for the payment chain so it will be always batched
         if (
           !isPaymentPolicyAdded &&
           sessionAction.chainId === feeToken.chainId
@@ -551,7 +653,7 @@ export const addPaymentPolicyForActions = (
           isPaymentPolicyAdded = true
           return {
             ...sessionAction,
-            actions: [...sessionAction.actions, paymentAction]
+            actions: [...sessionAction.actions, ...paymentAction.actions]
           }
         }
 
@@ -619,7 +721,7 @@ export const getSessionQuote = async <T extends GetSessionQuoteParams>(
 
     // Prepare session validator install instructions
     const sessionValidatorInstallInstructions =
-      await prepareInstallSessionValidator(client, smartSessionValidatorAddress)
+      await prepareInstallSmartSessions(client, smartSessionValidatorAddress)
 
     const hasSessionValidatorInstallInstructions =
       sessionValidatorInstallInstructions.length > 0
