@@ -153,12 +153,32 @@ export async function getSupertransactionReceipt(
 
   switch (transactionStatus.status) {
     case "FAILED": {
-      console.log({ transactionStatus, explorerResponse, hash: params.hash })
-      throw new Error(parseErrorMessage(transactionStatus.message))
+      const errorMessage = parseErrorMessage(transactionStatus.message)
+
+      if (client.info.isDebugMode) {
+        console.error({
+          transactionStatus,
+          hash: params.hash,
+          errorMessage,
+          explorerResponse
+        })
+      }
+
+      throw new Error(errorMessage)
     }
     case "MINED_FAIL": {
-      console.log({ transactionStatus, explorerResponse, hash: params.hash })
-      throw new Error(parseErrorMessage(transactionStatus.message))
+      const errorMessage = parseErrorMessage(transactionStatus.message)
+
+      if (client.info.isDebugMode) {
+        console.error({
+          transactionStatus,
+          hash: params.hash,
+          errorMessage,
+          explorerResponse
+        })
+      }
+
+      throw new Error(errorMessage)
     }
     case "PENDING": {
       break

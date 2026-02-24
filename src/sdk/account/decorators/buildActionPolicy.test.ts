@@ -50,7 +50,7 @@ describe("mee.buildActionPolicy", () => {
   it("Build timeframe policy", async () => {
     const now = Math.floor(Date.now() / 1000)
     const validAfter = now
-    const validUntil = now + 3600
+    const validUntil = now + 60 * 60 * 24
 
     const timeframePolicy = mcNexus.buildActionPolicy({
       type: "timeframe",
@@ -101,5 +101,20 @@ describe("mee.buildActionPolicy", () => {
 
     expect(universalPolicy).toBeDefined()
     expect(universalPolicy.policy).to.eq(UNIVERSAL_ACTION_POLICY_ADDRESS)
+  })
+
+  it("Should fail if more than 16 rules are added for universal policy", async () => {
+    expect(() =>
+      mcNexus.buildActionPolicy({
+        type: "universal",
+        rules: new Array(17).fill(0).map(() => {
+          return {
+            condition: "equal",
+            calldataOffset: calldataArgument(2),
+            comparisonValue: parseUnits("10", 6)
+          }
+        })
+      })
+    ).to.throw("Universal policy only supports 16 rules")
   })
 })

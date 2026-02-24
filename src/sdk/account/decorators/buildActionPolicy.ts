@@ -1,12 +1,4 @@
-import {
-  type Address,
-  type Hex,
-  isAddress,
-  isHex,
-  padHex,
-  toBytes,
-  toHex
-} from "viem"
+import { type Address, type Hex, toBytes, toHex } from "viem"
 import {
   type PolicyData,
   getSpendingLimitsPolicy,
@@ -16,11 +8,85 @@ import {
   getUsageLimitPolicy
 } from "../../constants"
 import { type LimitUsage, ParamCondition, type ParamRule } from "../../modules"
+import { toBytes32 } from "../utils"
+
+export const UniversalPolicyAbi = [
+  {
+    components: [
+      {
+        name: "valueLimitPerUse",
+        type: "uint256"
+      },
+      {
+        components: [
+          {
+            name: "length",
+            type: "uint256"
+          },
+          {
+            components: [
+              {
+                name: "condition",
+                type: "uint8"
+              },
+              {
+                name: "offset",
+                type: "uint64"
+              },
+              {
+                name: "isLimited",
+                type: "bool"
+              },
+              {
+                name: "ref",
+                type: "bytes32"
+              },
+              {
+                components: [
+                  {
+                    name: "limit",
+                    type: "uint256"
+                  },
+                  {
+                    name: "used",
+                    type: "uint256"
+                  }
+                ],
+                name: "usage",
+                type: "tuple"
+              }
+            ],
+            name: "rules",
+            type: "tuple[16]"
+          }
+        ],
+        name: "paramRules",
+        type: "tuple"
+      }
+    ],
+    name: "ActionConfig",
+    type: "tuple"
+  }
+]
+
+export type UniversalPolicyData = {
+  valueLimitPerUse: bigint
+  paramRules: {
+    length: bigint
+    rules: {
+      condition: number
+      offset: bigint
+      isLimited: boolean
+      ref: Hex
+      usage: { limit: bigint; used: bigint }
+    }[]
+  }
+}
 
 /**
  * Sudo policy type — allows unrestricted action.
  */
-export type BuildSudoActionPolicy = {
+export type BuildSudoActionPolicyParams = {
   type: "sudo"
 }
 
@@ -29,7 +95,7 @@ export type BuildSudoActionPolicy = {
  * - rules: The array of parameter rules to apply per calldata parameter.
  * - valueLimitPerUse: Max value allowed for each action execution.
  */
-export type BuildUniversalActionPolicy = {
+export type BuildUniversalActionPolicyParams = {
   type: "universal"
   rules: {
     /**
@@ -65,7 +131,7 @@ export type BuildUniversalActionPolicy = {
  * - validAfter: Unix timestamp in seconds after which valid.
  * - validUntil: Unix timestamp in seconds until which valid.
  */
-export type BuildTimeFrameActionPolicy = {
+export type BuildTimeFrameActionPolicyParams = {
   type: "timeframe"
   validAfter: number
   validUntil: number
@@ -75,7 +141,7 @@ export type BuildTimeFrameActionPolicy = {
  * Usage Limit Policy parameters.
  * - limit: Maximum number of allowed usages.
  */
-export type BuildUsageLimitActionPolicy = {
+export type BuildUsageLimitActionPolicyParams = {
   type: "usageLimit"
   limit: bigint
 }
@@ -84,20 +150,42 @@ export type BuildUsageLimitActionPolicy = {
  * Spending Limits Policy parameters
  * - data: Array of per-token spending limits.
  */
-export type BuildSpendingLimitsActionPolicy = {
+export type BuildSpendingLimitsActionPolicyParams = {
   type: "spendingLimits"
   tokenLimits: { token: Address; limit: bigint }[]
 }
 
 /**
+ * Abstracted Spending Limits Policy parameters
+ * - data: Array of per-token spending limits.
+ */
+export type AbstractedBuildSpendingLimitsActionPolicyParams = {
+  type: "spendingLimits"
+  tokenLimits: { limit: bigint }[]
+}
+
+type BaseBuildActionPolicyParamTypes =
+  | BuildSudoActionPolicyParams
+  | BuildUniversalActionPolicyParams
+  | BuildTimeFrameActionPolicyParams
+  | BuildUsageLimitActionPolicyParams
+
+/**
+ * All abstracted action policy build types supported by this builder.
+ */
+export type AbstractedBuildActionPolicyParamTypes =
+  | BuildSudoActionPolicyParams
+  | BuildUniversalActionPolicyParams
+  | BuildTimeFrameActionPolicyParams
+  | BuildUsageLimitActionPolicyParams
+  | AbstractedBuildSpendingLimitsActionPolicyParams
+
+/**
  * All action policy build types supported by this builder.
  */
-export type BuildActionPolicyTypes =
-  | BuildSudoActionPolicy
-  | BuildUniversalActionPolicy
-  | BuildTimeFrameActionPolicy
-  | BuildUsageLimitActionPolicy
-  | BuildSpendingLimitsActionPolicy
+export type BuildActionPolicyParamTypes =
+  | BaseBuildActionPolicyParamTypes
+  | BuildSpendingLimitsActionPolicyParams
 
 /**
  * Supported universal policy rule conditions.
@@ -113,7 +201,7 @@ type UniversalActionPolicyConditionType =
 /**
  * Tuple type for a fixed-length ParamRule array (length required by ABI).
  */
-type ParamRule16 = [
+export type ParamRule16 = [
   ParamRule,
   ParamRule,
   ParamRule,
@@ -137,7 +225,7 @@ type ParamRule16 = [
  * @param conditionType Human-readable condition string.
  * @returns ParamCondition enum value.
  */
-const getUniversalActionPolicyConditionType = (
+export const getUniversalActionPolicyConditionType = (
   conditionType: UniversalActionPolicyConditionType
 ) => {
   let condition: ParamRule["condition"] = ParamCondition.EQUAL
@@ -169,22 +257,6 @@ const getUniversalActionPolicyConditionType = (
   return condition
 }
 
-const toBytes32 = (value: bigint | Address | Hex): Hex => {
-  if (typeof value === "bigint") {
-    return padHex(toHex(value), { size: 32 })
-  }
-
-  if (isAddress(value)) {
-    return padHex(value, { size: 32 })
-  }
-
-  if (isHex(value)) {
-    return padHex(value, { size: 32 })
-  }
-
-  throw new Error("Invalid value: must be bigint, address, or hex string")
-}
-
 // 32 bytes calldata param value
 export const calldataArgument = (value: number) => {
   if (value <= 0) {
@@ -197,8 +269,12 @@ export const calldataArgument = (value: number) => {
 /**
  * Prepares data for the Universal Action Policy, including parameter rules and per-action value limits.
  */
-const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
+const getUniversalPolicy = (params: BuildUniversalActionPolicyParams) => {
   const { rules, valueLimitPerUse } = params
+
+  if (rules.length > 16) {
+    throw new Error("Universal policy only supports 16 rules")
+  }
 
   const paramRules: ParamRule[] = []
 
@@ -220,7 +296,7 @@ const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
         ),
         offset: configuredRule.calldataOffset,
         ref: toBytes32(configuredRule.comparisonValue),
-        isLimited: configuredRule.isLimited || false,
+        isLimited: configuredRule.isLimited ?? false,
         usage: configuredRule.usage || { limit: BigInt(0), used: BigInt(0) }
       })
     } else {
@@ -241,7 +317,7 @@ const getUniversalPolicy = (params: BuildUniversalActionPolicy) => {
  * Builds and returns the appropriate action policy based on the provided parameters (type and data).
  */
 export const buildActionPolicy = (
-  parameters: BuildActionPolicyTypes
+  parameters: BuildActionPolicyParamTypes
 ): PolicyData => {
   const { type } = parameters
 
@@ -253,9 +329,10 @@ export const buildActionPolicy = (
       return getUniversalPolicy(parameters)
     }
     case "timeframe": {
+      // Convert Unix timestamp into milliseconds
       return getTimeFramePolicy({
-        validAfter: parameters.validAfter,
-        validUntil: parameters.validUntil
+        validAfter: parameters.validAfter * 1000,
+        validUntil: parameters.validUntil * 1000
       })
     }
     case "usageLimit": {

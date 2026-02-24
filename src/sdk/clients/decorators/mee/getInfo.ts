@@ -29,6 +29,8 @@ export type GetInfoPayload = {
    * List of supported wallet providers and their capabilities
    */
   supported_wallet_providers: SupportedWalletProvider[]
+  /** SDK debug mode. Default: false */
+  isDebugMode?: boolean
 }
 
 /**

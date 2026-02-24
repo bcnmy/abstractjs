@@ -317,6 +317,26 @@ export type EIP7702AuthorizationParams = OneOf<
     }
 >
 
+/** FeeToken or Sponsorship params */
+export type FeePaymentParams = OneOf<
+  | {
+      /**
+       * Token to be used for paying transaction fees
+       */
+      feeToken: FeeTokenInfo
+    }
+  | {
+      /**
+       * sponsorship flag to enable the sponsored super transactions.
+       */
+      sponsorship: true
+      /**
+       * Sponsorship options for overrides
+       */
+      sponsorshipOptions?: SponsorshipOptionsParams
+    }
+>
+
 /**
  * Parameters required for requesting a quote from the MEE service
  */
@@ -419,24 +439,7 @@ export type GetQuoteParams = SupertransactionLike & {
         eoa?: Address
       }
   > &
-  OneOf<
-    | {
-        /**
-         * Token to be used for paying transaction fees
-         */
-        feeToken: FeeTokenInfo
-      }
-    | {
-        /**
-         * sponsorship flag to enable the sponsored super transactions.
-         */
-        sponsorship: true
-        /**
-         * Sponsorship options for overrides
-         */
-        sponsorshipOptions?: SponsorshipOptionsParams
-      }
-  > &
+  FeePaymentParams &
   EIP7702AuthorizationParams
 
 export type MeeAuthorization = {
@@ -1144,7 +1147,11 @@ export const getQuote = async (
     ].includes(sponsorshipOptions.url)
 
     if (isSelfHostedSponsorship) {
-      const selfHostedClient = createHttpClient(sponsorshipOptions.url)
+      const selfHostedClient = createHttpClient(
+        sponsorshipOptions.url,
+        undefined,
+        client.info.isDebugMode
+      )
 
       quote = await selfHostedClient.request<GetQuotePayload>({
         path: `sponsorship/sign/${sponsorshipOptions.gasTank.chainId}/${sponsorshipOptions.gasTank.address}`,
@@ -1217,7 +1224,11 @@ const preparePaymentInfo = async (
 
     // If it is not an trusted sponsorship ? The nonce will be fetched from third party sponsorship backend
     if (!isTrustedSponsorship) {
-      const sponsorshipClient = createHttpClient(sponsorshipUrl)
+      const sponsorshipClient = createHttpClient(
+        sponsorshipUrl,
+        undefined,
+        client.info.isDebugMode
+      )
 
       const nonceInfo = await sponsorshipClient.request<{
         nonce: string

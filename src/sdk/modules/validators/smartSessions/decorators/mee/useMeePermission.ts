@@ -1,14 +1,13 @@
-import type { Hash, OneOf } from "viem"
+import type { Hash } from "viem"
 import type {
   BaseMeeClient,
   MeeClient
 } from "../../../../../clients/createMeeClient"
 import type {
+  FeePaymentParams,
   Instruction,
-  Simulation,
-  SponsorshipOptionsParams
+  Simulation
 } from "../../../../../clients/decorators/mee"
-import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
@@ -22,15 +21,7 @@ export type UseMeePermissionParams = {
   batch?: boolean
   simulation?: Simulation
   verificationGasLimit?: bigint
-} & OneOf<
-  | {
-      feeToken: FeeTokenInfo
-    }
-  | {
-      sponsorship: true
-      sponsorshipOptions?: SponsorshipOptionsParams
-    }
->
+} & FeePaymentParams
 
 export type UseMeePermissionPayload = { hash: Hash }
 

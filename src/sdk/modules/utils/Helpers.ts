@@ -96,7 +96,8 @@ export const parseModule = <
 
 export const isPermitSupported = async (
   walletClient: WalletClient,
-  tokenAddress: Address
+  tokenAddress: Address,
+  isDebugMode = false
 ): Promise<boolean> => {
   try {
     const client = walletClient.extend(publicActions)
@@ -143,7 +144,7 @@ export const isPermitSupported = async (
 
     return hasPermit && hasDomainSeparator && hasNonces
   } catch (err) {
-    console.error("Error checking permit support:", err)
+    if (isDebugMode) console.error("Error checking permit support:", err)
     return false
   }
 }

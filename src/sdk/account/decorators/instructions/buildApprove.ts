@@ -2,7 +2,8 @@ import { type Address, encodeFunctionData, erc20Abi } from "viem"
 import type {
   AbstractCall,
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData } from "../../../modules/utils/Types"
@@ -40,6 +41,8 @@ export type BuildApproveParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   spender: Address
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   /** Custom metadata override for instruction */
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
@@ -109,7 +112,8 @@ export const buildApprove = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -192,7 +196,8 @@ export const buildApprove = async (
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
       upperBoundTimestamp,
-      executionSimulationRetryDelay
+      executionSimulationRetryDelay,
+      simulationOverrides
     }
   ]
 }

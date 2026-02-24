@@ -2,6 +2,7 @@ import {
   http,
   type Account,
   type Chain,
+  type Hash,
   type LocalAccount,
   type PublicClient,
   type Transport,
@@ -16,6 +17,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
 import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
+import type { SessionAction } from "../../sdk/account/decorators/buildSessionAction"
 import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
   type AnyData,
@@ -24,7 +26,6 @@ import {
   toSmartSessionsModule
 } from "../../sdk/modules"
 import type { GrantPermissionResponse } from "../../sdk/modules/validators/smartSessions/decorators/grantPermission"
-import type { MultichainActionData } from "../../sdk/modules/validators/smartSessions/decorators/mee/grantMeePermission"
 import { TESTNET_RPC_URLS } from "../testSetup"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../testTokens"
 import { generateNewTestnetMcNexusAccountAndMeeClient } from "./generate-mc-nexus"
@@ -37,7 +38,8 @@ export const prepareForTestnetSmartSessions = async (
   eoaAccount: LocalAccount,
   enableSessionType: "legacy" | "new" = "new",
   use7702Auth = false,
-  customActions?: MultichainActionData["actions"]
+  customActions?: SessionAction[],
+  batchActions = true
 ) => {
   // New orchestrator account
   const { mcNexus, meeClient } =
@@ -67,7 +69,7 @@ export const prepareForTestnetSmartSessions = async (
     customActions && customActions.length > 0
       ? customActions
       : [
-          mcNexus.buildAction({
+          mcNexus.buildSessionAction({
             type: "transfer",
             data: {
               chainIds: [paymentChain.id],
@@ -79,7 +81,6 @@ export const prepareForTestnetSmartSessions = async (
                   type: "spendingLimits",
                   tokenLimits: [
                     {
-                      token: testnetMcTestUSDC.addressOn(paymentChain.id),
                       limit: parseUnits("100", 6)
                     }
                   ]
@@ -87,7 +88,7 @@ export const prepareForTestnetSmartSessions = async (
                 {
                   type: "timeframe",
                   validAfter: 0,
-                  validUntil: Date.now() + 60 * 60 * 24
+                  validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
                 },
                 {
                   type: "universal",
@@ -103,7 +104,7 @@ export const prepareForTestnetSmartSessions = async (
               ]
             }
           }),
-          mcNexus.buildAction({
+          mcNexus.buildSessionAction({
             type: "custom",
             data: {
               chainIds: [paymentChain.id],
@@ -118,7 +119,6 @@ export const prepareForTestnetSmartSessions = async (
                   type: "spendingLimits",
                   tokenLimits: [
                     {
-                      token: testnetMcUSDC.addressOn(paymentChain.id),
                       limit: parseUnits("100", 6)
                     }
                   ]
@@ -126,7 +126,7 @@ export const prepareForTestnetSmartSessions = async (
                 {
                   type: "timeframe",
                   validAfter: 0,
-                  validUntil: Date.now() + 60 * 60 * 24
+                  validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
                 },
                 {
                   type: "universal",
@@ -142,7 +142,7 @@ export const prepareForTestnetSmartSessions = async (
               ]
             }
           }),
-          mcNexus.buildAction({
+          mcNexus.buildSessionAction({
             type: "custom",
             data: {
               chainIds: [paymentChain.id],
@@ -170,6 +170,8 @@ export const prepareForTestnetSmartSessions = async (
       }
     : {}
 
+  let hash: Hash | null = null
+
   if (enableSessionType === "new") {
     const payload = await sessionsMeeClient.prepareForPermissions({
       smartSessionsValidator: ssValidator,
@@ -185,6 +187,7 @@ export const prepareForTestnetSmartSessions = async (
         chainId: paymentChain.id,
         amount: parseUnits("1", 6)
       },
+      batchActions,
       ...sessionParams,
       ...authParams
     })
@@ -196,6 +199,8 @@ export const prepareForTestnetSmartSessions = async (
       console.log("Prepare permissions and enable session: ", {
         explorerLinks
       })
+
+      hash = payload.hash
     }
 
     if (!payload?.sessionDetails) {
@@ -228,6 +233,8 @@ export const prepareForTestnetSmartSessions = async (
       console.log("Prepare permissions and enable session: ", {
         explorerLinks
       })
+
+      hash = payload.hash
     }
 
     sessionDetails = await sessionsMeeClient.grantPermissionTypedDataSign({
@@ -235,7 +242,15 @@ export const prepareForTestnetSmartSessions = async (
         address: testnetMcTestUSDCP.addressOn(paymentChain.id),
         chainId: paymentChain.id
       },
-      ...sessionParams
+      ...sessionParams,
+      actions: sessionParams.actions.flatMap((sessionAction) => {
+        return sessionAction.actions.map((action) => {
+          return {
+            ...action,
+            chainId: sessionAction.chainId
+          }
+        })
+      })
     })
   }
 
@@ -256,6 +271,7 @@ export const prepareForTestnetSmartSessions = async (
   return {
     sessionAccount: userOwnedOrchestratorWithSessionSigner,
     sessionDetails,
-    mcNexus
+    mcNexus,
+    prepareForPermissionsHash: hash
   }
 }
