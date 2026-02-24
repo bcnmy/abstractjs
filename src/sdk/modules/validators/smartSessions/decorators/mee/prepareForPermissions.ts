@@ -33,6 +33,7 @@ export type PrepareForPermissionsParams = Omit<
   trigger?: Trigger
   maxPaymentAmount?: bigint
   redeemer?: Address
+  /** Actions can be a single SessionAction or array of SessionAction (Will be flattened) */
   actions?: SessionActionLike[]
   batchActions?: boolean
 } & FeePaymentParams &

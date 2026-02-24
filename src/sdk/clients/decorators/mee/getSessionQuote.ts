@@ -75,6 +75,7 @@ export type SessionDetail = GrantMeePermissionPayload[0]
 
 export type EnableSession = {
   redeemer: Address
+  /** Actions can be a single SessionAction or array of SessionAction (Will be flattened) */
   actions: SessionActionLike[]
   maxPaymentAmount?: bigint
   batchActions?: boolean
@@ -556,6 +557,13 @@ export const addPaymentPolicyForActions = (
                       rules: updatedRules as ParamRule16
                     }
                   })
+                }
+
+                // If the rules are already 16 in length, The payment policy rule cannot be added to an existing universal policy
+                if (universalPolicyData.paramRules.length >= 16) {
+                  throw new Error(
+                    "Failed to add payment policy for the supertransaction. There is policy conflicts within the defined universal action policies"
+                  )
                 }
 
                 // New payment policy rule is added in the next free rule slot
