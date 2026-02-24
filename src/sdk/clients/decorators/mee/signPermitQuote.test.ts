@@ -49,7 +49,8 @@ import {
 } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
-import { type FeeTokenInfo, getQuote } from "./getQuote"
+import getPermitQuote from "./getPermitQuote"
+import type { FeeTokenInfo } from "./getQuote"
 import { type QuoteType, getQuoteType } from "./getQuoteType"
 import signOnChainQuote from "./signOnChainQuote"
 import {
@@ -211,21 +212,15 @@ describe("mee.signPermitQuote", () => {
         amount: 1n
       }
 
-      const recipient = mcNexus.addressOn(paymentChain.id, true)
-      const sender = mcNexus.signer.address
-
-      const quote = await getQuote(meeClient, {
-        path: "quote-permit",
-        eoa: sender,
+      const fusionQuote = await getPermitQuote(meeClient, {
+        trigger,
         instructions: [
-          mcNexus.build({
-            type: "transferFrom",
-            data: { ...trigger, recipient, sender }
-          }),
           mcNexus.build({
             type: "transfer",
             data: {
-              ...trigger,
+              tokenAddress: trigger.tokenAddress,
+              chainId: trigger.chainId,
+              amount: 1n,
               recipient: recipientAccount.address
             }
           })
@@ -233,16 +228,9 @@ describe("mee.signPermitQuote", () => {
         feeToken
       })
 
-      const fusionQuote = {
-        quote,
-        trigger: {
-          ...trigger,
-          amount:
-            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-        }
-      }
-
       console.timeEnd("signPermitQuote:getQuote")
+      expect(fusionQuote.quote.quoteType).toBe("permit")
+
       const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
         await signPermitQuote({
           fusionQuote,

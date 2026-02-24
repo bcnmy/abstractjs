@@ -43,7 +43,7 @@ import {
 import executeSignedQuote from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import getOnChainQuote from "./getOnChainQuote"
-import { type FeeTokenInfo, getQuote } from "./getQuote"
+import type { FeeTokenInfo } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
 import {
   ON_CHAIN_PREFIX,
@@ -68,7 +68,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let recipientAccount: LocalAccount
   let tokenAddress: Hex
 
-  const index = 79n // Randomly chosen index
+  const index = 1n // Randomly chosen index
 
   let paymentChain: Chain
   let targetChain: Chain
@@ -125,21 +125,15 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       amount: 1n
     }
 
-    const sender = mcNexus.signer.address
-    const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
-
-    const quote = await getQuote(meeClient, {
-      path: "quote-permit",
-      eoa: sender,
+    const fusionQuote = await getOnChainQuote(meeClient, {
+      trigger,
       instructions: [
-        mcNexus.build({
-          type: "transferFrom",
-          data: { ...trigger, sender, recipient }
-        }),
         mcNexus.build({
           type: "transfer",
           data: {
-            ...trigger,
+            tokenAddress,
+            chainId: optimism.id,
+            amount: 1n,
             recipient: recipientAccount.address
           }
         })
@@ -148,18 +142,16 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     })
 
     console.timeEnd("signOnChainQuote:getQuote")
+    expect(fusionQuote.quote.quoteType).toBe("onchain")
+
     const signedQuote = await signOnChainQuote(meeClient, {
-      fusionQuote: {
-        quote,
-        trigger: {
-          ...trigger,
-          amount:
-            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-        }
-      }
+      fusionQuote
     })
 
-    const meeVersions = getMeeVersionsForQuote(mcNexus, quote.userOps)
+    const meeVersions = getMeeVersionsForQuote(
+      mcNexus,
+      fusionQuote.quote.userOps
+    )
     const signedQuoteFull = {
       ...signedQuote,
       meeVersions,
