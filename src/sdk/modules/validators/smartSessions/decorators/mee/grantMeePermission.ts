@@ -1,10 +1,14 @@
 import type { Address, Prettify, PublicClient } from "viem"
 import { erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
-import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
+import {
+  type FeeTokenInfo,
+  addPaymentPolicyForActions
+} from "../../../../../clients/decorators/mee"
 import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
 import type { MEEVersionConfig } from "../../../../../account"
+import type { SessionAction } from "../../../../../account/decorators/buildSessionAction"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
 import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
@@ -12,7 +16,6 @@ import {
   grantPermissionPersonalSign,
   grantPermissionTypedDataSign
 } from "../grantPermission"
-import { addPaymentPolicyForActions } from "./prepareForPermissions"
 
 export type MultichainActionData = {
   actions: (ActionData & { chainId: number })[]
@@ -135,11 +138,36 @@ export const grantMeePermission = async <
 
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
-      actionsForChain = addPaymentPolicyForActions(
-        actionsForChain,
+      // This is a legacy setup, the session action will be always one and no unbatched cases here
+      const sessionAction: SessionAction = {
+        actions: [],
+        chainId
+      }
+
+      for (const {
+        actionTargetSelector,
+        actionPolicies,
+        actionTarget
+      } of actionsForChain) {
+        sessionAction.actions.push({
+          actionTargetSelector,
+          actionPolicies,
+          actionTarget
+        })
+      }
+
+      const [updatedSessionAction] = addPaymentPolicyForActions(
+        [sessionAction],
         feeToken,
         maxPaymentAmount!
       )
+
+      actionsForChain = updatedSessionAction.actions.map((action) => {
+        return {
+          ...action,
+          chainId: sessionAction.chainId
+        }
+      })
     }
 
     return {

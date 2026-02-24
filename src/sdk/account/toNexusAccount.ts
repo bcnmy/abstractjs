@@ -520,7 +520,7 @@ export const toNexusAccount = async (
         })
 
         if (!bytecode || bytecode === "0x") {
-          console.debug(
+          console.error(
             `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Contract address (${address}) is not deployed`
           )
 

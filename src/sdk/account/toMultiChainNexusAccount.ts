@@ -4,15 +4,8 @@ import type {
   Instruction,
   MeeAuthorization
 } from "../clients/decorators/mee/getQuote"
+import type { ComposabilityVersion, MEEVersion, PolicyData } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
-import {
-  type ChainConfiguration,
-  type DelegationParams,
-  type ToNexusSmartAccountParameters,
-  toNexusAccount
-} from "./toNexusAccount"
-import type { Signer } from "./utils/toSigner"
-
 import {
   type BuildComposableInstructionTypes,
   type BuildInstructionTypes,
@@ -20,10 +13,19 @@ import {
   build as buildDecorator
 } from "./decorators/build"
 import {
+  type BuildActionPolicyParamTypes,
+  buildActionPolicy as buildActionPolicyDecorator
+} from "./decorators/buildActionPolicy"
+import {
   type BridgingInstructions,
   type MultichainBridgingParams,
   buildBridgeInstructions as buildBridgeInstructionsDecorator
 } from "./decorators/buildBridgeInstructions"
+import {
+  type BuildSessionActionTypes,
+  type SessionAction,
+  buildSessionAction as buildSessionActionDecorator
+} from "./decorators/buildSessionAction"
 import {
   type UnifiedERC20Balance,
   getUnifiedERC20Balance as getUnifiedERC20BalanceDecorator
@@ -33,8 +35,6 @@ import {
   type IsDelegatedPayload,
   isDelegated as isDelegatedDecorator
 } from "./decorators/isDelegated"
-
-import type { ComposabilityVersion, MEEVersion } from "../constants"
 import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
@@ -54,7 +54,14 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
+import {
+  type ChainConfiguration,
+  type DelegationParams,
+  type ToNexusSmartAccountParameters,
+  toNexusAccount
+} from "./toNexusAccount"
 import type { MultichainToken } from "./utils/Types"
+import type { Signer } from "./utils/toSigner"
 
 /**
  * Parameters required to create a multichain Nexus account
@@ -126,6 +133,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+
   /**
    * Function to build composable instructions
    * @param params - The parameters for the composable instruction
@@ -141,6 +149,29 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+
+  /**
+   * Function to build action policy for smart sessions
+   * @param params - The parameters for the smart session action policies
+   * @returns Action policy
+   * @example
+   * const actionPolicy = await mcAccount.buildActionPolicy({
+   *   type: "sudo"
+   * })
+   */
+  buildActionPolicy: (params: BuildActionPolicyParamTypes) => PolicyData
+
+  /**
+   * Function to build actions for smart sessions
+   * @param params - The parameters for the smart session actions
+   * @returns Action
+   * @example
+   * const action = await mcAccount.buildSessionAction({
+   *   type: "transfer",
+   *   data: { chainIds: [1, 10], contractAddress: "0x...", policies: [{ type: "sudo" }] }
+   * })
+   */
+  buildSessionAction: (params: BuildSessionActionTypes) => SessionAction[]
 
   /**
    * Function to build instructions for bridging a token across all deployments
@@ -338,6 +369,18 @@ export async function toMultichainNexusAccount(
       params
     )
 
+  const buildActionPolicy = (
+    params: BuildActionPolicyParamTypes
+  ): PolicyData => {
+    return buildActionPolicyDecorator(params)
+  }
+
+  const buildSessionAction = (
+    params: BuildSessionActionTypes
+  ): SessionAction[] => {
+    return buildSessionActionDecorator(params)
+  }
+
   const buildComposable = (
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
@@ -417,6 +460,8 @@ export async function toMultichainNexusAccount(
     getUnifiedERC20Balance,
     build,
     buildComposable,
+    buildActionPolicy,
+    buildSessionAction,
     buildBridgeInstructions,
     queryBridge,
     isDelegated,

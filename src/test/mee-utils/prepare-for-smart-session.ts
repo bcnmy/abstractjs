@@ -2,6 +2,7 @@ import {
   http,
   type Account,
   type Chain,
+  type Hash,
   type LocalAccount,
   type PublicClient,
   type Transport,
@@ -15,18 +16,11 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { toMultichainNexusAccount } from "../../sdk/account"
-import {
-  DEFAULT_MEE_VERSION,
-  getSpendingLimitsPolicy,
-  getSudoPolicy,
-  getTimeFramePolicy,
-  getUniversalActionPolicy,
-  getUsageLimitPolicy,
-  testnetMcUSDC
-} from "../../sdk/constants"
+import { calldataArgument } from "../../sdk/account/decorators/buildActionPolicy"
+import type { SessionAction } from "../../sdk/account/decorators/buildSessionAction"
+import { DEFAULT_MEE_VERSION, testnetMcUSDC } from "../../sdk/constants"
 import {
   type AnyData,
-  type ParamRule,
   getMEEVersion,
   meeSessionActions,
   toSmartSessionsModule
@@ -43,7 +37,9 @@ export const prepareForTestnetSmartSessions = async (
   paymentChainWalletClient: WalletClient<Transport, Chain, Account>,
   eoaAccount: LocalAccount,
   enableSessionType: "legacy" | "new" = "new",
-  use7702Auth = false
+  use7702Auth = false,
+  customActions?: SessionAction[],
+  batchActions = true
 ) => {
   // New orchestrator account
   const { mcNexus, meeClient } =
@@ -61,40 +57,6 @@ export const prepareForTestnetSmartSessions = async (
       }
     )
 
-  const paramRule: ParamRule = {
-    condition: 1, // EQUAL
-    isLimited: false,
-    offset: 0n,
-    ref: toHex(toBytes("0x", { size: 32 })),
-    usage: { limit: BigInt(0), used: BigInt(0) }
-  }
-
-  const universalActionPolicy = getUniversalActionPolicy({
-    paramRules: {
-      length: 1n,
-      // Weird rhinestone typescript type which forces to have 16 of this like this
-      rules: [
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule,
-        paramRule
-      ]
-    },
-    valueLimitPerUse: parseUnits("100", 6)
-  })
-
   const sessionSigner = privateKeyToAccount(generatePrivateKey())
 
   const ssValidator = toSmartSessionsModule({
@@ -103,77 +65,99 @@ export const prepareForTestnetSmartSessions = async (
 
   const sessionsMeeClient = meeClient.extend(meeSessionActions)
 
+  const actions =
+    customActions && customActions.length > 0
+      ? customActions
+      : [
+          mcNexus.buildSessionAction({
+            type: "transfer",
+            data: {
+              chainIds: [paymentChain.id],
+              contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+              policies: [
+                { type: "sudo" },
+                { type: "usageLimit", limit: 100n },
+                {
+                  type: "spendingLimits",
+                  tokenLimits: [
+                    {
+                      limit: parseUnits("100", 6)
+                    }
+                  ]
+                },
+                {
+                  type: "timeframe",
+                  validAfter: 0,
+                  validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
+                },
+                {
+                  type: "universal",
+                  valueLimitPerUse: parseUnits("100", 6),
+                  rules: [
+                    {
+                      condition: "greaterThan",
+                      calldataOffset: calldataArgument(1),
+                      comparisonValue: toHex(toBytes("0x", { size: 32 }))
+                    }
+                  ]
+                }
+              ]
+            }
+          }),
+          mcNexus.buildSessionAction({
+            type: "custom",
+            data: {
+              chainIds: [paymentChain.id],
+              contractAddress: testnetMcUSDC.addressOn(paymentChain.id),
+              functionSignature: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              ),
+              policies: [
+                { type: "sudo" },
+                { type: "usageLimit", limit: 100n },
+                {
+                  type: "spendingLimits",
+                  tokenLimits: [
+                    {
+                      limit: parseUnits("100", 6)
+                    }
+                  ]
+                },
+                {
+                  type: "timeframe",
+                  validAfter: 0,
+                  validUntil: Math.floor(Date.now() / 1000) + 60 * 60 * 24
+                },
+                {
+                  type: "universal",
+                  valueLimitPerUse: parseUnits("100", 6),
+                  rules: [
+                    {
+                      condition: "greaterThan",
+                      calldataOffset: calldataArgument(1),
+                      comparisonValue: toHex(toBytes("0x", { size: 32 }))
+                    }
+                  ]
+                }
+              ]
+            }
+          }),
+          mcNexus.buildSessionAction({
+            type: "custom",
+            data: {
+              chainIds: [paymentChain.id],
+              contractAddress: testnetMcTestUSDCP.addressOn(paymentChain.id),
+              functionSignature: toFunctionSelector(
+                getAbiItem({ abi: erc20Abi, name: "transfer" })
+              )
+            }
+          })
+        ].flat()
+
   const sessionParams = {
     redeemer: sessionSigner.address,
     maxPaymentAmount: parseUnits("2", 6),
-    actions: [
-      {
-        chainId: paymentChain.id,
-        actionTarget: testnetMcTestUSDC.addressOn(paymentChain.id),
-        actionTargetSelector: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        actionPolicies: [
-          getSudoPolicy(),
-          getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-          getSpendingLimitsPolicy([
-            {
-              token: testnetMcTestUSDC.addressOn(paymentChain.id),
-              limit: parseUnits("100", 6)
-            }
-          ]),
-          universalActionPolicy,
-          getTimeFramePolicy({
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          })
-        ]
-      },
-      {
-        chainId: paymentChain.id,
-        actionTarget: testnetMcUSDC.addressOn(paymentChain.id),
-        actionTargetSelector: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        actionPolicies: [
-          getSudoPolicy(),
-          getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-          getSpendingLimitsPolicy([
-            {
-              token: testnetMcUSDC.addressOn(paymentChain.id),
-              limit: parseUnits("100", 6)
-            }
-          ]),
-          universalActionPolicy,
-          getTimeFramePolicy({
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          })
-        ]
-      },
-      {
-        chainId: paymentChain.id,
-        actionTarget: testnetMcTestUSDCP.addressOn(paymentChain.id),
-        actionTargetSelector: toFunctionSelector(
-          getAbiItem({ abi: erc20Abi, name: "transfer" })
-        ),
-        actionPolicies: [
-          getSudoPolicy(),
-          getUsageLimitPolicy({ limit: parseUnits("100", 6) }),
-          getSpendingLimitsPolicy([
-            {
-              token: testnetMcTestUSDCP.addressOn(paymentChain.id),
-              limit: parseUnits("100", 6)
-            }
-          ]),
-          universalActionPolicy,
-          getTimeFramePolicy({
-            validAfter: 0,
-            validUntil: Date.now() + 60 * 60 * 24
-          })
-        ]
-      }
-    ]
+    actions
   }
 
   let sessionDetails: GrantPermissionResponse = []
@@ -185,6 +169,8 @@ export const prepareForTestnetSmartSessions = async (
         authorizations: []
       }
     : {}
+
+  let hash: Hash | null = null
 
   if (enableSessionType === "new") {
     const payload = await sessionsMeeClient.prepareForPermissions({
@@ -201,6 +187,7 @@ export const prepareForTestnetSmartSessions = async (
         chainId: paymentChain.id,
         amount: parseUnits("1", 6)
       },
+      batchActions,
       ...sessionParams,
       ...authParams
     })
@@ -212,6 +199,8 @@ export const prepareForTestnetSmartSessions = async (
       console.log("Prepare permissions and enable session: ", {
         explorerLinks
       })
+
+      hash = payload.hash
     }
 
     if (!payload?.sessionDetails) {
@@ -244,6 +233,8 @@ export const prepareForTestnetSmartSessions = async (
       console.log("Prepare permissions and enable session: ", {
         explorerLinks
       })
+
+      hash = payload.hash
     }
 
     sessionDetails = await sessionsMeeClient.grantPermissionTypedDataSign({
@@ -251,7 +242,15 @@ export const prepareForTestnetSmartSessions = async (
         address: testnetMcTestUSDCP.addressOn(paymentChain.id),
         chainId: paymentChain.id
       },
-      ...sessionParams
+      ...sessionParams,
+      actions: sessionParams.actions.flatMap((sessionAction) => {
+        return sessionAction.actions.map((action) => {
+          return {
+            ...action,
+            chainId: sessionAction.chainId
+          }
+        })
+      })
     })
   }
 
@@ -272,6 +271,7 @@ export const prepareForTestnetSmartSessions = async (
   return {
     sessionAccount: userOwnedOrchestratorWithSessionSigner,
     sessionDetails,
-    mcNexus
+    mcNexus,
+    prepareForPermissionsHash: hash
   }
 }

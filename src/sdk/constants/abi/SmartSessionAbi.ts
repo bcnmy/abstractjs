@@ -1465,4 +1465,4 @@ export const SmartSessionAbi = [
       }
     ]
   }
-]
+] as const

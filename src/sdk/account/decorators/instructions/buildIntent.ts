@@ -1,7 +1,8 @@
 import type { Address } from "viem"
 import type {
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { BaseMultichainSmartAccount } from "../../toMultiChainNexusAccount"
@@ -31,6 +32,8 @@ export type BuildIntentParameters = {
   }
   toChainId: number
   mode?: "DEBIT" | "OPTIMISTIC"
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
 
@@ -95,7 +98,8 @@ export const buildIntent = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
 
   const { instructions } = await buildBridgeInstructions({
@@ -108,7 +112,8 @@ export const buildIntent = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   })
 
   return [...currentInstructions, ...instructions]

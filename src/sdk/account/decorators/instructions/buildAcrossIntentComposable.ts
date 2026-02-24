@@ -10,7 +10,8 @@ import {
 } from "viem"
 import type {
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
@@ -88,6 +89,8 @@ export type BuildAcrossIntentComposableParams = {
   pool?: Address
   gasLimit?: bigint
   fees?: SuggestedFeesReturnType
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
 
@@ -116,7 +119,8 @@ export const buildAcrossIntentComposable = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
 
   // sanity checks
@@ -146,7 +150,8 @@ export const buildAcrossIntentComposable = async (
       recipient: acrossIntentWrapperOnOrigin,
       lowerBoundTimestamp,
       upperBoundTimestamp,
-      executionSimulationRetryDelay
+      executionSimulationRetryDelay,
+      simulationOverrides
     },
     composabilityParams
   )
@@ -236,7 +241,8 @@ export const buildAcrossIntentComposable = async (
       metadata: metadata || bridgeMetadata,
       lowerBoundTimestamp,
       upperBoundTimestamp,
-      executionSimulationRetryDelay
+      executionSimulationRetryDelay,
+      simulationOverrides
     },
     composabilityParams
   )
