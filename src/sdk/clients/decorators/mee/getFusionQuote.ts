@@ -303,10 +303,7 @@ export const prepareInstructions = async (
         ...resolvedInstructions.slice(1)
       ]
     } else {
-      partiallyBatchedInstructions = [
-        ...triggerTransfer,
-        ...resolvedInstructions
-      ]
+      partiallyBatchedInstructions = [...triggerTransfer]
     }
 
     // If integrators explicitly want unbatched userOps

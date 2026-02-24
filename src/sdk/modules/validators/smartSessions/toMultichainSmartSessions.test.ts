@@ -1,4 +1,3 @@
-import { getSudoPolicy, getUniversalActionPolicy } from "@rhinestone/module-sdk"
 import type {
   Account,
   Address,
@@ -23,7 +22,7 @@ import {
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, test } from "vitest"
 import { prepareForTestnetSmartSessions } from "../../../../test/mee-utils/prepare-for-smart-session"
 import {
   TESTNET_RPC_URLS,
@@ -36,7 +35,7 @@ import {
 } from "../../../../test/testTokens"
 import { type NetworkConfig, transferErc20 } from "../../../../test/testUtils"
 import { getMeeScanLink } from "../../../account"
-import { buildAction } from "../../../account/decorators/buildAction"
+import { buildSessionAction } from "../../../account/decorators/buildSessionAction"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -52,7 +51,13 @@ import type {
   BaseGetSupertransactionReceiptPayload,
   FeeTokenInfo
 } from "../../../clients/decorators/mee"
-import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
+import {
+  DEFAULT_MEE_VERSION,
+  MEEVersion,
+  getSudoPolicy,
+  getUniversalActionPolicy,
+  testnetMcUSDC
+} from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
 import { getMEEVersion } from "../../utils"
 import type { AnyData } from "../../utils/Types"
@@ -76,7 +81,7 @@ enum ParamCondition {
   IN_RANGE = 6
 }
 
-describe("mee.multichainSmartSessions", () => {
+describe("mee.multichainSmartSessions (Legacy)", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -1034,16 +1039,18 @@ describe("mee.multichainSmartSessions", () => {
     console.log({ explorerLink: getMeeScanLink(executionPayload.hash) })
   })
 
-  test("Smart sessions flow: erc20 spending limit action", async () => {
+  // Same policy resolver is being used for transferFrom and approve as well. So no need to explicitly test them
+  test("Smart sessions flow: transfer action", async () => {
     const actions = [
-      buildAction({
-        type: "erc20SpendingLimit",
+      buildSessionAction({
+        type: "transfer",
         data: {
           chainIds: [paymentChain.id],
           contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
           recipientAddress: "0x0000000000000000000000000000000000000001",
-          limitPerAction: parseUnits("0.5", 6),
-          maxLimit: parseUnits("0.5", 6)
+          amountLimitPerAction: parseUnits("0.5", 6),
+          maxAmountLimit: parseUnits("0.5", 6),
+          usageLimit: 3n
         }
       })
     ].flat()
@@ -1076,19 +1083,26 @@ describe("mee.multichainSmartSessions", () => {
     const sessionSignerSessionMeeClient =
       sessionSignerMeeClient.extend(meeSessionActions)
 
+    const validTransferInxs = await mcNexus.build({
+      type: "transfer",
+      data: {
+        tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        recipient: "0x0000000000000000000000000000000000000001",
+        amount: parseUnits("0.1", 6),
+        chainId: paymentChain.id
+      }
+    })
+
     const actionInstructions = [
-      // Valid instruction which satisfies all the policy constraints
+      // Valid instruction which satisfies all the policy constraints + (Usage by 1)
       {
         isValid: true,
-        instructions: await mcNexus.build({
-          type: "transfer",
-          data: {
-            tokenAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
-            recipient: "0x0000000000000000000000000000000000000001",
-            amount: parseUnits("0.5", 6),
-            chainId: paymentChain.id
-          }
-        })
+        instructions: validTransferInxs
+      },
+      // Valid: usage limit constraint + (Usage by 3)
+      {
+        isValid: true,
+        instructions: [...validTransferInxs, ...validTransferInxs]
       },
       // Invalid: Recipient address contraint failure
       {
@@ -1115,6 +1129,11 @@ describe("mee.multichainSmartSessions", () => {
             chainId: paymentChain.id
           }
         })
+      },
+      // Invalid: usage limit constraint failure where usage exceeds by one
+      {
+        isValid: false,
+        instructions: [...validTransferInxs, ...validTransferInxs]
       }
     ]
 
@@ -1180,7 +1199,7 @@ describe("mee.multichainSmartSessions", () => {
   })
 
   test("Smart sessions enable permission with custom actions batching", async () => {
-    const approveAction = buildAction({
+    const approveAction = buildSessionAction({
       type: "approve",
       data: {
         chainIds: [paymentChain.id],
@@ -1188,7 +1207,7 @@ describe("mee.multichainSmartSessions", () => {
       }
     })
 
-    const transferAction = buildAction({
+    const transferAction = buildSessionAction({
       type: "transfer",
       data: {
         chainIds: [paymentChain.id],
@@ -1196,7 +1215,7 @@ describe("mee.multichainSmartSessions", () => {
       }
     })
 
-    const transferFromAction = buildAction({
+    const transferFromAction = buildSessionAction({
       type: "transferFrom",
       data: {
         chainIds: [paymentChain.id],
@@ -1204,7 +1223,7 @@ describe("mee.multichainSmartSessions", () => {
       }
     })
 
-    const batchOne = buildAction({
+    const batchOne = buildSessionAction({
       type: "batch",
       data: {
         actions: [...approveAction, ...transferFromAction]
