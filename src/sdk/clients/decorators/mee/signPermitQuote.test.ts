@@ -53,6 +53,7 @@ import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { type QuoteType, getQuoteType } from "./getQuoteType"
 import signOnChainQuote from "./signOnChainQuote"
 import {
+  type MultichainSmartAccountParams,
   type TokenTrigger,
   type Trigger,
   formatSignedPermitQuotePayload,
@@ -119,6 +120,21 @@ describe("mee.signPermitQuote", () => {
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
+  const buildAccountParams = (
+    account: MultichainSmartAccount,
+    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+  ): MultichainSmartAccountParams => {
+    const { trigger } = fusionQuote
+    const deployment = account.deploymentOn(trigger.chainId, true)
+    const startIndex = fusionQuote.quote.paymentInfo.sponsored ? 1 : 0
+    return {
+      owner: account.signer.address,
+      spender: deployment.address,
+      walletClient: deployment.walletClient,
+      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+    }
+  }
+
   test.concurrent("should check permitTypehash is correct", async () => {
     const permitTypehash = keccak256(
       toBytes(
@@ -168,7 +184,10 @@ describe("mee.signPermitQuote", () => {
     const {
       fallbackToOnchainMode,
       signedPermitQuotePayload: signedPermitQuote
-    } = await signPermitQuote(meeClient, { fusionQuote })
+    } = await signPermitQuote({
+      fusionQuote,
+      account: buildAccountParams(mcNexus, fusionQuote)
+    })
 
     if (fallbackToOnchainMode) {
       // This always fails here. This is being coded like this to avoid type issues
@@ -225,7 +244,10 @@ describe("mee.signPermitQuote", () => {
 
       console.timeEnd("signPermitQuote:getQuote")
       const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
-        await signPermitQuote(meeClient, { fusionQuote })
+        await signPermitQuote({
+          fusionQuote,
+          account: buildAccountParams(mcNexus, fusionQuote)
+        })
 
       if (fallbackToOnchainMode) {
         // This always fails here. This is being coded like this to avoid type issues
@@ -303,6 +325,21 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       apiKey: "mee_3ZhZhHx3hmKrBQxacr283dHt"
     })
   })
+
+  const buildAccountParams = (
+    account: MultichainSmartAccount,
+    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+  ): MultichainSmartAccountParams => {
+    const { trigger } = fusionQuote
+    const deployment = account.deploymentOn(trigger.chainId, true)
+    const startIndex = fusionQuote.quote.paymentInfo.sponsored ? 1 : 0
+    return {
+      owner: account.signer.address,
+      spender: deployment.address,
+      walletClient: deployment.walletClient,
+      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+    }
+  }
 
   describe("custom approvalAmount", () => {
     test("should fail if approvalAmount is smaller than the trigger amount", async () => {
@@ -455,7 +492,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     const {
       fallbackToOnchainMode,
       signedPermitQuotePayload: signedPermitQuote
-    } = await signPermitQuote(meeClient, { fusionQuote })
+    } = await signPermitQuote({
+      fusionQuote,
+      account: buildAccountParams(mcNexus, fusionQuote)
+    })
 
     if (fallbackToOnchainMode) {
       // This always fails here. This is being coded like this to avoid type issues
@@ -494,8 +534,9 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       account: walletClient.account!
     })
 
+    const accountParams = buildAccountParams(mcNexus, fusionQuote)
     const manuallySignedPermitQuote = formatSignedPermitQuotePayload(
-      mcNexus,
+      accountParams.meeVersions,
       fusionQuote,
       metadata,
       signature
@@ -619,7 +660,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     }
 
     const { fallbackToOnchainMode, signedPermitQuotePayload } =
-      await signPermitQuote(meeClient, { fusionQuote: modifiedFusionQuote })
+      await signPermitQuote({
+        fusionQuote: modifiedFusionQuote,
+        account: buildAccountParams(mcNexus, modifiedFusionQuote)
+      })
 
     expect(fallbackToOnchainMode).to.be.eq(true)
     expect(signedPermitQuotePayload).to.be.eq(undefined)
@@ -661,7 +705,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
     }
 
     const { fallbackToOnchainMode, signedPermitQuotePayload } =
-      await signPermitQuote(meeClient, { fusionQuote: modifiedFusionQuote })
+      await signPermitQuote({
+        fusionQuote: modifiedFusionQuote,
+        account: buildAccountParams(mcNexus, modifiedFusionQuote)
+      })
 
     expect(fallbackToOnchainMode).to.be.eq(true)
     expect(signedPermitQuotePayload).to.be.eq(undefined)
