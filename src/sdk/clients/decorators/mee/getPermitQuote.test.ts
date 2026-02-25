@@ -21,7 +21,6 @@ import {
   signPermitQuote,
   waitForSupertransactionReceipt
 } from "."
-import { getMeeVersionsForQuote } from "./signQuote"
 import {
   TESTNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
@@ -42,6 +41,7 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
 
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
@@ -100,7 +100,10 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
 
   const buildAccountParams = (
     account: MultichainSmartAccount,
-    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      trigger: { chainId: number }
+    }
   ): MultichainSmartAccountParams => {
     const { trigger } = fusionQuote
     const deployment = account.deploymentOn(trigger.chainId, true)
@@ -109,7 +112,10 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
       owner: account.signer.address,
       spender: deployment.address,
       walletClient: deployment.walletClient,
-      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
     }
   }
 

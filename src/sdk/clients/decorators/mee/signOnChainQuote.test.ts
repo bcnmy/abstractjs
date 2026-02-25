@@ -43,7 +43,7 @@ import {
 import executeSignedQuote from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
 import getOnChainQuote from "./getOnChainQuote"
-import type { FeeTokenInfo } from "./getQuote"
+import { type FeeTokenInfo, getQuote } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
 import {
   ON_CHAIN_PREFIX,

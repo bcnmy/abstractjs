@@ -123,7 +123,10 @@ describe("mee.signPermitQuote", () => {
 
   const buildAccountParams = (
     account: MultichainSmartAccount,
-    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      trigger: { chainId: number }
+    }
   ): MultichainSmartAccountParams => {
     const { trigger } = fusionQuote
     const deployment = account.deploymentOn(trigger.chainId, true)
@@ -132,7 +135,10 @@ describe("mee.signPermitQuote", () => {
       owner: account.signer.address,
       spender: deployment.address,
       walletClient: deployment.walletClient,
-      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
     }
   }
 
@@ -316,7 +322,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
 
   const buildAccountParams = (
     account: MultichainSmartAccount,
-    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      trigger: { chainId: number }
+    }
   ): MultichainSmartAccountParams => {
     const { trigger } = fusionQuote
     const deployment = account.deploymentOn(trigger.chainId, true)
@@ -325,7 +334,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       owner: account.signer.address,
       spender: deployment.address,
       walletClient: deployment.walletClient,
-      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
     }
   }
 
