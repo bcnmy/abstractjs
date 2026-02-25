@@ -49,7 +49,8 @@ import {
 } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
-import { type FeeTokenInfo, getQuote } from "./getQuote"
+import getPermitQuote from "./getPermitQuote"
+import type { FeeTokenInfo } from "./getQuote"
 import { type QuoteType, getQuoteType } from "./getQuoteType"
 import signOnChainQuote from "./signOnChainQuote"
 import {
@@ -122,7 +123,10 @@ describe("mee.signPermitQuote", () => {
 
   const buildAccountParams = (
     account: MultichainSmartAccount,
-    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      trigger: { chainId: number }
+    }
   ): MultichainSmartAccountParams => {
     const { trigger } = fusionQuote
     const deployment = account.deploymentOn(trigger.chainId, true)
@@ -131,7 +135,10 @@ describe("mee.signPermitQuote", () => {
       owner: account.signer.address,
       spender: deployment.address,
       walletClient: deployment.walletClient,
-      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
     }
   }
 
@@ -211,21 +218,15 @@ describe("mee.signPermitQuote", () => {
         amount: 1n
       }
 
-      const recipient = mcNexus.addressOn(paymentChain.id, true)
-      const sender = mcNexus.signer.address
-
-      const quote = await getQuote(meeClient, {
-        path: "quote-permit",
-        eoa: sender,
+      const fusionQuote = await getPermitQuote(meeClient, {
+        trigger,
         instructions: [
-          mcNexus.build({
-            type: "transferFrom",
-            data: { ...trigger, recipient, sender }
-          }),
           mcNexus.build({
             type: "transfer",
             data: {
-              ...trigger,
+              tokenAddress: trigger.tokenAddress,
+              chainId: trigger.chainId,
+              amount: 1n,
               recipient: recipientAccount.address
             }
           })
@@ -233,16 +234,9 @@ describe("mee.signPermitQuote", () => {
         feeToken
       })
 
-      const fusionQuote = {
-        quote,
-        trigger: {
-          ...trigger,
-          amount:
-            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-        }
-      }
-
       console.timeEnd("signPermitQuote:getQuote")
+      expect(fusionQuote.quote.quoteType).toBe("permit")
+
       const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
         await signPermitQuote({
           fusionQuote,
@@ -328,7 +322,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
 
   const buildAccountParams = (
     account: MultichainSmartAccount,
-    fusionQuote: { quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }; trigger: { chainId: number } }
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      trigger: { chainId: number }
+    }
   ): MultichainSmartAccountParams => {
     const { trigger } = fusionQuote
     const deployment = account.deploymentOn(trigger.chainId, true)
@@ -337,7 +334,10 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
       owner: account.signer.address,
       spender: deployment.address,
       walletClient: deployment.walletClient,
-      meeVersions: getMeeVersionsForQuote(account, fusionQuote.quote.userOps.slice(startIndex))
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
     }
   }
 

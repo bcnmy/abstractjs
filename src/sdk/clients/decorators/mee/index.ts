@@ -312,8 +312,7 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
     ) => waitForSupertransactionReceipt(meeClient, params),
     signOnChainQuote: (params: SignOnChainQuoteParams) =>
       signOnChainQuote(meeClient, params),
-    signPermitQuote: (params: SignPermitQuoteParams) =>
-      signPermitQuote(params),
+    signPermitQuote: (params: SignPermitQuoteParams) => signPermitQuote(params),
     getPermitQuote: (params: GetPermitQuoteParams) =>
       getPermitQuote(meeClient, params),
     getFusionQuote: (params: GetFusionQuoteParams) =>
