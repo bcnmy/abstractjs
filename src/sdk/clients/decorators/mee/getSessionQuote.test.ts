@@ -13,6 +13,7 @@ import {
   createPublicClient,
   createWalletClient,
   decodeAbiParameters,
+  encodePacked,
   erc20Abi,
   getAbiItem,
   parseUnits,
@@ -51,11 +52,13 @@ import {
   type Instruction,
   type SessionDetail,
   type TokenTrigger,
-  addPaymentPolicyForActions
+  addPaymentPolicyForActions,
+  getSessionValidatorInitData
 } from "../../../clients/decorators/mee"
 import {
   CounterAbi,
   DEFAULT_MEE_VERSION,
+  MEEVersion,
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode,
   UNIVERSAL_ACTION_POLICY_ADDRESS
@@ -863,5 +866,29 @@ describe("mee.getSessionQuote", () => {
     expect(BigInt(policyData.paramRules.rules[1].ref)).to.eq(parseUnits("5", 6))
     expect(policyData.paramRules.rules[1].isLimited).to.eq(false)
     expect(policyData.paramRules.rules[1].usage.limit).to.eq(0n)
+  })
+})
+
+describe("getSessionValidatorInitData", () => {
+  const redeemer = "0x1234567890abcdef1234567890abcdef12345678" as Address
+
+  test("should return raw redeemer address for pre-V3 versions (K1 validator)", () => {
+    const versionConfig = getMEEVersion(MEEVersion.V2_0_0)
+    const initData = getSessionValidatorInitData(versionConfig, redeemer)
+    expect(initData).to.eq(redeemer)
+  })
+
+  test("should return encodePacked init data for V3_0_0 (STX validator)", () => {
+    const versionConfig = getMEEVersion(MEEVersion.V3_0_0)
+    const initData = getSessionValidatorInitData(versionConfig, redeemer)
+
+    const expected = encodePacked(
+      ["address", "uint8", "address"],
+      [versionConfig.submodules!.EoaStatelessValidator!, 0, redeemer]
+    )
+
+    expect(initData).to.eq(expected)
+    // Verify it's not just the redeemer (packed format is longer)
+    expect(initData.length).toBeGreaterThan(redeemer.length)
   })
 })
