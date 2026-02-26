@@ -275,7 +275,7 @@ export const fundAndDeploySingleClient = async (
 }
 
 export const safeTopUp = async (
-  testClient: MasterClient,
+  testClient: AnyData,
   recipient: Hex,
   amount = 100000000000000000000n,
   token?: Hex
@@ -286,7 +286,7 @@ export const safeTopUp = async (
 }
 
 export const topUp = async (
-  testClient: MasterClient,
+  testClient: AnyData,
   recipient: Hex,
   amount = 10000000000000000n,
   token?: Hex

@@ -17,7 +17,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
-import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
 import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
@@ -38,7 +38,7 @@ describe("mee.signFusionQuote", () => {
   let recipientAccount: LocalAccount
   let tokenAddress: Address
 
-  const index = 11n // Randomly chosen index
+  const index = 12n // Randomly chosen index
 
   let paymentChain: Chain
   let targetChain: Chain
@@ -67,12 +67,12 @@ describe("mee.signFusionQuote", () => {
         {
           chain: paymentChain,
           transport: paymentChainTransport,
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(MEEVersion.V2_2_1)
         },
         {
           chain: targetChain,
           transport: targetChainTransport,
-          version: getMEEVersion(DEFAULT_MEE_VERSION)
+          version: getMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
@@ -117,7 +117,8 @@ describe("mee.signFusionQuote", () => {
     console.time("signFusionQuote:getHash")
     console.time("signFusionQuote:receipt")
 
-    const triggerAmount = 1n
+    const triggerAmount = 5n
+    const amountToTransfer = triggerAmount - 1n
 
     const { publicClient } = mcNexus.deploymentOn(paymentChain.id, true)
     const usdcFromPaymentChain = mcUSDC.addressOn(paymentChain.id)
@@ -134,7 +135,9 @@ describe("mee.signFusionQuote", () => {
         mcNexus.build({
           type: "transfer",
           data: {
-            ...trigger,
+            tokenAddress,
+            amount: amountToTransfer,
+            chainId: paymentChain.id,
             recipient: recipientAccount.address
           }
         })
@@ -159,6 +162,6 @@ describe("mee.signFusionQuote", () => {
       recipientAccount.address,
       usdcFromPaymentChain
     )
-    expect(recipientBalanceAfter).toBe(triggerAmount)
+    expect(recipientBalanceAfter).toBe(amountToTransfer)
   })
 })

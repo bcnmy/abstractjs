@@ -1,13 +1,17 @@
 import {
+  type Address,
   type Hex,
   type SignableMessage,
   type TypedDataDefinition,
   type TypedDataDomain,
   type WalletClient,
   concatHex,
+  encodePacked,
   validateTypedData
 } from "viem"
 import { erc7739Actions } from "viem/experimental"
+import { deriveOwnershipData } from "../../../account/decorators/ownership"
+import type { MEEVersionConfig } from "../../../account/utils/getVersion"
 import { DUMMY_SIGNATURE } from "../smartSessions"
 import {
   type Validator,
@@ -18,32 +22,166 @@ import {
 const MOCK_SUPERTXN_HASH_AND_TIMESTAMPS: Hex =
   "0x9e1cce57126e9205fe085888ed6b5ca0033f168e26b8927adb1c6da566cf7c5100000000000000000000000000000000000000000000000000000000642622800000000000000000000000000000000000000000000000000000000064262668"
 
-export type MeeSignatureType =
+export type StxSignatureType =
   | "simple"
-  | "no-mee"
+  | "no-stx"
   | "permit"
   | "on-chain"
-  | "mm-dtk"
   | "safe-sa"
 
-export type ToMeeK1ModuleParameters = Omit<
-  ValidatorParameters,
-  "initData" | "signer"
-> & {
+export type ToStxValidatorParameters = Omit<ValidatorParameters, "initData"> & {
   walletClient: WalletClient
-  signatureType?: MeeSignatureType
+  signatureType?: StxSignatureType
   superTxEntriesCount?: number
+
+  /**
+   * Address of the stateless validator to use
+   * Defaults to P256StatelessValidator or EoaStatelessValidator from submodules
+   * based on the signer type
+   */
+  statelessValidator?: Address
+
+  /**
+   * Ownership data for the stateless validator
+   * For EOA: auto-generated as encodePacked(['address'], [walletClient.account.address])
+   * For P256: auto-generated as x || y (64 bytes) from the signer's publicKey
+   * For other validators: must be provided by user as pre-encoded bytes
+   */
+  ownershipData?: Hex
+
+  /**
+   * Optional array of safe sender addresses
+   * Defaults to empty array []
+   */
+  safeSenders?: Address[]
+
+  // Custom config parameters (advanced use case)
+  /**
+   * Address of custom stxModeVerifier for advanced configuration
+   * If provided, includes custom config in initData
+   */
+  stxModeVerifier?: Address
+
+  /**
+   * Config ID for custom stxModeVerifier
+   * Only used when stxModeVerifier is provided
+   */
+  configId?: Hex
+
+  /**
+   * Submodules configuration from MEE version config
+   * Used to get default EoaStatelessValidator address
+   */
+  submodules?: MEEVersionConfig["submodules"]
 }
 
-export const toMeeK1Module = (
-  parameters: ToMeeK1ModuleParameters
+export const toStxValidator = (
+  parameters: ToStxValidatorParameters
 ): Validator => {
-  const { signatureType = "no-mee", superTxEntriesCount = 3 } = parameters
+  const { signatureType = "no-stx", superTxEntriesCount = 3 } = parameters
   if (!parameters.walletClient.account) {
     throw new Error(
       "Account should be defined in the wallet client provided to the module"
     )
   }
+
+  // Prepare initData and data using encodePacked
+  let initData: Hex
+
+  // Detect P256 signer
+  const isP256 = parameters.signer?.source === "p256"
+
+  // Get stateless validator address (auto-select based on signer type)
+  const statelessValidator =
+    parameters.statelessValidator ??
+    (isP256
+      ? parameters.submodules?.P256StatelessValidator
+      : parameters.submodules?.EoaStatelessValidator)
+
+  // Prepare ownershipData based on signer type
+  let ownershipData: Hex
+  if (parameters.ownershipData) {
+    ownershipData = parameters.ownershipData
+  } else if (isP256 && parameters.signer) {
+    ownershipData = deriveOwnershipData(parameters.signer, "p256")
+  } else {
+    // EOA: ownership data is the account address
+    ownershipData = encodePacked(
+      ["address"],
+      [parameters.walletClient.account.address]
+    )
+  }
+
+  if (!statelessValidator) {
+    throw new Error(
+      "Either provide statelessValidator or submodules with a StatelessValidator address"
+    )
+  }
+
+  // Prepare safe senders
+  const safeSenders = parameters.safeSenders ?? []
+  const safeSendersCount = safeSenders.length
+
+  // Build initData using encodePacked based on whether custom config is provided
+  if (parameters.stxModeVerifier && parameters.configId) {
+    // Custom config format:
+    // [statelessValidator(20) + stxModeVerifier(20) + configId(32) + safeSendersCount(1) + safeSenders(20*count) + ownershipData]
+    const types: string[] = [
+      "address", // statelessValidator
+      "address", // stxModeVerifier
+      "bytes32", // configId
+      "uint8" // safeSendersCount
+    ]
+    const values: (Address | Hex | number)[] = [
+      statelessValidator,
+      parameters.stxModeVerifier,
+      parameters.configId,
+      safeSendersCount
+    ]
+
+    // Add safe sender addresses
+    for (let i = 0; i < safeSendersCount; i++) {
+      types.push("address")
+      values.push(safeSenders[i])
+    }
+
+    // Add ownership data
+    types.push("bytes")
+    values.push(ownershipData)
+
+    initData = encodePacked(
+      types as readonly string[],
+      values as unknown as Parameters<typeof encodePacked>[1]
+    )
+  } else {
+    // Default format:
+    // [statelessValidator(20) + safeSendersCount(1) + safeSenders(20*count) + ownershipData]
+    const types: string[] = [
+      "address", // statelessValidator
+      "uint8" // safeSendersCount
+    ]
+    const values: (Address | Hex | number)[] = [
+      statelessValidator,
+      safeSendersCount
+    ]
+
+    // Add safe sender addresses
+    for (let i = 0; i < safeSendersCount; i++) {
+      types.push("address")
+      values.push(safeSenders[i])
+    }
+
+    // Add ownership data
+    types.push("bytes")
+    values.push(ownershipData)
+
+    initData = encodePacked(
+      types as readonly string[],
+      values as unknown as Parameters<typeof encodePacked>[1]
+    )
+  }
+
+  const data = initData
 
   const walletClient7739 = parameters.walletClient.extend(erc7739Actions())
 
@@ -99,24 +237,38 @@ export const toMeeK1Module = (
     })
   }
 
+  // For P256 signers, override signUserOperationHash to use signer.sign() directly.
+  // The P256 on-chain validator verifies against the raw userOpHash, unlike the K1
+  // validator which wraps with toEthSignedMessageHash().
+  const signer = parameters.signer
+  const signUserOperationHash =
+    isP256 && signer?.sign
+      ? async (hash: Hex): Promise<Hex> => await signer.sign!({ hash })
+      : undefined
+
+  // Destructure signer out to avoid OneOf<{signer} | {walletClient}> type conflict
+  // The walletClient already wraps the signer, so signing works correctly through it
+  const { signer: _signer, ...restParameters } = parameters
+
   return toValidator({
-    initData: parameters.walletClient.account.address,
-    data: parameters.walletClient.account.address,
+    initData,
+    data,
     deInitData: "0x",
-    ...parameters,
+    ...restParameters,
     address: parameters.module,
     module: parameters.module,
     type: "validator",
     signMessageErc7739,
     signTypedDataErc7739,
+    ...(signUserOperationHash ? { signUserOperationHash } : {}),
     getStubSignature: async () =>
-      getMeeK1ModuleStubSignature(signatureType, superTxEntriesCount),
+      getStxValidatorStubSignature(signatureType, superTxEntriesCount),
     erc7739VersionSupported_: 1
   })
 }
 
-export const getMeeK1ModuleStubSignature = (
-  signatureType: MeeSignatureType,
+export const getStxValidatorStubSignature = (
+  signatureType: StxSignatureType,
   superTxEntriesCount: number
 ): Hex => {
   // get the proof size for a given merkle tree size
@@ -126,7 +278,7 @@ export const getMeeK1ModuleStubSignature = (
   let prefix: Hex = "0x"
   let mockModePayload: Hex = "0x"
 
-  if (signatureType === "no-mee") {
+  if (signatureType === "no-stx") {
     return DUMMY_SIGNATURE
   }
   if (signatureType === "simple") {
@@ -137,7 +289,7 @@ export const getMeeK1ModuleStubSignature = (
       "0x0000000000000000000000000000000000000000000000000000000000000100"
     ])
   }
-  // for permit mode, on-chain mode, and mm-dtk mode, we imitate the sig structure
+  // for permit mode, on-chain mode, we imitate the sig structure
   // hex values are taken from a real signature for an according fusion mode
   // stub signatures are used to estimate gas and are not expected to be valid
 
@@ -156,16 +308,6 @@ export const getMeeK1ModuleStubSignature = (
       "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b000000000000000000000000000000000000000000000001158e460913d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
       "0x000000000000000000000000000000000000000000000000000000000000000568f7d0137aa459fc3d87c0405f9df08008c9b97b3da85ef4f663b0e4fc910b518146837426fd3167918049cae2bc9fdf90aabc1e9db16244b56a12463711c2d500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-    ])
-  }
-
-  // TODO: adjust this to the actual mm-dtk payload
-  if (signatureType === "mm-dtk") {
-    prefix = "0x177eee03"
-    mockModePayload = concatHex([
-      "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000001d1499e622d69689cdf9004d05ec547d650ff211000000000000000000000000a0cb889707d426a7a386870a03bc70d1b0697598fe8244a8453f6a5a1623e38a7117cfcadf84d670fe741a32e447cd5f5671a68b0000000000000000000000000000000000000000000000003782dace9d9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000027d5730e3c64852e56f4f10c0c27a8d96651193fd13663c1dd652b5f18677458",
-      MOCK_SUPERTXN_HASH_AND_TIMESTAMPS,
-      "0x00000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000250e2ad6bd90d6121dc5166dc6968f23ba43497594de5c7ca655f58e96d31775d"
     ])
   }
 

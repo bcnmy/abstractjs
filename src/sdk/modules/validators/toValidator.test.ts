@@ -54,6 +54,7 @@ describe("modules.toValidator", async () => {
         "signMessageErc7739": [Function],
         "signTypedData": [Function],
         "signTypedDataErc7739": [Function],
+        "signUserOperationHash": [Function],
         "signer": {
           "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
           "getHdKey": [Function],

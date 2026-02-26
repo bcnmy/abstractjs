@@ -9,6 +9,7 @@ import {
   type TypedDataParameter,
   concat,
   createPublicClient,
+  decodeAbiParameters,
   decodeFunctionResult,
   encodeAbiParameters,
   encodeFunctionData,
@@ -121,6 +122,12 @@ export type SignWith6492Params = {
 }
 
 /**
+ * The EIP-6492 magic suffix used to identify wrapped signatures.
+ */
+export const ERC6492_MAGIC_BYTES: Hex =
+  "0x6492649264926492649264926492649264926492649264926492649264926492"
+
+/**
  * Wraps a signature according to EIP-6492 specification.
  *
  * @param params - Parameters including factory address, calldata, and signature
@@ -144,8 +151,70 @@ export const wrapSignatureWith6492 = ({
       factoryCalldata,
       signature
     ]),
-    "0x6492649264926492649264926492649264926492649264926492649264926492"
+    ERC6492_MAGIC_BYTES
   ])
+}
+
+/**
+ * Result of unwrapping an EIP-6492 signature.
+ */
+export type UnwrapSignature6492Result = {
+  /** Whether the signature was wrapped with EIP-6492 */
+  isWrapped: boolean
+  /** The original signature (unwrapped if it was wrapped) */
+  originalSignature: Hex
+  /** The factory contract address (only present if wrapped) */
+  factoryAddress?: Address
+  /** The factory initialization calldata (only present if wrapped) */
+  factoryCalldata?: Hex
+}
+
+/**
+ * Unwraps an EIP-6492 signature if it's wrapped, otherwise returns the original signature.
+ *
+ * EIP-6492 signatures are used to validate signatures for contracts that haven't been deployed yet.
+ * They wrap the original signature with factory deployment information.
+ *
+ * @param wrappedSignature - The potentially wrapped signature to unwrap
+ * @returns An object containing the unwrapped signature and deployment information if wrapped
+ *
+ * @example
+ * ```ts
+ * const result = unwrapSignature6492(signature)
+ * if (result.isWrapped) {
+ *   console.log('Factory:', result.factoryAddress)
+ *   console.log('Original signature:', result.originalSignature)
+ * } else {
+ *   console.log('Not wrapped, using signature as-is')
+ * }
+ * ```
+ */
+export const unwrapSignature6492 = (
+  wrappedSignature: Hex
+): UnwrapSignature6492Result => {
+  // Check if signature ends with EIP-6492 magic bytes
+  if (!wrappedSignature.endsWith(ERC6492_MAGIC_BYTES.slice(2))) {
+    return {
+      isWrapped: false,
+      originalSignature: wrappedSignature
+    }
+  }
+
+  // Remove magic bytes (32 bytes = 64 hex chars)
+  const signatureWithoutMagic = wrappedSignature.slice(0, -64) as Hex
+
+  // Decode the ABI-encoded data: (address, bytes, bytes)
+  const decoded = decodeAbiParameters(
+    parseAbiParameters("address, bytes, bytes"),
+    signatureWithoutMagic
+  )
+
+  return {
+    isWrapped: true,
+    factoryAddress: decoded[0],
+    factoryCalldata: decoded[1],
+    originalSignature: decoded[2]
+  }
 }
 
 /**
