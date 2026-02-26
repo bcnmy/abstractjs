@@ -54,6 +54,15 @@ export type ValidatorActions = {
    */
   signMessage: (message: SignableMessage) => Promise<Hex>
   /**
+   * Signs a raw userOperation hash.
+   * Unlike signMessage, this method is used specifically for signing userOp hashes
+   * where the on-chain validator may expect a raw signature (e.g. P256) rather than
+   * an EIP-191 wrapped one (e.g. K1/EOA).
+   * @param hash - The userOperation hash to sign.
+   * @returns A promise that resolves to a hexadecimal string representing the signature.
+   */
+  signUserOperationHash: (hash: Hex) => Promise<Hex>
+  /**
    * Signs a typed data.
    * @param typedData - The typed data to sign.
    * @returns A promise that resolves to a hexadecimal string representing the signature.
@@ -148,6 +157,10 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     })
   }
 
+  const signUserOperationHash = async (hash: Hex): Promise<Hex> => {
+    return await signMessage({ raw: hash })
+  }
+
   const signTypedData = async (
     typedData: TypedDataDefinition
   ): Promise<Hex> => {
@@ -185,6 +198,7 @@ export const toValidator = (parameters: ValidatorParameters): Validator => {
     type,
     getStubSignature: async () => DUMMY_SIGNATURE,
     signMessage,
+    signUserOperationHash,
     signTypedData,
     erc7739VersionSupported,
     signMessageErc7739,

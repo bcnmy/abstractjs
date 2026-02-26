@@ -106,8 +106,19 @@ export const signFusionQuote = async (
 
   switch (signatureType) {
     case "permit": {
+      const { trigger } = parameters.fusionQuote
+      const deployment = client.account.deploymentOn(trigger.chainId, true)
+
       const { fallbackToOnchainMode, signedPermitQuotePayload } =
-        await signPermitQuote(client, parameters)
+        await signPermitQuote({
+          fusionQuote: parameters.fusionQuote,
+          account: {
+            owner: client.account.signer.address,
+            spender: deployment.address,
+            walletClient: deployment.walletClient,
+            meeVersions
+          }
+        })
 
       // If there is any issue with permit fuctionality, the quote signing will fallback to onchain mode.
       // Fallback only happens if RPC issue, problem with permit values such as name, version, domain separator.

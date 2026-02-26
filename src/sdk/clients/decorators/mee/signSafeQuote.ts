@@ -120,15 +120,19 @@ export const computeSafeDomainSeparator = (
  * @returns The signed Safe quote payload
  */
 export const formatSignedSafeQuotePayload = (
+  safeAccount: Address,
   quoteParams: GetSafeQuotePayload,
   safeTxData: Omit<SafeTxnDataForNode, "signatures">,
   signatures: Hex
 ): SignSafeQuotePayload => {
   const { quote } = quoteParams
 
+  console.log("safeAccount:", safeAccount)
+
   // Encode the SafeTxnData struct for the signature
   const encodedSafeTxnData = encodeAbiParameters(
     [
+      { name: "safeAccount", type: "address" },
       {
         name: "safeTxnData",
         type: "tuple",
@@ -149,6 +153,7 @@ export const formatSignedSafeQuotePayload = (
       }
     ],
     [
+      safeAccount,
       {
         ogDomainSeparator: safeTxData.ogDomainSeparator,
         to: safeTxData.to,
@@ -309,6 +314,7 @@ export const signSafeQuote = async (
   }
 
   return formatSignedSafeQuotePayload(
+    parameters.safeAccount,
     parameters.fusionQuote,
     safeTxData,
     signatures as Hex
