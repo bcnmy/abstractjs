@@ -49,7 +49,10 @@ import {
   type ComposableCall,
   InputParamType
 } from "../modules/utils/composabilityCalls"
-import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
+import {
+  type ToDefaultModuleParameters,
+  toDefaultModule
+} from "../modules/validators/default/toDefaultModule"
 import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
@@ -63,20 +66,28 @@ import {
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
 import { toInitData } from "./utils"
-import { EXECUTE_BATCH, EXECUTE_SINGLE } from "./utils/Constants"
+import {
+  EXECUTE_BATCH,
+  EXECUTE_SINGLE,
+  SIG_TYPE_NO_STX_P256,
+  SIG_TYPE_NO_STX_VANILLA_1271_EOA,
+  SIG_TYPE_NO_STX_VANILLA_1271_P256
+} from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
 import {
   type EthersWallet,
   addressEquals,
   isNullOrUndefined,
-  supportsCancun
+  supportsCancun,
+  wrapSignatureWith6492
 } from "./utils/Utils"
 import {
   type MEEVersionConfig,
   type NexusAccountId,
   isVersionOlder
 } from "./utils/getVersion"
+import { isP256Signer } from "./utils/toP256Signer"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
 
@@ -157,6 +168,8 @@ export type ToNexusSmartAccountParameters = {
   fallbacks?: Array<GenericModuleConfig>
   /** Optional init data */
   initData?: Hex
+  /** Optional default module parameters */
+  defaultModuleParameters?: Partial<ToDefaultModuleParameters>
 } & Prettify<
   Pick<
     ClientConfig<Transport, Chain, Account, RpcSchema>,
@@ -285,6 +298,11 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** EIP-712 domain for the account */
     getEip712Domain: () => Promise<GetEip712DomainReturnType>
+
+    /** Signs a message using EIP-1271 only (module.signMessage). Never uses ERC-7739. */
+    signMessage1271: (parameters: {
+      message: SignableMessage
+    }) => Promise<Hex>
   }
 >
 
@@ -468,7 +486,8 @@ export const toNexusAccount = async (
     hook: customHook,
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
-    initData: customInitData
+    initData: customInitData,
+    defaultModuleParameters
   } = parameters
 
   // if the MEE version is not older than 2.0.0 ? SDK checks for cancun support and throw error if not
@@ -534,6 +553,15 @@ export const toNexusAccount = async (
 
   const signer = await toSigner({ signer: _signer })
 
+  if (
+    isP256Signer(signer) &&
+    isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)
+  ) {
+    throw new Error(
+      `P256 signers require MEE version ${MEEVersion.V3_0_0} or higher. Current version: ${meeConfig.version}`
+    )
+  }
+
   const walletClient = toWalletClient({
     unresolvedSigner: _signer,
     resolvedSigner: signer,
@@ -548,7 +576,12 @@ export const toNexusAccount = async (
     customValidators
   )
 
-  const defaultValidator = toDefaultModule({ walletClient })
+  const defaultValidator = toDefaultModule({
+    ...defaultModuleParameters,
+    walletClient,
+    signer,
+    meeConfig
+  })
 
   // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
   let module = validators[0] || defaultValidator
@@ -816,6 +849,9 @@ export const toNexusAccount = async (
 
   /**
    * @description Signs typed data. Uses ERC-7739 TypedDataSign flow for modules that support it.
+   * Supports both EOA and P256 signers.
+   * P256 signers are supported only for MEE Version 3.0.0 and above and require a dedicated prefix
+   * to be passed to the validator module to let it know that the signer is a P256 signer.
    * @param parameters - The typed data parameters
    * @returns The signature with module address prepended (Nexus-specific format)
    */
@@ -835,8 +871,19 @@ export const toNexusAccount = async (
             (await getEip712Domain()).domain
           )
 
+    let wrappedSignature = signature
+    if (
+      !isVersionOlder(meeConfig.version, MEEVersion.V3_0_0) &&
+      isP256Signer(signer)
+    ) {
+      wrappedSignature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_P256, signature]
+      )
+    }
+
     // Prepend module address to signature (Nexus-specific wrapper)
-    return encodePacked(["address", "bytes"], [module.module, signature])
+    return encodePacked(["address", "bytes"], [module.module, wrappedSignature])
   }
 
   /**
@@ -859,8 +906,67 @@ export const toNexusAccount = async (
             (await getEip712Domain()).domain
           )
 
+    let wrappedSignature = signature
+    if (
+      !isVersionOlder(meeConfig.version, MEEVersion.V3_0_0) &&
+      isP256Signer(signer)
+    ) {
+      wrappedSignature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_P256, signature]
+      )
+    }
+
     // Prepend module address to signature (Nexus-specific wrapper)
-    return encodePacked(["address", "bytes"], [module.module, signature])
+    return encodePacked(["address", "bytes"], [module.module, wrappedSignature])
+  }
+
+  /**
+   * @description Signs a message using EIP-1271 flow only (module.signMessage). Never uses ERC-7739.
+   * @param params - The parameters for signing
+   * @param params.message - The message to sign
+   * @returns The signature with module address prepended (Nexus-specific format)
+   */
+  const signMessage1271 = async (parameters: {
+    message: SignableMessage
+  }): Promise<Hex> => {
+    const { message } = parameters
+
+    // Run signing concurrently with address + deployed check
+    const [rawSignature, code] = await Promise.all([
+      module.signMessage(message),
+      getAddress().then((addr) => publicClient.getCode({ address: addr }))
+    ])
+
+    let signature = rawSignature
+
+    // for Stx Validator, we need to explicitly mention
+    // we want vanilla 1271 flow by using the according mode,
+    // otherwise 7739 will be used instead in the smart contract
+    if (!isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)) {
+      const prefix = isP256Signer(signer)
+        ? SIG_TYPE_NO_STX_VANILLA_1271_P256
+        : SIG_TYPE_NO_STX_VANILLA_1271_EOA
+      signature = encodePacked(["bytes4", "bytes"], [prefix, signature])
+    }
+
+    const wrappedSignature = encodePacked(
+      ["address", "bytes"],
+      [module.module, signature]
+    )
+
+    const isDeployed = Boolean(code)
+
+    if (!isDeployed) {
+      // Wrap signature with ERC-6492 for undeployed accounts
+      return wrapSignatureWith6492({
+        factoryAddress: meeConfig.factoryAddress,
+        factoryCalldata: factoryData,
+        signature: wrappedSignature
+      })
+    }
+
+    return wrappedSignature
   }
 
   /**
@@ -965,6 +1071,7 @@ export const toNexusAccount = async (
     getFactoryArgs,
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
     signMessage,
+    signMessage1271,
     signTypedData,
     signUserOperation: async (
       parameters: UnionPartialBy<UserOperation, "sender"> & {
@@ -986,7 +1093,7 @@ export const toNexusAccount = async (
         entryPointVersion: "0.7",
         userOperation
       })
-      return await module.signMessage({ raw: hash })
+      return await module.signUserOperationHash(hash)
     },
     getNonce,
 
@@ -1012,6 +1119,7 @@ export const toNexusAccount = async (
       publicClient,
       chain,
       setModule,
+      signMessage1271,
       getModule: () => module,
       version: meeConfig
     }

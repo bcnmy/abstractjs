@@ -52,6 +52,7 @@ import {
   signOnChainQuote
 } from "./signOnChainQuote"
 import type { Trigger } from "./signPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
 import waitForSupertransactionReceipt from "./waitForSupertransactionReceipt"
 
 // @ts-ignore
@@ -67,7 +68,7 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
   let recipientAccount: LocalAccount
   let tokenAddress: Hex
 
-  const index = 79n // Randomly chosen index
+  const index = 1n // Randomly chosen index
 
   let paymentChain: Chain
   let targetChain: Chain
@@ -124,21 +125,15 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
       amount: 1n
     }
 
-    const sender = mcNexus.signer.address
-    const { address: recipient } = mcNexus.deploymentOn(optimism.id, true)
-
-    const quote = await getQuote(meeClient, {
-      path: "quote-permit",
-      eoa: sender,
+    const fusionQuote = await getOnChainQuote(meeClient, {
+      trigger,
       instructions: [
-        mcNexus.build({
-          type: "transferFrom",
-          data: { ...trigger, sender, recipient }
-        }),
         mcNexus.build({
           type: "transfer",
           data: {
-            ...trigger,
+            tokenAddress,
+            chainId: optimism.id,
+            amount: 1n,
             recipient: recipientAccount.address
           }
         })
@@ -147,18 +142,23 @@ describe.runIf(runPaidTests)("mee.signOnChainQuote", () => {
     })
 
     console.timeEnd("signOnChainQuote:getQuote")
+    expect(fusionQuote.quote.quoteType).toBe("onchain")
+
     const signedQuote = await signOnChainQuote(meeClient, {
-      fusionQuote: {
-        quote,
-        trigger: {
-          ...trigger,
-          amount:
-            BigInt(trigger.amount) + BigInt(quote.paymentInfo.tokenWeiAmount)
-        }
-      }
+      fusionQuote
     })
+
+    const meeVersions = getMeeVersionsForQuote(
+      mcNexus,
+      fusionQuote.quote.userOps
+    )
+    const signedQuoteFull = {
+      ...signedQuote,
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
+    }
     const executeSignedQuoteResponse = await executeSignedQuote(meeClient, {
-      signedQuote
+      signedQuote: signedQuoteFull
     })
     console.timeEnd("signOnChainQuote:getHash")
     const superTransactionReceipt = await waitForSupertransactionReceipt(

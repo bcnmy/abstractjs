@@ -96,6 +96,7 @@ describe("modules.toMeeK1Module", () => {
         "signMessageErc7739": [Function],
         "signTypedData": [Function],
         "signTypedDataErc7739": [Function],
+        "signUserOperationHash": [Function],
         "type": "validator",
       }
     `)

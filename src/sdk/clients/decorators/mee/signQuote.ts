@@ -1,9 +1,11 @@
 import { type GetEip712DomainReturnType, type Hex, concatHex } from "viem"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
+import { SIG_TYPE_SIMPLE_P256 } from "../../../account/utils/Constants"
 import {
   type MeeVersionsWithChainId,
   versionIsAtLeast
 } from "../../../account/utils/getVersion"
+import { isP256Signer } from "../../../account/utils/toP256Signer"
 import { MEEVersion } from "../../../constants"
 import type { AnyData } from "../../../modules"
 import {
@@ -165,11 +167,13 @@ export const formatSignedQuotePayload = (
   quote: GetQuotePayload,
   _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
   signature: Hex,
-  meeVersions: MeeVersionsWithChainId
+  meeVersions: MeeVersionsWithChainId,
+  isP256?: boolean
 ): SignQuotePayload => {
+  const prefix = isP256 ? SIG_TYPE_SIMPLE_P256 : DEFAULT_PREFIX
   return {
     ...quote,
-    signature: concatHex([DEFAULT_PREFIX, signature]),
+    signature: concatHex([prefix, signature]),
     meeVersions: meeVersions,
     isEIP712TrustedSponsorshipSupported: true
   }
@@ -206,6 +210,7 @@ export const signQuote = async (
 ): Promise<SignQuotePayload> => {
   const { account: account_ = client.account, quote } = params
   const signer = account_.signer
+  const isP256 = isP256Signer(signer)
 
   const startIndex = quote.paymentInfo.sponsored ? 1 : 0
   const chainId = quote.userOps[startIndex].chainId
@@ -237,7 +242,8 @@ export const signQuote = async (
       quote,
       metadata,
       typedDataSignature,
-      meeVersions
+      meeVersions,
+      isP256
     )
   }
 
@@ -249,7 +255,8 @@ export const signQuote = async (
     quote,
     metadata,
     personalSignature,
-    meeVersions
+    meeVersions,
+    isP256
   )
 }
 

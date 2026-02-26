@@ -14,6 +14,7 @@ import {
   DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
+  type MultichainSmartAccountParams,
   type Trigger,
   executeSignedQuote,
   getFusionQuote,
@@ -40,6 +41,7 @@ import {
 } from "../../../modules/utils/composabilityCalls"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
 
 // @ts-ignore
 const { runLifecycleTests } = inject("settings")
@@ -95,6 +97,27 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
     })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
+
+  const buildAccountParams = (
+    account: MultichainSmartAccount,
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      trigger: { chainId: number }
+    }
+  ): MultichainSmartAccountParams => {
+    const { trigger } = fusionQuote
+    const deployment = account.deploymentOn(trigger.chainId, true)
+    const startIndex = fusionQuote.quote.paymentInfo.sponsored ? 1 : 0
+    return {
+      owner: account.signer.address,
+      spender: deployment.address,
+      walletClient: deployment.walletClient,
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
+    }
+  }
 
   test("should resolve instructions", async () => {
     const trigger = {
@@ -379,7 +402,10 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
     expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
 
     const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
-      await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+      await signPermitQuote({
+        fusionQuote,
+        account: buildAccountParams(mcNexus, fusionQuote)
+      }) // Permit with 20k
 
     if (fallbackToOnchainMode) {
       // This always fails here. This is being coded like this to avoid type issues
@@ -428,7 +454,10 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
     })
 
     const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
-      await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+      await signPermitQuote({
+        fusionQuote,
+        account: buildAccountParams(mcNexus, fusionQuote)
+      }) // Permit with 20k
 
     if (fallbackToOnchainMode) {
       // This always fails here. This is being coded like this to avoid type issues
