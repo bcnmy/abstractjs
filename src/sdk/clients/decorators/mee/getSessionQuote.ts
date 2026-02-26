@@ -4,6 +4,7 @@ import {
   type PublicClient,
   decodeAbiParameters,
   encodeAbiParameters,
+  encodePacked,
   erc20Abi,
   getAbiItem,
   getAddress,
@@ -23,7 +24,8 @@ import {
   calldataArgument,
   getUniversalActionPolicyConditionType,
   resolveInstructions,
-  resolveSessionActions
+  resolveSessionActions,
+  versionIsAtLeast
 } from "../../../account"
 import type {
   SessionAction,
@@ -33,6 +35,7 @@ import { toBytes32 } from "../../../account/utils/Utils"
 import {
   type AccountType,
   DEFAULT_MEE_VERSION,
+  MEEVersion,
   NexusImplementationAbi,
   SMART_SESSIONS_ADDRESS,
   type Session,
@@ -291,11 +294,15 @@ export const prepareEnableSessions = async (
       }
 
       const defaultVersionConfig = getMEEVersion(DEFAULT_MEE_VERSION)
+      const deploymentVersion = deployment.version;
 
       // MEE K1 validator or Stateless stx vaidator is our session validator based on version
       const validatorAddress =
-        deployment.version.validatorAddress ||
+        deploymentVersion.validatorAddress ||
         defaultVersionConfig.validatorAddress
+
+      const isStxValidator = versionIsAtLeast(deploymentVersion.version, MEEVersion.V3_0_0);
+      const sessionValidatorInitData = isStxValidator ? encodePacked(['address', 'uint8', 'address'], [deploymentVersion.submodules?.EoaStatelessValidator!, 0, redeemer]) : redeemer;
 
       if (batchActions && sessionActionsForChain.length > 1) {
         sessionActionsForChain = client.account.buildSessionAction({
@@ -308,9 +315,7 @@ export const prepareEnableSessions = async (
 
       const session: Session = {
         sessionValidator: validatorAddress,
-        // TODO: NEED TO SUPPORT STX VALIDATOR HERE
-        // Initdata for the MEE K1 validator is just the signer address
-        sessionValidatorInitData: redeemer,
+        sessionValidatorInitData,
         salt: generateSalt(),
         userOpPolicies: permitERC4337Paymaster
           ? [buildActionPolicy({ type: "sudo" })]
