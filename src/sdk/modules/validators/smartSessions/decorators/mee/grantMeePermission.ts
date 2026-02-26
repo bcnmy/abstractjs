@@ -138,9 +138,7 @@ export const grantMeePermission = async <
       defaultVersionConfig.validatorAddress
 
     if (!deployment) {
-      throw new Error(
-        `Multichain Nexus is not configured on chain ${chainId}`
-      )
+      throw new Error(`Multichain Nexus is not configured on chain ${chainId}`)
     }
 
     const deploymentVersion = deployment.version
