@@ -3,7 +3,8 @@ import { erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import {
   type FeeTokenInfo,
-  addPaymentPolicyForActions
+  addPaymentPolicyForActions,
+  getSessionValidatorInitData
 } from "../../../../../clients/decorators/mee"
 import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
@@ -136,6 +137,14 @@ export const grantMeePermission = async <
       deployment?.version.validatorAddress ||
       defaultVersionConfig.validatorAddress
 
+    if (!deployment) {
+      throw new Error(
+        `Multichain Nexus is not configured on chain ${chainId}`
+      )
+    }
+
+    const deploymentVersion = deployment.version
+
     // if the fee token is involved in the permissions, try adding the payment action policy
     if (feeToken && feeToken.chainId === chainId) {
       // This is a legacy setup, the session action will be always one and no unbatched cases here
@@ -170,12 +179,17 @@ export const grantMeePermission = async <
       })
     }
 
+    const sessionValidatorInitData = getSessionValidatorInitData(
+      deploymentVersion,
+      redeemer
+    )
+
     return {
       account: deployment,
       redeemer,
       actions: actionsForChain,
       sessionValidator: meeValidatorAddress,
-      sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
+      sessionValidatorInitData,
       permitERC4337Paymaster: true
     }
   })

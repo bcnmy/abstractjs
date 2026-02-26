@@ -15,6 +15,7 @@ import {
   zeroAddress
 } from "viem"
 import {
+  type MEEVersionConfig,
   type ParamRule16,
   UniversalPolicyAbi,
   type UniversalPolicyData,
@@ -137,6 +138,22 @@ export type GetSessionQuoteResponse<T extends GetSessionQuoteParams> =
     : T extends SessionQuoteUseParams
       ? GetSessionQuoteResponseConfig["USE"]
       : never
+
+export const getSessionValidatorInitData = (
+  deploymentVersion: MEEVersionConfig,
+  redeemer: Address
+): Hex => {
+  const isStxValidator = versionIsAtLeast(
+    deploymentVersion.version,
+    MEEVersion.V3_0_0
+  )
+  return isStxValidator
+    ? encodePacked(
+        ["address", "uint8", "address"],
+        [deploymentVersion.submodules?.EoaStatelessValidator!, 0, redeemer]
+      )
+    : redeemer
+}
 
 export const prepareInstallSmartSessions = async (
   client: BaseMeeClient,
@@ -301,16 +318,10 @@ export const prepareEnableSessions = async (
         deploymentVersion.validatorAddress ||
         defaultVersionConfig.validatorAddress
 
-      const isStxValidator = versionIsAtLeast(
-        deploymentVersion.version,
-        MEEVersion.V3_0_0
+      const sessionValidatorInitData = getSessionValidatorInitData(
+        deploymentVersion,
+        redeemer
       )
-      const sessionValidatorInitData = isStxValidator
-        ? encodePacked(
-            ["address", "uint8", "address"],
-            [deploymentVersion.submodules?.EoaStatelessValidator!, 0, redeemer]
-          )
-        : redeemer
 
       if (batchActions && sessionActionsForChain.length > 1) {
         sessionActionsForChain = client.account.buildSessionAction({
