@@ -294,15 +294,23 @@ export const prepareEnableSessions = async (
       }
 
       const defaultVersionConfig = getMEEVersion(DEFAULT_MEE_VERSION)
-      const deploymentVersion = deployment.version;
+      const deploymentVersion = deployment.version
 
       // MEE K1 validator or Stateless stx vaidator is our session validator based on version
       const validatorAddress =
         deploymentVersion.validatorAddress ||
         defaultVersionConfig.validatorAddress
 
-      const isStxValidator = versionIsAtLeast(deploymentVersion.version, MEEVersion.V3_0_0);
-      const sessionValidatorInitData = isStxValidator ? encodePacked(['address', 'uint8', 'address'], [deploymentVersion.submodules?.EoaStatelessValidator!, 0, redeemer]) : redeemer;
+      const isStxValidator = versionIsAtLeast(
+        deploymentVersion.version,
+        MEEVersion.V3_0_0
+      )
+      const sessionValidatorInitData = isStxValidator
+        ? encodePacked(
+            ["address", "uint8", "address"],
+            [deploymentVersion.submodules?.EoaStatelessValidator!, 0, redeemer]
+          )
+        : redeemer
 
       if (batchActions && sessionActionsForChain.length > 1) {
         sessionActionsForChain = client.account.buildSessionAction({
