@@ -1,7 +1,8 @@
 import type { Address } from "viem"
 import type {
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../clients/decorators/mee/getQuote"
 import type { InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
@@ -59,6 +60,8 @@ export type MultichainBridgingParams = {
   bridgingPlugins?: BridgingPlugin[]
   feeData?: FeeData
   mode?: "DEBIT" | "OPTIMISTIC"
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   metadata?: InstructionMetadata[]
 } & InstructionLevelTimeBounds
 
@@ -175,7 +178,8 @@ export const buildBridgeInstructions = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = params
 
   const tokenMapping = {
@@ -286,7 +290,8 @@ export const buildBridgeInstructions = async (
           metadata: metadata || result.userOp.metadata || customMetadata,
           lowerBoundTimestamp,
           upperBoundTimestamp,
-          executionSimulationRetryDelay
+          executionSimulationRetryDelay,
+          simulationOverrides
         }
 
         return {

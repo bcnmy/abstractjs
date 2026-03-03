@@ -2066,7 +2066,7 @@ describe("mee.getQuote", () => {
         }
       })
     ).rejects.toThrow(
-      "Invalid authorizations: The nonce for all the chains are zero and only one multichain authorization is expected"
+      "Invalid authorizations: The nonce for all the chains are same and only one multichain authorization is expected"
     )
   })
 
@@ -2466,7 +2466,7 @@ describe("mee.getQuote", () => {
   })
 
   test("Should execute multichain 7702 delegation supertx with manual multichain auth", async () => {
-    // New account, so the nonce on all the chains are zero
+    // New account, so the nonce on all the chains are same
     const eoaAccount = privateKeyToAccount(generatePrivateKey())
 
     const baseSepoliaWalletClient = createWalletClient({
@@ -2563,7 +2563,7 @@ describe("mee.getQuote", () => {
   })
 
   test("Should execute multichain 7702 delegation supertx with automatic auth", async () => {
-    // New account, so the nonce on all the chains are zero
+    // New account, so the nonce on all the chains are same
     const eoaAccount = privateKeyToAccount(generatePrivateKey())
 
     const mcNexus = await toMultichainNexusAccount({

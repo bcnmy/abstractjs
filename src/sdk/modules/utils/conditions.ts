@@ -142,7 +142,7 @@ export const createCondition = <
   functionAbi: TAbi
   functionName: TFunctionName
   args: ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>
-  value: bigint
+  value: bigint | boolean
   type: ConditionType
   description?: string
 }): ExecutionCondition<TAbi, TFunctionName> => {

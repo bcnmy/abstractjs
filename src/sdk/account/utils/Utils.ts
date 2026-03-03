@@ -15,9 +15,12 @@ import {
   encodeFunctionData,
   erc20Abi,
   hexToBytes,
+  isAddress,
+  isHex,
   keccak256,
   numberToHex,
   pad,
+  padHex,
   parseAbi,
   parseAbiParameters,
   publicActions,
@@ -71,6 +74,28 @@ export const isBigInt = (value: AnyData) => {
     // If conversion fails, value is not a valid BigInt.
     return false
   }
+}
+
+export const toBytes32 = (value: bigint | boolean | Address | Hex): Hex => {
+  if (typeof value === "boolean") {
+    return padHex(toHex(value ? 1n : 0n), { size: 32 })
+  }
+
+  if (typeof value === "bigint") {
+    return padHex(toHex(value), { size: 32 })
+  }
+
+  if (isAddress(value)) {
+    return padHex(value, { size: 32 })
+  }
+
+  if (isHex(value)) {
+    return padHex(value, { size: 32 })
+  }
+
+  throw new Error(
+    "Invalid value: must be boolean, bigint, address, or hex string"
+  )
 }
 
 /**

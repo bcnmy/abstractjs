@@ -1,7 +1,8 @@
 import type { Address, Hex } from "viem"
 import type {
   Instruction,
-  InstructionLevelTimeBounds
+  InstructionLevelTimeBounds,
+  Overrides
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import {
@@ -33,6 +34,8 @@ export type BuildRawComposableParameters = {
    * @since v1.2.0
    */
   conditions?: ExecutionCondition[]
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
   /**
    * Optional metadata describing the instruction for display purposes
    */
@@ -83,7 +86,8 @@ export const buildRawComposable = async (
     metadata,
     lowerBoundTimestamp,
     upperBoundTimestamp,
-    executionSimulationRetryDelay
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = parameters
   const { composabilityVersion } = composabilityParameters
 
@@ -141,7 +145,8 @@ export const buildRawComposable = async (
       metadata: metadata || defaultMetadata,
       lowerBoundTimestamp,
       upperBoundTimestamp,
-      executionSimulationRetryDelay
+      executionSimulationRetryDelay,
+      simulationOverrides
     }
   ]
 }

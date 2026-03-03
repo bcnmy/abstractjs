@@ -7,6 +7,7 @@ import {
   executeFusionQuote
 } from "./executeFusionQuote"
 import executeQuote from "./executeQuote"
+import executeSessionQuote from "./executeSessionQuote"
 import executeSignedQuote, {
   type ExecuteSignedQuoteParams,
   type ExecuteSignedQuotePayload
@@ -33,6 +34,11 @@ import getSafeQuote, {
   type GetSafeQuoteParams,
   type GetSafeQuotePayload
 } from "./getSafeQuote"
+import {
+  type GetSessionQuoteParams,
+  type GetSessionQuoteResponse,
+  getSessionQuote
+} from "./getSessionQuote"
 import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
   type GetSupertransactionReceiptPayload
@@ -62,6 +68,10 @@ import signSafeQuote, {
   type SignSafeQuoteParams,
   type SignSafeQuotePayload
 } from "./signSafeQuote"
+import {
+  type SignSessionQuoteParams,
+  signSessionQuote
+} from "./signSessionQuote"
 import waitForSupertransactionReceipt, {
   type WaitForSupertransactionReceiptParams,
   type WaitForSupertransactionReceiptPayload
@@ -214,6 +224,33 @@ export type MeeActions = {
   ) => Promise<GetPermitQuotePayload>
 
   /**
+   * Get a session quote for a enable session permissions or use existing permissions for a supertransaction.
+   * @param params - Parameters including mode, session validator, actions, session config, fee token, and optionally trigger details.
+   * @returns Promise resolving to session quote with session details optionally
+   */
+  getSessionQuote: <T extends GetSessionQuoteParams>(
+    params: T
+  ) => Promise<GetSessionQuoteResponse<T>>
+
+  /**
+   * Sign a session quote for enabling or using a session.
+   * @param params - Parameters including the session quote and signing options.
+   * @returns Promise resolving to signed session quote data
+   */
+  signSessionQuote: (
+    params: SignSessionQuoteParams
+  ) => Promise<SignQuotePayload | SignFusionQuotePayload>
+
+  /**
+   * Execute a session quote by signing and submit it to the MEE network.
+   * @param params - Parameters including the session quote and options.
+   * @returns Promise resolving to transaction execution result data
+   */
+  executeSessionQuote: (
+    params: SignSessionQuoteParams
+  ) => Promise<ExecuteSignedQuotePayload>
+
+  /**
    * Get gas token information for a specific chain
    * @param params - Parameters for retrieving gas token info
    * @returns Promise resolving to gas token data
@@ -321,6 +358,12 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
       signFusionQuote(meeClient, params),
     executeFusionQuote: (params: SignFusionQuoteParameters) =>
       executeFusionQuote(meeClient, params),
+    getSessionQuote: <T extends GetSessionQuoteParams>(params: T) =>
+      getSessionQuote(meeClient, params),
+    signSessionQuote: (params: SignSessionQuoteParams) =>
+      signSessionQuote(meeClient, params),
+    executeSessionQuote: (params: SignSessionQuoteParams) =>
+      executeSessionQuote(meeClient, params),
     getSupertransactionReceipt: (params: GetSupertransactionReceiptParams) =>
       getSupertransactionReceipt(meeClient, params),
     getSafeQuote: (params: GetSafeQuoteParams) =>
@@ -353,3 +396,6 @@ export * from "./getMmDtkQuote"
 export * from "./getSupportedFeeToken"
 export * from "./getSafeQuote"
 export * from "./signSafeQuote"
+export * from "./getSessionQuote"
+export * from "./signSessionQuote"
+export * from "./executeSessionQuote"

@@ -1,14 +1,13 @@
-import type { Hash, OneOf } from "viem"
+import type { Hash } from "viem"
 import type {
   BaseMeeClient,
   MeeClient
 } from "../../../../../clients/createMeeClient"
 import type {
+  FeePaymentParams,
   Instruction,
-  Simulation,
-  SponsorshipOptionsParams
+  Simulation
 } from "../../../../../clients/decorators/mee"
-import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
@@ -22,15 +21,7 @@ export type UseMeePermissionParams = {
   batch?: boolean
   simulation?: Simulation
   verificationGasLimit?: bigint
-} & OneOf<
-  | {
-      feeToken: FeeTokenInfo
-    }
-  | {
-      sponsorship: true
-      sponsorshipOptions?: SponsorshipOptionsParams
-    }
->
+} & FeePaymentParams
 
 export type UseMeePermissionPayload = { hash: Hash }
 
@@ -50,6 +41,18 @@ export const useMeePermission = async (
     verificationGasLimit
   } = parameters
   const meeClient = meeClient_ as MeeClient
+
+  const isEnableAndUseSessionDetailExists = sessionDetailsArray.some(
+    (sessionDetailsInfo) =>
+      sessionDetailsInfo.mode === SmartSessionMode.UNSAFE_ENABLE
+  )
+
+  // If permission/session enabled via prepareForPermission ? The usePermission flow should always use USE mode
+  if (!isEnableAndUseSessionDetailExists && mode_ === "ENABLE_AND_USE") {
+    throw new Error(
+      "ENABLE_AND_USE mode cannot be used with given session details, instead try USE mode directly"
+    )
+  }
 
   const mode =
     mode_ === "ENABLE_AND_USE"
