@@ -10,6 +10,7 @@ import {
   toHex
 } from "viem"
 import { toAccount } from "viem/accounts"
+import { AnyData } from "../../modules"
 
 export type P256Signer = LocalAccount<"p256">
 
@@ -53,7 +54,8 @@ export const toP256Signer = (privateKey: Hex): P256Signer => {
       prehash: false
     })
 
-    return toHex(sigBytes.toCompactRawBytes())
+    // The type system doesn't satisfy for some reason but the flow works as expected
+    return toHex(sigBytes.toCompactRawBytes() as AnyData)
   }
 
   const account = toAccount({
