@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.2.1
+
+### Patch Changes
+
+- noble curves peer dependency added
+
 ## 1.2.0
 
 ### Minor Changes
@@ -7,6 +13,7 @@
 #### Features
 
 1. **Smart Sessions Core Revamp**
+
    - Refactored Smart Sessions core architecture.
    - Introduced new abstractions for:
      - Policy construction
@@ -16,10 +23,12 @@
    - Full backward compatibility maintained
 
 2. **Smart Session Action Batching**
+
    - Added dynamic batching and unbatching of session actions.
    - Allow developers to enable a large action sets within a single session.
 
 3. **Composable Transactions in `prepare` permission flow**
+
    - `prepare` permission flow now supports composable transactions.
    - Enables:
      - Runtime value injection
@@ -29,11 +38,13 @@
    - Unlocks advanced enable Smart Session workflows.
 
 4. **Payment Policy Enhancements**
+
    - Added conflict resolution between payment policies and developer-defined policies.
    - Ensures deterministic policy evaluation.
    - Improves reliability and security guarantees.
 
 5. **SDK Debug Mode**
+
    - Provides detailed error logging
 
 6. **Stateless STX Validator + MEE v3.0.0 Support**
@@ -45,6 +56,7 @@
    - Improves authentication flexibility and validation capabilities.
 
 #### Breaking Changes
+
 1. prepareForPermissions flow now only supports building instructions via buildComposable.
 
 ## 1.1.21
