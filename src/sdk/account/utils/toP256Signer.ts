@@ -51,8 +51,8 @@ export const toP256Signer = (privateKey: Hex): P256Signer => {
     // sign returns compact format (r || s, 64 bytes) by default with prehash: false
     const signature = p256.sign(hashBytesArray, privateKeyBytesArray, {
       prehash: false
-    });
-    const compactSig = signature.toCompactRawBytes();
+    })
+    const compactSig = signature.toCompactRawBytes()
 
     return toHex(compactSig)
   }
