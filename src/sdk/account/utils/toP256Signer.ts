@@ -10,7 +10,7 @@ import {
   toHex
 } from "viem"
 import { toAccount } from "viem/accounts"
-import { AnyData } from "../../modules"
+import type { AnyData } from "../../modules"
 
 export type P256Signer = LocalAccount<"p256">
 
