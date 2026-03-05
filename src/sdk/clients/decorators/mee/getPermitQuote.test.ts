@@ -34,7 +34,7 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { AnyData, getMEEVersion } from "../../../modules"
+import { type AnyData, getMEEVersion } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf

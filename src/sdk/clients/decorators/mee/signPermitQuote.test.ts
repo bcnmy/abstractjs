@@ -40,7 +40,7 @@ import {
   TokenWithPermitAbi
 } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { AnyData, getMEEVersion } from "../../../modules"
+import { type AnyData, getMEEVersion } from "../../../modules"
 import {
   type MeeClient,
   createMeeClient,
