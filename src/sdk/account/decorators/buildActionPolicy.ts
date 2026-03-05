@@ -329,10 +329,9 @@ export const buildActionPolicy = (
       return getUniversalPolicy(parameters)
     }
     case "timeframe": {
-      // Convert Unix timestamp into milliseconds
       return getTimeFramePolicy({
-        validAfter: parameters.validAfter * 1000,
-        validUntil: parameters.validUntil * 1000
+        validAfter: parameters.validAfter,
+        validUntil: parameters.validUntil
       })
     }
     case "usageLimit": {

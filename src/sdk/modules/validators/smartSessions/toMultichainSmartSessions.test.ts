@@ -1050,7 +1050,9 @@ describe("mee.multichainSmartSessions (Legacy)", () => {
           recipientAddress: "0x0000000000000000000000000000000000000001",
           amountLimitPerAction: parseUnits("0.5", 6),
           maxAmountLimit: parseUnits("0.5", 6),
-          usageLimit: 3n
+          usageLimit: 3n,
+          validAfter: Math.floor(Date.now() / 1000),
+          validUntil: Math.floor(Date.now() / 1000) + 3600, // 1 hour
         }
       })
     ].flat()
