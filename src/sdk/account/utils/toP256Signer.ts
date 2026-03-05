@@ -49,13 +49,12 @@ export const toP256Signer = (privateKey: Hex): P256Signer => {
   const signP256 = (hash: Hex): Hex => {
     const hashBytesArray = hexToBytes(hash)
     // sign returns compact format (r || s, 64 bytes) by default with prehash: false
-    const sigHex = p256
+    const sigBytes = p256
       .sign(hashBytesArray, privateKeyBytesArray, {
         prehash: false
-      })
-      .toCompactHex() as Hex
+      });
 
-    return sigHex
+    return toHex(sigBytes.toCompactRawBytes())
   }
 
   const account = toAccount({
