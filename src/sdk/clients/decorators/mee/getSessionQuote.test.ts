@@ -867,6 +867,39 @@ describe("mee.getSessionQuote", () => {
     expect(policyData.paramRules.rules[1].isLimited).to.eq(false)
     expect(policyData.paramRules.rules[1].usage.limit).to.eq(0n)
   })
+
+  test("Smart sessions (New): Should enable 25 complex actions with proper gas estimations", async () => {
+    // New orchestrator account
+    const { mcNexus, meeClient } = await getNewUserMcNexusAndMeeClient({
+      useSponsorship: true
+    })
+
+    const transferAction = mcNexus.buildSessionAction({
+      type: "transfer",
+      data: {
+        chainIds: [paymentChain.id],
+        contractAddress: testnetMcTestUSDC.addressOn(paymentChain.id),
+        recipientAddress: "0x0000000000000000000000000000000000000001",
+        amountLimitPerAction: parseUnits("0.5", 6),
+        maxAmountLimit: parseUnits("0.5", 6),
+        usageLimit: 3n,
+        validAfter: Math.floor(Date.now() / 1000),
+        validUntil: Math.floor(Date.now() / 1000) + 3600 // 1 hour
+      }
+    })
+
+    // 25 transferActions
+    const actions = Array.from({ length: 25 }, () => transferAction).flat()
+
+    const { txHash, sessionDetails } = await prepareAndEnableSession(
+      meeClient,
+      actions,
+      { useSponsorship: true }
+    )
+
+    expect(txHash).toBeDefined()
+    expect(sessionDetails).toBeDefined()
+  })
 })
 
 describe("getSessionValidatorInitData", () => {
