@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.2.2
+
+### Patch Changes
+
+- Fixed the timeframe policy issue for smart sessions
+
 ## 1.2.1
 
 ### Patch Changes
