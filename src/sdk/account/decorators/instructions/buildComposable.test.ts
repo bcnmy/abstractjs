@@ -1540,7 +1540,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         const { hash } = await testMeeClient.executeFusionQuote({ fusionQuote })
 
         console.log("waiting for supertransaction receipt")
-        await new Promise((resolve) => setTimeout(resolve, 75_000)) // 75s timeout
+        await new Promise((resolve) => setTimeout(resolve, 80_000)) // 80s timeout
         // should fail since condition not met
         const stxStatus = await getStxStatus(testMeeClient, hash)
         expect(stxStatus).to.be.eq("FAILED")

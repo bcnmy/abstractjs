@@ -93,8 +93,7 @@ function createChainSpecificContract<TAbi extends Abi>(
         gasLimit = LARGE_DEFAULT_GAS_LIMIT,
         value = 0n
       }: {
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-        args: any[] // This will be typed by the ChainSpecificContract type
+        args: AnyData[] // This will be typed by the ChainSpecificContract type
         gasLimit?: bigint
         value?: bigint
       }) => {

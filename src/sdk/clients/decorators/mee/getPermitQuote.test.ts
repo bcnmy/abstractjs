@@ -34,7 +34,7 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { getMEEVersion } from "../../../modules"
+import { type AnyData, getMEEVersion } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
@@ -101,7 +101,7 @@ describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
   const buildAccountParams = (
     account: MultichainSmartAccount,
     fusionQuote: {
-      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      quote: { paymentInfo: { sponsored: boolean }; userOps: AnyData[] }
       trigger: { chainId: number }
     }
   ): MultichainSmartAccountParams => {

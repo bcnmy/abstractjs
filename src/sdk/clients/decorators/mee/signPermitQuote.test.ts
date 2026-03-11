@@ -40,7 +40,7 @@ import {
   TokenWithPermitAbi
 } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { getMEEVersion } from "../../../modules"
+import { type AnyData, getMEEVersion } from "../../../modules"
 import {
   type MeeClient,
   createMeeClient,
@@ -124,7 +124,7 @@ describe("mee.signPermitQuote", () => {
   const buildAccountParams = (
     account: MultichainSmartAccount,
     fusionQuote: {
-      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      quote: { paymentInfo: { sponsored: boolean }; userOps: AnyData[] }
       trigger: { chainId: number }
     }
   ): MultichainSmartAccountParams => {
@@ -323,7 +323,7 @@ describe.runIf(runLifecycleTests)("mee.signPermitQuote - testnet", () => {
   const buildAccountParams = (
     account: MultichainSmartAccount,
     fusionQuote: {
-      quote: { paymentInfo: { sponsored: boolean }; userOps: any[] }
+      quote: { paymentInfo: { sponsored: boolean }; userOps: AnyData[] }
       trigger: { chainId: number }
     }
   ): MultichainSmartAccountParams => {
