@@ -63,6 +63,7 @@ export const buildBatch = async (
   let maxExecutionSimulationRetryDelay = 0
   let finalLowerBoundTimestamp = 0
   let finalUpperBoundTimestamp = 0
+  let maxRetryCount = 0
   const customOverrides: CustomOverride[] = []
   const tokenOverrides: TokenOverride[] = []
 
@@ -70,7 +71,8 @@ export const buildBatch = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } of resolvedInstructions) {
     if (executionSimulationRetryDelay !== undefined) {
       // The last defined max executionSimulationRetryDelay will be considered
@@ -110,6 +112,10 @@ export const buildBatch = async (
       if (simulationOverrides.tokenOverrides !== undefined) {
         tokenOverrides.push(...simulationOverrides.tokenOverrides)
       }
+    }
+
+    if (retry !== undefined) {
+      maxRetryCount = Math.max(retry, maxRetryCount)
     }
   }
 
@@ -151,6 +157,7 @@ export const buildBatch = async (
       chainId: resolvedInstructions[0].chainId, // Batch instructions must be on the same chain
       isComposable,
       metadata,
+      ...(maxRetryCount !== 0 ? { retry: maxRetryCount } : {}),
       ...(finalLowerBoundTimestamp !== 0
         ? { lowerBoundTimestamp: finalLowerBoundTimestamp }
         : {}),

@@ -92,6 +92,11 @@ export type BuildAcrossIntentComposableParams = {
   /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
   simulationOverrides?: Overrides
   metadata?: InstructionMetadata[]
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 
 /**
@@ -120,7 +125,8 @@ export const buildAcrossIntentComposable = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } = parameters
 
   // sanity checks
@@ -239,6 +245,7 @@ export const buildAcrossIntentComposable = async (
       chainId: originChainId,
       gasLimit,
       metadata: metadata || bridgeMetadata,
+      retry,
       lowerBoundTimestamp,
       upperBoundTimestamp,
       executionSimulationRetryDelay,

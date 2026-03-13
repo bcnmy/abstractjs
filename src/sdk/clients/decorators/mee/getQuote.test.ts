@@ -25,7 +25,7 @@ import {
   setAllowance,
   transferErc20
 } from "../../../../test/testUtils"
-import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
+import { getMeeScanLink, LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
@@ -2870,6 +2870,60 @@ describe("mee.getQuote", () => {
     })
 
     expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+
+    expect(hash).toBeDefined()
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+  })
+
+  test("Should execute quote with instruction level retries", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 12000 // 10 seconds
+
+    const transferWithRetry = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        amount: 0n,
+        chainId: baseSepolia.id,
+        retry: 3
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: transferWithRetry,
+      executionSimulationRetryDelay: customExecutionSimulationRetryDelay,
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    console.log(getMeeScanLink(quote.hash))
 
     const { hash } = await meeClient.executeQuote({ quote })
 

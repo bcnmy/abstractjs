@@ -131,6 +131,11 @@ export type Instruction = {
   metadata?: InstructionMetadata[]
   /** Simulation overrides */
   simulationOverrides?: Overrides
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 /**
  * Represents a supertransaction, which is a collection of instructions
@@ -1430,23 +1435,41 @@ const prepareUserOps = async (
   isCleanUpUserOps = false,
   validatorAddress?: Address
 ) => {
-  return await Promise.all(
-    instructions.map((instruction) => {
+  const retryEnabledInstructions: {
+    instruction: Instruction
+    dependsOn?: number
+  }[] = []
+
+  for (const instruction of instructions) {
+    // Only composable instructions can have retries
+    if (
+      instruction.isComposable &&
+      instruction.retry &&
+      instruction.retry > 0
+    ) {
+      retryEnabledInstructions.push({ instruction })
+
+      // Deep cloning the retries instruction to avoid mutation side effects
+      const retryInstructions = Array.from({ length: instruction.retry }, () =>
+        structuredClone(instruction)
+      )
+
+      for (const inx of retryInstructions) {
+        // Length - 1 is good here - Always there will be one instruction in array here
+        retryEnabledInstructions.push({
+          instruction: inx,
+          dependsOn: retryEnabledInstructions.length - 1
+        })
+      }
+    } else {
+      retryEnabledInstructions.push({ instruction })
+    }
+  }
+
+  let resolvedUserOpValues = await Promise.all(
+    retryEnabledInstructions.map(({ instruction, dependsOn }) => {
       const deployment = account.deploymentOn(instruction.chainId, true)
       const accountAddress = account.addressOn(instruction.chainId, true)
-
-      let callsPromise: Promise<Hex>
-
-      if (instruction.isComposable) {
-        callsPromise = deployment.encodeExecuteComposable(
-          instruction.calls as ComposableCall[]
-        )
-      } else {
-        callsPromise =
-          instruction.calls.length > 1
-            ? deployment.encodeExecuteBatch(instruction.calls as AbstractCall[])
-            : deployment.encodeExecute(instruction.calls[0] as AbstractCall)
-      }
 
       // This is the place to set the short encoding flag
       // It can be based on the module address or on the instruction type
@@ -1461,7 +1484,7 @@ const prepareUserOps = async (
       const shortEncoding = false
 
       return Promise.all([
-        callsPromise,
+        instruction.calls,
         deployment.getNonceWithKey(accountAddress, {
           moduleAddress: validatorAddress
         }),
@@ -1480,10 +1503,86 @@ const prepareUserOps = async (
         instruction.simulationOverrides,
         instruction.lowerBoundTimestamp,
         instruction.upperBoundTimestamp,
-        instruction.executionSimulationRetryDelay
+        instruction.executionSimulationRetryDelay,
+        instruction.isComposable,
+        dependsOn
       ])
     })
   )
+
+  resolvedUserOpValues = resolvedUserOpValues.map((userOpValue) => {
+    const dependsOn: number | undefined = userOpValue[userOpValue.length - 1]
+    const isComposable = userOpValue[userOpValue.length - 2]
+
+    // No dependencies or not a composable instruction, so no need to add nonce dependency to the calls
+    if (dependsOn === undefined || !isComposable) {
+      return userOpValue
+    }
+
+    // Previous userOp where the current userOp should depends on the nonce for sequential execution
+    const previousUserOp = resolvedUserOpValues[dependsOn]
+    const { nonceKey, nonce } = previousUserOp[1]
+
+    const chainId = Number(userOpValue[6])
+    const deployment = account.deploymentOn(chainId, true)
+
+    const nonceOf = runtimeNonceOf({
+      smartAccountAddress: account.addressOn(chainId, true),
+      nonceKey: nonceKey,
+      constraints: [greaterThanOrEqualTo(nonce + 1n)]
+    })
+
+    const formattedNonceDependencyInputParams =
+      formatCallDataInputParamsWithVersion(
+        deployment.version.composabilityVersion,
+        false,
+        nonceOf.inputParams
+      )
+
+    let calls = (userOpValue[0] as ComposableCall[]).map((call) => {
+      call.inputParams.push(...formattedNonceDependencyInputParams)
+      return call
+    })
+
+    userOpValue[0] = calls
+    return userOpValue
+  })
+
+  const finalResolvedUserOpValues = await Promise.all(
+    resolvedUserOpValues.map(async (userOpValue) => {
+      let callsPromise: Promise<Hex>
+
+      const calls = userOpValue[0]
+      const chainId = Number(userOpValue[6])
+      const isComposable = userOpValue[userOpValue.length - 2]
+
+      const deployment = account.deploymentOn(chainId, true)
+
+      if (isComposable) {
+        callsPromise = deployment.encodeExecuteComposable(
+          calls as ComposableCall[]
+        )
+      } else {
+        callsPromise =
+          calls.length > 1
+            ? deployment.encodeExecuteBatch(calls as AbstractCall[])
+            : deployment.encodeExecute(calls[0] as AbstractCall)
+      }
+
+      type UserOpValueType = typeof userOpValue
+      type UpdatedUserOpValueType = [
+        Hex,
+        ...(UserOpValueType extends [any, ...infer R] ? R : never)
+      ]
+
+      return [
+        await callsPromise,
+        ...userOpValue.slice(1)
+      ] as UpdatedUserOpValueType
+    })
+  )
+
+  return finalResolvedUserOpValues
 }
 
 export const userOp = (userOpIndex: number) => {

@@ -83,6 +83,11 @@ export type BuildComposableParameters = {
    * Optional metadata describing the instruction for display purposes
    */
   metadata?: InstructionMetadata[]
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 
 export type BuildNativeTokenTransferComposableParameters = {
@@ -356,7 +361,8 @@ export const buildComposableUtil = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } = parameters
 
   const calls = await buildComposableCall(parameters, composabilityParams)
@@ -376,6 +382,7 @@ export const buildComposableUtil = async (
       chainId: parameters.chainId,
       isComposable: true,
       metadata: metadata || defaultMetadata,
+      retry,
       lowerBoundTimestamp,
       upperBoundTimestamp,
       executionSimulationRetryDelay,

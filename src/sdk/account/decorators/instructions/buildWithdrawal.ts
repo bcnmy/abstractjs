@@ -49,6 +49,11 @@ export type BuildWithdrawalParameters = TokenParams & {
   simulationOverrides?: Overrides
   /** Custom metadata override for instruction */
   metadata?: InstructionMetadata[]
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 
 /**
@@ -109,7 +114,8 @@ export const buildWithdrawal = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } = parameters
 
   const [meeVersionInfo] = meeVersions.filter(
@@ -172,6 +178,7 @@ export const buildWithdrawal = async (
           args: [recipient],
           chainId,
           metadata: metadataOverride || metadata,
+          retry,
           lowerBoundTimestamp,
           upperBoundTimestamp,
           executionSimulationRetryDelay,
@@ -238,6 +245,7 @@ export const buildWithdrawal = async (
           chainId,
           isComposable: true,
           metadata,
+          retry,
           lowerBoundTimestamp,
           upperBoundTimestamp,
           executionSimulationRetryDelay,
