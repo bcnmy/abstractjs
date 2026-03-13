@@ -25,7 +25,7 @@ import {
   setAllowance,
   transferErc20
 } from "../../../../test/testUtils"
-import { getMeeScanLink, LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
+import { LARGE_DEFAULT_GAS_LIMIT, getMeeScanLink } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"

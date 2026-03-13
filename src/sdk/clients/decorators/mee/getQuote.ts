@@ -22,7 +22,11 @@ import {
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
 } from "../../../constants"
-import type { ModularSmartAccount, RuntimeValue } from "../../../modules"
+import type {
+  AnyData,
+  ModularSmartAccount,
+  RuntimeValue
+} from "../../../modules"
 import {
   type ComposableCall,
   greaterThanOrEqualTo,
@@ -1539,7 +1543,7 @@ const prepareUserOps = async (
         nonceOf.inputParams
       )
 
-    let calls = (userOpValue[0] as ComposableCall[]).map((call) => {
+    const calls = (userOpValue[0] as ComposableCall[]).map((call) => {
       call.inputParams.push(...formattedNonceDependencyInputParams)
       return call
     })
@@ -1572,7 +1576,7 @@ const prepareUserOps = async (
       type UserOpValueType = typeof userOpValue
       type UpdatedUserOpValueType = [
         Hex,
-        ...(UserOpValueType extends [any, ...infer R] ? R : never)
+        ...(UserOpValueType extends [AnyData, ...infer R] ? R : never)
       ]
 
       return [
