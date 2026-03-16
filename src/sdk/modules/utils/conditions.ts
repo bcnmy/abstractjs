@@ -3,9 +3,9 @@ import {
   type Address,
   type ContractFunctionArgs,
   type ContractFunctionName,
+  type Hex,
   encodeAbiParameters,
-  encodeFunctionData,
-  type Hex
+  encodeFunctionData
 } from "viem"
 import {
   type ConstraintField,

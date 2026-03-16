@@ -1,9 +1,9 @@
 import {
   type Address,
-  encodePacked,
   type Hex,
-  keccak256,
   type OneOf,
+  encodePacked,
+  keccak256,
   pad,
   parseUnits,
   toHex
@@ -13,6 +13,12 @@ import {
   buildComposable,
   formatCallDataInputParamsWithVersion
 } from "../../../account/decorators"
+import {
+  NAMESPACE_STORAGE_ABI,
+  NAMESPACE_STORAGE_CONTRACT_ADDRESS,
+  getStorageNameSpace,
+  getStorageNameSpaceSlot
+} from "../../../account/decorators/getNamespaceStorage"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
@@ -35,11 +41,11 @@ import {
   testnetMcUSDC
 } from "../../../constants"
 import {
-  ConditionType,
-  createCondition,
   type AnyData,
+  ConditionType,
   type ModularSmartAccount,
-  type RuntimeValue
+  type RuntimeValue,
+  createCondition
 } from "../../../modules"
 import {
   type ComposableCall,
@@ -62,12 +68,6 @@ import {
 import type { QuoteType } from "./getQuoteType"
 import type { TokenTrigger } from "./signPermitQuote"
 import type { InstructionMetadata } from "./types/instruction-metadata.type"
-import {
-  getStorageNameSpace,
-  getStorageNameSpaceSlot,
-  NAMESPACE_STORAGE_ABI,
-  NAMESPACE_STORAGE_CONTRACT_ADDRESS
-} from "../../../account/decorators/getNamespaceStorage"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -1708,7 +1708,7 @@ const prepareUserOps = async (
         )
 
       const calls = (userOpValue[0] as ComposableCall[]).map((call) => {
-        let clonedCall = structuredClone(call)
+        const clonedCall = structuredClone(call)
         clonedCall.inputParams.push(...formattedNonceDependencyInputParams)
         return clonedCall
       })

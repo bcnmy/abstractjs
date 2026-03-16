@@ -1,4 +1,4 @@
-import { Abi, encodePacked, Hex, keccak256, type Address } from "viem"
+import { type Abi, type Address, type Hex, encodePacked, keccak256 } from "viem"
 
 // Storage contract
 export const NAMESPACE_STORAGE_CONTRACT_ADDRESS =
