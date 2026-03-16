@@ -1,13 +1,4 @@
-import {
-  type Address,
-  type Hex,
-  type OneOf,
-  encodePacked,
-  keccak256,
-  pad,
-  parseUnits,
-  toHex
-} from "viem"
+import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import {
   buildComposable,
@@ -37,8 +28,7 @@ import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
   SMART_SESSIONS_ADDRESS,
-  SmartSessionMode,
-  testnetMcUSDC
+  SmartSessionMode
 } from "../../../constants"
 import {
   type AnyData,
@@ -1679,7 +1669,7 @@ const prepareUserOps = async (
 
   const updatedUserOpsWithNonceDeps = resolvedUserOpValues.map(
     (userOpValue) => {
-      const dependsOn: number | undefined = userOpValue[userOpValue.length - 1]
+      const dependsOn: number | undefined = userOpValue[userOpValue.length - 1] as number | undefined;
       const isComposable = userOpValue[userOpValue.length - 2]
 
       // In case of no dependencies or not an composable instruction, there is no need to add nonce dependency to the calls
