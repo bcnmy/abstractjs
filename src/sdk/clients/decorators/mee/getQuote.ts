@@ -1,4 +1,13 @@
-import { type Address, type Hex, type OneOf, pad, toHex } from "viem"
+import {
+  type Address,
+  encodePacked,
+  type Hex,
+  keccak256,
+  type OneOf,
+  pad,
+  parseUnits,
+  toHex
+} from "viem"
 import type { SignAuthorizationReturnType } from "viem/accounts"
 import {
   buildComposable,
@@ -8,9 +17,11 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import type { NonceInfo } from "../../../account/toNexusAccount"
 import {
   addressEquals,
+  calculateNameSpaceStorageInitializationSlot,
   calculateNonceStorageSlot,
   isBigInt,
   isNativeToken,
+  toBytes32,
   validateConsistentMeeVersions
 } from "../../../account/utils/Utils"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
@@ -20,12 +31,15 @@ import { resolveInstructions } from "../../../account/utils/resolveInstructions"
 import {
   ComposabilityVersion,
   SMART_SESSIONS_ADDRESS,
-  SmartSessionMode
+  SmartSessionMode,
+  testnetMcUSDC
 } from "../../../constants"
-import type {
-  AnyData,
-  ModularSmartAccount,
-  RuntimeValue
+import {
+  ConditionType,
+  createCondition,
+  type AnyData,
+  type ModularSmartAccount,
+  type RuntimeValue
 } from "../../../modules"
 import {
   type ComposableCall,
@@ -48,6 +62,12 @@ import {
 import type { QuoteType } from "./getQuoteType"
 import type { TokenTrigger } from "./signPermitQuote"
 import type { InstructionMetadata } from "./types/instruction-metadata.type"
+import {
+  getStorageNameSpace,
+  getStorageNameSpaceSlot,
+  NAMESPACE_STORAGE_ABI,
+  NAMESPACE_STORAGE_CONTRACT_ADDRESS
+} from "../../../account/decorators/getNamespaceStorage"
 
 export const USEROP_MIN_EXEC_WINDOW_DURATION = 180
 
@@ -1451,26 +1471,161 @@ const prepareUserOps = async (
       instruction.retry &&
       instruction.retry > 0
     ) {
-      retryEnabledInstructions.push({ instruction })
+      const accountAddress = account.addressOn(instruction.chainId, true)
+      const deployment = account.deploymentOn(instruction.chainId, true)
+      const meeVersions = account.deployments.map(({ version, chain }) => ({
+        chainId: chain.id,
+        version
+      }))
 
-      // Deep cloning the retries instruction to avoid mutation side effects
+      // Our nexus flow uses a delegate call, so the caller address and account address will be always same here
+      const slot = await getStorageNameSpaceSlot(
+        accountAddress,
+        accountAddress,
+        instruction.chainId
+      )
+
+      // This instruction will store the execution status as false in the storage slot manually
+      const [initializeWriteStorageSlotInstruction] = await buildComposable(
+        {
+          accountAddress: account.signer.address, // EOA account address
+          currentInstructions: [],
+          meeVersions
+        },
+        {
+          type: "default",
+          data: {
+            to: NAMESPACE_STORAGE_CONTRACT_ADDRESS,
+            functionName: "writeStorage",
+            args: [slot, toBytes32(false), accountAddress],
+            abi: NAMESPACE_STORAGE_ABI,
+            chainId: instruction.chainId,
+            // static fixed gas limit. This will be ignored if simulation is turned on
+            gasLimit: 100_000n
+          }
+        },
+        deployment.version.composabilityVersion
+      )
+
+      // Always let this be a separate storage initialization userOp. So this won't have side effects with other userOp failures
+      retryEnabledInstructions.push({
+        instruction: initializeWriteStorageSlotInstruction
+      })
+
+      // This is a execution status which is expected to be stored on storage contract on successful execution
+      const executionSuccessFlag = toBytes32(true)
+
+      // Our nexus flow uses a delegate call, so the caller address and account address will be always same here
+      const namespace = getStorageNameSpace(accountAddress, accountAddress)
+
+      const condition = createCondition({
+        targetContract: NAMESPACE_STORAGE_CONTRACT_ADDRESS,
+        functionAbi: NAMESPACE_STORAGE_ABI,
+        functionName: "readStorage",
+        args: [namespace, slot], // Storage slot is same for all the retries
+        value: false, // Execution status to be false before execution for this storage write to happen
+        type: ConditionType.EQ
+      })
+
+      // This instruction will store the execution status in the storage slot
+      const storageWriteInstruction = await buildComposable(
+        {
+          accountAddress: account.signer.address, // EOA account address
+          currentInstructions: [],
+          meeVersions
+        },
+        {
+          type: "default",
+          data: {
+            to: NAMESPACE_STORAGE_CONTRACT_ADDRESS,
+            functionName: "writeStorage",
+            args: [slot, executionSuccessFlag, accountAddress],
+            abi: NAMESPACE_STORAGE_ABI,
+            chainId: instruction.chainId,
+            conditions: [condition],
+            // static fixed gas limit. This will be ignored if simulation is turned on
+            gasLimit: 100_000n
+          }
+        },
+        deployment.version.composabilityVersion
+      )
+
+      // Batched instruction will be always one for same chain
+      const [instructionBatchWithStorageWrite] = await batchInstructions({
+        accountAddress: account.signer.address, // EOA account address
+        meeVersions,
+        instructions: [structuredClone(instruction), ...storageWriteInstruction]
+      })
+
+      // Adding a custom state overrides to mimic the storage slot initialization
+      const storageSlotInitializationCustomOverride: CustomOverride = {
+        chainId: instruction.chainId,
+        contractAddress: NAMESPACE_STORAGE_CONTRACT_ADDRESS,
+        storageSlot: calculateNameSpaceStorageInitializationSlot(
+          namespace,
+          slot
+        ),
+        value: toBytes32(true)
+      }
+
+      retryEnabledInstructions.push({
+        instruction: {
+          ...instructionBatchWithStorageWrite,
+          simulationOverrides: {
+            ...instructionBatchWithStorageWrite.simulationOverrides,
+            customOverrides: [
+              ...(instructionBatchWithStorageWrite.simulationOverrides
+                ?.customOverrides ?? []),
+              storageSlotInitializationCustomOverride
+            ]
+          }
+        }
+      })
+
+      // The main userOp nonce dependency will be enforced on retry userOps.
+      let mainInstructionIndex = retryEnabledInstructions.length - 1
+
+      // Deep cloning the retry instructions to avoid mutation side effects
       const retryInstructions = Array.from({ length: instruction.retry }, () =>
         structuredClone(instruction)
       )
 
-      for (const inx of retryInstructions) {
-        // Length - 1 is good here - Always there will be one instruction in array here
+      for (const retryInstruction of retryInstructions) {
+        // Batched instruction will be always one for same chain
+        const [retryInstructionBatchWithStorageWrite] = await batchInstructions(
+          {
+            accountAddress: account.signer.address, // EOA account address
+            meeVersions,
+            instructions: [retryInstruction, ...storageWriteInstruction]
+          }
+        )
+
         retryEnabledInstructions.push({
-          instruction: inx,
-          dependsOn: retryEnabledInstructions.length - 1
+          instruction: {
+            ...retryInstructionBatchWithStorageWrite,
+            simulationOverrides: {
+              ...retryInstructionBatchWithStorageWrite.simulationOverrides,
+              customOverrides: [
+                ...(retryInstructionBatchWithStorageWrite.simulationOverrides
+                  ?.customOverrides ?? []),
+                storageSlotInitializationCustomOverride
+              ]
+            }
+          },
+          // Retry userOps will be sequential executed based on nonce dependencies
+          dependsOn: mainInstructionIndex
         })
+
+        mainInstructionIndex++
       }
     } else {
-      retryEnabledInstructions.push({ instruction })
+      retryEnabledInstructions.push({
+        instruction: structuredClone(instruction)
+      })
     }
   }
 
-  let resolvedUserOpValues = await Promise.all(
+  const resolvedUserOpValues = await Promise.all(
     retryEnabledInstructions.map(({ instruction, dependsOn }) => {
       const deployment = account.deploymentOn(instruction.chainId, true)
       const accountAddress = account.addressOn(instruction.chainId, true)
@@ -1506,7 +1661,15 @@ const prepareUserOps = async (
         instruction.metadata,
         instruction.simulationOverrides,
         instruction.lowerBoundTimestamp,
-        instruction.upperBoundTimestamp,
+        // Retry userOps has extra 10% of the execution window compared to the main userOp
+        dependsOn !== undefined && instruction.upperBoundTimestamp
+          ? instruction.upperBoundTimestamp +
+            Math.floor(
+              (instruction.upperBoundTimestamp -
+                (instruction.lowerBoundTimestamp ?? 0)) *
+                0.1
+            )
+          : instruction.upperBoundTimestamp,
         instruction.executionSimulationRetryDelay,
         instruction.isComposable,
         dependsOn
@@ -1514,46 +1677,71 @@ const prepareUserOps = async (
     })
   )
 
-  resolvedUserOpValues = resolvedUserOpValues.map((userOpValue) => {
-    const dependsOn: number | undefined = userOpValue[userOpValue.length - 1]
-    const isComposable = userOpValue[userOpValue.length - 2]
+  const updatedUserOpsWithNonceDeps = resolvedUserOpValues.map(
+    (userOpValue) => {
+      const dependsOn: number | undefined = userOpValue[userOpValue.length - 1]
+      const isComposable = userOpValue[userOpValue.length - 2]
 
-    // No dependencies or not a composable instruction, so no need to add nonce dependency to the calls
-    if (dependsOn === undefined || !isComposable) {
+      // In case of no dependencies or not an composable instruction, there is no need to add nonce dependency to the calls
+      if (dependsOn === undefined || !isComposable) {
+        return userOpValue
+      }
+
+      // Previous userOp where the current userOp should depend on the nonce for sequential execution
+      const previousUserOp = resolvedUserOpValues[dependsOn]
+      const { nonceKey, nonce } = previousUserOp[1]
+
+      const chainId = Number(userOpValue[6])
+      const deployment = account.deploymentOn(chainId, true)
+
+      const nonceOf = runtimeNonceOf({
+        smartAccountAddress: account.addressOn(chainId, true),
+        nonceKey: nonceKey,
+        constraints: [greaterThanOrEqualTo(nonce + 1n)]
+      })
+
+      const formattedNonceDependencyInputParams =
+        formatCallDataInputParamsWithVersion(
+          deployment.version.composabilityVersion,
+          false,
+          nonceOf.inputParams
+        )
+
+      const calls = (userOpValue[0] as ComposableCall[]).map((call) => {
+        let clonedCall = structuredClone(call)
+        clonedCall.inputParams.push(...formattedNonceDependencyInputParams)
+        return clonedCall
+      })
+
+      const { entryPoint } = account.deploymentOn(chainId, true)
+
+      const customOverride: CustomOverride = {
+        chainId: chainId,
+        contractAddress: entryPoint.address,
+        storageSlot: calculateNonceStorageSlot(
+          account.addressOn(chainId, true),
+          nonceKey
+        ),
+        value: pad(toHex(nonce + 1n).slice(-16) as Hex)
+      }
+
+      userOpValue[0] = calls
+
+      // Add custom state overrides for the nonce dependency
+      userOpValue[11] = {
+        ...userOpValue[11],
+        customOverrides: [
+          ...(userOpValue[11]?.customOverrides ?? []),
+          customOverride
+        ]
+      }
+
       return userOpValue
     }
+  )
 
-    // Previous userOp where the current userOp should depends on the nonce for sequential execution
-    const previousUserOp = resolvedUserOpValues[dependsOn]
-    const { nonceKey, nonce } = previousUserOp[1]
-
-    const chainId = Number(userOpValue[6])
-    const deployment = account.deploymentOn(chainId, true)
-
-    const nonceOf = runtimeNonceOf({
-      smartAccountAddress: account.addressOn(chainId, true),
-      nonceKey: nonceKey,
-      constraints: [greaterThanOrEqualTo(nonce + 1n)]
-    })
-
-    const formattedNonceDependencyInputParams =
-      formatCallDataInputParamsWithVersion(
-        deployment.version.composabilityVersion,
-        false,
-        nonceOf.inputParams
-      )
-
-    const calls = (userOpValue[0] as ComposableCall[]).map((call) => {
-      call.inputParams.push(...formattedNonceDependencyInputParams)
-      return call
-    })
-
-    userOpValue[0] = calls
-    return userOpValue
-  })
-
-  const finalResolvedUserOpValues = await Promise.all(
-    resolvedUserOpValues.map(async (userOpValue) => {
+  const finalUserOpValues = await Promise.all(
+    updatedUserOpsWithNonceDeps.map(async (userOpValue) => {
       let callsPromise: Promise<Hex>
 
       const calls = userOpValue[0]
@@ -1586,7 +1774,7 @@ const prepareUserOps = async (
     })
   )
 
-  return finalResolvedUserOpValues
+  return finalUserOpValues
 }
 
 export const userOp = (userOpIndex: number) => {

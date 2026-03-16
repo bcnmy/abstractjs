@@ -76,13 +76,19 @@ export const isBigInt = (value: AnyData) => {
   }
 }
 
-export const toBytes32 = (value: bigint | boolean | Address | Hex): Hex => {
+export const toBytes32 = (
+  value: bigint | boolean | Address | Hex | number
+): Hex => {
   if (typeof value === "boolean") {
     return padHex(toHex(value ? 1n : 0n), { size: 32 })
   }
 
   if (typeof value === "bigint") {
     return padHex(toHex(value), { size: 32 })
+  }
+
+  if (typeof value === "number") {
+    return padHex(toHex(BigInt(value)), { size: 32 })
   }
 
   if (isAddress(value)) {
@@ -718,6 +724,53 @@ export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
   )
 
   return finalSlot
+}
+
+/**
+ * Calculates the storage slot for "initializedSlots" mapping using a namespace and slot.
+ *
+ * This follows Solidity's rules for mapping storage layout. Used, for example, by
+ * contracts that store initialization flags for a (namespace, slot) pair at mapping slot 0.
+ *
+ * Storage structure (Solidity pseudocode):
+ *   mapping(bytes32 namespace => mapping(bytes32 slot => bool)) initializedSlots;
+ *
+ * The formula:
+ *   keccak256(
+ *     abi.encode(
+ *       keccak256(abi.encode(namespace, slot)),
+ *       uint256(BASE_SLOT)
+ *     )
+ *   )
+ *
+ * Both keys and slot are padded to 32 bytes. BASE_SLOT = 0 here.
+ *
+ * @param namespace - 32-byte hex string namespace identifier
+ * @param slot - 32-byte hex string representing the individual slot
+ * @returns The storage slot (as Hex) for (namespace, slot) in "initializedSlots"
+ */
+export function calculateNameSpaceStorageInitializationSlot(
+  namespace: Hex,
+  slot: Hex
+): Hex {
+  const BASE_SLOT = 0 // 'initializedSlots' mapping lives at storage slot 0
+
+  // Step 1: keccak256(abi.encode(namespace, slot))
+  // Both are padded to 32 bytes as per Solidity's abi.encode
+  const namespacedSlot = keccak256(
+    concat([pad(namespace, { size: 32 }), pad(slot, { size: 32 })])
+  )
+
+  // Step 2: keccak256(abi.encode(namespacedSlot, BASE_SLOT))
+  // namespacedSlot is already 32 bytes; BASE_SLOT is padded to 32 bytes
+  const mappingSlot = keccak256(
+    concat([
+      pad(namespacedSlot, { size: 32 }),
+      pad(numberToHex(BASE_SLOT), { size: 32 }) // slot padding
+    ])
+  )
+
+  return mappingSlot
 }
 
 /**

@@ -6,6 +6,8 @@ import {
   encodeFunctionData,
   encodePacked,
   erc20Abi,
+  isAddress,
+  isHex,
   parseAbi,
   zeroAddress
 } from "viem"
@@ -224,7 +226,9 @@ export const validateAndProcessConstraints = (
       // Handle value validation in a appropriate to runtime function
       if (
         typeof constraint.value !== "bigint" &&
-        typeof constraint.value !== "boolean"
+        typeof constraint.value !== "boolean" &&
+        !isHex(constraint.value) &&
+        !isAddress(constraint.value)
       ) {
         throw new Error("Invalid constraint value")
       }

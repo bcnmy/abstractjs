@@ -2883,7 +2883,7 @@ describe("mee.getQuote", () => {
     expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 
-  test("Should execute quote with instruction level retries", async () => {
+  test("Should execute quote with instruction level retries with atomic batch", async () => {
     const mcNexus = await toMultichainNexusAccount({
       signer: eoaAccount,
       chainConfigurations: [
@@ -2899,7 +2899,15 @@ describe("mee.getQuote", () => {
       account: mcNexus
     })
 
-    const customExecutionSimulationRetryDelay = 12000 // 10 seconds
+    const transfer = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        amount: 0n,
+        chainId: baseSepolia.id
+      }
+    })
 
     const transferWithRetry = await mcNexus.buildComposable({
       type: "transfer",
@@ -2913,8 +2921,12 @@ describe("mee.getQuote", () => {
     })
 
     const quote = await meeClient.getQuote({
-      instructions: transferWithRetry,
-      executionSimulationRetryDelay: customExecutionSimulationRetryDelay,
+      instructions: [...transfer, ...transferWithRetry],
+      simulation: {
+        simulate: true
+      },
+      lowerBoundTimestamp: Math.floor(Date.now() / 1000),
+      upperBoundTimestamp: Math.floor(Date.now() / 1000) + 60,
       feeToken: {
         address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
         chainId: baseSepolia.id
@@ -2923,17 +2935,98 @@ describe("mee.getQuote", () => {
 
     expect(quote).toBeDefined()
 
+    expect(quote.userOps.length).to.eq(6)
+
     console.log(getMeeScanLink(quote.hash))
 
     const { hash } = await meeClient.executeQuote({ quote })
 
     expect(hash).toBeDefined()
-    const receipt = await meeClient.waitForSupertransactionReceipt({
-      hash,
-      confirmations: TEST_BLOCK_CONFIRMATIONS
+
+    try {
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    } catch (error) {
+      // This will fail because the retry is no longer required to be executed
+      expect((error as Error).message).to.eq(
+        "[2] Execution deadline limit exceeded"
+      )
+    }
+  })
+
+  test("Should execute quote with instruction level retries without atomic batch", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
     })
 
-    expect(receipt).toBeDefined()
-    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const transfer = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        amount: 0n,
+        chainId: baseSepolia.id
+      }
+    })
+
+    const transferWithRetry = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        amount: 0n,
+        chainId: baseSepolia.id,
+        retry: 3
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      instructions: [...transfer, ...transferWithRetry],
+      simulation: {
+        simulate: true
+      },
+      batch: false,
+      lowerBoundTimestamp: Math.floor(Date.now() / 1000),
+      upperBoundTimestamp: Math.floor(Date.now() / 1000) + 60,
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.userOps.length).to.eq(7)
+
+    console.log(getMeeScanLink(quote.hash))
+
+    const { hash } = await meeClient.executeQuote({ quote })
+
+    expect(hash).toBeDefined()
+
+    try {
+      await meeClient.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    } catch (error) {
+      // This will fail because the retry is no longer required to be executed
+      expect((error as Error).message).to.eq(
+        "[3] Execution deadline limit exceeded"
+      )
+    }
   })
 })
