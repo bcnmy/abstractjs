@@ -1669,7 +1669,9 @@ const prepareUserOps = async (
 
   const updatedUserOpsWithNonceDeps = resolvedUserOpValues.map(
     (userOpValue) => {
-      const dependsOn: number | undefined = userOpValue[userOpValue.length - 1] as number | undefined;
+      const dependsOn: number | undefined = userOpValue[
+        userOpValue.length - 1
+      ] as number | undefined
       const isComposable = userOpValue[userOpValue.length - 2]
 
       // In case of no dependencies or not an composable instruction, there is no need to add nonce dependency to the calls
