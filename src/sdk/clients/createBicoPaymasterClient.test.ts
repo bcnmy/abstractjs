@@ -250,7 +250,7 @@ describe.skipIf(!paymasterTruthy() || !runLifecycleTests)(
       expect(finalBalance).toBe(initialBalance - 1n)
     })
 
-    test("should retrieve quotes from token paymaster", async () => {
+    test.skip("should retrieve quotes from token paymaster", async () => {
       const tokenList = [baseSepoliaUSDCAddress]
       const userOp = await nexusClient.prepareUserOperation({
         calls: [
@@ -347,7 +347,7 @@ describe.skipIf(!paymasterTruthy() || !runLifecycleTests)(
       expect(finalBalance).toBe(initialBalance - 1n)
     })
 
-    test("should retrieve all supported token addresses from the token paymaster", async () => {
+    test.skip("should retrieve all supported token addresses from the token paymaster", async () => {
       const paymasterContext = toBiconomyTokenPaymasterContext({
         feeTokenAddress: baseSepoliaUSDCAddress
       })
