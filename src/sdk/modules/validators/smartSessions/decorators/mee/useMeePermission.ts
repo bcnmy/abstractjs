@@ -1,13 +1,13 @@
-import type { Hash, OneOf } from "viem"
+import type { Hash } from "viem"
 import type {
   BaseMeeClient,
   MeeClient
 } from "../../../../../clients/createMeeClient"
 import type {
+  FeePaymentParams,
   Instruction,
-  SponsorshipOptionsParams
+  Simulation
 } from "../../../../../clients/decorators/mee"
-import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
   SMART_SESSIONS_ADDRESS,
   SmartSessionMode
@@ -18,15 +18,10 @@ export type UseMeePermissionParams = {
   mode: "ENABLE_AND_USE" | "USE"
   instructions: Instruction[]
   sessionDetails: GrantMeePermissionPayload
-} & OneOf<
-  | {
-      feeToken: FeeTokenInfo
-    }
-  | {
-      sponsorship: true
-      sponsorshipOptions?: SponsorshipOptionsParams
-    }
->
+  batch?: boolean
+  simulation?: Simulation
+  verificationGasLimit?: bigint
+} & FeePaymentParams
 
 export type UseMeePermissionPayload = { hash: Hash }
 
@@ -39,10 +34,25 @@ export const useMeePermission = async (
 ): Promise<UseMeePermissionPayload> => {
   const {
     sessionDetails: sessionDetailsArray,
+    simulation,
     mode: mode_,
-    instructions
+    instructions,
+    batch = true,
+    verificationGasLimit
   } = parameters
   const meeClient = meeClient_ as MeeClient
+
+  const isEnableAndUseSessionDetailExists = sessionDetailsArray.some(
+    (sessionDetailsInfo) =>
+      sessionDetailsInfo.mode === SmartSessionMode.UNSAFE_ENABLE
+  )
+
+  // If permission/session enabled via prepareForPermission ? The usePermission flow should always use USE mode
+  if (!isEnableAndUseSessionDetailExists && mode_ === "ENABLE_AND_USE") {
+    throw new Error(
+      "ENABLE_AND_USE mode cannot be used with given session details, instead try USE mode directly"
+    )
+  }
 
   const mode =
     mode_ === "ENABLE_AND_USE"
@@ -53,6 +63,11 @@ export const useMeePermission = async (
     instructions,
     moduleAddress: SMART_SESSIONS_ADDRESS,
     shortEncodingSuperTxn: true,
+    sessionDetails: sessionDetailsArray,
+    smartSessionMode: mode_,
+    batch,
+    simulation,
+    verificationGasLimit,
     ...(parameters.sponsorship
       ? {
           sponsorship: parameters.sponsorship,
@@ -63,36 +78,42 @@ export const useMeePermission = async (
 
   const signedQuote = await meeClient.signQuote({ quote })
 
-  const modeMap = signedQuote.userOps.reduce(
-    (acc, userOpEntry) => {
-      acc[String(userOpEntry.chainId)] = false
-      return acc
-    },
-    {} as Record<string, boolean>
-  )
+  // Assign the correct mode for each userOp
+  // This is required to avoid using ENABLE mode for the same chain more than once
+  const processedChains = new Set<string>()
+  const startIndex = signedQuote.paymentInfo.sponsored ? 1 : 0
 
-  // Then focus on the other user ops
-  for (const [_, userOpEntry] of signedQuote.userOps.entries()) {
-    // If we've iterated over this chainId before, it will never require enable mode again.
-    const alreadyUsed = !!modeMap[userOpEntry.chainId]
+  for (const [index, userOpEntry] of signedQuote.userOps.entries()) {
+    // Skip payment userOp if sponsored
+    if (index < startIndex) continue
 
+    const chainId = String(userOpEntry.chainId)
+    const isFirstTimeForChain = !processedChains.has(chainId)
+
+    // Find session details for this chain
     const relevantIndex = sessionDetailsArray.findIndex(
       ({ enableSessionData }) =>
         enableSessionData?.enableSession?.sessionToEnable?.chainId ===
         BigInt(userOpEntry.chainId)
     )
 
-    // Mark the session as used or unused
-    const dynamicMode = alreadyUsed ? SmartSessionMode.USE : mode
+    if (relevantIndex === -1) {
+      throw new Error(
+        `No session details found for chainId ${userOpEntry.chainId}`
+      )
+    }
 
-    // Set the session details for the user op
+    // Determine mode: first time gets original mode (enable and use most likely), subsequent times get USE
+    const dynamicMode = isFirstTimeForChain ? mode : SmartSessionMode.USE
+
+    // Apply mode to session details
     userOpEntry.sessionDetails = {
       ...sessionDetailsArray[relevantIndex],
       mode: dynamicMode
     }
 
-    // Remember that the mode has now been catered for
-    modeMap[userOpEntry.chainId] = true
+    // Mark chain as processed
+    processedChains.add(chainId)
   }
 
   return await meeClient.executeSignedQuote({ signedQuote })

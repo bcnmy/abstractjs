@@ -29,6 +29,9 @@ export type GetPermitQuoteParams = GetQuoteParams & {
    */
   trigger: Trigger
 
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
+
   feePayer?: undefined
 }
 
@@ -54,7 +57,7 @@ export type GetPermitQuoteParams = GetQuoteParams & {
  *     value: "0"
  *   }],
  *   trigger: {
- *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
+ *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
  *     amount: "1000000", // 1 USDC (6 decimals)
  *     owner: "0x...", // Token owner address
  *     spender: "0x..." // Address approved to spend tokens
@@ -76,6 +79,7 @@ export const getPermitQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
     ...rest
   } = parameters
@@ -84,12 +88,12 @@ export const getPermitQuote = async (
     throw new Error("Custom call trigger is not supported for permit quotes")
   }
 
-  const sender = account_.signer.address // sender is an EOA which is the signer for the companion account_
-  const scaAddress = account_.addressOn(trigger.chainId, true)
+  const owner = account_.signer.address // sender is an EOA which is the signer for the companion account_
+  const spender = account_.addressOn(trigger.chainId, true)
 
   // By default the trigger amount will be deposited to sca account.
   // if a custom recipient is defined ? It will deposit to the recipient address
-  const recipient = trigger.recipientAddress || scaAddress
+  const recipient = trigger.recipientAddress || spender
 
   const resolvedInstructions = await resolveInstructions(instructions)
 
@@ -97,22 +101,42 @@ export const getPermitQuote = async (
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
-      sender,
-      scaAddress,
-      recipient,
-      account: account_
+      owner, // EOA address
+      spender, // SCA address who gets the approval for spend initiation
+      recipient, // Either the SCA takes amount for itself or transferred for custom recipient
+      account: account_,
+      batch
     })
 
   const eoa = account_.signer.address
 
-  const quote = await getQuote(client, {
-    path: "quote-permit", // Use different endpoint for permit enabled tokens
-    eoa,
-    instructions: batchedInstructions,
-    gasLimit: gasLimit || triggerGasLimit,
-    ...(cleanUps ? { cleanUps } : {}),
-    ...rest
-  })
+  const triggerInfo: Trigger = {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    gasLimit: triggerGasLimit,
+    amount: triggerAmount, // Amount without fees and fees will be added below
+    ...(trigger.approvalAmount
+      ? { approvalAmount: trigger.approvalAmount }
+      : {}),
+    ...(trigger.recipientAddress
+      ? { recipientAddress: trigger.recipientAddress }
+      : {})
+  }
+
+  const quote = await getQuote(
+    client,
+    {
+      path: "quote-permit", // Use different endpoint for permit enabled tokens
+      eoa,
+      batch,
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || triggerGasLimit,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    },
+    "permit",
+    triggerInfo
+  )
 
   // For useMaxAvailableFunds case, fees will be taken from max available funds.
   // else it will be explicitly defined here
@@ -125,22 +149,11 @@ export const getPermitQuote = async (
     fees = 0n
   }
 
-  const amount = triggerAmount + fees
+  triggerInfo.amount += fees
 
   return {
     quote,
-    trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      gasLimit: triggerGasLimit,
-      amount,
-      ...(trigger.approvalAmount
-        ? { approvalAmount: trigger.approvalAmount }
-        : {}),
-      ...(trigger.recipientAddress
-        ? { recipientAddress: trigger.recipientAddress }
-        : {})
-    }
+    trigger: triggerInfo
   }
 }
 

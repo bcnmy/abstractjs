@@ -6,6 +6,8 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import createHttpClient from "./createHttpClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
 
@@ -31,9 +33,19 @@ describe("mee.createHttpClient", async () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

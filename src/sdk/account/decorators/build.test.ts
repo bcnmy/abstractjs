@@ -3,11 +3,14 @@ import { beforeAll, describe, expect, it } from "vitest"
 import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { mcUSDC } from "../../constants/tokens"
+import { getMEEVersion } from "../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../toMultiChainNexusAccount"
+import type { MeeVersionsWithChainId } from "../utils"
 import { build } from "./build"
 
 describe("mee.build", () => {
@@ -21,6 +24,7 @@ describe("mee.build", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -32,17 +36,32 @@ describe("mee.build", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
 
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should use the default option while building instructions", async () => {
     const instructions = await build(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         type: "default",
         data: {
@@ -77,19 +96,28 @@ describe("mee.build", () => {
 
   it("should use the bridge action while building instructions", async () => {
     const currentInstructions = await build(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         type: "intent",
         data: {
+          depositor: mcNexus.addressOn(paymentChain.id, true),
+          recipient: mcNexus.addressOn(targetChain.id, true),
           amount: 1n,
-          mcToken: mcUSDC,
-          toChain: targetChain
+          token: {
+            mcToken: mcUSDC,
+            unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+          },
+          toChainId: targetChain.id
         }
       }
     )
 
     const instructions = await build(
-      { account: mcNexus, currentInstructions },
+      {
+        accountAddress: mcNexus.signer.address,
+        currentInstructions,
+        meeVersions
+      },
       {
         type: "default",
         data: {

@@ -6,6 +6,8 @@ import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
 import type { MeeFilledUserOpDetails } from "../../clients/decorators/mee/getQuote"
 import type { UserOpStatus } from "../../clients/decorators/mee/getSupertransactionReceipt"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { parseTransactionStatus } from "./parseTransactionStatus"
 
 const DUMMY_RECEIPT: TransactionReceipt = {
@@ -41,6 +43,7 @@ const DUMMY_USER_OP: MeeFilledUserOpDetails & UserOpStatus = {
   },
   userOpHash: "0x123",
   meeUserOpHash: "0x123",
+  shortEncoding: false,
   lowerBoundTimestamp: "1000000",
   upperBoundTimestamp: "1000000",
   maxGasLimit: "1000000",
@@ -50,24 +53,16 @@ const DUMMY_USER_OP: MeeFilledUserOpDetails & UserOpStatus = {
   executionError: ""
 }
 
-const fulfilledReceipt: PromiseSettledResult<TransactionReceipt> = {
-  status: "fulfilled",
-  value: DUMMY_RECEIPT
-}
-
-const rejectedReceipt: PromiseSettledResult<TransactionReceipt> = {
-  status: "rejected",
-  reason: new Error("Rejected")
-}
-
 // Define user ops with different statuses
 const successUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
+  isConfirmed: true,
   executionStatus: "SUCCESS"
 }
 
 const minedSuccessUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
+  isConfirmed: true,
   executionStatus: "MINED_SUCCESS"
 }
 
@@ -89,6 +84,7 @@ const failedUserOp: MeeFilledUserOpDetails & UserOpStatus = {
 
 const minedFailUserOp: MeeFilledUserOpDetails & UserOpStatus = {
   ...DUMMY_USER_OP,
+  isConfirmed: true,
   executionStatus: "MINED_FAIL",
   executionError: "This is a test error for status MINED_FAIL"
 }
@@ -114,9 +110,19 @@ describe("utils.parseTransactionStatus", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -152,6 +158,7 @@ describe("utils.parseTransactionStatus", () => {
   })
 
   test("should return MINING with finalised=false when any userOp has MINING status", async () => {
+    // Payment userOps will be skipped for main sprtx status
     const userOps = [minedSuccessUserOp, miningUserOp, minedSuccessUserOp]
 
     const result = await parseTransactionStatus(userOps)

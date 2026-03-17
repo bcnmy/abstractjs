@@ -2,7 +2,6 @@ import {
   COUNTER_ADDRESS,
   type Ecosystem,
   type Infra,
-  getRandomNumber,
   toClients,
   toEcosystem
 } from "@biconomy/ecosystem"
@@ -25,8 +24,13 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "../../../clients/createBicoBundlerClient"
-import { getSudoPolicy } from "../../../constants"
+import {
+  DEFAULT_CONFIGURATIONS_BY_MEE_VERSION,
+  DEFAULT_MEE_VERSION,
+  getSudoPolicy
+} from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
+import { getMEEVersion } from "../../utils"
 import { smartSessionActions } from "./decorators"
 import type { GrantPermissionResponse } from "./decorators/grantPermission"
 import { toSmartSessionsModule } from "./toSmartSessionsModule"
@@ -51,6 +55,7 @@ describe("modules.toSmartSessionsModule", () => {
   let sessionDetailsTypedDataSign: GrantPermissionResponse
   let publicClient: PublicClient
   let secondChainPublicClient: PublicClient
+  let meeK1ValidatorAddress: Address
 
   beforeAll(async () => {
     ecosystem = await toEcosystem({
@@ -78,9 +83,16 @@ describe("modules.toSmartSessionsModule", () => {
 
     nexusAccount = await toNexusAccount({
       signer: eoaAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
+
+    meeK1ValidatorAddress =
+      DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[DEFAULT_MEE_VERSION]
+        .validatorAddress
 
     const { testClient } = await toClients(infra.network)
     const { testClient: secondTestClient } = await toClients(
@@ -96,8 +108,11 @@ describe("modules.toSmartSessionsModule", () => {
     // prepare Nexus account for a second chain
     secondChainNexusAccount = await toNexusAccount({
       ...nexusAccount,
-      chain: secondChain,
-      transport: http(secondInfra.network.rpcUrl)
+      chainConfiguration: {
+        chain: secondChain,
+        transport: http(secondInfra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     secondChainNexusClient = createSmartAccountClient({
@@ -152,6 +167,8 @@ describe("modules.toSmartSessionsModule", () => {
     sessionDetailsTypedDataSign =
       await smartSessionsClient.grantPermissionTypedDataSign([
         {
+          sessionValidator: meeK1ValidatorAddress,
+          sessionValidatorInitData: redeemerAddress,
           redeemer: redeemerAddress,
           actions: [
             {
@@ -165,6 +182,8 @@ describe("modules.toSmartSessionsModule", () => {
           chainId: BigInt(chain.id)
         },
         {
+          sessionValidator: meeK1ValidatorAddress,
+          sessionValidatorInitData: redeemerAddress,
           redeemer: redeemerAddress,
           actions: [
             {
@@ -180,9 +199,10 @@ describe("modules.toSmartSessionsModule", () => {
           account: secondChainNexusAccount
         }
       ])
+    // console.log("sessionDetailsTypedDataSign", sessionDetailsTypedDataSign)
   })
 
-  test("use a permission with typed data sign", async () => {
+  test("use a permission with typed data sign for the first time", async () => {
     const counterBefore = await publicClient.readContract({
       address: COUNTER_ADDRESS,
       abi: parseAbi(["function getNumber() view returns (uint256)"]),
@@ -190,10 +210,13 @@ describe("modules.toSmartSessionsModule", () => {
     })
 
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -214,7 +237,8 @@ describe("modules.toSmartSessionsModule", () => {
           )
         }
       ],
-      mode: "ENABLE_AND_USE"
+      mode: "ENABLE_AND_USE",
+      verificationGasLimit: 20000000n
     })
     const receiptTypedDataSignOne =
       await nexusClient.waitForUserOperationReceipt({
@@ -240,10 +264,13 @@ describe("modules.toSmartSessionsModule", () => {
     })
 
     const emulatedAccount = await toNexusAccount({
-      accountAddress: secondChainNexusAccount.address,
       signer: redeemerAccount,
-      chain: secondChain,
-      transport: http(secondInfra.network.rpcUrl)
+      chainConfiguration: {
+        chain: secondChain,
+        transport: http(secondInfra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: secondChainNexusAccount.address
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -284,10 +311,13 @@ describe("modules.toSmartSessionsModule", () => {
 
   test("use a permission with typed data sign a second time", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -322,6 +352,8 @@ describe("modules.toSmartSessionsModule", () => {
     const smartSessionsClient = nexusClient.extend(smartSessionActions())
     sessionDetails = await smartSessionsClient.grantPermissionPersonalSign([
       {
+        sessionValidator: meeK1ValidatorAddress,
+        sessionValidatorInitData: redeemerAddress,
         redeemer: redeemerAddress,
         actions: [
           {
@@ -335,6 +367,8 @@ describe("modules.toSmartSessionsModule", () => {
       },
       // decrement the counter as a separate permission
       {
+        sessionValidator: meeK1ValidatorAddress,
+        sessionValidatorInitData: redeemerAddress,
         redeemer: redeemerAddress,
         actions: [
           {
@@ -349,12 +383,15 @@ describe("modules.toSmartSessionsModule", () => {
     ])
   })
 
-  test("use a permission", async () => {
+  test("use a permission with personal sign for the first time", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -387,10 +424,13 @@ describe("modules.toSmartSessionsModule", () => {
 
   test("use a second permission on the same chain should work with index", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
+      }
     })
 
     const emulatedClient = createSmartAccountClient({
@@ -422,12 +462,15 @@ describe("modules.toSmartSessionsModule", () => {
     expect(receiptWithIndex.success).toBe(true)
   })
 
-  test("use a permission a second time", async () => {
+  test("use a permission with personal sign a second time", async () => {
     const emulatedAccount = await toNexusAccount({
-      accountAddress: nexusAccount.address,
       signer: redeemerAccount,
-      chain,
-      transport: http(infra.network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(infra.network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION),
+        accountAddress: nexusAccount.address
+      }
     })
 
     const emulatedClient = createSmartAccountClient({

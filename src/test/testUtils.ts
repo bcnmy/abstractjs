@@ -20,7 +20,11 @@ import {
 } from "viem"
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts"
 import { baseSepolia, optimismSepolia } from "viem/chains"
-import { getChain, getCustomChain } from "../sdk/account/utils"
+import {
+  getChain,
+  getCustomChain,
+  getMultichainContract
+} from "../sdk/account/utils"
 import { Logger } from "../sdk/account/utils/Logger"
 import type { NexusClient } from "../sdk/clients/createBicoBundlerClient"
 import type { AnyData } from "../sdk/modules/utils/Types"
@@ -271,7 +275,7 @@ export const fundAndDeploySingleClient = async (
 }
 
 export const safeTopUp = async (
-  testClient: MasterClient,
+  testClient: AnyData,
   recipient: Hex,
   amount = 100000000000000000000n,
   token?: Hex
@@ -282,7 +286,7 @@ export const safeTopUp = async (
 }
 
 export const topUp = async (
-  testClient: MasterClient,
+  testClient: AnyData,
   recipient: Hex,
   amount = 10000000000000000n,
   token?: Hex
@@ -395,4 +399,10 @@ export const transferErc20 = async ({
     hash,
     confirmations: TEST_BLOCK_CONFIRMATIONS
   })
+}
+
+export const getRandomAccountIndex = (min: number, max: number) => {
+  const minValue = Math.ceil(min) // Round up to ensure inclusive min
+  const maxValue = Math.floor(max) // Round down to ensure inclusive max
+  return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue
 }

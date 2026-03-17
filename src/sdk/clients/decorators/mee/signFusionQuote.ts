@@ -1,6 +1,6 @@
-import { isPermitSupported } from "../../../modules/utils/Helpers"
+import type { MeeVersionsWithChainId } from "../../../account/utils/getVersion"
 import type { BaseMeeClient } from "../../createMeeClient"
-import { getPaymentToken } from "./getPaymentToken"
+import { getQuoteType } from "./getQuoteType"
 import { type SignMmDtkQuoteParams, signMMDtkQuote } from "./signMmDtkQuote"
 import signOnChainQuote, {
   type SignOnChainQuotePayload,
@@ -11,6 +11,12 @@ import {
   type SignPermitQuotePayload,
   signPermitQuote
 } from "./signPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
+import {
+  type SignSafeQuoteParams,
+  type SignSafeQuotePayload,
+  signSafeQuote
+} from "./signSafeQuote"
 
 /**
  * Union type for parameters that can be used with signFusionQuote
@@ -19,13 +25,20 @@ export type SignFusionQuoteParameters =
   | SignPermitQuoteParams
   | SignOnChainQuoteParams
   | SignMmDtkQuoteParams
+  | SignSafeQuoteParams
 
 /**
  * Union type for the payload returned by signFusionQuote
  */
-export type SignFusionQuotePayload =
+export type SignFusionQuotePayload = (
   | SignOnChainQuotePayload
   | SignPermitQuotePayload
+  | SignSafeQuotePayload
+) & {
+  meeVersions: MeeVersionsWithChainId
+  /** This flag is being used for trusted sponsorship backwards compatibility */
+  isEIP712TrustedSponsorshipSupported: boolean
+}
 
 /**
  * Signs a fusion quote by automatically selecting between permit and on-chain signing
@@ -63,44 +76,75 @@ export const signFusionQuote = async (
   client: BaseMeeClient,
   parameters: SignFusionQuoteParameters
 ): Promise<SignFusionQuotePayload> => {
-  if ("delegatorSmartAccount" in parameters) {
-    return signMMDtkQuote(client, parameters as SignMmDtkQuoteParams)
-  }
-  // if it is not mm-dtk, then it is permit or on-chain
-
-  // if custom call is provided, we use on-chain tx fusion mode
-  if ("call" in parameters.fusionQuote.trigger) {
-    return signOnChainQuote(client, parameters)
-  }
-
-  // if no call, decide based on whether the payment token supports permit
-  const paymentTokenInfo = await getPaymentToken(
-    client,
-    parameters.fusionQuote.trigger
+  const startIndex = parameters.fusionQuote.quote.paymentInfo.sponsored ? 1 : 0
+  const meeVersions = getMeeVersionsForQuote(
+    client.account,
+    parameters.fusionQuote.quote.userOps.slice(startIndex)
   )
-  let permitEnabled = false
 
-  if (paymentTokenInfo.paymentToken) {
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
-  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-    const modularSmartAccount = client.account.deploymentOn(
-      parameters.fusionQuote.trigger.chainId,
-      true
-    )
-
-    permitEnabled = await isPermitSupported(
-      modularSmartAccount.walletClient,
-      parameters.fusionQuote.trigger.tokenAddress
-    )
-  } else {
-    throw new Error(
-      `Payment token (${parameters.fusionQuote.trigger.tokenAddress}) not supported for chain ${parameters.fusionQuote.trigger.chainId}`
-    )
+  if ("delegatorSmartAccount" in parameters) {
+    return {
+      ...(await signMMDtkQuote(client, parameters as SignMmDtkQuoteParams)),
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
+    }
   }
 
-  return permitEnabled
-    ? signPermitQuote(client, parameters)
-    : signOnChainQuote(client, parameters)
+  // if safe account is provided, use safe-sa fusion mode
+  if ("safeAccount" in parameters && "safeWalletClient" in parameters) {
+    return {
+      ...(await signSafeQuote(client, parameters as SignSafeQuoteParams)),
+      meeVersions,
+      isEIP712TrustedSponsorshipSupported: true
+    }
+  }
+
+  // if it is not mm-dtk or safe, then it is permit or on-chain
+  const signatureType =
+    parameters.fusionQuote.quote.quoteType ||
+    (await getQuoteType(client, parameters.fusionQuote))
+
+  switch (signatureType) {
+    case "permit": {
+      const { trigger } = parameters.fusionQuote
+      const deployment = client.account.deploymentOn(trigger.chainId, true)
+
+      const { fallbackToOnchainMode, signedPermitQuotePayload } =
+        await signPermitQuote({
+          fusionQuote: parameters.fusionQuote,
+          account: {
+            owner: client.account.signer.address,
+            spender: deployment.address,
+            walletClient: deployment.walletClient,
+            meeVersions
+          }
+        })
+
+      // If there is any issue with permit fuctionality, the quote signing will fallback to onchain mode.
+      // Fallback only happens if RPC issue, problem with permit values such as name, version, domain separator.
+      if (fallbackToOnchainMode) {
+        return {
+          ...(await signOnChainQuote(client, parameters)),
+          meeVersions,
+          isEIP712TrustedSponsorshipSupported: true
+        }
+      }
+
+      return {
+        ...signedPermitQuotePayload,
+        meeVersions,
+        isEIP712TrustedSponsorshipSupported: true
+      }
+    }
+    case "onchain":
+      return {
+        ...(await signOnChainQuote(client, parameters)),
+        meeVersions,
+        isEIP712TrustedSponsorshipSupported: true
+      }
+    default:
+      throw new Error("Invalid quote type for fusion quote")
+  }
 }
 
 export default signFusionQuote

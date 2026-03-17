@@ -8,6 +8,7 @@ import {
 import { ENTRY_POINT_ADDRESS } from "../../constants"
 import { EntrypointAbi } from "../../constants/abi"
 import type { NonceInfo } from "../toNexusAccount"
+import { sanitizeUrl } from "../utils"
 
 export type GetNonceWithKeyParams = {
   key: bigint
@@ -82,8 +83,11 @@ class NonceManager {
       ])
 
       return { nonceKey: BigInt(key), nonce }
-    } catch (e) {
-      return { nonceKey: 0n, nonce: 0n }
+    } catch (error) {
+      const errorMessage = (error as Error).message ?? "RPC issue"
+      throw new Error(
+        `Failed to fetch nonce due to the error: ${sanitizeUrl(errorMessage)}`
+      )
     }
   }
 }

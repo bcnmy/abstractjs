@@ -39,7 +39,10 @@ export const waitForTransactionReceipts = async (
 ): Promise<WaitForTransactionReceiptPayload> => {
   const receipts = await Promise.all(
     parameters.account.deployments.map(({ publicClient }, i) =>
-      publicClient.waitForTransactionReceipt({ hash: parameters.hashes[i] })
+      publicClient.waitForTransactionReceipt({
+        hash: parameters.hashes[i],
+        confirmations: 5
+      })
     )
   )
   const failure = receipts.find((receipt) => receipt.status !== "success")

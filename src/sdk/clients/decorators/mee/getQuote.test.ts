@@ -5,10 +5,11 @@ import {
   type Transport,
   createWalletClient,
   erc20Abi,
+  parseUnits,
   publicActions
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
-import { baseSepolia } from "viem/chains"
+import { baseSepolia, optimismSepolia } from "viem/chains"
 import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   TESTNET_RPC_URLS,
@@ -16,16 +17,20 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import {
   type NetworkConfig,
   getBalance,
+  getRandomAccountIndex,
   setAllowance,
   transferErc20
 } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
+import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -33,9 +38,10 @@ import {
   DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
   DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-  DEFAULT_PATHFINDER_URL,
   type MeeClient,
-  createMeeClient
+  createMeeClient,
+  getDefaultMEENetworkUrl,
+  getDefaultMeeGasTank
 } from "../../createMeeClient"
 import {
   CLEANUP_USEROP_EXTENDED_EXEC_WINDOW_DURATION,
@@ -44,12 +50,6 @@ import {
   type Instruction,
   getQuote
 } from "./getQuote"
-
-const getRandomAccountIndex = (min: number, max: number) => {
-  const minValue = Math.ceil(min) // Round up to ensure inclusive min
-  const maxValue = Math.floor(max) // Round down to ensure inclusive max
-  return Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue
-}
 
 // @ts-ignore
 const { runPaidTests } = inject("settings")
@@ -80,9 +80,19 @@ describe("mee.getQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -126,9 +136,14 @@ describe("mee.getQuote", () => {
         mcNexus.build({
           type: "intent",
           data: {
+            depositor: mcNexus.addressOn(paymentChain.id, true),
+            recipient: mcNexus.addressOn(targetChain.id, true),
             amount: 1n,
-            mcToken: mcUSDC,
-            toChain: targetChain
+            token: {
+              mcToken: mcUSDC,
+              unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+            },
+            toChainId: targetChain.id
           }
         }),
         mcNexus.build({
@@ -194,6 +209,59 @@ describe("mee.getQuote", () => {
     expect(quote).toBeDefined()
 
     expect(quote.paymentInfo.callGasLimit).toBe(customGasLimit.toString())
+  })
+
+  test("should revert for 'smart-account' mode if multichain account has inconsistent mee versions", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_2_1)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    await expect(
+      meeClient.getQuote({
+        instructions: [
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: baseSepolia.id
+          },
+          {
+            calls: [
+              {
+                to: eoaAccount.address,
+                value: 1n
+              }
+            ],
+            chainId: optimismSepolia.id
+          }
+        ],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+          chainId: baseSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
+    )
   })
 
   test("Cleanup userOp should have extra time window", async () => {
@@ -269,25 +337,26 @@ describe("mee.getQuote", () => {
   })
   test("Should get quote for sponsored super transaction (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
       sponsorship: true,
       sponsorshipOptions: {
-        url: DEFAULT_PATHFINDER_URL,
-        gasTank: {
-          address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-          token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-          chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-        }
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
       },
       instructions: [
         {
@@ -327,14 +396,19 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored super transaction (Mainnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport]
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -377,15 +451,20 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored super transaction with init code on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport],
-      index: BigInt(getRandomAccountIndex(1000, 10000000000000))
+      index: BigInt(getRandomAccountIndex(1000, 10000000000000)),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -435,15 +514,20 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored super transaction with authorization list on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport],
-      index: BigInt(getRandomAccountIndex(1000, 10000000000000))
+      index: BigInt(getRandomAccountIndex(1000, 10000000000000)),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -505,15 +589,20 @@ describe("mee.getQuote", () => {
 
   test("Should get quote for sponsored fusion super transaction with init code on first developer defined userOp", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain],
       signer: eoaAccount,
-      transports: [paymentChainTransport],
-      index: BigInt(getRandomAccountIndex(1000, 10000000000000))
+      index: BigInt(getRandomAccountIndex(1000, 10000000000000)),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const amountToTrigger = 1n
@@ -537,7 +626,6 @@ describe("mee.getQuote", () => {
         }
       ]
     })
-
     expect(fusionQuote).toBeDefined()
 
     // This ensure no fees are covered in trigger amount
@@ -573,28 +661,29 @@ describe("mee.getQuote", () => {
   })
 
   test.runIf(runPaidTests)(
-    "Should execute quote for sponsored super transaction (Testnet)",
+    "Should execute quote for sponsored super transaction on Testnet",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         instructions: [
           {
@@ -624,17 +713,22 @@ describe("mee.getQuote", () => {
   )
 
   test.runIf(runPaidTests)(
-    "Should execute quote for sponsored super transaction (Mainnet)",
+    "Should execute quote for sponsored super transaction on Mainnet",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [paymentChain],
         signer: eoaAccount,
-        transports: [paymentChainTransport]
+        chainConfigurations: [
+          {
+            chain: paymentChain,
+            transport: paymentChainTransport,
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
@@ -671,10 +765,15 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored super transaction for undeployed SCA case",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        index: BigInt(getRandomAccountIndex(1000, 1000000000))
+        index: BigInt(getRandomAccountIndex(1000, 1000000000)),
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const nexusAccount = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -683,18 +782,14 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         instructions: [
           {
@@ -729,11 +824,16 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored super transaction with 7702 delegation",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        accountAddress: eoaAccount.address,
-        index: BigInt(getRandomAccountIndex(1000, 1000000000))
+        index: BigInt(getRandomAccountIndex(1000, 1000000000)),
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION),
+            accountAddress: eoaAccount.address
+          }
+        ]
       })
 
       const nexusAccount = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -754,18 +854,14 @@ describe("mee.getQuote", () => {
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         delegate: true,
         instructions: [
@@ -814,9 +910,14 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored fusion super transaction",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -826,28 +927,24 @@ describe("mee.getQuote", () => {
       const balanceBefore = await getBalance(
         publicClient,
         mcNexus.addressOn(baseSepolia.id, true),
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         trigger: {
           amount: amountToTransfer,
           chainId: baseSepolia.id,
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
         },
         instructions: [
           {
@@ -880,7 +977,7 @@ describe("mee.getQuote", () => {
       const balanceAfter = await getBalance(
         publicClient,
         mcNexus.addressOn(baseSepolia.id, true),
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       expect(balanceAfter).to.eq(balanceBefore + amountToTransfer)
@@ -891,10 +988,15 @@ describe("mee.getQuote", () => {
     "Should execute quote for sponsored fusion super transaction for undeployed SCA case",
     async () => {
       const mcNexus = await toMultichainNexusAccount({
-        chains: [baseSepolia],
         signer: eoaAccount,
-        transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-        index: BigInt(getRandomAccountIndex(1000, 1000000000))
+        index: BigInt(getRandomAccountIndex(1000, 1000000000)),
+        chainConfigurations: [
+          {
+            chain: baseSepolia,
+            transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
       })
 
       const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -904,18 +1006,18 @@ describe("mee.getQuote", () => {
       const balanceBefore = await getBalance(
         publicClient,
         eoaAccount.address,
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       const meeClient = await createMeeClient({
         account: mcNexus,
-        apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+        apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
       })
 
       const transferInx = await mcNexus.build({
         type: "transfer",
         data: {
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
           amount: amountToTransfer,
           chainId: baseSepolia.id,
           recipient: eoaAccount.address
@@ -925,17 +1027,13 @@ describe("mee.getQuote", () => {
       const quote = await meeClient.getFusionQuote({
         sponsorship: true,
         sponsorshipOptions: {
-          url: DEFAULT_PATHFINDER_URL,
-          gasTank: {
-            address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
-            token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
-            chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
-          }
+          url: getDefaultMEENetworkUrl(true),
+          gasTank: getDefaultMeeGasTank(true)
         },
         trigger: {
           amount: amountToTransfer,
           chainId: baseSepolia.id,
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
         },
         instructions: [transferInx]
       })
@@ -958,7 +1056,7 @@ describe("mee.getQuote", () => {
       const balanceAfter = await getBalance(
         publicClient,
         eoaAccount.address,
-        testnetMcUSDC.addressOn(baseSepolia.id)
+        testnetMcTestUSDCP.addressOn(baseSepolia.id)
       )
 
       expect(balanceAfter).to.eq(balanceBefore)
@@ -968,14 +1066,19 @@ describe("mee.getQuote", () => {
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
   test.skip("Should execute sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getQuote({
@@ -1018,20 +1121,24 @@ describe("mee.getQuote", () => {
   // This test will be always skipped. This test requires someone to run a sponsored backend service from starter kit repo
   test.skip("Should execute fusion sponsored supertransaction with self hosted sponsorship backend (Testnet)", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])]
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({
       account: mcNexus,
-
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     const quote = await meeClient.getFusionQuote({
       trigger: {
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
         chainId: baseSepolia.id,
         amount: 1n
       },
@@ -1071,31 +1178,43 @@ describe("mee.getQuote", () => {
     expect(transactionStatus).to.to.eq("MINED_SUCCESS")
   })
 
-  test("should use feePayer if provided", async () => {
+  // Skipping this test due to the possibilities of transaction failures due to gas estimations
+  // It transfer Native tokens and ERC20 tokens as a initial process for test and it sometimes fails
+  // due to gas fluctuations
+  test.skip("should use feePayer if provided", async () => {
     const chain = baseSepolia
+
     const mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
       signer: eoaAccount,
-      transports: [http(TESTNET_RPC_URLS[chain.id])]
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
     const meeClient = await createMeeClient({
       account: mcNexus
     })
 
-    const tokenAddress = testnetMcUSDC.addressOn(chain.id)
+    const tokenAddress = testnetMcTestUSDCP.addressOn(chain.id)
     const feeAccount = privateKeyToAccount(generatePrivateKey())
+
     const walletClient = createWalletClient({
       account: feeAccount,
       chain,
       transport: http(TESTNET_RPC_URLS[chain.id])
     })
+
     const signerWalletClient = createWalletClient({
       account: mcNexus.signer,
       chain,
       transport: http(TESTNET_RPC_URLS[chain.id])
     })
 
-    const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
+    const { publicClient } = mcNexus.deploymentOn(chain.id, true)
 
     const quote = await meeClient.getQuote({
       instructions: [
@@ -1128,13 +1247,14 @@ describe("mee.getQuote", () => {
       ]
     })
     // Estimate gas for approve
+    // @ts-ignore
     const approveGas = await publicClient.estimateGas(request)
 
     // Estimate current gas fees
     const gasFees = await publicClient.estimateFeesPerGas()
 
-    // Add 300% buffer
-    const totalGasWithBuffer = (approveGas * gasFees.maxFeePerGas * 300n) / 100n
+    // Add 25% buffer
+    const totalGasWithBuffer = (approveGas * gasFees.maxFeePerGas * 125n) / 100n
 
     // Transfer ETH to the fee account
     const sendEthHash = await signerWalletClient.sendTransaction({
@@ -1146,6 +1266,7 @@ describe("mee.getQuote", () => {
       hash: sendEthHash,
       confirmations: TEST_BLOCK_CONFIRMATIONS
     })
+
     // transfer usdc to the fee account
     await transferErc20({
       publicClient,
@@ -1163,6 +1284,7 @@ describe("mee.getQuote", () => {
       spender: mcNexus.addressOn(chain.id, true),
       amount: BigInt(quote.paymentInfo.tokenWeiAmount) + 1n
     })
+
     const { hash } = await meeClient.executeQuote({ quote })
     // Wait for the transaction to complete
     const receipt = await meeClient.waitForSupertransactionReceipt({
@@ -1176,5 +1298,1588 @@ describe("mee.getQuote", () => {
       tokenAddress
     )
     expect(feeAccountErc20Balance).toBe(0n)
+  })
+
+  test("Should SDK automatically inject 7702 auth for multiple chains", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const optimismSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      baseSepolia.id,
+      true
+    )
+    const { version: optimismSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      optimismSepolia.id,
+      true
+    )
+
+    // Auth is only being signed manually here for comparision purposes
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: baseSepoliaMcNexusVersion.implementationAddress
+    })
+
+    // Auth is only being signed manually here for comparision purposes
+    const optimismSepoliaAuth =
+      await optimismSepoliaWalletClient.signAuthorization({
+        contractAddress: optimismSepoliaMcNexusVersion.implementationAddress
+      })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      authorizations: [], // No auth is added. So the SDK should add auth message in all userOps with multichain context
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.userOps[0].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[0].eip7702Auth).not.toBeDefined()
+
+    expect(quote.userOps[1].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[1].eip7702Auth).toBeDefined()
+    expect(quote.userOps[1].eip7702Auth?.address).to.eq(
+      baseSepoliaMcNexusVersion.implementationAddress
+    )
+    expect(quote.userOps[1].eip7702Auth?.chainId).to.eq(baseSepolia.id)
+    expect(quote.userOps[1].eip7702Auth?.nonce).to.eq(baseSepoliaAuth.nonce)
+    expect(quote.userOps[1].eip7702Auth?.r).to.eq(baseSepoliaAuth.r)
+    expect(quote.userOps[1].eip7702Auth?.s).to.eq(baseSepoliaAuth.s)
+    expect(quote.userOps[1].eip7702Auth?.yParity).to.eq(baseSepoliaAuth.yParity)
+
+    expect(quote.userOps[2].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[2].eip7702Auth).toBeDefined()
+    expect(quote.userOps[2].eip7702Auth?.address).to.eq(
+      optimismSepoliaMcNexusVersion.implementationAddress
+    )
+    expect(quote.userOps[2].eip7702Auth?.chainId).to.eq(optimismSepolia.id)
+    expect(quote.userOps[2].eip7702Auth?.nonce).to.eq(optimismSepoliaAuth.nonce)
+    expect(quote.userOps[2].eip7702Auth?.r).to.eq(optimismSepoliaAuth.r)
+    expect(quote.userOps[2].eip7702Auth?.s).to.eq(optimismSepoliaAuth.s)
+    expect(quote.userOps[2].eip7702Auth?.yParity).to.eq(
+      optimismSepoliaAuth.yParity
+    )
+  })
+
+  test("Should SDK inject manually signed 7702 auth for multiple chains", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const optimismSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      baseSepolia.id,
+      true
+    )
+    const { version: optimismSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      optimismSepolia.id,
+      true
+    )
+
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: baseSepoliaMcNexusVersion.implementationAddress
+    })
+
+    const optimismSepoliaAuth =
+      await optimismSepoliaWalletClient.signAuthorization({
+        contractAddress: optimismSepoliaMcNexusVersion.implementationAddress
+      })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      // Both baseSepolia and optimismSepolia auth added manually.
+      // order doesn't matter
+      authorizations: [optimismSepoliaAuth, baseSepoliaAuth],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.userOps[0].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[0].eip7702Auth).not.toBeDefined()
+
+    expect(quote.userOps[1].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[1].eip7702Auth).toBeDefined()
+    expect(quote.userOps[1].eip7702Auth?.address).to.eq(
+      baseSepoliaMcNexusVersion.implementationAddress
+    )
+    expect(quote.userOps[1].eip7702Auth?.chainId).to.eq(baseSepolia.id)
+    expect(quote.userOps[1].eip7702Auth?.nonce).to.eq(baseSepoliaAuth.nonce)
+    expect(quote.userOps[1].eip7702Auth?.r).to.eq(baseSepoliaAuth.r)
+    expect(quote.userOps[1].eip7702Auth?.s).to.eq(baseSepoliaAuth.s)
+    expect(quote.userOps[1].eip7702Auth?.yParity).to.eq(baseSepoliaAuth.yParity)
+
+    expect(quote.userOps[2].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[2].eip7702Auth).toBeDefined()
+    expect(quote.userOps[2].eip7702Auth?.address).to.eq(
+      optimismSepoliaMcNexusVersion.implementationAddress
+    )
+    expect(quote.userOps[2].eip7702Auth?.chainId).to.eq(optimismSepolia.id)
+    expect(quote.userOps[2].eip7702Auth?.nonce).to.eq(optimismSepoliaAuth.nonce)
+    expect(quote.userOps[2].eip7702Auth?.r).to.eq(optimismSepoliaAuth.r)
+    expect(quote.userOps[2].eip7702Auth?.s).to.eq(optimismSepoliaAuth.s)
+    expect(quote.userOps[2].eip7702Auth?.yParity).to.eq(
+      optimismSepoliaAuth.yParity
+    )
+  })
+
+  test("Should SDK ignore manually signed 7702 auth if the userOps doesn't exist for the chain", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const optimismSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      baseSepolia.id,
+      true
+    )
+    const { version: optimismSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      optimismSepolia.id,
+      true
+    )
+
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: baseSepoliaMcNexusVersion.implementationAddress
+    })
+
+    const optimismSepoliaAuth =
+      await optimismSepoliaWalletClient.signAuthorization({
+        contractAddress: optimismSepoliaMcNexusVersion.implementationAddress
+      })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      // Both baseSepolia and optimismSepolia auth added manually.
+      // order doesn't matter
+      authorizations: [optimismSepoliaAuth, baseSepoliaAuth],
+      instructions: [...baseSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.userOps[0].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[0].eip7702Auth).not.toBeDefined()
+
+    expect(quote.userOps[1].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[1].eip7702Auth).toBeDefined()
+    expect(quote.userOps[1].eip7702Auth?.address).to.eq(
+      baseSepoliaMcNexusVersion.implementationAddress
+    )
+    expect(quote.userOps[1].eip7702Auth?.chainId).to.eq(baseSepolia.id)
+    expect(quote.userOps[1].eip7702Auth?.nonce).to.eq(baseSepoliaAuth.nonce)
+    expect(quote.userOps[1].eip7702Auth?.r).to.eq(baseSepoliaAuth.r)
+    expect(quote.userOps[1].eip7702Auth?.s).to.eq(baseSepoliaAuth.s)
+    expect(quote.userOps[1].eip7702Auth?.yParity).to.eq(baseSepoliaAuth.yParity)
+  })
+
+  test("Should SDK automatically inject one 7702 auth with chain id zero if the nonce on all the chains are same", async () => {
+    const eoaAccount = privateKeyToAccount(generatePrivateKey())
+
+    const walletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    // Auth is only being signed manually here for comparision purposes
+    const auth = await walletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: 0
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      multichain7702Auth: true,
+      authorizations: [],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.userOps[0].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[0].eip7702Auth).not.toBeDefined()
+
+    expect(quote.userOps[1].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[1].eip7702Auth).toBeDefined()
+    expect(quote.userOps[1].eip7702Auth?.address).to.eq(
+      version.implementationAddress
+    )
+    expect(quote.userOps[1].eip7702Auth?.chainId).to.eq(auth.chainId)
+    expect(quote.userOps[1].eip7702Auth?.nonce).to.eq(auth.nonce)
+    expect(quote.userOps[1].eip7702Auth?.r).to.eq(auth.r)
+    expect(quote.userOps[1].eip7702Auth?.s).to.eq(auth.s)
+    expect(quote.userOps[1].eip7702Auth?.yParity).to.eq(auth.yParity)
+
+    expect(quote.userOps[2].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[2].eip7702Auth).toBeDefined()
+    expect(quote.userOps[2].eip7702Auth?.address).to.eq(
+      version.implementationAddress
+    )
+    expect(quote.userOps[2].eip7702Auth?.chainId).to.eq(auth.chainId)
+    expect(quote.userOps[2].eip7702Auth?.nonce).to.eq(auth.nonce)
+    expect(quote.userOps[2].eip7702Auth?.r).to.eq(auth.r)
+    expect(quote.userOps[2].eip7702Auth?.s).to.eq(auth.s)
+    expect(quote.userOps[2].eip7702Auth?.yParity).to.eq(auth.yParity)
+  })
+
+  test("Should SDK use manually injected 7702 auth with chain id zero for all chains if the nonce are same", async () => {
+    const newEoaAccount = privateKeyToAccount(generatePrivateKey())
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: newEoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: newEoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: newEoaAccount.address
+        }
+      ]
+    })
+
+    const { publicClient } = mcNexus.deploymentOn(optimismSepolia.id, true)
+
+    const eoaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    await transferErc20({
+      publicClient,
+      walletClient: eoaWalletClient,
+      tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+      recipient: newEoaAccount.address,
+      amount: parseUnits("0.5", 6)
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const walletClient = createWalletClient({
+      account: newEoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const auth = await walletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: 0
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: newEoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: newEoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      delegate: true,
+      multichain7702Auth: true,
+      authorizations: [auth],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+        chainId: optimismSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    console.log(quote)
+
+    expect(quote.userOps[0].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[0].eip7702Auth).toBeDefined()
+
+    expect(quote.userOps[1].userOp.initCode).to.eq("0x")
+    expect(quote.userOps[1].eip7702Auth).toBeDefined()
+    expect(quote.userOps[1].eip7702Auth?.address).to.eq(
+      version.implementationAddress
+    )
+    expect(quote.userOps[1].eip7702Auth?.chainId).to.eq(auth.chainId)
+    expect(quote.userOps[1].eip7702Auth?.nonce).to.eq(auth.nonce)
+    expect(quote.userOps[1].eip7702Auth?.r).to.eq(auth.r)
+    expect(quote.userOps[1].eip7702Auth?.s).to.eq(auth.s)
+    expect(quote.userOps[1].eip7702Auth?.yParity).to.eq(auth.yParity)
+
+    expect(quote.userOps[2].eip7702Auth).not.toBeDefined()
+  })
+
+  test("Should SDK throw an error if invalid 7702 auth is used", async () => {
+    const eoaAccount = privateKeyToAccount(generatePrivateKey())
+
+    const walletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const invalidAuth = await walletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: 1 // Signing for ETH chain which makes it invalid for this sprtx
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        multichain7702Auth: true,
+        authorizations: [invalidAuth],
+        instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          chainId: optimismSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Invalid authorizations: The nonce for some of the chains are same. Missing multichain authorization for the following chains: 11155420, 84532"
+    )
+  })
+
+  test("Should SDK throw an error if 7702 auth is not sufficient for all the chains", async () => {
+    const walletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const auth = await walletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: baseSepolia.id
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        multichain7702Auth: true,
+        authorizations: [auth],
+        instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          chainId: optimismSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Invalid authorizations: The nonce for all the chains are not same. You need to pass specific authorizations for the following chains: 11155420"
+    )
+  })
+
+  test("Should SDK throw an error if nonces on all the chains are same and custom 7702 auths are passed more than one", async () => {
+    const eoaAccount = privateKeyToAccount(generatePrivateKey())
+
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const optimismSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: baseSepolia.id
+    })
+
+    const optimismSepoliaAuth =
+      await optimismSepoliaWalletClient.signAuthorization({
+        contractAddress: version.implementationAddress,
+        chainId: optimismSepolia.id
+      })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        multichain7702Auth: true,
+        authorizations: [baseSepoliaAuth, optimismSepoliaAuth],
+        instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          chainId: optimismSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Invalid authorizations: The nonce for all the chains are same and only one multichain authorization is expected"
+    )
+  })
+
+  test("Should SDK throw an error if non zero chain id auth is passed for multichain and one chain sprtx", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: baseSepolia.id
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        multichain7702Auth: true,
+        authorizations: [baseSepoliaAuth],
+        instructions: [...baseSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+          chainId: baseSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Invalid authorizations: Multichain authorization should be signed with chain ID zero"
+    )
+  })
+
+  test("Should SDK throw an error for single chain authorization if the custom auth is not sufficient", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: baseSepolia.id
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        authorizations: [baseSepoliaAuth],
+        instructions: [...baseSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          chainId: optimismSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Authorizations are missing for the following chains: 11155420"
+    )
+  })
+
+  test("Should SDK throw an error for single chain authorization if the multichain auth is passed", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    const { version } = mcNexus.deploymentOn(baseSepolia.id, true)
+
+    const multichainAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: version.implementationAddress,
+      chainId: 0
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    await expect(
+      meeClient.getQuote({
+        delegate: true,
+        authorizations: [multichainAuth],
+        instructions: [...baseSepoliaTransfer],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+          chainId: optimismSepolia.id
+        }
+      })
+    ).rejects.toThrow(
+      "Authorizations are missing for the following chains: 11155420, 84532"
+    )
+  })
+
+  // Skipping the test because of RPC issue which fails to undelegate the EOA and it fails for AA13
+  test.skip("Should execute multiple 7702 delegation supertx with manual single chain authorisations with sponsorship", async () => {
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const optimismSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: optimismSepolia,
+      transport: http(TESTNET_RPC_URLS[optimismSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    let isDelegated = await mcNexus.isDelegated()
+
+    if (isDelegated) {
+      await mcNexus.unDelegate()
+      isDelegated = await mcNexus.isDelegated()
+    }
+
+    expect(isDelegated).toBe(false)
+
+    const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      baseSepolia.id,
+      true
+    )
+
+    const { version: optimismSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      optimismSepolia.id,
+      true
+    )
+
+    const baseSepoliaAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: baseSepoliaMcNexusVersion.implementationAddress
+    })
+
+    const optimismSepoliaAuth =
+      await optimismSepoliaWalletClient.signAuthorization({
+        contractAddress: optimismSepoliaMcNexusVersion.implementationAddress
+      })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      authorizations: [baseSepoliaAuth, optimismSepoliaAuth],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    isDelegated = await mcNexus.isDelegated()
+
+    expect(isDelegated).toBe(true)
+
+    if (isDelegated) {
+      await mcNexus.unDelegate()
+
+      isDelegated = await mcNexus.isDelegated()
+    }
+
+    expect(isDelegated).toBe(false)
+  })
+
+  // Skipping the test because of RPC issue which fails to undelegate the EOA and it fails for AA13
+  test.skip("Should execute multiple 7702 delegation supertx with authomatic auth and single chain auth", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    let isDelegated = await mcNexus.isDelegated()
+
+    if (isDelegated) {
+      await mcNexus.unDelegate()
+      isDelegated = await mcNexus.isDelegated()
+    }
+
+    expect(isDelegated).toBe(false)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 1n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      delegate: true,
+      authorizations: [],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(optimismSepolia.id),
+        chainId: optimismSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: 5
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    isDelegated = await mcNexus.isDelegated()
+
+    expect(isDelegated).toBe(true)
+
+    if (isDelegated) {
+      await mcNexus.unDelegate()
+
+      isDelegated = await mcNexus.isDelegated()
+    }
+
+    expect(isDelegated).toBe(false)
+  })
+
+  test("Should execute multichain 7702 delegation supertx with manual multichain auth", async () => {
+    // New account, so the nonce on all the chains are same
+    const eoaAccount = privateKeyToAccount(generatePrivateKey())
+
+    const baseSepoliaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: baseSepolia,
+      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+    }).extend(publicActions)
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    let isDelegated = await mcNexus.isDelegated()
+    expect(isDelegated).toBe(false)
+
+    const { version: baseSepoliaMcNexusVersion } = mcNexus.deploymentOn(
+      baseSepolia.id,
+      true
+    )
+
+    const multichainAuth = await baseSepoliaWalletClient.signAuthorization({
+      contractAddress: baseSepoliaMcNexusVersion.implementationAddress,
+      chainId: 0
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 0n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 0n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      multichain7702Auth: true,
+      authorizations: [multichainAuth],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote: quote })
+
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: 5
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    isDelegated = await mcNexus.isDelegated()
+
+    expect(isDelegated).toBe(true)
+  })
+
+  test("Should execute multichain 7702 delegation supertx with automatic auth", async () => {
+    // New account, so the nonce on all the chains are same
+    const eoaAccount = privateKeyToAccount(generatePrivateKey())
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: eoaAccount.address
+        }
+      ]
+    })
+
+    let isDelegated = await mcNexus.isDelegated()
+    expect(isDelegated).toBe(false)
+
+    const meeClient = await createMeeClient({
+      account: mcNexus,
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
+    })
+
+    const baseSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: baseSepolia.id,
+        amount: 0n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
+      }
+    })
+
+    const optimismSepoliaTransfer = await mcNexus.build({
+      type: "transfer",
+      data: {
+        recipient: eoaAccount.address,
+        chainId: optimismSepolia.id,
+        amount: 0n,
+        tokenAddress: testnetMcTestUSDCP.addressOn(optimismSepolia.id)
+      }
+    })
+
+    const quote = await meeClient.getQuote({
+      sponsorship: true,
+      sponsorshipOptions: {
+        url: getDefaultMEENetworkUrl(true),
+        gasTank: getDefaultMeeGasTank(true)
+      },
+      delegate: true,
+      multichain7702Auth: true,
+      authorizations: [],
+      instructions: [...baseSepoliaTransfer, ...optimismSepoliaTransfer]
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote: quote })
+
+    expect(hash).toBeDefined()
+
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: 5
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
+
+    isDelegated = await mcNexus.isDelegated()
+
+    expect(isDelegated).toBe(true)
+  })
+
+  test("Multichain accountAddress overrides for EIP 7702 Auth", async () => {
+    const randomAddressOne = privateKeyToAccount(generatePrivateKey())
+    const randomAddressTwo = privateKeyToAccount(generatePrivateKey())
+
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: randomAddressOne.address
+        },
+        {
+          chain: optimismSepolia,
+          transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0),
+          accountAddress: randomAddressTwo.address
+        }
+      ]
+    })
+
+    expect(mcNexus.addressOn(baseSepolia.id, true)).to.eq(
+      randomAddressOne.address
+    )
+    expect(mcNexus.addressOn(optimismSepolia.id, true)).to.eq(
+      randomAddressTwo.address
+    )
+  })
+
+  test("Should include gasRefundAddress in quote payment info if configured in feeToken", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({ account: mcNexus })
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id,
+        gasRefundAddress: eoaAccount.address
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    expect(quote.paymentInfo.gasRefundAddress).toEqual(eoaAccount.address)
+  })
+
+  test("Global executionSimulationRetryDelay should be applied for quote", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 2000
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        },
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id
+        }
+      ],
+      batch: false,
+      executionSimulationRetryDelay: customExecutionSimulationRetryDelay,
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    // For payment userOps, the custom retry should not be applied so payment can be done as soon as possible always
+    expect(quote.userOps[0].executionSimulationRetryDelay).to.be.eq(undefined)
+
+    for (const { executionSimulationRetryDelay } of quote.userOps.slice(1)) {
+      expect(executionSimulationRetryDelay).to.be.eq(
+        customExecutionSimulationRetryDelay
+      )
+    }
+  })
+
+  test("Instruction level executionSimulationRetryDelay should be applied for quote", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 2000
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id,
+          executionSimulationRetryDelay: customExecutionSimulationRetryDelay
+        },
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id,
+          executionSimulationRetryDelay:
+            customExecutionSimulationRetryDelay + 1000
+        }
+      ],
+      batch: false,
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    // For payment userOps, the custom retry should not be applied so payment can be done as soon as possible always
+    expect(quote.userOps[0].executionSimulationRetryDelay).to.be.eq(undefined)
+
+    expect(quote.userOps[1].executionSimulationRetryDelay).to.be.eq(
+      customExecutionSimulationRetryDelay
+    )
+    expect(quote.userOps[2].executionSimulationRetryDelay).to.be.eq(
+      customExecutionSimulationRetryDelay + 1000
+    )
+  })
+
+  test("Should execute quote with custom instruction level executionSimulationRetryDelay", async () => {
+    const mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(MEEVersion.V2_1_0)
+        }
+      ]
+    })
+
+    const meeClient = await createMeeClient({
+      account: mcNexus
+    })
+
+    const customExecutionSimulationRetryDelay = 12000 // 10 seconds
+
+    const quote = await meeClient.getQuote({
+      instructions: [
+        {
+          calls: [
+            {
+              to: eoaAccount.address,
+              value: 1n
+            }
+          ],
+          chainId: baseSepolia.id,
+          executionSimulationRetryDelay: customExecutionSimulationRetryDelay
+        }
+      ],
+      feeToken: {
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
+        chainId: baseSepolia.id
+      }
+    })
+
+    expect(quote).toBeDefined()
+
+    const { hash } = await meeClient.executeQuote({ quote })
+
+    expect(hash).toBeDefined()
+    const receipt = await meeClient.waitForSupertransactionReceipt({
+      hash,
+      confirmations: TEST_BLOCK_CONFIRMATIONS
+    })
+
+    expect(receipt).toBeDefined()
+    expect(receipt.transactionStatus).toBe("MINED_SUCCESS")
   })
 })

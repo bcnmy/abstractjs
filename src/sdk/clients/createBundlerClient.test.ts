@@ -9,12 +9,13 @@ import {
 } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, inject, test } from "vitest"
+import { beforeAll, describe, expect, inject, test, vi } from "vitest"
 import {
   TESTNET_RPC_URLS,
   TEST_BLOCK_CONFIRMATIONS,
   toNetwork
 } from "../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../test/testTokens"
 import type { NetworkConfig } from "../../test/testUtils"
 import {
   type MultichainSmartAccount,
@@ -22,7 +23,8 @@ import {
 } from "../account/toMultiChainNexusAccount"
 import { type NexusAccount, toNexusAccount } from "../account/toNexusAccount"
 import { safeMultiplier } from "../account/utils"
-import { testnetMcUSDC } from "../constants"
+import { DEFAULT_MEE_VERSION } from "../constants"
+import { getMEEVersion } from "../modules"
 import type { NexusClient } from "./createBicoBundlerClient"
 import { createBicoBundlerClient } from "./createBicoBundlerClient"
 import { type MeeClient, createMeeClient } from "./createMeeClient"
@@ -30,7 +32,7 @@ import { erc7579Actions } from "./decorators/erc7579"
 import { smartAccountActions } from "./decorators/smartAccount"
 
 // @ts-ignore
-const { runPaidTests } = inject("settings")
+const { runLifecycleTests, runPaidTests } = inject("settings")
 
 const COMPETITORS = [
   {
@@ -54,68 +56,76 @@ const calls = [
   }
 ]
 
-describe.runIf(runPaidTests)("nexus.interoperability with 'MeeNode'", () => {
-  let network: NetworkConfig
-  let eoaAccount: LocalAccount
+describe.runIf(runLifecycleTests)(
+  "nexus.interoperability with 'MeeNode'",
+  () => {
+    let network: NetworkConfig
+    let eoaAccount: LocalAccount
 
-  let mcNexus: MultichainSmartAccount
-  let meeClient: MeeClient
+    let mcNexus: MultichainSmartAccount
+    let meeClient: MeeClient
 
-  let chain: Chain
+    let chain: Chain
 
-  beforeAll(async () => {
-    network = await toNetwork("TESTNET_FROM_ENV_VARS")
-    eoaAccount = network.account!
-    chain = baseSepolia
+    beforeAll(async () => {
+      network = await toNetwork("TESTNET_FROM_ENV_VARS")
+      eoaAccount = network.account!
+      chain = baseSepolia
 
-    mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
-      signer: eoaAccount
+      mcNexus = await toMultichainNexusAccount({
+        signer: eoaAccount,
+        chainConfigurations: [
+          {
+            chain: chain,
+            transport: http(network.rpcUrl),
+            version: getMEEVersion(DEFAULT_MEE_VERSION)
+          }
+        ]
+      })
+
+      meeClient = await createMeeClient({ account: mcNexus })
     })
 
-    meeClient = await createMeeClient({ account: mcNexus })
-  })
+    /**
+     * This test doesn't utilise Fusion =>  there is not trigger Txn,
+     * and Nexus is NOT prefunded before userOp =>
+     * => Nexus account SHOULD have its own USDC balance
+     * Otherwise the test will fail
+     */
+    test("should send a transaction through the MeeNode", async () => {
+      const usdcBalance = await createPublicClient({
+        chain: baseSepolia,
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id])
+      }).getBalance({
+        address: mcNexus.addressOn(baseSepolia.id, true)
+      })
 
-  /**
-   * This test doesn't utilise Fusion =>  there is not trigger Txn,
-   * and Nexus is NOT prefunded before userOp =>
-   * => Nexus account SHOULD have its own USDC balance
-   * Otherwise the test will fail
-   */
-  test("should send a transaction through the MeeNode", async () => {
-    const usdcBalance = await createPublicClient({
-      chain: baseSepolia,
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id])
-    }).getBalance({
-      address: mcNexus.addressOn(baseSepolia.id, true)
-    })
+      if (usdcBalance === 0n) {
+        throw new Error("Insufficient balance")
+      }
 
-    if (usdcBalance === 0n) {
-      throw new Error("Insufficient balance")
-    }
-
-    const { hash } = await meeClient.execute({
-      instructions: [
-        {
-          calls,
+      const { hash } = await meeClient.execute({
+        instructions: [
+          {
+            calls,
+            chainId: baseSepolia.id
+          }
+        ],
+        feeToken: {
+          address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
           chainId: baseSepolia.id
         }
-      ],
-      feeToken: {
-        address: testnetMcUSDC.addressOn(baseSepolia.id),
-        chainId: baseSepolia.id
-      }
-    })
-
-    const { transactionStatus } =
-      await meeClient.waitForSupertransactionReceipt({
-        hash,
-        confirmations: TEST_BLOCK_CONFIRMATIONS
       })
-    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-  })
-})
+
+      const { transactionStatus } =
+        await meeClient.waitForSupertransactionReceipt({
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+      expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    })
+  }
+)
 
 describe.runIf(runPaidTests).each(COMPETITORS)(
   "nexus.interoperability with $name bundler",
@@ -132,8 +142,11 @@ describe.runIf(runPaidTests).each(COMPETITORS)(
     beforeAll(async () => {
       nexusAccount = await toNexusAccount({
         signer: account,
-        chain,
-        transport: http(TESTNET_RPC_URLS[chain.id])
+        chainConfiguration: {
+          chain,
+          transport: http(TESTNET_RPC_URLS[chain.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
       })
 
       nexusAccountAddress = await nexusAccount.getAddress()

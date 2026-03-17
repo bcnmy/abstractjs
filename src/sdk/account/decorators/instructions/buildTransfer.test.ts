@@ -7,11 +7,14 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildTransfer from "./buildTransfer"
 
 describe("mee.buildTransfer", () => {
@@ -26,6 +29,7 @@ describe("mee.buildTransfer", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -37,10 +41,25 @@ describe("mee.buildTransfer", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
 
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
@@ -48,7 +67,7 @@ describe("mee.buildTransfer", () => {
 
   it("should highlight building transfer instructions", async () => {
     const instructions: Instruction[] = await buildTransfer(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         chainId: targetChain.id,
         tokenAddress,

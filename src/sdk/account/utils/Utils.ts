@@ -8,12 +8,19 @@ import {
   type TypedDataDomain,
   type TypedDataParameter,
   concat,
+  createPublicClient,
+  decodeAbiParameters,
   decodeFunctionResult,
   encodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
   hexToBytes,
+  isAddress,
+  isHex,
   keccak256,
+  numberToHex,
+  pad,
+  padHex,
   parseAbi,
   parseAbiParameters,
   publicActions,
@@ -21,6 +28,8 @@ import {
   toBytes,
   toHex
 } from "viem"
+import type { Transport } from "viem"
+import type { Chain } from "viem/chains"
 import {
   BICONOMY_TOKEN_PAYMASTER,
   MOCK_MULTI_MODULE_ADDRESS,
@@ -29,6 +38,7 @@ import {
   NEXUS_DOMAIN_TYPEHASH,
   NEXUS_DOMAIN_VERSION
 } from "../../account/utils/Constants"
+import { MEEVersion } from "../../constants"
 import { EIP1271Abi } from "../../constants/abi"
 import {
   type AnyData,
@@ -36,6 +46,8 @@ import {
   moduleTypeIds
 } from "../../modules/utils/Types"
 import type { AccountMetadata, EIP712DomainReturn } from "./Types"
+import { isVersionOlder, versionIsAtLeast } from "./getVersion"
+import type { MeeVersionsWithChainId } from "./getVersion"
 
 /**
  * Type guard to check if a value is null or undefined.
@@ -45,6 +57,56 @@ import type { AccountMetadata, EIP712DomainReturn } from "./Types"
  */
 export const isNullOrUndefined = (value: AnyData): value is undefined => {
   return value === null || value === undefined
+}
+
+/**
+ * Checks if the provided value can be safely converted to a BigInt.
+ *
+ * @param value - The value to check for BigInt compatibility.
+ * @returns True if the value can be converted to BigInt, false otherwise.
+ */
+export const isBigInt = (value: AnyData) => {
+  try {
+    // Attempt to convert the value to BigInt.
+    BigInt(value)
+    return true
+  } catch {
+    // If conversion fails, value is not a valid BigInt.
+    return false
+  }
+}
+
+export const toBytes32 = (value: bigint | boolean | Address | Hex): Hex => {
+  if (typeof value === "boolean") {
+    return padHex(toHex(value ? 1n : 0n), { size: 32 })
+  }
+
+  if (typeof value === "bigint") {
+    return padHex(toHex(value), { size: 32 })
+  }
+
+  if (isAddress(value)) {
+    return padHex(value, { size: 32 })
+  }
+
+  if (isHex(value)) {
+    return padHex(value, { size: 32 })
+  }
+
+  throw new Error(
+    "Invalid value: must be boolean, bigint, address, or hex string"
+  )
+}
+
+/**
+ * Removes all HTTP/HTTPS URLs from the provided string.
+ *
+ * @param value - The string to sanitize.
+ * @returns The sanitized string with URLs removed.
+ */
+export const sanitizeUrl = (value: string) => {
+  // Replace all occurrences of http:// or https:// followed by non-whitespace characters with an empty string.
+  return value.replace(/https?:\/\/[^\s]+/g, "")
 }
 
 /**
@@ -68,6 +130,10 @@ export const isValidRpcUrl = (url: string): boolean => {
 export const addressEquals = (a?: string, b?: string): boolean =>
   !!a && !!b && a?.toLowerCase() === b.toLowerCase()
 
+export const isNativeToken = (tokenAddress: Address): boolean =>
+  addressEquals(tokenAddress, "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") ||
+  addressEquals(tokenAddress, "0x0000000000000000000000000000000000000000")
+
 /**
  * Parameters for wrapping a signature according to EIP-6492.
  */
@@ -79,6 +145,12 @@ export type SignWith6492Params = {
   /** The original signature to wrap */
   signature: Hash
 }
+
+/**
+ * The EIP-6492 magic suffix used to identify wrapped signatures.
+ */
+export const ERC6492_MAGIC_BYTES: Hex =
+  "0x6492649264926492649264926492649264926492649264926492649264926492"
 
 /**
  * Wraps a signature according to EIP-6492 specification.
@@ -104,8 +176,70 @@ export const wrapSignatureWith6492 = ({
       factoryCalldata,
       signature
     ]),
-    "0x6492649264926492649264926492649264926492649264926492649264926492"
+    ERC6492_MAGIC_BYTES
   ])
+}
+
+/**
+ * Result of unwrapping an EIP-6492 signature.
+ */
+export type UnwrapSignature6492Result = {
+  /** Whether the signature was wrapped with EIP-6492 */
+  isWrapped: boolean
+  /** The original signature (unwrapped if it was wrapped) */
+  originalSignature: Hex
+  /** The factory contract address (only present if wrapped) */
+  factoryAddress?: Address
+  /** The factory initialization calldata (only present if wrapped) */
+  factoryCalldata?: Hex
+}
+
+/**
+ * Unwraps an EIP-6492 signature if it's wrapped, otherwise returns the original signature.
+ *
+ * EIP-6492 signatures are used to validate signatures for contracts that haven't been deployed yet.
+ * They wrap the original signature with factory deployment information.
+ *
+ * @param wrappedSignature - The potentially wrapped signature to unwrap
+ * @returns An object containing the unwrapped signature and deployment information if wrapped
+ *
+ * @example
+ * ```ts
+ * const result = unwrapSignature6492(signature)
+ * if (result.isWrapped) {
+ *   console.log('Factory:', result.factoryAddress)
+ *   console.log('Original signature:', result.originalSignature)
+ * } else {
+ *   console.log('Not wrapped, using signature as-is')
+ * }
+ * ```
+ */
+export const unwrapSignature6492 = (
+  wrappedSignature: Hex
+): UnwrapSignature6492Result => {
+  // Check if signature ends with EIP-6492 magic bytes
+  if (!wrappedSignature.endsWith(ERC6492_MAGIC_BYTES.slice(2))) {
+    return {
+      isWrapped: false,
+      originalSignature: wrappedSignature
+    }
+  }
+
+  // Remove magic bytes (32 bytes = 64 hex chars)
+  const signatureWithoutMagic = wrappedSignature.slice(0, -64) as Hex
+
+  // Decode the ABI-encoded data: (address, bytes, bytes)
+  const decoded = decodeAbiParameters(
+    parseAbiParameters("address, bytes, bytes"),
+    signatureWithoutMagic
+  )
+
+  return {
+    isWrapped: true,
+    factoryAddress: decoded[0],
+    factoryCalldata: decoded[1],
+    originalSignature: decoded[2]
+  }
 }
 
 /**
@@ -221,7 +355,9 @@ export function _hashTypedData(
 
 export function getTypesForEIP712Domain({
   domain
-}: { domain?: TypedDataDomain | undefined }): TypedDataParameter[] {
+}: {
+  domain?: TypedDataDomain | undefined
+}): TypedDataParameter[] {
   return [
     typeof domain?.name === "string" && { name: "name", type: "string" },
     domain?.version && { name: "version", type: "string" },
@@ -475,4 +611,157 @@ export function parseRequestArguments(input: string[]) {
   )
 
   return result
+}
+
+/**
+ * Checks if a chain supports Cancun.
+ *
+ * @param transport - The transport to use
+ * @param chain - The chain to check
+ * @returns True if the chain supports Cancun, false otherwise
+ */
+export async function supportsCancun({
+  transport,
+  chain
+}: {
+  transport: Transport
+  chain: Chain
+}): Promise<boolean> {
+  const cancunSupportedChains: Record<string, boolean> = {
+    "1": true,
+    "11155111": true,
+    "8453": true,
+    "84532": true,
+    "137": true,
+    "80002": true,
+    "42161": true,
+    "421614": true,
+    "10": true,
+    "11155420": true,
+    "56": true,
+    "97": true,
+    "146": true,
+    "57054": true,
+    "534352": true,
+    "534351": true,
+    "100": true,
+    "10200": true,
+    "43114": true,
+    "43113": true,
+    "33139": true,
+    "33111": true,
+    "999": true,
+    "1116": true,
+    "267": true,
+    "1329": true,
+    "1328": true,
+    "130": true,
+    "1301": true,
+    "747474": true,
+    "1135": true,
+    "480": true,
+    "4801": true,
+    "20993": true,
+    "10143": true,
+    "143": true,
+    "88882": false,
+    "531050204": true,
+    "5010405": true
+  }
+
+  if (cancunSupportedChains[chain.id.toString()]) {
+    return cancunSupportedChains[chain.id.toString()]
+  }
+
+  const client = createPublicClient({
+    chain,
+    transport
+  })
+
+  // Fetch the latest block with full transactions
+  const block = await client.getBlock({
+    blockTag: "latest"
+  })
+
+  // Check for Cancun-specific block fields
+  if (block.blobGasUsed !== undefined || block.excessBlobGas !== undefined) {
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Calculate the storage slot for nonces in EntryPoint V7
+ * Following exact Solidity storage layout rules from docs
+ */
+export function calculateNonceStorageSlot(sender: Address, key = 0n): Hex {
+  const BASE_SLOT = 1 // nonceSequenceNumber is at slot 1
+
+  // Step 1: Calculate slot for first mapping level
+  // keccak256(abi.encode(address_key, uint256_slot))
+  // Both address and slot are padded to 32 bytes
+  const firstLevelSlot = keccak256(
+    concat([
+      pad(sender, { size: 32 }), // address padded to 32 bytes
+      pad(numberToHex(BASE_SLOT), { size: 32 }) // slot padded to 32 bytes
+    ])
+  )
+
+  // Step 2: Calculate slot for second mapping level
+  // keccak256(abi.encode(uint192_key, bytes32_slot))
+  const finalSlot = keccak256(
+    concat([
+      pad(numberToHex(key), { size: 32 }), // uint192 key padded to 32 bytes
+      firstLevelSlot // already 32 bytes
+    ])
+  )
+
+  return finalSlot
+}
+
+/**
+ * Checks if the account has consistent MEE versions across deployments for signing the quote.
+ *
+ * Version < 2.2.0 uses personal_sign, version >= 2.2.0 uses EIP-712 signing.
+ * Mixing these two signing methods is not allowed as it would result in incompatible signatures.
+ *
+ * For EIP-712 versions (>= 2.2.0), all MEE versions must be the same to ensure consistent
+ * signature validation across chains.
+ *
+ * @param meeVersions - Array of chain IDs with their corresponding MEE versions
+ * @throws Error if versions are inconsistent or mixing signing methods
+ */
+export function validateConsistentMeeVersions(
+  meeVersions: MeeVersionsWithChainId
+): void {
+  let hasPersonalSignVersion = false
+  let hasEIP712Version = false
+
+  // Track version consistency while iterating (fail-fast approach)
+  for (const { version: meeVersionConfig } of meeVersions) {
+    const meeVersion = meeVersionConfig.version
+    // Check version type as we go
+    const isCurrentVersionPersonalSign = isVersionOlder(
+      meeVersion,
+      MEEVersion.V2_2_1
+    )
+    const isCurrentVersionEIP712 = versionIsAtLeast(
+      meeVersion,
+      MEEVersion.V2_2_1
+    )
+
+    // Update flags
+    hasPersonalSignVersion =
+      hasPersonalSignVersion || isCurrentVersionPersonalSign
+    hasEIP712Version = hasEIP712Version || isCurrentVersionEIP712
+
+    // Early exit: Cannot mix personal_sign and EIP-712 signing methods
+    if (hasPersonalSignVersion && hasEIP712Version) {
+      throw new Error(
+        "MEE versions on all chains should be whether less than 2.2.0 or greater than or equal to 2.2.0. " +
+          "Otherwise Multichain account won't be able to consume the same signature across all chains involved in the quote request."
+      )
+    }
+  }
 }

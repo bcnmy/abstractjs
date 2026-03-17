@@ -4,6 +4,8 @@ import { privateKeyToAccount } from "viem/accounts"
 import { mainnet } from "viem/chains"
 import { describe, expect, it } from "vitest"
 import { MAINNET_RPC_URLS } from "../../../test/testSetup"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { toNexusAccount } from "../toNexusAccount"
 import {
   type BundlerClientTypes,
@@ -39,9 +41,12 @@ describe("utils.fromBundlerClient", async () => {
 
   // Create a real Nexus account
   const nexusAccount = await toNexusAccount({
-    chain: mainnet,
     signer,
-    transport
+    chainConfiguration: {
+      chain: mainnet,
+      transport,
+      version: getMEEVersion(DEFAULT_MEE_VERSION)
+    }
   })
 
   // Attach the Nexus account to the bundler client

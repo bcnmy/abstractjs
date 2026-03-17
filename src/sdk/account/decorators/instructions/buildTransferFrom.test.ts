@@ -7,11 +7,14 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildTransferFrom from "./buildTransferFrom"
 
 describe("mee.buildTransferFrom", () => {
@@ -25,6 +28,7 @@ describe("mee.buildTransferFrom", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -36,17 +40,32 @@ describe("mee.buildTransferFrom", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
 
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
   it("should highlight building transferFrom instructions", async () => {
     const instructions: Instruction[] = await buildTransferFrom(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
         chainId: targetChain.id,
         tokenAddress: mcUSDC.addressOn(paymentChain.id),

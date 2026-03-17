@@ -1,7 +1,9 @@
+import type { Address } from "viem"
 import type { MinimalModuleConfig } from "../account"
-import { COMPOSABLE_MODULE_ADDRESS } from "../constants"
 
-export const toComposableExecutor = (): MinimalModuleConfig => ({
-  module: COMPOSABLE_MODULE_ADDRESS,
+export const toComposableExecutor = (
+  composableAddress: Address
+): MinimalModuleConfig => ({
+  module: composableAddress,
   data: "0x"
 })

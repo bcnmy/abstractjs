@@ -1,8 +1,7 @@
-import {
-  type GetTransactionReceiptParameters,
-  type Hex,
-  type TransactionReceipt,
-  formatTransactionReceipt
+import type {
+  GetTransactionReceiptParameters,
+  Hex,
+  TransactionReceipt
 } from "viem"
 import { getTransactionReceipt as getTransactionReceiptFromViem } from "viem/actions"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
@@ -13,28 +12,41 @@ import {
 } from "../../../account/utils/explorer"
 import { parseErrorMessage } from "../../../account/utils/parseErrorMessage"
 import { parseTransactionStatus } from "../../../account/utils/parseTransactionStatus"
-import type { AnyData } from "../../../modules"
-import { type Url, createHttpClient } from "../../createHttpClient"
-import {
-  type BaseMeeClient,
-  DEFAULT_PATHFINDER_URL
-} from "../../createMeeClient"
+import type { Url } from "../../createHttpClient"
+import type { BaseMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload, MeeFilledUserOpDetails } from "./getQuote"
+
+export type StatusFetchMode = "fast-block" | "default"
 
 /**
  * Parameters for waiting for a supertransaction receipt
  */
 export type GetSupertransactionReceiptParams =
   GetTransactionReceiptParameters & {
+    /**
+     * Fetch mode for supertransaction resceipt
+     * fast-block: Fetches the supertransaction status and resolve it with just 1 block confirmations. Suitable for fast response but not reliable (Reorgs/retry can happen in worst case)
+     * default: Fetches the status with sufficient block confirmations
+     */
+    mode?: StatusFetchMode
     /** Whether to wait for receipts to be mined. Defaults to true. */
     waitForReceipts?: boolean
-    /** The number of confirmations to wait for. Defaults to 2. Only used if waitForReceipts is true. */
+    /** The number of confirmations to wait for. Defaults to 3. Only used if waitForReceipts is true. */
     confirmations?: number
+    /** Optional callback to listen to transaction replacement for meeUserOps */
+    onTransactionReplaced?: ({
+      meeUserOpHash,
+      txHash
+    }: { meeUserOpHash: Hex; txHash: Hex }) => void
     /**
      * Optional smart account to execute the transaction.
      * If not provided, uses the client's default account
      */
     account?: MultichainSmartAccount
+    /**
+     * Interval delay between fetching the tx receipt to check if the transaction is mined
+     */
+    pollingInterval?: number
   }
 
 /**
@@ -72,6 +84,8 @@ export type BaseGetSupertransactionReceiptPayload = Omit<
    * @example "FAILED"
    */
   transactionStatus: UserOpStatus["executionStatus"]
+  isFinalised: boolean
+  message?: string
 }
 
 /**
@@ -130,15 +144,41 @@ export async function getSupertransactionReceipt(
       method: "GET"
     })
 
-  const metaStatus = await parseTransactionStatus(explorerResponse.userOps)
-  switch (metaStatus.status) {
+  const userOpsWithoutPayment = explorerResponse.userOps.slice(1)
+
+  const transactionStatus = await parseTransactionStatus(
+    userOpsWithoutPayment,
+    parameters.mode
+  )
+
+  switch (transactionStatus.status) {
     case "FAILED": {
-      console.log({ metaStatus, explorerResponse, hash: params.hash })
-      throw new Error(parseErrorMessage(metaStatus.message))
+      const errorMessage = parseErrorMessage(transactionStatus.message)
+
+      if (client.info.isDebugMode) {
+        console.error({
+          transactionStatus,
+          hash: params.hash,
+          errorMessage,
+          explorerResponse
+        })
+      }
+
+      throw new Error(errorMessage)
     }
     case "MINED_FAIL": {
-      console.log({ metaStatus, explorerResponse, hash: params.hash })
-      throw new Error(parseErrorMessage(metaStatus.message))
+      const errorMessage = parseErrorMessage(transactionStatus.message)
+
+      if (client.info.isDebugMode) {
+        console.error({
+          transactionStatus,
+          hash: params.hash,
+          errorMessage,
+          explorerResponse
+        })
+      }
+
+      throw new Error(errorMessage)
     }
     case "PENDING": {
       break
@@ -148,14 +188,10 @@ export async function getSupertransactionReceipt(
     }
     case "MINED_SUCCESS": {
       if (waitForReceipts) {
-        const isSponsoredSupertransaction =
-          explorerResponse.paymentInfo.sponsored
-        const sponsorshipUrl =
-          explorerResponse.paymentInfo.sponsorshipUrl || DEFAULT_PATHFINDER_URL
-
         receipts = await Promise.all(
-          explorerResponse.userOps
+          userOpsWithoutPayment
             .filter((userOp) => {
+              // Cleanup userOps are ignored for transaction receipt if it is not successful
               if (
                 userOp.isCleanUpUserOp &&
                 userOp.executionStatus !== "MINED_SUCCESS"
@@ -163,22 +199,10 @@ export async function getSupertransactionReceipt(
                 return false
               }
 
+              // Only the main userOps will be considered
               return true
             })
-            .map(async ({ chainId, executionData }, index) => {
-              // If sponsored tx ? the receipt for sponsored payment userOp needs to be fetched from
-              // sponsorship backend
-              if (isSponsoredSupertransaction && index === 0) {
-                const sponsorshipClient = createHttpClient(sponsorshipUrl)
-
-                const receipt = await sponsorshipClient.request({
-                  path: `sponsorship/receipt/${chainId}/${executionData}`,
-                  method: "GET"
-                })
-
-                return formatTransactionReceipt(receipt as AnyData)
-              }
-
+            .map(async ({ chainId, executionData }) => {
               return getTransactionReceiptFromViem(
                 account.deploymentOn(Number(chainId), true).publicClient,
                 {
@@ -197,7 +221,7 @@ export async function getSupertransactionReceipt(
     }
   }
 
-  const explorerLinks = explorerResponse.userOps.reduce(
+  const explorerLinks = userOpsWithoutPayment.reduce(
     (acc, userOp) => {
       acc.push(
         getExplorerTxLink(userOp.executionData, userOp.chainId),
@@ -210,9 +234,12 @@ export async function getSupertransactionReceipt(
 
   return {
     ...explorerResponse,
+    userOps: userOpsWithoutPayment,
     explorerLinks,
     receipts,
-    transactionStatus: metaStatus.status
+    transactionStatus: transactionStatus.status,
+    isFinalised: transactionStatus.isFinalised,
+    message: transactionStatus.message
   } as GetSupertransactionReceiptPayload
 }
 

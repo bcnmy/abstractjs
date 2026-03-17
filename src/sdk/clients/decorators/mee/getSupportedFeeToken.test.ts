@@ -5,12 +5,14 @@ import type { NetworkConfig } from "../../../../test/testUtils"
 import { addressEquals } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { getInfo } from "./getInfo"
 import type { FeeTokenInfo } from "./getQuote"
 
-describe("mee.getPaymentToken", () => {
+describe("mee.getSupportedFeeToken", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -37,9 +39,19 @@ describe("mee.getPaymentToken", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -52,8 +64,9 @@ describe("mee.getPaymentToken", () => {
       Number(chainId)
     )
 
-    const tokenSymbols = info.supportedGasTokens.flatMap(({ paymentTokens }) =>
-      paymentTokens.map(({ symbol }) => symbol)
+    const tokenSymbols = info.supportedGasTokens.flatMap(
+      ({ paymentTokens: supportedFeeTokens }) =>
+        supportedFeeTokens.map(({ symbol }) => symbol)
     )
 
     expect(supportedChains.length).toBeGreaterThan(0)
@@ -66,25 +79,28 @@ describe("mee.getPaymentToken", () => {
   })
 
   test("should return payment token and arbitrary token payment info for valid chain id and address", async () => {
-    const paymentTokenInfo = await meeClient.getPaymentToken({
+    const supportedFeeTokenInfo = await meeClient.getSupportedFeeToken({
       chainId: 1,
       tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     })
 
-    expect(paymentTokenInfo.isArbitraryPaymentTokensSupported).to.be.oneOf([
+    expect(supportedFeeTokenInfo.isArbitraryFeeTokensSupported).to.be.oneOf([
       true,
       false,
       null,
       undefined
     ])
 
-    expect(paymentTokenInfo.paymentToken).not.to.be.oneOf([undefined, null])
+    expect(supportedFeeTokenInfo.supportedFeeToken).not.to.be.oneOf([
+      undefined,
+      null
+    ])
 
-    if (paymentTokenInfo.paymentToken) {
-      expect(paymentTokenInfo.paymentToken.symbol).toBe("USDC")
+    if (supportedFeeTokenInfo.supportedFeeToken) {
+      expect(supportedFeeTokenInfo.supportedFeeToken.symbol).toBe("USDC")
       expect(
         addressEquals(
-          paymentTokenInfo.paymentToken.address,
+          supportedFeeTokenInfo.supportedFeeToken.address,
           "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
         )
       ).toBe(true)

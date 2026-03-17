@@ -1,9 +1,11 @@
-import type { Chain, LocalAccount, Transport } from "viem"
+import { http, type LocalAccount } from "viem"
+import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
-import { getTestChainConfig, toNetwork } from "../../../test/testSetup"
+import { TESTNET_RPC_URLS, toNetwork } from "../../../test/testSetup"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { getSmartSessionsValidator } from "../../constants"
+import { DEFAULT_MEE_VERSION, getSmartSessionsValidator } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -16,35 +18,30 @@ describe("mee.multichainRead", () => {
   let mcNexus: MultichainSmartAccount
   let meeClient: MeeClient
 
-  let paymentChain: Chain
-  let targetChain: Chain
-  let paymentChainTransport: Transport
-  let targetChainTransport: Transport
-
   beforeAll(async () => {
-    network = await toNetwork("MAINNET_FROM_ENV_VARS")
-    ;[
-      [paymentChain, targetChain],
-      [paymentChainTransport, targetChainTransport]
-    ] = getTestChainConfig(network)
+    network = await toNetwork("TESTNET_FROM_ENV_VARS")
 
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
   })
 
-  it("should check if smartSessions module is installed across optimism and base", async () => {
+  it("should check if smartSessions module is installed for base sepolia", async () => {
     const readResults = await mcNexus.read<boolean>({
       type: "toIsModuleInstalledReads",
       parameters: getSmartSessionsValidator({})
     })
     expect(readResults[0]).toBeTypeOf("boolean")
-    expect(readResults[1]).toBeTypeOf("boolean")
   })
 })

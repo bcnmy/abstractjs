@@ -1,27 +1,42 @@
 import type { Address, Prettify } from "viem"
 import type { MultichainSmartAccount } from "../account/toMultiChainNexusAccount"
-import { isStaging } from "../account/utils/Helpers"
+import { isStaging, isTesting } from "../account/utils/Helpers"
 import createHttpClient, { type HttpClient, type Url } from "./createHttpClient"
 import { type GetInfoPayload, getInfo, meeActions } from "./decorators/mee"
 
-export const DEFAULT_MEE_NODE_URL = "https://mee-node.biconomy.io/v1"
-/**
-  const STAKEPOOL_MEE_NODE_URL = "https://mainnet.mee.stakepool.dev.br/v3"
-*/
+const isStagingOrTesting = isStaging() || isTesting()
+
+export const getDefaultMEENetworkUrl = (isStaging = false) => {
+  if (isStaging) {
+    return "https://staging-network.biconomy.io/v1"
+  }
+
+  return "https://network.biconomy.io/v1"
+}
+
+export const getDefaultMEENetworkApiKey = (isStaging = false) => {
+  if (isStaging) {
+    return "mee_3ZhZhHx3hmKrBQxacr283dHt"
+  }
+
+  return "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
+}
+
 /**
  * Default URL for the MEE node service
  */
-export const DEFAULT_PATHFINDER_URL = "https://network.biconomy.io/v1"
-const DEFAULT_PATHFINDER_API_KEY = "mee_3ZZmXCSod4xVXDRCZ5k5LTHg"
-
-export const DEFAULT_STAGING_PATHFINDER_URL =
-  "https://staging-network.biconomy.io/v1"
-const DEFAULT_STAGING_PATHFINDER_API_KEY = "mee_3ZhZhHx3hmKrBQxacr283dHt"
+export const DEFAULT_PATHFINDER_URL =
+  getDefaultMEENetworkUrl(isStagingOrTesting)
 
 /**
- * Constants for sponshorshipxw
+ * Default API key for the MEE node service
  */
+export const DEFAULT_PATHFINDER_API_KEY =
+  getDefaultMEENetworkApiKey(isStagingOrTesting)
 
+/**
+ * Constants for sponshorship
+ */
 // Sponsorship Nexus Account Address
 export const DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT: Address =
   "0x18eAc826f3dD77d065E75E285d3456B751AC80d5"
@@ -40,6 +55,22 @@ export const DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID = 84532
 export const DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS: Address =
   "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
 
+export const getDefaultMeeGasTank = (isTestnet = false) => {
+  if (isTestnet) {
+    return {
+      address: DEFAULT_MEE_TESTNET_SPONSORSHIP_PAYMASTER_ACCOUNT,
+      token: DEFAULT_MEE_TESTNET_SPONSORSHIP_TOKEN_ADDRESS,
+      chainId: DEFAULT_MEE_TESTNET_SPONSORSHIP_CHAIN_ID
+    }
+  }
+
+  return {
+    address: DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
+    token: DEFAULT_MEE_SPONSORSHIP_TOKEN_ADDRESS,
+    chainId: DEFAULT_MEE_SPONSORSHIP_CHAIN_ID
+  }
+}
+
 /**
  * Parameters for creating a Mee client
  */
@@ -52,6 +83,8 @@ export type CreateMeeClientParams = {
   account: MultichainSmartAccount
   /** Auth key for the Mee client */
   apiKey?: string
+  /** Debug mode which prints some useful console logs for errors */
+  isDebugMode?: boolean
 }
 
 export type BaseMeeClient = Prettify<
@@ -67,15 +100,17 @@ export type MeeClient = Awaited<ReturnType<typeof createMeeClient>>
 export const createMeeClient = async (params: CreateMeeClientParams) => {
   const {
     account,
-    pollingInterval = 1000,
-    url = isStaging() ? DEFAULT_STAGING_PATHFINDER_URL : DEFAULT_PATHFINDER_URL,
-    apiKey = isStaging()
-      ? DEFAULT_STAGING_PATHFINDER_API_KEY
-      : DEFAULT_PATHFINDER_API_KEY
+    pollingInterval = 250,
+    url = DEFAULT_PATHFINDER_URL,
+    apiKey = DEFAULT_PATHFINDER_API_KEY,
+    // By default: its false.
+    // If staging or testing suite, its true by default
+    isDebugMode = !!isStagingOrTesting
   } = params
-
-  const httpClient = createHttpClient(url, apiKey)
+  const httpClient = createHttpClient(url, apiKey, isDebugMode)
   const info = await getInfo(httpClient)
+  info.isDebugMode = isDebugMode
+
   const baseMeeClient = Object.assign(httpClient, {
     pollingInterval,
     account,

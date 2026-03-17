@@ -1,14 +1,17 @@
 import type { Address, Prettify, PublicClient } from "viem"
 import { erc20Abi, parseUnits } from "viem"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
-import type { FeeTokenInfo } from "../../../../../clients/decorators/mee"
 import {
-  type ActionData,
-  MEE_VALIDATOR_ADDRESS,
-  getSpendingLimitsPolicy
-} from "../../../../../constants"
+  type FeeTokenInfo,
+  addPaymentPolicyForActions,
+  getSessionValidatorInitData
+} from "../../../../../clients/decorators/mee"
+import { type ActionData, DEFAULT_MEE_VERSION } from "../../../../../constants"
 
+import type { MEEVersionConfig } from "../../../../../account"
+import type { SessionAction } from "../../../../../account/decorators/buildSessionAction"
 import type { AnyData, ModularSmartAccount } from "../../../../utils/Types"
+import { getMEEVersion } from "../../../../utils/getMeeConfig"
 import {
   type GrantPermissionResponse,
   grantPermissionPersonalSign,
@@ -78,7 +81,8 @@ export const grantMeePermission = async <
     redeemer,
     actions,
     feeToken,
-    maxPaymentAmount
+    maxPaymentAmount,
+    account: _account
   }: GrantMeePermissionParams<TModularSmartAccount>,
   mode: "PERSONAL_SIGN" | "TYPED_DATA_SIGN"
 ): Promise<GrantMeePermissionPayload> => {
@@ -102,33 +106,88 @@ export const grantMeePermission = async <
     maxPaymentAmount = parseUnits("5", decimals)
   }
 
-  const grantPermissionParameters = actions.map((action) => {
-    const chainId = action.chainId
-    const actionTarget = action.actionTarget
+  /**
+   * Actions can be defined for multiple chains.
+   * Current approach is to build a single session for each unique chainId.
+   * So all the actions for a given chainId will be added to the same session.
+   *
+   * TODO: In future, we may want to add an additional parameter to the
+   * action object, which will define, whether the action can be batched into the same session
+   * or should be added to a separate session.
+   * This will also require changing the algorithm when using the permissions,
+   * since it will involve having several sessions on the same chain =>
+   * so it will require a proper algorithm of choosing which session we are using
+   * w/o requesting dev to provide the sessionId explicitly.
+   */
+
+  const uniqueChainIds = Array.from(
+    new Set(actions.map((action) => action.chainId))
+  )
+
+  const grantPermissionParameters = uniqueChainIds.map((chainId) => {
     const deployment = account.deployments.find(
       (deployment) => deployment?.client?.chain?.id === chainId
     )
 
-    const paymentActionPolicy =
-      feeToken && feeToken.chainId === chainId
-        ? {
-            actionTarget: feeToken.address,
-            actionTargetSelector: "0xa9059cbb" as Address, // transfer
-            actionPolicies: [
-              getPolicyForPayment(maxPaymentAmount!, feeToken.address)
-            ]
-          }
-        : undefined
+    let actionsForChain = actions.filter((action) => action.chainId === chainId)
+
+    const defaultVersionConfig: MEEVersionConfig =
+      getMEEVersion(DEFAULT_MEE_VERSION)
+    const meeValidatorAddress =
+      deployment?.version.validatorAddress ||
+      defaultVersionConfig.validatorAddress
+
+    if (!deployment) {
+      throw new Error(`Multichain Nexus is not configured on chain ${chainId}`)
+    }
+
+    const deploymentVersion = deployment.version
+
+    // if the fee token is involved in the permissions, try adding the payment action policy
+    if (feeToken && feeToken.chainId === chainId) {
+      // This is a legacy setup, the session action will be always one and no unbatched cases here
+      const sessionAction: SessionAction = {
+        actions: [],
+        chainId
+      }
+
+      for (const {
+        actionTargetSelector,
+        actionPolicies,
+        actionTarget
+      } of actionsForChain) {
+        sessionAction.actions.push({
+          actionTargetSelector,
+          actionPolicies,
+          actionTarget
+        })
+      }
+
+      const [updatedSessionAction] = addPaymentPolicyForActions(
+        [sessionAction],
+        feeToken,
+        maxPaymentAmount!
+      )
+
+      actionsForChain = updatedSessionAction.actions.map((action) => {
+        return {
+          ...action,
+          chainId: sessionAction.chainId
+        }
+      })
+    }
+
+    const sessionValidatorInitData = getSessionValidatorInitData(
+      deploymentVersion,
+      redeemer
+    )
 
     return {
       account: deployment,
       redeemer,
-      actions: [
-        ...actions.map((action) => ({ ...action, actionTarget })),
-        ...(paymentActionPolicy ? [paymentActionPolicy] : [])
-      ],
-      sessionValidator: MEE_VALIDATOR_ADDRESS,
-      sessionValidatorInitData: redeemer, // initdata for the k1Mee validator is just the signer address
+      actions: actionsForChain,
+      sessionValidator: meeValidatorAddress,
+      sessionValidatorInitData,
       permitERC4337Paymaster: true
     }
   })
@@ -142,8 +201,4 @@ export const grantMeePermission = async <
         undefined as AnyData,
         grantPermissionParameters
       )
-}
-
-const getPolicyForPayment = (maxPaymentAmount: bigint, token: Address) => {
-  return getSpendingLimitsPolicy([{ limit: maxPaymentAmount, token }])
 }

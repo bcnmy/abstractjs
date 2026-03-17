@@ -4,6 +4,7 @@ import {
   type Address,
   type Chain,
   type ClientConfig,
+  type GetEip712DomainReturnType,
   type Hex,
   type LocalAccount,
   type OneOf,
@@ -18,16 +19,10 @@ import {
   type WalletClient,
   concatHex,
   createPublicClient,
-  domainSeparator,
   encodeAbiParameters,
   encodeFunctionData,
   encodePacked,
-  keccak256,
   parseAbi,
-  parseAbiParameters,
-  toBytes,
-  toHex,
-  validateTypedData,
   zeroAddress
 } from "viem"
 import {
@@ -39,64 +34,73 @@ import {
   toSmartAccount
 } from "viem/account-abstraction"
 import type { SignAuthorizationReturnType } from "viem/accounts"
+import { getEip712Domain as getEip712DomainViemAction } from "viem/actions"
 import type { MeeAuthorization } from "../clients/decorators/mee/getQuote"
-import {
-  ENTRY_POINT_ADDRESS,
-  NEXUS_ACCOUNT_FACTORY_ADDRESS,
-  NEXUS_BOOTSTRAP_ADDRESS,
-  NEXUS_IMPLEMENTATION_ADDRESS
-} from "../constants"
+import { ENTRY_POINT_ADDRESS, MEEVersion } from "../constants"
 // Constants
-import { EntrypointAbi } from "../constants/abi"
-import { COMPOSABILITY_MODULE_ABI } from "../constants/abi"
+import {
+  COMPOSABILITY_MODULE_ABI_V1_0_0,
+  COMPOSABILITY_MODULE_ABI_V1_1_0,
+  EntrypointAbi
+} from "../constants/abi"
+import { toComposableExecutor, toComposableFallback } from "../modules"
 import { toEmptyHook } from "../modules/toEmptyHook"
-import type {
-  BaseComposableCall,
-  ComposableCall
+import {
+  type ComposableCall,
+  InputParamType
 } from "../modules/utils/composabilityCalls"
-import { toDefaultModule } from "../modules/validators/default/toDefaultModule"
-import { toLegacyK1Module } from "../modules/validators/legacyK1/toLegacyK1Module"
+import {
+  type ToDefaultModuleParameters,
+  toDefaultModule
+} from "../modules/validators/default/toDefaultModule"
+import { toMeeK1Module } from "../modules/validators/meeK1/toMeeK1Module"
 import type { Validator } from "../modules/validators/toValidator"
 import {
   getFactoryData,
-  getInitData,
-  getK1FactoryData
+  getInitDataNoRegistry,
+  getInitDataWithRegistry
 } from "./decorators/getFactoryData"
-import {
-  getK1NexusAddress,
-  getNexusAddress
-} from "./decorators/getNexusAddress"
+import { getNexusAddress } from "./decorators/getNexusAddress"
 import {
   getDefaultNonceKey,
   getNonceWithKeyUtil
 } from "./decorators/getNonceWithKey"
+import { toInitData } from "./utils"
 import {
   EXECUTE_BATCH,
   EXECUTE_SINGLE,
-  PARENT_TYPEHASH
+  SIG_TYPE_NO_STX_P256,
+  SIG_TYPE_NO_STX_VANILLA_1271_EOA,
+  SIG_TYPE_NO_STX_VANILLA_1271_P256
 } from "./utils/Constants"
 // Utils
 import type { Call } from "./utils/Types"
 import {
   type EthersWallet,
-  type TypedDataWith712,
   addressEquals,
-  eip712WrapHash,
-  getAccountDomainStructFields,
-  getTypesForEIP712Domain,
   isNullOrUndefined,
-  typeToString
+  supportsCancun,
+  wrapSignatureWith6492
 } from "./utils/Utils"
 import {
-  type AddressConfigsAdditions,
+  type MEEVersionConfig,
   type NexusAccountId,
-  type NexusVersion,
-  getConfigFromNexusVersion,
   isVersionOlder
 } from "./utils/getVersion"
-import { toInitData } from "./utils/toInitData"
+import { isP256Signer } from "./utils/toP256Signer"
 import { type EthereumProvider, type Signer, toSigner } from "./utils/toSigner"
 import { toWalletClient } from "./utils/toWalletClient"
+
+export type GetInitDataParams = {
+  accountIndex: bigint
+  defaultValidator: GenericModuleConfig
+  prevalidationHooks: PrevalidationHookModuleConfig[]
+  validators: GenericModuleConfig[]
+  executors: GenericModuleConfig[]
+  hook: GenericModuleConfig
+  fallbacks: GenericModuleConfig[]
+  customInitData?: Hex
+}
 
 /**
  * Base module configuration type
@@ -116,14 +120,31 @@ export type GenericModuleConfig<
 export type PrevalidationHookModuleConfig = GenericModuleConfig & {
   hookType: bigint
 }
+
 /**
- * Parameters for creating a Nexus Smart Account
+ * Parameters for chain configuration
  */
-export type ToNexusSmartAccountParameters = {
+export type ChainConfiguration = {
   /** The blockchain network */
   chain: Chain
   /** The transport configuration */
   transport: ClientConfig["transport"]
+  /** MEE version config */
+  version: MEEVersionConfig
+  /** Optional account address override */
+  accountAddress?: Address
+  /**
+   * Flag to enable/disable MEE Version check. Defaults to true.
+   * Only set this as false if you're very sure about MEE version support on specific chains otherwise SDK will
+   * fail to detect the unavailability of version on certains which may result in weird error because of undeployed contracts
+   */
+  versionCheck?: boolean
+}
+
+/**
+ * Parameters for creating a Nexus Smart Account
+ */
+export type ToNexusSmartAccountParameters = {
   /** The signer account or address */
   signer: OneOf<
     | EthereumProvider
@@ -131,10 +152,10 @@ export type ToNexusSmartAccountParameters = {
     | LocalAccount
     | EthersWallet
   >
+  /** Chain configuration */
+  chainConfiguration: ChainConfiguration
   /** Optional index for the account */
   index?: bigint | undefined
-  /** Optional account address override */
-  accountAddress?: Address
   /** Optional validator modules configuration */
   validators?: Array<Validator>
   /** Optional executor modules configuration */
@@ -145,29 +166,16 @@ export type ToNexusSmartAccountParameters = {
   hook?: GenericModuleConfig
   /** Optional fallback modules configuration */
   fallbacks?: Array<GenericModuleConfig>
-  /** Optional bootstrap address */
-  bootStrapAddress?: Address
-  /** Optional implementation address */
-  implementationAddress?: Address
-  /** Optional version of the Nexus Smart Account. If undefined, the latest version will be used. */
-  nexusVersion?: NexusVersion
-  /** Optional factory address */
-  factoryAddress?: Address
   /** Optional init data */
   initData?: Hex
-} & AddressConfigsAdditions[keyof AddressConfigsAdditions] &
-  Prettify<
-    Pick<
-      ClientConfig<Transport, Chain, Account, RpcSchema>,
-      | "account"
-      | "cacheTime"
-      | "chain"
-      | "key"
-      | "name"
-      | "pollingInterval"
-      | "rpcSchema"
-    >
+  /** Optional default module parameters */
+  defaultModuleParameters?: Partial<ToDefaultModuleParameters>
+} & Prettify<
+  Pick<
+    ClientConfig<Transport, Chain, Account, RpcSchema>,
+    "account" | "cacheTime" | "key" | "name" | "pollingInterval" | "rpcSchema"
   >
+>
 /**
  * Nexus Smart Account type
  */
@@ -190,10 +198,16 @@ export type NonceInfo = {
  * @param multiChain - Whether to use the multi-chain authorization. Defaults to false.
  */
 export type DelegationParams = {
-  authorization?: SignAuthorizationReturnType
-  multiChain?: boolean
   delegatedContract?: Address
-}
+} & OneOf<
+  | {
+      authorization: SignAuthorizationReturnType
+    }
+  | {
+      multiChain: boolean
+    }
+  | { chainId: number }
+>
 
 /**
  * UnDelegation type
@@ -275,8 +289,164 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
 
     /** Check if the account is delegated to the implementation address */
     isDelegated: () => Promise<boolean>
+
+    /** Account ID */
+    accountId: NexusAccountId
+
+    /** Nexus version config */
+    version: MEEVersionConfig
+
+    /** EIP-712 domain for the account */
+    getEip712Domain: () => Promise<GetEip712DomainReturnType>
+
+    /** Signs a message using EIP-1271 only (module.signMessage). Never uses ERC-7739. */
+    signMessage1271: (parameters: {
+      message: SignableMessage
+    }) => Promise<Hex>
   }
 >
+
+const prepareValidators = async (
+  walletClient: WalletClient<Transport, Chain | undefined, Account, RpcSchema>,
+  meeConfig: MEEVersionConfig,
+  customValidators?: Validator[]
+): Promise<Validator[]> => {
+  let validators: Validator[] = []
+
+  if (customValidators && customValidators.length > 0) {
+    return customValidators
+  }
+
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    validators = [
+      toMeeK1Module({
+        walletClient,
+        module: meeConfig.defaultValidatorAddress
+      })
+    ]
+  } else {
+    // No need to explicitly add validator for 1.2.X versions. default validator will be used which is
+    // mee k1 validator
+    validators = []
+  }
+
+  return validators
+}
+
+const prepareExecutors = (
+  meeConfig: MEEVersionConfig,
+  customExecutors?: GenericModuleConfig[]
+): GenericModuleConfig[] => {
+  let executors: GenericModuleConfig[] = []
+
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    if (!meeConfig.composableModuleAddress) {
+      throw new Error("Composable module address is missing")
+    }
+
+    // if using <=1.0.0, add the composable executor
+    const composableExecutor = toComposableExecutor(
+      meeConfig.composableModuleAddress
+    )
+    executors = [composableExecutor]
+
+    for (const executor of customExecutors || []) {
+      if (!addressEquals(executor.module, composableExecutor.module)) {
+        executors.push(executor)
+      }
+    }
+  } else {
+    executors = customExecutors || []
+  }
+
+  return executors
+}
+
+const prepareFallbacks = (
+  meeConfig: MEEVersionConfig,
+  customFallbacks?: GenericModuleConfig[]
+): GenericModuleConfig[] => {
+  let fallbacks: GenericModuleConfig[] = []
+
+  if (isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    if (!meeConfig.composableModuleAddress) {
+      throw new Error("Composable module address is missing")
+    }
+
+    // if nexus version <=1.0.0, add the composable fallback
+    const composableFallback = toComposableFallback(
+      meeConfig.composableModuleAddress
+    )
+    fallbacks = [composableFallback]
+
+    for (const fallback of customFallbacks || []) {
+      if (!addressEquals(fallback.module, composableFallback.module)) {
+        fallbacks.push(fallback)
+      }
+    }
+  } else {
+    fallbacks = customFallbacks || []
+  }
+
+  return fallbacks
+}
+
+const prepareFactoryData = (
+  meeConfig: MEEVersionConfig,
+  initDataParams: GetInitDataParams
+): { initData: Hex; factoryData: Hex } => {
+  let factoryData: Hex = "0x"
+  let initData: Hex = "0x"
+
+  switch (meeConfig.version) {
+    case MEEVersion.V1_0_0:
+    case MEEVersion.V1_1_0: {
+      if (!meeConfig.moduleRegistry) {
+        throw new Error("Module registry not found in nexus config")
+      }
+
+      initData =
+        initDataParams.customInitData ||
+        getInitDataWithRegistry({
+          bootStrapAddress: meeConfig.bootStrapAddress,
+          validators: initDataParams.validators,
+          registryAddress: meeConfig.moduleRegistry.registryAddress,
+          attesters: meeConfig.moduleRegistry.attesters,
+          attesterThreshold: meeConfig.moduleRegistry.attesterThreshold,
+          meeVersion: meeConfig.version
+        })
+
+      factoryData = getFactoryData({
+        initData,
+        index: initDataParams.accountIndex
+      })
+      break
+    }
+
+    default: {
+      // All the nexus version 1.2.x will be deployed with no registry
+      initData =
+        initDataParams.customInitData ||
+        getInitDataNoRegistry({
+          defaultValidator: initDataParams.defaultValidator,
+          prevalidationHooks: initDataParams.prevalidationHooks,
+          validators: initDataParams.validators,
+          executors: initDataParams.executors,
+          hook: initDataParams.hook,
+          fallbacks: initDataParams.fallbacks,
+          bootStrapAddress: meeConfig.bootStrapAddress
+        })
+
+      factoryData = getFactoryData({
+        initData,
+        index: initDataParams.accountIndex
+      })
+      break
+    }
+  }
+
+  return { initData, factoryData }
+}
 
 /**
  * @description Create a Nexus Smart Account.
@@ -290,138 +460,167 @@ export type NexusSmartAccountImplementation = SmartAccountImplementation<
  * import { mainnet } from 'viem/chains'
  *
  * const account = await toNexusAccount({
- *   chain: mainnet,
- *   transport: http(),
  *   signer: '0x...',
+ *   chainConfiguration: {
+ *     chain: mainnet,
+ *     transport: http(),
+ *     version: getMEEVersion(DEFAULT_MEE_VERSION),
+ *   }
  * })
  */
 export const toNexusAccount = async (
   parameters: ToNexusSmartAccountParameters
 ): Promise<NexusAccount> => {
   const {
-    chain,
-    transport: transportConfig,
     signer: _signer,
+    chainConfiguration: {
+      chain,
+      version: meeConfig,
+      transport: transportConfig,
+      versionCheck = true,
+      accountAddress: accountAddress_
+    },
     index = 0n,
     validators: customValidators,
     executors: customExecutors,
     hook: customHook,
     fallbacks: customFallbacks,
     prevalidationHooks: customPrevalidationHooks,
-    accountAddress: accountAddress_,
-    nexusVersion,
-    attesterThreshold = 1,
-    useK1Config = false
+    initData: customInitData,
+    defaultModuleParameters
   } = parameters
 
-  let {
-    initData,
-    // those params are 1.2.0 by default
-    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    bootStrapAddress = NEXUS_BOOTSTRAP_ADDRESS,
-    implementationAddress = NEXUS_IMPLEMENTATION_ADDRESS,
-    // those params are undefined by default and are defined only if explicitly provided
-    // or if nexus version is provided
-    registryAddress,
-    attesters,
-    k1ValidatorAddress,
-    k1FactoryAddress
-  } = parameters
+  // if the MEE version is not older than 2.0.0 ? SDK checks for cancun support and throw error if not
+  if (!isVersionOlder(meeConfig.version, MEEVersion.V2_0_0)) {
+    // check if the chain supports > 1.2.0
+    const hasCancun = await supportsCancun({
+      chain,
+      transport: transportConfig
+    })
 
-  // if nexus version earlier than 1.2.0 is provided, use the config from the constants
-  if (nexusVersion && isVersionOlder(nexusVersion, "1.2.0")) {
-    ;({
-      factoryAddress,
-      bootStrapAddress,
-      implementationAddress,
-      registryAddress,
-      attesters,
-      k1ValidatorAddress,
-      k1FactoryAddress
-    } = getConfigFromNexusVersion(nexusVersion))
-    if (useK1Config) {
-      factoryAddress = k1FactoryAddress!
+    if (!hasCancun) {
+      throw new Error(
+        `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Please use a version earlier than 2.0.0 or a chain that supports Cancun.`
+      )
     }
   }
 
+  const publicClient = createPublicClient({ chain, transport: transportConfig })
+
+  if (versionCheck) {
+    // All these version specific contract addresses were checked whether it was deployed or not.
+    const addressesToDeploymentSet = new Set([
+      meeConfig.bootStrapAddress,
+      meeConfig.defaultValidatorAddress,
+      meeConfig.validatorAddress,
+      meeConfig.factoryAddress,
+      meeConfig.implementationAddress
+    ])
+
+    if (meeConfig.moduleRegistry) {
+      addressesToDeploymentSet.add(meeConfig.moduleRegistry.registryAddress)
+    }
+
+    if (meeConfig.composableModuleAddress) {
+      addressesToDeploymentSet.add(meeConfig.composableModuleAddress)
+    }
+
+    // Filtering zero address because sometimes the default validator is zeroAddress which needs to be excluded
+    const addressesToDeploymentCheck = [...addressesToDeploymentSet].filter(
+      (address) => address !== zeroAddress
+    )
+
+    await Promise.all(
+      addressesToDeploymentCheck.map(async (address) => {
+        // Checks if the MEE contracts are deployed or not
+        // This ensures the MEE version suite is supported or not for the chain
+        const bytecode = await publicClient.getCode({
+          address
+        })
+
+        if (!bytecode || bytecode === "0x") {
+          console.error(
+            `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain. Contract address (${address}) is not deployed`
+          )
+
+          throw new Error(
+            `MEE version (${meeConfig.version}) is not supported for the ${chain.name} chain.`
+          )
+        }
+      })
+    )
+  }
+
   const signer = await toSigner({ signer: _signer })
+
+  if (
+    isP256Signer(signer) &&
+    isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)
+  ) {
+    throw new Error(
+      `P256 signers require MEE version ${MEEVersion.V3_0_0} or higher. Current version: ${meeConfig.version}`
+    )
+  }
+
   const walletClient = toWalletClient({
     unresolvedSigner: _signer,
     resolvedSigner: signer,
     chain,
     transport: transportConfig
   })
-  const publicClient = createPublicClient({ chain, transport: transportConfig })
-
-  // Prepare default validator module
-  const defaultValidator = toDefaultModule({ signer })
 
   // Prepare validator modules
-  const validators = customValidators || []
+  const validators: Validator[] = await prepareValidators(
+    walletClient,
+    meeConfig,
+    customValidators
+  )
 
-  let k1Validator: Validator | undefined = undefined
+  const defaultValidator = toDefaultModule({
+    ...defaultModuleParameters,
+    walletClient,
+    signer,
+    meeConfig
+  })
 
-  if (useK1Config && k1ValidatorAddress) {
-    k1Validator = toLegacyK1Module({
-      signer,
-      module: k1ValidatorAddress
-    })
-  }
-
-  // The default validator should be the defaultValidator unless custom validators have been set or k1Validator is set
-  let module = k1Validator || customValidators?.[0] || defaultValidator
+  // For 1.2.x accounts, no explicit validators will be added. So default validator will be used
+  let module = validators[0] || defaultValidator
 
   // Prepare executor modules
-  const executors = customExecutors || []
+  const executors = prepareExecutors(meeConfig, customExecutors)
 
   // Prepare hook module
   const hook = customHook || toEmptyHook()
 
   // Prepare fallback modules
-  const fallbacks = customFallbacks || []
+  const fallbacks = prepareFallbacks(meeConfig, customFallbacks)
 
   // Generate the initialization data for the account using the initNexus function
   const prevalidationHooks = customPrevalidationHooks || []
 
-  let factoryData: Hex = "0x"
-
-  if (useK1Config) {
-    factoryData = getK1FactoryData({
-      signerAddress: signer.address,
-      index,
-      attesters: attesters!,
-      attesterThreshold
-    })
-  } else {
-    if (!initData) {
-      initData = getInitData({
-        defaultValidator: toInitData(defaultValidator),
-        prevalidationHooks,
-        validators: validators.map(toInitData),
-        executors: executors.map(toInitData),
-        hook: toInitData(hook),
-        fallbacks: fallbacks.map(toInitData),
-        bootStrapAddress,
-        registryAddress,
-        attesters,
-        attesterThreshold,
-        nexusVersion
-      })
-      factoryData = getFactoryData({ initData, index })
-    }
-  }
+  // prepare factory data
+  const { initData, factoryData } = prepareFactoryData(meeConfig, {
+    accountIndex: index,
+    defaultValidator: toInitData(defaultValidator),
+    prevalidationHooks,
+    validators: validators.map(toInitData),
+    executors: executors.map(toInitData),
+    hook: toInitData(hook),
+    fallbacks: fallbacks.map(toInitData),
+    customInitData
+  })
 
   /**
    * @description Gets the init code for the account
    * @returns The init code as a hexadecimal string
    */
-  const getInitCode = () =>
-    concatHex([useK1Config ? k1FactoryAddress! : factoryAddress, factoryData])
+  const getInitCode = () => concatHex([meeConfig.factoryAddress, factoryData])
 
   let _accountAddress: Address | undefined = accountAddress_
+  let _eip712Domain: GetEip712DomainReturnType
 
   const accountId: NexusAccountId = (await publicClient.readContract({
-    address: implementationAddress,
+    address: meeConfig.implementationAddress,
     abi: parseAbi(["function accountId() public view returns (string)"]),
     functionName: "accountId",
     args: []
@@ -435,21 +634,12 @@ export const toNexusAccount = async (
   const getAddress = async (): Promise<Address> => {
     if (!isNullOrUndefined(_accountAddress)) return _accountAddress
 
-    const addressFromFactory = useK1Config
-      ? await getK1NexusAddress({
-          k1FactoryAddress: k1FactoryAddress!,
-          index,
-          ownerAddress: signer.address,
-          attesters: attesters!,
-          attesterThreshold,
-          publicClient
-        })
-      : await getNexusAddress({
-          factoryAddress,
-          index,
-          initData: initData!,
-          publicClient
-        })
+    const addressFromFactory = await getNexusAddress({
+      factoryAddress: meeConfig.factoryAddress,
+      index,
+      initData,
+      publicClient
+    })
 
     if (!addressEquals(addressFromFactory, zeroAddress)) {
       _accountAddress = addressFromFactory
@@ -457,6 +647,20 @@ export const toNexusAccount = async (
     }
 
     throw new Error("Failed to get account address")
+  }
+
+  /**
+   * Use viem helper to obtain and cache the eip712 domain for the account
+   */
+  const getEip712Domain = async (): Promise<GetEip712DomainReturnType> => {
+    if (!isNullOrUndefined(_eip712Domain)) return _eip712Domain
+    const eip712Domain = await getEip712DomainViemAction(publicClient, {
+      address: await getAddress(),
+      factory: meeConfig.factoryAddress,
+      factoryData
+    })
+    _eip712Domain = eip712Domain
+    return eip712Domain
   }
 
   /**
@@ -541,21 +745,62 @@ export const toNexusAccount = async (
   const encodeExecuteComposable = async (
     calls: ComposableCall[]
   ): Promise<Hex> => {
-    const composableCalls: BaseComposableCall[] = calls.map((call) => {
-      return {
-        to: call.to,
-        value: call.value ?? 0n,
-        functionSig: call.functionSig,
-        inputParams: call.inputParams,
-        outputParams: call.outputParams
-      }
+    // as of now, we just need to decide b/w 1.0.0 and 1.1.0
+    // and we can decide this based on the `to` field:
+    // it must be present for 1.0.0 and must not be present for 1.1.0+
+    // instead, an input param with type TARGET should be present for 1.1.0+
+    // In future, when more version are introduced, this logic will have to be updated
+    // One approach for more version will be to just add a `composabilityVersion` field
+    // `ComposableCall` type during the ComposableCall creation, since at the point where
+    // we create the ComposableCall, we will know the composabilityVersion for sure
+
+    // since this is the method on the toNexusAccount which is single chain,
+    // all the composable calls should be of the same version
+    const isComposability_v1_0_0 =
+      calls.every((call) => !!call.to) &&
+      !calls.every((call) =>
+        call.inputParams.some(
+          (param) => param.paramType === InputParamType.TARGET
+        )
+      )
+
+    const composableCallsFormattedByVersion = calls.map((call) => {
+      return isComposability_v1_0_0
+        ? {
+            to: call.to,
+            value: call.value ?? 0n,
+            functionSig: call.functionSig,
+            inputParams: call.inputParams,
+            outputParams: call.outputParams
+          }
+        : {
+            functionSig: call.functionSig,
+            inputParams: call.inputParams,
+            outputParams: call.outputParams
+          }
     })
 
     return encodeFunctionData({
-      abi: COMPOSABILITY_MODULE_ABI,
+      abi: isComposability_v1_0_0
+        ? COMPOSABILITY_MODULE_ABI_V1_0_0
+        : COMPOSABILITY_MODULE_ABI_V1_1_0,
       functionName: "executeComposable", // Function selector in Composability feature which executes the composable calls.
-      args: [composableCalls] // Multiple composable calls can be batched here.
+      args: [composableCallsFormattedByVersion] // Multiple composable calls can be batched here.
     })
+  }
+
+  /**
+   * @description Gets the factory arguments for the account
+   * @returns The factory arguments
+   */
+  const getFactoryArgs = async (): Promise<{
+    factory: Address
+    factoryData: Hex
+  }> => {
+    return {
+      factory: meeConfig.factoryAddress,
+      factoryData
+    }
   }
 
   /**
@@ -603,76 +848,125 @@ export const toNexusAccount = async (
   }
 
   /**
-   * @description Signs typed data
+   * @description Signs typed data. Uses ERC-7739 TypedDataSign flow for modules that support it.
+   * Supports both EOA and P256 signers.
+   * P256 signers are supported only for MEE Version 3.0.0 and above and require a dedicated prefix
+   * to be passed to the validator module to let it know that the signer is a P256 signer.
    * @param parameters - The typed data parameters
-   * @returns The signature
+   * @returns The signature with module address prepended (Nexus-specific format)
    */
   async function signTypedData<
     const typedData extends TypedData | Record<string, unknown>,
     primaryType extends keyof typedData | "EIP712Domain" = keyof typedData
   >(parameters: TypedDataDefinition<typedData, primaryType>): Promise<Hex> {
-    const { message, primaryType, types: _types, domain } = parameters
+    // Cast to base TypedDataDefinition for module interface compatibility
+    const typedDataParams = parameters as TypedDataDefinition
 
-    if (!domain) throw new Error("Missing domain")
-    if (!message) throw new Error("Missing message")
+    // Use ERC-7739 signing if supported, otherwise fall back to standard signing
+    const signature =
+      (await module.erc7739VersionSupported()) === 0
+        ? await module.signTypedData(typedDataParams)
+        : await module.signTypedDataErc7739(
+            typedDataParams,
+            (await getEip712Domain()).domain
+          )
 
-    const types = {
-      EIP712Domain: getTypesForEIP712Domain({ domain }),
-      ..._types
+    let wrappedSignature = signature
+    if (
+      !isVersionOlder(meeConfig.version, MEEVersion.V3_0_0) &&
+      isP256Signer(signer)
+    ) {
+      wrappedSignature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_P256, signature]
+      )
     }
 
-    // @ts-ignore: Comes from nexus parent typehash
-    const messageStuff: Hex = message.stuff
+    // Prepend module address to signature (Nexus-specific wrapper)
+    return encodePacked(["address", "bytes"], [module.module, wrappedSignature])
+  }
 
-    // @ts-ignore
-    validateTypedData({
-      domain,
-      message,
-      primaryType,
-      types
-    })
+  /**
+   * @description Signs a message. Uses ERC-7739 PersonalSign flow for modules that support it.
+   * @param params - The parameters for signing
+   * @param params.message - The message to sign
+   * @returns The signature with module address prepended (Nexus-specific format)
+   */
+  const signMessage = async (parameters: {
+    message: SignableMessage
+  }): Promise<Hex> => {
+    const { message } = parameters
 
-    const appDomainSeparator = domainSeparator({ domain })
-    const accountDomainStructFields = await getAccountDomainStructFields(
-      publicClient,
-      await getAddress()
-    )
+    // Use ERC-7739 signing if supported, otherwise fall back to standard signing
+    const signature =
+      (await module.erc7739VersionSupported()) === 0
+        ? await module.signMessage(message)
+        : await module.signMessageErc7739(
+            message,
+            (await getEip712Domain()).domain
+          )
 
-    const parentStructHash = keccak256(
-      encodePacked(
-        ["bytes", "bytes"],
-        [
-          encodeAbiParameters(parseAbiParameters(["bytes32, bytes32"]), [
-            keccak256(toBytes(PARENT_TYPEHASH)),
-            messageStuff
-          ]),
-          accountDomainStructFields
-        ]
+    let wrappedSignature = signature
+    if (
+      !isVersionOlder(meeConfig.version, MEEVersion.V3_0_0) &&
+      isP256Signer(signer)
+    ) {
+      wrappedSignature = encodePacked(
+        ["bytes4", "bytes"],
+        [SIG_TYPE_NO_STX_P256, signature]
       )
-    )
+    }
 
-    const wrappedTypedHash = eip712WrapHash(
-      parentStructHash,
-      appDomainSeparator
-    )
+    // Prepend module address to signature (Nexus-specific wrapper)
+    return encodePacked(["address", "bytes"], [module.module, wrappedSignature])
+  }
 
-    let signature = await module.signMessage({ raw: toBytes(wrappedTypedHash) })
-    const contentsType = toBytes(typeToString(types as TypedDataWith712)[1])
+  /**
+   * @description Signs a message using EIP-1271 flow only (module.signMessage). Never uses ERC-7739.
+   * @param params - The parameters for signing
+   * @param params.message - The message to sign
+   * @returns The signature with module address prepended (Nexus-specific format)
+   */
+  const signMessage1271 = async (parameters: {
+    message: SignableMessage
+  }): Promise<Hex> => {
+    const { message } = parameters
 
-    const signatureData = concatHex([
-      signature,
-      appDomainSeparator,
-      messageStuff,
-      toHex(contentsType),
-      toHex(contentsType.length, { size: 2 })
+    // Run signing concurrently with address + deployed check
+    const [rawSignature, code] = await Promise.all([
+      module.signMessage(message),
+      getAddress().then((addr) => publicClient.getCode({ address: addr }))
     ])
 
-    signature = encodePacked(
+    let signature = rawSignature
+
+    // for Stx Validator, we need to explicitly mention
+    // we want vanilla 1271 flow by using the according mode,
+    // otherwise 7739 will be used instead in the smart contract
+    if (!isVersionOlder(meeConfig.version, MEEVersion.V3_0_0)) {
+      const prefix = isP256Signer(signer)
+        ? SIG_TYPE_NO_STX_VANILLA_1271_P256
+        : SIG_TYPE_NO_STX_VANILLA_1271_EOA
+      signature = encodePacked(["bytes4", "bytes"], [prefix, signature])
+    }
+
+    const wrappedSignature = encodePacked(
       ["address", "bytes"],
-      [module.module, signatureData]
+      [module.module, signature]
     )
 
-    return signature
+    const isDeployed = Boolean(code)
+
+    if (!isDeployed) {
+      // Wrap signature with ERC-6492 for undeployed accounts
+      return wrapSignatureWith6492({
+        factoryAddress: meeConfig.factoryAddress,
+        factoryCalldata: factoryData,
+        signature: wrappedSignature
+      })
+    }
+
+    return wrappedSignature
   }
 
   /**
@@ -698,24 +992,25 @@ export const toNexusAccount = async (
     const {
       authorization: authorization_,
       multiChain,
-      delegatedContract
+      delegatedContract,
+      chainId
     } = params || {}
 
-    const contractAddress = delegatedContract || implementationAddress
+    const contractAddress = delegatedContract || meeConfig.implementationAddress
 
     const authorization: SignAuthorizationReturnType =
       authorization_ ||
       (await walletClient.signAuthorization({
-        contractAddress
+        contractAddress,
+        chainId: multiChain ? 0 : chainId
       }))
 
     const eip7702Auth: MeeAuthorization = {
-      chainId: `0x${(multiChain ? 0 : chain.id).toString(16)}` as Hex,
+      chainId: `0x${(authorization.chainId).toString(16)}` as Hex,
       address: authorization.address as Hex,
       nonce: `0x${authorization.nonce.toString(16)}` as Hex,
       r: authorization.r as Hex,
       s: authorization.s as Hex,
-      v: `0x${authorization.v!.toString(16)}` as Hex,
       yParity: `0x${authorization.yParity!.toString(16)}` as Hex
     }
 
@@ -728,7 +1023,7 @@ export const toNexusAccount = async (
       !!code &&
       code
         ?.toLowerCase()
-        .includes(NEXUS_IMPLEMENTATION_ADDRESS.substring(2).toLowerCase())
+        .includes(meeConfig.implementationAddress.substring(2).toLowerCase())
     )
   }
 
@@ -773,21 +1068,10 @@ export const toNexusAccount = async (
         ? encodeExecute(calls[0])
         : encodeExecuteBatch(calls)
     },
-    getFactoryArgs: async () => ({
-      factory: factoryAddress,
-      factoryData
-    }),
+    getFactoryArgs,
     getStubSignature: async (): Promise<Hex> => module.getStubSignature(),
-    /**
-     * @description Signs a message
-     * @param params - The parameters for signing
-     * @param params.message - The message to sign
-     * @returns The signature
-     */
-    async signMessage({ message }: { message: SignableMessage }): Promise<Hex> {
-      const tempSignature = await module.signMessage(message)
-      return encodePacked(["address", "bytes"], [module.module, tempSignature])
-    },
+    signMessage,
+    signMessage1271,
     signTypedData,
     signUserOperation: async (
       parameters: UnionPartialBy<UserOperation, "sender"> & {
@@ -809,7 +1093,7 @@ export const toNexusAccount = async (
         entryPointVersion: "0.7",
         userOperation
       })
-      return await module.signUserOpHash(hash)
+      return await module.signUserOperationHash(hash)
     },
     getNonce,
 
@@ -820,6 +1104,7 @@ export const toNexusAccount = async (
       entryPointAddress: entryPoint07Address,
       getAddress,
       accountId,
+      getEip712Domain,
       getInitCode,
       getNonceWithKey,
       encodeExecute,
@@ -827,14 +1112,16 @@ export const toNexusAccount = async (
       encodeExecuteComposable,
       getUserOpHash,
       factoryData,
-      factoryAddress,
-      registryAddress,
+      factoryAddress: meeConfig.factoryAddress,
+      registryAddress: meeConfig.moduleRegistry?.registryAddress || zeroAddress,
       signer,
       walletClient,
       publicClient,
       chain,
       setModule,
-      getModule: () => module
+      signMessage1271,
+      getModule: () => module,
+      version: meeConfig
     }
   })
 }

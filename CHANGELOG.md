@@ -1,5 +1,373 @@
 # @biconomy/abstractjs
 
+## 1.2.2
+
+### Patch Changes
+
+- Fixed the timeframe policy issue for smart sessions
+
+## 1.2.1
+
+### Patch Changes
+
+- noble curves peer dependency added
+
+## 1.2.0
+
+### Minor Changes
+
+#### Features
+
+1. **Smart Sessions Core Revamp**
+
+   - Refactored Smart Sessions core architecture.
+   - Introduced new abstractions for:
+     - Policy construction
+     - Session action definition
+     - Modular Smart Session execution flow
+   - Improved extensibility and maintainability.
+   - Full backward compatibility maintained
+
+2. **Smart Session Action Batching**
+
+   - Added dynamic batching and unbatching of session actions.
+   - Allow developers to enable a large action sets within a single session.
+
+3. **Composable Transactions in `prepare` permission flow**
+
+   - `prepare` permission flow now supports composable transactions.
+   - Enables:
+     - Runtime value injection
+     - Composable batching
+     - Transaction cleanups
+     - Flexible execution strategies
+   - Unlocks advanced enable Smart Session workflows.
+
+4. **Payment Policy Enhancements**
+
+   - Added conflict resolution between payment policies and developer-defined policies.
+   - Ensures deterministic policy evaluation.
+   - Improves reliability and security guarantees.
+
+5. **SDK Debug Mode**
+
+   - Provides detailed error logging
+
+6. **Stateless STX Validator + MEE v3.0.0 Support**
+   - Added support for Stateless STX Validator.
+   - Integrated MEE v3.0.0.
+   - Enables:
+     - Passkeys support
+     - Safe Fusion mode support
+   - Improves authentication flexibility and validation capabilities.
+
+#### Breaking Changes
+
+1. prepareForPermissions flow now only supports building instructions via buildComposable.
+
+## 1.1.21
+
+### Patch Changes
+
+- Feautues:
+
+  1. Biconomy hosted sponsorship optimization which will optimisitically skip the payment userOp with offchain signature verification which reduces gas costs for end users
+  2. Conditional execution support for rawCalldata builder
+  3. Minor patch for Safe type kit dependencies
+
+  Breaking changes:
+
+  1. sponsorshipOptions.rpcUrl field has been removed now with respect to the sponsorship optimization
+
+## 1.1.20
+
+### Patch Changes
+
+#### Features:
+
+1. Supertransactions are supported for `Safe smart wallets` now. You can execute supertransaction with Safe Multisig wallet with `Safe fusion mode`
+2. `Custom execution simulation retry` feature is supported which enables you to create a long running supertransaction by adjusting the simulation interval as needed
+3. `Latency optimizations` - Concurrent nonce calculation, improved sponsorship nonce calculation, reduced RPC calls for permit mode and other pre validation checks to reduce latency for different scenarios.
+4. Support for `ERC-7739` Readable Typed Signatures for Smart Accounts
+
+#### Breaking changes:
+
+1. `toDefaultModule` and `toMeeK1Module` now require WalletClient object instead of signer object to enable 7739 signatures Ownables and SS modules do not support 7739 thus still accept signer toValidator() now accepts any of WalletClient or signer objects.
+2. New methods: `signMessageErc7739` and `signTypedDataErc7739` are exposed for Validator objects to sign for 7739. (used by Nexus account under the hood)
+3. Nexus account will by default always use `7739` if current module supports it.
+4. `sponsorshipOptions.rpcUrl` - Sponsorship options now expects a RPC url, by default public RPC is used or if the chain is defined in chainConfig, it will be reused. It is recommended to pass a reliable RPC url or define a sponsorship chain in chain config
+
+## 1.1.19
+
+### Patch Changes
+
+- Added EIP-712 typed data signing support for smart account mode, upgraded to MEE v2.2.1 contracts with new addresses, and improved quote execution with proper version handling. This enables using 712 typed signatures for signing supertransactions when using non-fusion modes.
+
+## 1.1.18
+
+### Patch Changes
+
+- Features included:
+
+  1. Permit flow enhancements: Automatic permit flaw detection and fallback to onchain mode
+  2. Permit flow enhancements: Different EIP 712 domain types support for different exotic permit based tokens
+  3. Smart sessions sponsorship support for prepare permission flow
+  4. Instruction level timebound support to customize the instruction execution time and its expiry as needed.
+
+  Check the documentation for more information on these changes
+
+## 1.1.17
+
+### Patch Changes
+
+- Feature included:
+
+  1. New smart session smart contracts are supported and used for smart session flows
+  2. Sophon mainnet and testnet are supported
+
+## 1.1.16
+
+### Patch Changes
+
+#### Features included
+
+1. Multichain accountAddress overrides for 7702 flow and Nexus upgrades.
+2. Simulation support for MEE version 2.2.0 for all the fusion modes
+3. Enhancements for cleanup userOps to cover native token cleanup for various target types such as EOA, SCA, and delegated EOA.
+
+#### Breaking changes:
+
+1. Gloabl accountAddress overrides are removed. Now all the accountAddress should be overriden per chainConfig basis
+
+#### Old way:
+
+```
+    const mcNexus = await toMultichainNexusAccount({
+    signer: eoaAccount,
+    accountAddress: randomAddressOne.address,
+    chainConfigurations: [
+      {
+        chain: baseSepolia,
+        transport: http(),
+        version: getMEEVersion(MEEVersion.V2_1_0),
+      },
+    ]
+  })
+```
+
+#### New way:
+
+```
+    const mcNexus = await toMultichainNexusAccount({
+    signer: eoaAccount,
+    chainConfigurations: [
+      {
+        chain: baseSepolia,
+        transport: http(),
+        version: getMEEVersion(MEEVersion.V2_1_0),
+        accountAddress: randomAddressOne.address
+      },
+    ]
+  })
+```
+
+## 1.1.15
+
+### Patch Changes
+
+- New MEE version 2.2.0 stable support has been added with Audited contracts. This should enable runtime native token flows out of the box along with some other improvements
+
+## 1.1.14
+
+### Patch Changes
+
+- Simulations support added for cleanup instructions
+
+## 1.1.13
+
+### Patch Changes
+
+- Features included:
+
+  1. Supertransaction simulations: Multichain and Single chain simulations for end to end transaction across the chains and protocols
+  2. Gas limit optimization: With the help of simulations, the gas limits are super optimized for the users
+  3. Gas prize optimization: Gas prices are highly optimized to reduce the gas fees for users
+  4. Fast block mode: Fast block mode enables a quick status resolution for supertransaction which highly improves the user experience
+
+  Please read more about these features in the biconomy docs
+
+## 1.1.12
+
+### Patch Changes
+
+- Patches:
+
+  1. Enhanced the permit tokens flow support for more uncovered exotic tokens
+  2. Fixed the native token transfer issue in withdraw and nativeTokenTransfer builder to cover more cases such as EOA, Delegated EOA, and SCA's
+
+## 1.1.11
+
+### Patch Changes
+
+- Features included:
+
+  1. Transaction metadata for instructions to provide rich context about supertransaction.
+  2. Conditional execution to enable developers to add custom conditions to the composable calls.
+  3. Added a support for monad mainnet and testnet chains in SDK
+
+## 1.1.10
+
+### Patch Changes
+
+- fixed the rawCalldata builder encoding issues
+
+## 1.1.9
+
+### Patch Changes
+
+- Patch: Smart sessions enhancement to have session batching. All the actions will be grouped into one session on the same chain.
+
+## 1.1.8
+
+### Patch Changes
+
+- Patches included:
+
+  1. Fixed Smart session mode usage
+  2. Added a universal policy to support payment token with warning
+
+## 1.1.7
+
+### Patch Changes
+
+- Features included:
+
+  1. Native token runtime values are supported
+  2. Native token runtime cleanups are supported
+  3. Custom verification gas limit for smart sessions are supported
+
+## 1.1.6
+
+### Patch Changes
+
+- Changes included:
+
+  1. Removed param v from the MEEAuthorization interface. So v is not mandatory anymore
+  2. verificationGasLimit field will be applied for all the instructions and not just payment instruction
+  3. Payment userOps will be excluded from the supertransaction status checks
+
+## 1.1.5
+
+### Patch Changes
+
+- Added custom gas refund address param for the entrypoint refunds
+
+## 1.1.4
+
+### Patch Changes
+
+- Features/improvements included:
+
+  1. Native token cleanup support with fixed amounts
+  2. Modular SDK - Decoupled some dependencies on batcher and builder functions to ease the SDK usage in backend environments
+  3. Default cleanup userOps constraints are removed to speed up the cleanup execution
+  4. Improved CommonJS and ESM build support
+  5. Improved the getQuoteType util to reduce the number of RPC calls to detect the quote type
+  6. Added a Nexus MEE version check bypass flag which avoid checking all the contract deployment status to improve latency in backend environments
+  7. Added a utils to getGasTank for sponsorship
+
+  Breaking changes:
+
+  1. Intent builder interface has changed a bit. Token field expects both mcToken and unified balance now
+
+  ```
+  mcNexus.build({
+    type: "intent",
+    data: {
+      depositor: mcNexus.addressOn(paymentChain.id, true),
+      recipient: mcNexus.addressOn(targetChain.id, true),
+      amount: 1n,
+      token: {
+        mcToken: mcUSDC,
+        unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+      },
+      toChainId: targetChain.id
+    }
+  })
+  ```
+
+  2. `getPaymentToken` method has been renamed into `getSupportedFeeToken` now
+
+## 1.1.3
+
+### Patch Changes
+
+- Improved the permit token on-chain details fetch with batched multicall for better performance
+
+## 1.1.2
+
+### Patch Changes
+
+- Added fallback version for permit flow
+
+## 1.1.1
+
+### Patch Changes
+
+- Features included:
+
+  1. Multichain 7702 authorization support.
+  2. Permit fusion mode improvements to cover more permit based tokens
+  3. SDK test case revamp
+  4. More across spoke pools are integration for composable across wrapper
+
+## 1.1.0
+
+### Minor Changes
+
+- Features included:
+
+  1. MEE versioning - Version aware SDK which enables developers to use four different MEE versions based on their needs. Currently the SDK support MEE versions 1.0.0, 1.1.0, 2.0.0 and 2.1.0. Check documentation for more info on this
+  2. Modular Signing utils for preparing the signable payload and prepare executable signed quote. This enables the abstractjs to be used in backend
+  3. Across intent wrapper - A composable across wrapper which enables composable bridge swaps with the help of MEE composability stack
+
+  Breaking changes:
+
+  1. MEE version needs to be added explicitly for all the nexus or multichain nexus instances. Field such as chains, transports are removed and grouped with a object called chainConfigurations. This object defines the chain, transport and version for nexus account and MEE stack. Check the docs for more info
+
+## 1.0.22
+
+### Patch Changes
+
+- Fixed the verification gas limit issue for metamask delegation toolkit fusion mode
+
+## 1.0.21
+
+### Patch Changes
+
+- fixed the metamask delegation toolkit import issues
+
+## 1.0.20
+
+### Patch Changes
+
+- Fixed the metamask delegation tool kit peer dependency issue
+
+## 1.0.19
+
+### Patch Changes
+
+- Features released:
+
+  1. Eth forwarder - It enables native token to be transferred via trigger
+  2. Custom trigger call - It enables the developer to define custom call in trigger instead of just token triggers
+  3. Metamask DTK - Experimental metamask delegation flow is supported
+  4. Custom Recipient for token triggers - It enables developers to add a custom recipient address for token transfers in trigger
+  5. Custom Recipient for Eth Forwarder - It enables developers to add a custom recipient address for native currency transfers in trigger
+  6. Max available Eth Forwarder transfer - It enables developers to transfer maximum available native tokens excluding gas fee via trigger
+  7. Custom fee payer - This enables anyone to provide custom fee payer address which will take care of fee payment via pre approved allowance
+  8. Code and test suite improvements
+
 ## 1.0.18
 
 ### Patch Changes

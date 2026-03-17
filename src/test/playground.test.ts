@@ -2,7 +2,6 @@ import {
   http,
   type Address,
   type Chain,
-  type Hex,
   type PrivateKeyAccount,
   type PublicClient,
   type WalletClient,
@@ -10,10 +9,7 @@ import {
   createWalletClient,
   parseEther
 } from "viem"
-import { privateKeyToAccount } from "viem/accounts"
-import { base, optimism, polygon } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
-import { toMultichainNexusAccount } from "../sdk/account"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import { toNexusAccount } from "../sdk/account/toNexusAccount"
 import { playgroundTrue } from "../sdk/account/utils/Utils"
 import {
@@ -26,12 +22,17 @@ import {
   biconomySponsoredPaymasterContext,
   createBicoPaymasterClient
 } from "../sdk/clients/createBicoPaymasterClient"
+import { DEFAULT_MEE_VERSION } from "../sdk/constants"
+import { getMEEVersion } from "../sdk/modules"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "./testSetup"
 import type { NetworkConfig } from "./testUtils"
 
 const index = 0n
 
-describe.skipIf(!playgroundTrue())("playground", () => {
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
+describe.skipIf(!playgroundTrue() || !runLifecycleTests)("playground", () => {
   let network: NetworkConfig
   // Nexus Config
   let chain: Chain
@@ -87,9 +88,12 @@ describe.skipIf(!playgroundTrue())("playground", () => {
   test("should init the smart account", async () => {
     nexusClient = createSmartAccountClient({
       account: await toNexusAccount({
-        chain,
         signer: eoaAccount,
-        transport: http(network.rpcUrl),
+        chainConfiguration: {
+          chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
         index
       }),
       transport: http(bundlerUrl),

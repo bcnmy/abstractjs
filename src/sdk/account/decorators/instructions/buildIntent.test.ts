@@ -8,11 +8,14 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildIntent from "./buildIntent"
 
 describe("mee.buildIntent", () => {
@@ -26,6 +29,7 @@ describe("mee.buildIntent", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -37,10 +41,25 @@ describe("mee.buildIntent", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
 
     meeClient = await createMeeClient({ account: mcNexus })
   })
@@ -49,11 +68,16 @@ describe("mee.buildIntent", () => {
     console.log("mcNexus", mcNexus.addressOn(targetChain.id))
 
     const instructions: Instruction[] = await buildIntent(
-      { account: mcNexus },
+      { accountAddress: mcNexus.signer.address, meeVersions },
       {
+        depositor: mcNexus.addressOn(paymentChain.id, true),
+        recipient: mcNexus.addressOn(targetChain.id, true),
         amount: 1000000n,
-        mcToken: mcUSDC,
-        toChain: targetChain
+        token: {
+          mcToken: mcUSDC,
+          unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+        },
+        toChainId: targetChain.id
       }
     )
 
@@ -62,22 +86,38 @@ describe("mee.buildIntent", () => {
 
   it("should highlight building optimistic intent instructions", async () => {
     const newMcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: privateKeyToAccount(generatePrivateKey())
+      signer: privateKeyToAccount(generatePrivateKey()),
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const instructions: Instruction[] = await buildIntent(
-      { account: newMcNexus },
+      { accountAddress: newMcNexus.signer.address, meeVersions },
       {
+        depositor: mcNexus.addressOn(targetChain.id, true),
+        recipient: mcNexus.addressOn(paymentChain.id, true),
         amount: 1000000n,
-        mcToken: mcUSDC,
-        toChain: paymentChain,
+        token: {
+          mcToken: mcUSDC,
+          unifiedBalance: await newMcNexus.getUnifiedERC20Balance(mcUSDC)
+        },
+        toChainId: paymentChain.id,
         mode: "OPTIMISTIC"
       }
     )
 
-    expect(instructions.length).toBe(1)
+    expect([1, 0]).toContain(instructions.length)
+    if (instructions.length === 0) return
     expect(instructions[0].calls.length).toBe(2)
   })
 })

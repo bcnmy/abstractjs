@@ -4,7 +4,6 @@ import {
   type ChainSession,
   type ERC7739Data,
   GLOBAL_CONSTANTS,
-  OWNABLE_VALIDATOR_ADDRESS,
   type PolicyData,
   type Session,
   SmartSessionMode,
@@ -18,17 +17,16 @@ import {
   getSudoPolicy,
   hashChainSessions
 } from "@rhinestone/module-sdk"
-import {
-  type Address,
-  type Chain,
-  type Client,
-  type Hex,
-  type LocalAccount,
-  type Prettify,
-  type PublicClient,
-  type RequiredBy,
-  type Transport,
-  zeroAddress
+import type {
+  Address,
+  Chain,
+  Client,
+  Hex,
+  LocalAccount,
+  Prettify,
+  PublicClient,
+  RequiredBy,
+  Transport
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import type { ModularSmartAccount } from "../../../utils/Types"
@@ -116,6 +114,12 @@ async function grantPermission<
 ): Promise<GrantPermissionResponse> {
   const { sessions, accountsAndChainIds, clients, signer } =
     await prepareForGrantingPermission(nexusClient, parameters)
+
+  const account = nexusClient?.account || parameters[0].account
+
+  if (!account) {
+    throw new Error("Account not set")
+  }
 
   const chainDigests: { chainId: bigint; sessionDigest: `0x${string}` }[] = []
   const chainSessions: ChainSession[] = []
@@ -211,7 +215,7 @@ async function grantPermission<
           sessionToEnable: session,
           permissionEnableSig: permissionEnableSig
         },
-        validator: zeroAddress, // default validator
+        validator: account.version.defaultValidatorAddress,
         accountType
       }
     }
@@ -346,7 +350,7 @@ const prepareForGrantingPermission = async <
     }
 
     const session: Session = {
-      sessionValidator: OWNABLE_VALIDATOR_ADDRESS,
+      sessionValidator: GLOBAL_CONSTANTS.OWNABLE_VALIDATOR_ADDRESS,
       permitERC4337Paymaster: false,
       sessionValidatorInitData: encodeValidationData({
         threshold: 1,

@@ -6,6 +6,8 @@ import { type GetQuotePayload, getQuote } from "./getQuote"
 import type { GetQuoteParams } from "./getQuote"
 import type { TokenTrigger, Trigger } from "./signPermitQuote"
 
+export const DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK = 200_000n
+
 /**
  * Response payload for a MM DTK quote request.
  * Combines the standard quote payload with MM DTK-specific trigger information.
@@ -34,6 +36,9 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
    */
   delegatorSmartAccount: MetaMaskSmartAccount
 
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
+
   feePayer?: undefined
 }
 
@@ -50,22 +55,6 @@ export type GetMmDtkQuoteParams = GetQuoteParams & {
  *
  * @returns Promise resolving to quote payload with permit-specific trigger information
  *
- * @example
- * ```typescript
- * const quote = await getPermitQuote(meeClient, {
- *   instructions: [{
- *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
- *     data: "0x...",
- *     value: "0"
- *   }],
- *   trigger: {
- *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
- *     amount: "1000000", // 1 USDC (6 decimals)
- *     owner: "0x...", // Token owner address
- *     spender: "0x..." // Address approved to spend tokens
- *   }
- * });
- * ```
  *
  * @throws Will throw an error if:
  * - The trigger parameters are invalid
@@ -80,7 +69,9 @@ export const getMmDtkQuote = async (
     trigger,
     cleanUps,
     instructions,
+    batch = true,
     gasLimit,
+    verificationGasLimit,
     delegatorSmartAccount,
     ...rest
   } = parameters
@@ -88,33 +79,55 @@ export const getMmDtkQuote = async (
   const resolvedInstructions = await resolveInstructions(instructions)
 
   const sender = delegatorSmartAccount.address
-  const scaAddress = account_.addressOn(trigger.chainId, true)
+  const spender = account_.addressOn(trigger.chainId, true)
 
   // By default the trigger amount will be deposited to sca account.
   // if a custom recipient is defined ? It will deposit to the recipient address
-  const recipient = trigger.recipientAddress || scaAddress
+  const recipient = trigger.recipientAddress || spender
 
   const { triggerGasLimit, triggerAmount, batchedInstructions } =
     await prepareInstructions(client, {
       resolvedInstructions,
       trigger,
-      sender,
-      scaAddress,
+      owner: sender,
+      spender,
       recipient,
-      account: account_
+      account: account_,
+      batch
     })
+
+  const triggerInfo: Trigger = {
+    tokenAddress: trigger.tokenAddress,
+    chainId: trigger.chainId,
+    gasLimit: triggerGasLimit,
+    amount: triggerAmount, // Amount without fees and fees will be added below
+    ...(trigger.approvalAmount
+      ? { approvalAmount: trigger.approvalAmount }
+      : {}),
+    ...(trigger.recipientAddress
+      ? { recipientAddress: trigger.recipientAddress }
+      : {})
+  }
 
   // using the quote-permit endpoint as the redeemed permission
   // will aprove whatever is required to be approved, so the
   // rest is similar to the regular permit fusion mode
-  const quote = await getQuote(client, {
-    path: "quote-permit",
-    eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
-    instructions: batchedInstructions,
-    gasLimit: gasLimit || triggerGasLimit,
-    ...(cleanUps ? { cleanUps } : {}),
-    ...rest
-  })
+  const quote = await getQuote(
+    client,
+    {
+      path: "quote-permit",
+      eoa: sender, // it is not an EOA, but a smart account in this case, however param is named `eoa` for backward compatibility, see `GetQuoteParams` type for more details
+      instructions: batchedInstructions,
+      gasLimit: gasLimit || triggerGasLimit,
+      batch,
+      verificationGasLimit:
+        verificationGasLimit || DEFAULT_VERIFICATION_GAS_LIMIT_FOR_MM_DTK,
+      ...(cleanUps ? { cleanUps } : {}),
+      ...rest
+    },
+    "mm-dtk",
+    triggerInfo
+  )
 
   // For useMaxAvailableFunds case, fees will be taken from max available funds.
   // else it will be explicitly defined here
@@ -127,16 +140,11 @@ export const getMmDtkQuote = async (
     fees = 0n
   }
 
-  const amount = triggerAmount + fees
+  triggerInfo.amount += fees
 
   return {
     quote,
-    trigger: {
-      tokenAddress: trigger.tokenAddress,
-      chainId: trigger.chainId,
-      amount,
-      gasLimit: triggerGasLimit
-    }
+    trigger: triggerInfo
   }
 }
 

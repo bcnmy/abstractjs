@@ -7,7 +7,9 @@ import {
   toMultichainNexusAccount
 } from "../../account/toMultiChainNexusAccount"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
+import { DEFAULT_MEE_VERSION } from "../../constants"
 import { mcUSDC } from "../../constants/tokens"
+import { getMEEVersion } from "../../modules"
 import { getUnifiedERC20Balance } from "./getUnifiedERC20Balance"
 
 describe("mee.getUnifiedERC20Balance", () => {
@@ -32,9 +34,19 @@ describe("mee.getUnifiedERC20Balance", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })

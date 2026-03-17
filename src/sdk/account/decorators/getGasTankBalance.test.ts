@@ -3,8 +3,10 @@ import { generatePrivateKey } from "viem/accounts"
 import { baseSepolia } from "viem/chains"
 import { beforeAll, describe, expect, it } from "vitest"
 import { TESTNET_RPC_URLS } from "../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import { getBalance } from "../../../test/testUtils"
-import { testnetMcUSDC } from "../../constants"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
 describe("mee.getGasTankBalance", () => {
@@ -12,8 +14,11 @@ describe("mee.getGasTankBalance", () => {
 
   beforeAll(async () => {
     gasTankAccount = await toGasTankAccount({
-      transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-      chain: baseSepolia,
+      chainConfiguration: {
+        transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+        chain: baseSepolia,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: generatePrivateKey()
     })
   })
@@ -29,11 +34,11 @@ describe("mee.getGasTankBalance", () => {
     const erc20Balance = await getBalance(
       publicClient,
       gasTankAddress,
-      testnetMcUSDC.addressOn(baseSepolia.id)
+      testnetMcTestUSDCP.addressOn(baseSepolia.id)
     )
 
     const { balance, decimals } = await gasTankAccount.getBalance({
-      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+      tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
     })
 
     expect(balance).to.eq(erc20Balance)

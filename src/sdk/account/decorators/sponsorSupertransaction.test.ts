@@ -1,14 +1,19 @@
 import { http, type Chain, type LocalAccount } from "viem"
 import { generatePrivateKey } from "viem/accounts"
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, inject, it } from "vitest"
 import { type MultichainSmartAccount, toMultichainNexusAccount } from ".."
 import { toNetwork } from "../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../test/testTokens"
 import type { NetworkConfig } from "../../../test/testUtils"
 import { type MeeClient, createMeeClient } from "../../clients/createMeeClient"
-import { testnetMcUSDC } from "../../constants"
+import { DEFAULT_MEE_VERSION } from "../../constants"
+import { getMEEVersion } from "../../modules"
 import { type GasTankAccount, toGasTankAccount } from "../toGasTankAccount"
 
-describe("mee.sponsorSupertransaction", () => {
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
+describe.runIf(runLifecycleTests)("mee.sponsorSupertransaction", () => {
   let network: NetworkConfig
   let eoaAccount: LocalAccount
 
@@ -24,19 +29,27 @@ describe("mee.sponsorSupertransaction", () => {
     chain = network.chain
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [chain],
-      transports: [http(network.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({
       account: mcNexus,
-      apiKey: "mee_3ZLvzYAmZa89WLGa3gmMH8JJ"
+      apiKey: "mee_3Zmc7H6Pbd5wUfUGu27aGzdf"
     })
 
     gasTankAccount = await toGasTankAccount({
-      transport: http(network.rpcUrl),
-      chain,
+      chainConfiguration: {
+        transport: http(network.rpcUrl),
+        chain,
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      },
       privateKey: generatePrivateKey()
     })
   })
@@ -61,7 +74,7 @@ describe("mee.sponsorSupertransaction", () => {
       ],
       // This is actually not required for sponsorship request. To mock the singature util, I've added this here
       feeToken: {
-        address: testnetMcUSDC.addressOn(chain.id),
+        address: testnetMcTestUSDCP.addressOn(chain.id),
         chainId: chain.id
       }
     })

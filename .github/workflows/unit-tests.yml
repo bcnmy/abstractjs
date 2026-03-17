@@ -31,7 +31,7 @@ jobs:
           MAINNET_CHAIN_ID: 10
 
       - name: Run the tests
-        run: bun run test --bail=1
+        run: bun run test
         env:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_TWO: ${{ secrets.PRIVATE_KEY_TWO }}
@@ -42,5 +42,6 @@ jobs:
           TESTNET_CHAIN_ID: 84532
           MAINNET_CHAIN_ID: 10
           RUN_PAID_TESTS: false
-          CI: true 
-          STAGING: false
+          RUN_LIFECYCLE_TESTS: true
+          CI: true
+          STAGING: true

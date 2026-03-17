@@ -1,15 +1,26 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds,
+  Overrides
+} from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  isComposableCallRequired
+  isComposableCallRequired,
+  isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -35,7 +46,11 @@ export type BuildTransferFromParameters = TokenParams & {
    * @example "0x1234567890123456789012345678901234567890"
    */
   recipient: Address
-}
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for the buildTransferFrom function
@@ -68,7 +83,7 @@ export type BuildTransferFromParams = BaseInstructionsParams & {
  * @example
  * ```typescript
  * const instructions = await buildTransferFrom(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   {
  *     chainId: 1,
  *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
@@ -83,12 +98,25 @@ export type BuildTransferFromParams = BaseInstructionsParams & {
 export const buildTransferFrom = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferFromParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
   const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, sender, recipient } =
-    parameters
+  const {
+    chainId,
+    tokenAddress,
+    amount,
+    gasLimit,
+    sender,
+    recipient,
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay,
+    simulationOverrides
+  } = parameters
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
   const abi = erc20Abi
   const functionSig = "transferFrom"
@@ -99,7 +127,6 @@ export const buildTransferFrom = async (
   ]
 
   const functionContext = getFunctionContextFromAbi(functionSig, abi)
-
   // Check for the runtime arguments and detect the need for composable call
   const isComposableCall = forceComposableEncoding
     ? true
@@ -108,10 +135,15 @@ export const buildTransferFrom = async (
         args as unknown as Array<AnyData>
       )
 
-  let triggerCalls: AbstractCall[] | ComposableCall[]
+  let transferFromCall: AbstractCall[] | ComposableCall[]
 
   // If the composable call is detected ? The call needs to composed with runtime encoding
   if (isComposableCall) {
+    if (!composabilityParams) {
+      throw new Error(
+        "Composability params are required to build a composable call"
+      )
+    }
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
       functionName: functionSig,
@@ -121,13 +153,12 @@ export const buildTransferFrom = async (
       ...(gasLimit ? { gasLimit } : {})
     }
 
-    triggerCalls = await buildComposableCall(
-      baseParams,
+    transferFromCall = await buildComposableCall(
       composableCallParams,
-      efficientMode
+      composabilityParams
     )
   } else {
-    triggerCalls = [
+    transferFromCall = [
       {
         to: tokenAddress,
         data: encodeFunctionData({
@@ -140,12 +171,32 @@ export const buildTransferFrom = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "TRANSFER",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: sender,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
-      calls: triggerCalls,
+      calls: transferFromCall,
       chainId,
-      isComposable: isComposableCall
+      isComposable: isComposableCall,
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp,
+      executionSimulationRetryDelay,
+      simulationOverrides
     }
   ]
 }

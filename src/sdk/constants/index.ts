@@ -1,48 +1,170 @@
-import {
-  GLOBAL_CONSTANTS,
-  REGISTRY_ADDRESS,
-  RHINESTONE_ATTESTER_ADDRESS
-} from "@rhinestone/module-sdk"
-import type { Hex } from "viem"
-import type { AddressConfig } from "../account/utils/getVersion"
+import { GLOBAL_CONSTANTS } from "@rhinestone/module-sdk"
+import { type Address, type Hex, zeroAddress } from "viem"
+import type { MEEVersionConfig } from "../account/utils/getVersion"
 export * from "./abi"
 export * from "./tokens"
 export * from "./protocols"
 
-export const ENTRY_POINT_ADDRESS: Hex =
-  "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
-export const ENTRYPOINT_SIMULATIONS_ADDRESS: Hex =
-  "0x74Cb5e4eE81b86e70f9045036a1C5477de69eE87"
-export const NEXUS_BOOTSTRAP_ADDRESS: Hex =
-  "0x00000000D3254452a909E4eeD47455Af7E27C289"
-export const MEE_VALIDATOR_ADDRESS: Hex =
-  "0x00000000d12897DDAdC2044614A9677B191A2d95"
-export const BICONOMY_ATTESTER_ADDRESS: Hex =
-  "0xF9ff902Cdde729b47A4cDB55EF16DF3683a04EAB"
-export const BICONOMY_ATTESTER_ADDRESS_UNTIL_0_1: Hex =
-  "0xDE8FD2dBcC0CA847d11599AF5964fe2AEa153699"
-export const NEXUS_ACCOUNT_FACTORY_ADDRESS: Hex =
-  "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de"
-export const COMPOSABLE_MODULE_ADDRESS: Hex =
-  "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10"
-export const NEXUS_IMPLEMENTATION_ADDRESS: Hex =
-  "0x000000004F43C49e93C970E84001853a70923B03"
-export const FORWARDER_ADDRESS: Hex =
-  "0x000000Afe527A978Ecb761008Af475cfF04132a1"
+/**
+ * Supported MEE versions with descriptions.
+ */
+export enum MEEVersion {
+  /**
+   * Mee k1 validator deprecated and replaced with Stx Validator
+   * Attention: Stx data packing into the signature for Permit mode has changed.
+   **/
+  V3_0_0 = "3.0.0",
+  /**
+   *  New K1 Validator with Safe SA as master account support
+   **/
+  V2_3_0 = "2.3.0",
+  /**
+   * Nexus 1.2.1
+   * - Composability 1.1.0
+   * - 7702 accounts initialization with eoa's signature (relayers' support)
+   * - EIP-712 signing support for `simple` (smart-account) mode
+   **/
+  V2_2_1 = "2.2.1",
 
-export const DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION: Record<
-  string,
-  AddressConfig
+  /** New K1 Mee module introduced that allows ERC-7702-delegated EOAs owning Nexus accounts. */
+  V2_1_0 = "2.1.0",
+
+  /** Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
+   * MEE K1 Validator is pre-installed as a default validator module.
+   */
+  V2_0_0 = "2.0.0",
+
+  /** Nexus v1.0.2 release with New Account Factory and MEE K1 Validator v1.0.3
+   * This is compiled for chains which only has evm Paris (No PUSH0, no MCOPY, no TSTORE)
+   */
+  V1_1_0 = "1.1.0",
+
+  /** First release for the MEE contracts suite, based on Nexus 1.0.2
+   * Requires installing MEE K1 validator and Composability module explicitly
+   */
+  V1_0_0 = "1.0.0"
+}
+
+export enum ComposabilityVersion {
+  /** Added native token runtime injection support. */
+  V1_1_0 = "1.1.0",
+  /** First release for the Composability contracts suite. */
+  V1_0_0 = "1.0.0"
+}
+
+// NOTE: Update this description, whenever changing the new default version
+/** Default version is 2.0.0.
+ * Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
+ * MEE K1 Validator is pre-installed as a default validator module.
+ */
+export const DEFAULT_MEE_VERSION: MEEVersion = MEEVersion.V2_0_0
+
+export const ENTRY_POINT_ADDRESS: Address =
+  "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+export const ENTRYPOINT_SIMULATIONS_ADDRESS: Address =
+  "0x74Cb5e4eE81b86e70f9045036a1C5477de69eE87"
+
+export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
+  MEEVersion,
+  MEEVersionConfig
 > = {
-  "1.0.2": {
+  [MEEVersion.V3_0_0]: {
+    version: MEEVersion.V3_0_0,
+    accountId: "biconomy.nexus.1.3.1",
+    factoryAddress: "0x75Eb8D1621D193010425D34b4Ae81835E2409660",
+    bootStrapAddress: "0x33A8F72F236e02eD62B0312f48105AcBD651Cd17",
+    implementationAddress: "0x37DF3014c8B72372F2783aAF517bcdC6B516c8Df",
+    validatorAddress: "0x5e2181ccC1550f5e86F14298A12a7a9A04536F58", // Stx Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
+    composabilityVersion: ComposabilityVersion.V1_1_0,
+    submodules: {
+      noStxModeVerifier: "0x03043fA2956d7729708E5871006E4D60f077BF9C",
+      SimpleModeSubmodule: "0x3dE6bd76AB8B77fc9E4b79168EaF2253Ff1F0410",
+      PermitSubmodule: "0x2eb293D700dEeaF923f6ff32741921C270Ff339b",
+      TxSubmodule: "0xBFf2aE0e9B523E8192A77c0Dd610b490eC45A08c",
+      SafeAccountSubmodule: "0xa35a716E8e1Df5Fb441bCDdC2357cf9b256AC566",
+      EoaStatelessValidator: "0xdD900Cd95f072eAe396bE0487C2546Bf81d01B48",
+      P256StatelessValidator: "0xa7B97e8152aCee107a098F95f691Cd24Cf2f9835"
+    }
+  },
+  [MEEVersion.V2_3_0]: {
+    version: MEEVersion.V2_3_0,
+    accountId: "biconomy.nexus.1.3.1",
+    factoryAddress: "0x5836Bdb35913c7CBA6ef40675354445121449917",
+    bootStrapAddress: "0xCa8f48912A3a33fE694c318a1d097AD394CFAB76",
+    implementationAddress: "0x54F220e4f0DEAb58Be26153df5a674668B9d7Fb2",
+    validatorAddress: "0x1Cdae7dcc3f32551865EfE3d77AC2b88Ee2905B4",
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
+    composabilityVersion: ComposabilityVersion.V1_1_0
+  },
+  [MEEVersion.V2_2_1]: {
+    version: MEEVersion.V2_2_1,
+    accountId: "biconomy.nexus.1.3.1",
+    factoryAddress: "0x000000002c9A405a196f2dc766F2476B731693c3", // Nexus Account Factory Address
+    bootStrapAddress: "0x000000007BfEdA33ac982cb38eAaEf5D7bCC954c",
+    implementationAddress: "0x0000000020fe2F30453074aD916eDeB653eC7E9D", // Nexus 1.3.1
+    validatorAddress: "0x0000000002d3cC5642A748B6783F32C032616E03", // MEE K1 Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
+    composabilityVersion: ComposabilityVersion.V1_1_0
+  },
+  [MEEVersion.V2_1_0]: {
+    version: MEEVersion.V2_1_0,
+    accountId: "biconomy.nexus.1.2.0",
+    factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837", // Nexus Account Factory Address
+    bootStrapAddress: "0x0000003eDf18913c01cBc482C978bBD3D6E8ffA3",
+    implementationAddress: "0x00000000383e8cBe298514674Ea60Ee1d1de50ac",
+    validatorAddress: "0x0000000031ef4155C978d48a8A7d4EDba03b04fE", // K1 MEE Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_0_0
+  },
+  [MEEVersion.V2_0_0]: {
+    version: MEEVersion.V2_0_0,
+    accountId: "biconomy.nexus.1.2.0",
+    factoryAddress: "0x000000001D1D5004a02bAfAb9de2D6CE5b7B13de", // Nexus Account Factory Address
+    bootStrapAddress: "0x00000000D3254452a909E4eeD47455Af7E27C289",
+    implementationAddress: "0x000000004F43C49e93C970E84001853a70923B03",
+    validatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95", // K1 MEE Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_0_0
+  },
+  [MEEVersion.V1_1_0]: {
+    version: MEEVersion.V1_1_0,
     accountId: "biconomy.nexus.1.0.2",
-    factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9",
+    factoryAddress: "0x0000000C8B6b3329cEa5d15C9d8C15F1f254ec3C", // Nexus Account Factory Address
+    bootStrapAddress: "0x000000c4781Be3349F81d341027fd7A4EdFa4Dd2",
+    implementationAddress: "0x000000001964d23C59962Fc7A912872EE8fB3b6A",
+    validatorAddress: "0x00000000E894100bEcFc7c934Ab7aC8FBA08A44c", // K1 MEE Validator Address
+    defaultValidatorAddress: "0x00000000E894100bEcFc7c934Ab7aC8FBA08A44c", // K1 MEE Validator Address
+    moduleRegistry: {
+      registryAddress: zeroAddress,
+      attesters: [],
+      attesterThreshold: 0
+    },
+    composableModuleAddress: "0x000000eff5C221A6bdB12381868307c9Db5eB462",
+    ethForwarderAddress: "0x000000001f1c68bD5bF69aa1cCc1d429700D41Da",
+    composabilityVersion: ComposabilityVersion.V1_0_0
+  },
+  [MEEVersion.V1_0_0]: {
+    version: MEEVersion.V1_0_0,
+    accountId: "biconomy.nexus.1.0.2",
+    factoryAddress: "0x000000c3A93d2c5E02Cb053AC675665b1c4217F9", // Nexus Account Factory Address
     bootStrapAddress: "0x879fa30248eeb693dcCE3eA94a743622170a3658",
     implementationAddress: "0x000000aC74357BFEa72BBD0781833631F732cf19",
-    k1ValidatorAddress: "0x0000002D6DB27c52E3C11c1Cf24072004AC75cBa", // K1 validator address
-    k1FactoryAddress: "0x2828A0E0f36d8d8BeAE95F00E2BbF235e4230fAc",
-    attesters: [RHINESTONE_ATTESTER_ADDRESS, BICONOMY_ATTESTER_ADDRESS],
-    registryAddress: REGISTRY_ADDRESS
+    validatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95", // K1 MEE Validator Address
+    defaultValidatorAddress: "0x00000000d12897DDAdC2044614A9677B191A2d95", // K1 MEE Validator Address
+    moduleRegistry: {
+      registryAddress: zeroAddress,
+      attesters: [],
+      attesterThreshold: 0
+    },
+    composableModuleAddress: "0x00000004430bB055dB66eBef6Fe5Ee1DA9668B10",
+    ethForwarderAddress: "0x000000Afe527A978Ecb761008Af475cfF04132a1",
+    composabilityVersion: ComposabilityVersion.V1_0_0
   }
 }
 
@@ -53,6 +175,7 @@ export {
   OWNABLE_EXECUTOR_ADDRESS,
   RHINESTONE_ATTESTER_ADDRESS,
   REGISTRY_ADDRESS,
+  type AccountType,
   type EnableSessionData,
   type ActionData,
   type PolicyData,
@@ -74,6 +197,7 @@ export {
   getSetOwnableValidatorThresholdAction,
   decodeSmartSessionSignature,
   encodeValidationData,
+  getPermissionId,
   getEnableSessionDetails,
   getSmartSessionsValidator,
   getSudoPolicy,
@@ -81,7 +205,8 @@ export {
   getUsageLimitPolicy,
   getValueLimitPolicy,
   getOwnableValidator,
-  getUniversalActionPolicy
+  getUniversalActionPolicy,
+  getTimeFramePolicy
 } from "@rhinestone/module-sdk"
 
 // Rhinestone doesn't export the universal action policy address, so we need to get it from the policies

@@ -1,3 +1,4 @@
+import type { OneOf } from "viem"
 import type { BaseMeeClient } from "../../createMeeClient"
 import execute from "./execute"
 import {
@@ -6,6 +7,7 @@ import {
   executeFusionQuote
 } from "./executeFusionQuote"
 import executeQuote from "./executeQuote"
+import executeSessionQuote from "./executeSessionQuote"
 import executeSignedQuote, {
   type ExecuteSignedQuoteParams,
   type ExecuteSignedQuotePayload
@@ -23,20 +25,29 @@ import getOnChainQuote, {
   type GetOnChainQuoteParams,
   type GetOnChainQuotePayload
 } from "./getOnChainQuote.js"
-import {
-  type GetPaymentTokenParams,
-  type GetPaymentTokenPayload,
-  getPaymentToken
-} from "./getPaymentToken"
 import getPermitQuote, {
   type GetPermitQuoteParams,
   type GetPermitQuotePayload
 } from "./getPermitQuote"
 import { type GetQuoteParams, type GetQuotePayload, getQuote } from "./getQuote"
+import getSafeQuote, {
+  type GetSafeQuoteParams,
+  type GetSafeQuotePayload
+} from "./getSafeQuote"
+import {
+  type GetSessionQuoteParams,
+  type GetSessionQuoteResponse,
+  getSessionQuote
+} from "./getSessionQuote"
 import getSupertransactionReceipt, {
   type GetSupertransactionReceiptParams,
   type GetSupertransactionReceiptPayload
 } from "./getSupertransactionReceipt"
+import {
+  type GetSupportedFeeTokenParams,
+  type GetSupportedFeeTokenPayload,
+  getSupportedFeeToken
+} from "./getSupportedFeeToken"
 import signFusionQuote, {
   type SignFusionQuotePayload,
   type SignFusionQuoteParameters
@@ -53,6 +64,14 @@ import signQuote, {
   type SignQuotePayload,
   type SignQuoteParams
 } from "./signQuote"
+import signSafeQuote, {
+  type SignSafeQuoteParams,
+  type SignSafeQuotePayload
+} from "./signSafeQuote"
+import {
+  type SignSessionQuoteParams,
+  signSessionQuote
+} from "./signSessionQuote"
 import waitForSupertransactionReceipt, {
   type WaitForSupertransactionReceiptParams,
   type WaitForSupertransactionReceiptPayload
@@ -184,11 +203,16 @@ export type MeeActions = {
   /**
    * Sign a permit quote for ERC20Permit-enabled tokens
    * @param params - Parameters for signing the permit quote
-   * @returns Promise resolving to signed permit data
+   * @returns Promise resolving to signed permit data or fallbackToOnchainMode flag
    */
   signPermitQuote: (
     params: SignPermitQuoteParams
-  ) => Promise<SignPermitQuotePayload>
+  ) => Promise<
+    OneOf<
+      | { signedPermitQuotePayload: SignPermitQuotePayload }
+      | { fallbackToOnchainMode: true }
+    >
+  >
 
   /**
    * Get a permit quote for ERC20Permit-enabled tokens
@@ -198,6 +222,33 @@ export type MeeActions = {
   getPermitQuote: (
     params: GetPermitQuoteParams
   ) => Promise<GetPermitQuotePayload>
+
+  /**
+   * Get a session quote for a enable session permissions or use existing permissions for a supertransaction.
+   * @param params - Parameters including mode, session validator, actions, session config, fee token, and optionally trigger details.
+   * @returns Promise resolving to session quote with session details optionally
+   */
+  getSessionQuote: <T extends GetSessionQuoteParams>(
+    params: T
+  ) => Promise<GetSessionQuoteResponse<T>>
+
+  /**
+   * Sign a session quote for enabling or using a session.
+   * @param params - Parameters including the session quote and signing options.
+   * @returns Promise resolving to signed session quote data
+   */
+  signSessionQuote: (
+    params: SignSessionQuoteParams
+  ) => Promise<SignQuotePayload | SignFusionQuotePayload>
+
+  /**
+   * Execute a session quote by signing and submit it to the MEE network.
+   * @param params - Parameters including the session quote and options.
+   * @returns Promise resolving to transaction execution result data
+   */
+  executeSessionQuote: (
+    params: SignSessionQuoteParams
+  ) => Promise<ExecuteSignedQuotePayload>
 
   /**
    * Get gas token information for a specific chain
@@ -211,9 +262,9 @@ export type MeeActions = {
    * @param params - Parameters for retrieving payment token info
    * @returns Promise resolving to payment token data
    */
-  getPaymentToken: <EParams extends GetPaymentTokenParams>(
+  getSupportedFeeToken: <EParams extends GetSupportedFeeTokenParams>(
     params: EParams
-  ) => Promise<GetPaymentTokenPayload>
+  ) => Promise<GetSupportedFeeTokenPayload>
 
   /**
    * Get an on-chain quote for standard transactions
@@ -259,6 +310,20 @@ export type MeeActions = {
   getSupertransactionReceipt: (
     params: GetSupertransactionReceiptParams
   ) => Promise<GetSupertransactionReceiptPayload>
+
+  /**
+   * Get a Safe Smart Account quote for using Gnosis Safe as master account
+   * @param params - Parameters for generating the Safe quote
+   * @returns Promise resolving to Safe quote data
+   */
+  getSafeQuote: (params: GetSafeQuoteParams) => Promise<GetSafeQuotePayload>
+
+  /**
+   * Sign a Safe Smart Account quote
+   * @param params - Parameters for signing the Safe quote
+   * @returns Promise resolving to signed Safe quote data
+   */
+  signSafeQuote: (params: SignSafeQuoteParams) => Promise<SignSafeQuotePayload>
 }
 
 /**
@@ -269,8 +334,8 @@ export type MeeActions = {
 export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
   return {
     getGasToken: (params: GetGasTokenParams) => getGasToken(meeClient, params),
-    getPaymentToken: (params: GetPaymentTokenParams) =>
-      getPaymentToken(meeClient, params),
+    getSupportedFeeToken: (params: GetSupportedFeeTokenParams) =>
+      getSupportedFeeToken(meeClient, params),
     getOnChainQuote: (params: GetOnChainQuoteParams) =>
       getOnChainQuote(meeClient, params),
     getQuote: (params: GetQuoteParams) => getQuote(meeClient, params),
@@ -284,8 +349,7 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
     ) => waitForSupertransactionReceipt(meeClient, params),
     signOnChainQuote: (params: SignOnChainQuoteParams) =>
       signOnChainQuote(meeClient, params),
-    signPermitQuote: (params: SignPermitQuoteParams) =>
-      signPermitQuote(meeClient, params),
+    signPermitQuote: (params: SignPermitQuoteParams) => signPermitQuote(params),
     getPermitQuote: (params: GetPermitQuoteParams) =>
       getPermitQuote(meeClient, params),
     getFusionQuote: (params: GetFusionQuoteParams) =>
@@ -294,10 +358,21 @@ export const meeActions = (meeClient: BaseMeeClient): MeeActions => {
       signFusionQuote(meeClient, params),
     executeFusionQuote: (params: SignFusionQuoteParameters) =>
       executeFusionQuote(meeClient, params),
+    getSessionQuote: <T extends GetSessionQuoteParams>(params: T) =>
+      getSessionQuote(meeClient, params),
+    signSessionQuote: (params: SignSessionQuoteParams) =>
+      signSessionQuote(meeClient, params),
+    executeSessionQuote: (params: SignSessionQuoteParams) =>
+      executeSessionQuote(meeClient, params),
     getSupertransactionReceipt: (params: GetSupertransactionReceiptParams) =>
-      getSupertransactionReceipt(meeClient, params)
+      getSupertransactionReceipt(meeClient, params),
+    getSafeQuote: (params: GetSafeQuoteParams) =>
+      getSafeQuote(meeClient, params),
+    signSafeQuote: (params: SignSafeQuoteParams) =>
+      signSafeQuote(meeClient, params)
   }
 }
+
 export * from "./getQuote"
 export * from "./executeSignedQuote"
 export * from "./signQuote"
@@ -315,3 +390,12 @@ export * from "./signFusionQuote"
 export * from "./getPermitQuote"
 export * from "./executeFusionQuote"
 export * from "./getSupertransactionReceipt"
+export * from "./getQuoteType"
+export * from "./getGasToken"
+export * from "./getMmDtkQuote"
+export * from "./getSupportedFeeToken"
+export * from "./getSafeQuote"
+export * from "./signSafeQuote"
+export * from "./getSessionQuote"
+export * from "./signSessionQuote"
+export * from "./executeSessionQuote"

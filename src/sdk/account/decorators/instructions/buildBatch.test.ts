@@ -7,11 +7,14 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import type { Instruction } from "../../../clients/decorators/mee/getQuote"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import { MEEVersionConfig, type MeeVersionsWithChainId } from "../../utils"
 import buildApprove from "./buildApprove"
 import buildBatch from "./buildBatch"
 import buildWithdrawal from "./buildWithdrawal"
@@ -28,6 +31,7 @@ describe("mee.buildBatch", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -39,10 +43,25 @@ describe("mee.buildBatch", () => {
     eoaAccount = network.account!
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
+
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
 
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
@@ -50,11 +69,19 @@ describe("mee.buildBatch", () => {
 
   it("should build a batch instruction", async () => {
     const instructions: Instruction[] = await buildBatch(
-      { account: mcNexus, currentInstructions: [] },
+      {
+        accountAddress: mcNexus.signer.address,
+        currentInstructions: [],
+        meeVersions
+      },
       {
         instructions: [
           buildApprove(
-            { account: mcNexus, currentInstructions: [] },
+            {
+              accountAddress: mcNexus.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               chainId: targetChain.id,
               tokenAddress,
@@ -63,7 +90,11 @@ describe("mee.buildBatch", () => {
             }
           ),
           buildWithdrawal(
-            { account: mcNexus, currentInstructions: [] },
+            {
+              accountAddress: mcNexus.signer.address,
+              currentInstructions: [],
+              meeVersions
+            },
             {
               chainId: targetChain.id,
               tokenAddress,

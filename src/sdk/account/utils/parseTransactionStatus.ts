@@ -1,4 +1,7 @@
-import type { UserOpStatus } from "../../clients/decorators/mee"
+import type {
+  StatusFetchMode,
+  UserOpStatus
+} from "../../clients/decorators/mee"
 import type { MeeFilledUserOpDetails } from "../../clients/decorators/mee/getQuote"
 
 /**
@@ -40,7 +43,8 @@ export const FINAL_STATUSES = ["FAILED", "MINED_SUCCESS", "MINED_FAIL"]
  * @returns The calculated overall transaction status with finality information
  */
 export const parseTransactionStatus = async (
-  userOps: (MeeFilledUserOpDetails & UserOpStatus)[]
+  userOps: (MeeFilledUserOpDetails & UserOpStatus)[],
+  mode: StatusFetchMode = "default"
 ): Promise<TransactionStatusResult> => {
   // Handle empty userOps case
   if (!userOps || userOps.length === 0) {
@@ -51,35 +55,57 @@ export const parseTransactionStatus = async (
     }
   }
 
-  // Cleanup user ops status is not considered for main status
-  const userOpsWithoutCleanup = userOps.filter((usop) => !usop.isCleanUpUserOp)
+  // Payment and cleanup userOps status are not considered for main status
+  const userOpsWithoutPaymentAndCleanup = userOps.filter(
+    (usop) => !usop.isCleanUpUserOp
+  )
 
   const statusMap = {
     // If there is a cleanup user op failue ? Ignore it
-    hasFailedOps: userOpsWithoutCleanup.some(
+    hasFailedOps: userOpsWithoutPaymentAndCleanup.some(
       (userOp) => userOp.executionStatus === "FAILED"
     ),
     // If there is a cleanup user op mining failue ? Ignore it
-    hasMinedFailOps: userOpsWithoutCleanup.some(
-      (userOp) => userOp.executionStatus === "MINED_FAIL"
-    ),
-    hasPendingOps: userOpsWithoutCleanup.some(
+    hasMinedFailOps: userOpsWithoutPaymentAndCleanup.some((userOp) => {
+      if (mode === "default") {
+        // If the block is not confirmed with sufficient block confirmations ? The userOps is still not considered as mined_fail until the confirmations is provided by node
+        return userOp.executionStatus === "MINED_FAIL" && userOp.isConfirmed
+      }
+
+      return userOp.executionStatus === "MINED_FAIL"
+    }),
+    hasPendingOps: userOpsWithoutPaymentAndCleanup.some(
       (userOp) => userOp.executionStatus === "PENDING"
     ),
-    hasMiningOps: userOpsWithoutCleanup.some(
+    hasMiningOps: userOpsWithoutPaymentAndCleanup.some(
       (userOp) => userOp.executionStatus === "MINING"
     ),
     // If there is a cleanup user op failue / mining failure ? Ignore it and mark the sprTx successful.
-    allMinedSuccess: userOpsWithoutCleanup.every(
-      (userOp) => userOp.executionStatus === "MINED_SUCCESS"
-    ),
+    allMinedSuccess: userOpsWithoutPaymentAndCleanup.every((userOp) => {
+      if (mode === "default") {
+        // If the block is not confirmed with sufficient block confirmations ? The userOps is still not considered as mined_success until the confirmations is provided by node
+        return userOp.executionStatus === "MINED_SUCCESS" && userOp.isConfirmed
+      }
+
+      return userOp.executionStatus === "MINED_SUCCESS"
+    }),
     // Check if all userOps have a final state
-    allFinalised: userOpsWithoutCleanup.every(
-      (userOp) =>
+    allFinalised: userOpsWithoutPaymentAndCleanup.every((userOp) => {
+      if (mode === "default") {
+        // If the block is not confirmed with sufficient block confirmations ? The userOps is still not considered as finalized until the confirmations is provided by node
+        return (
+          userOp.executionStatus === "FAILED" ||
+          (userOp.executionStatus === "MINED_FAIL" && userOp.isConfirmed) ||
+          (userOp.executionStatus === "MINED_SUCCESS" && userOp.isConfirmed)
+        )
+      }
+
+      return (
         userOp.executionStatus === "FAILED" ||
         userOp.executionStatus === "MINED_FAIL" ||
         userOp.executionStatus === "MINED_SUCCESS"
-    )
+      )
+    })
   }
   // Calculate status and finality
   let status: UserOpStatus["executionStatus"] = "PENDING" // Default status
@@ -89,35 +115,36 @@ export const parseTransactionStatus = async (
   if (statusMap.hasFailedOps) {
     status = "FAILED"
     // Find the first failed userOp to get error details
-    const failedUserOpIndex = userOpsWithoutCleanup.findIndex(
+    const failedUserOpIndex = userOpsWithoutPaymentAndCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
-    const failedUserOp = userOpsWithoutCleanup[failedUserOpIndex]
+    const failedUserOp = userOpsWithoutPaymentAndCleanup[failedUserOpIndex]
     message = `[${failedUserOpIndex}] ${failedUserOp?.executionError || "Transaction failed off-chain"}`
   } else if (statusMap.hasMinedFailOps) {
     status = "MINED_FAIL"
     // Find the first mined-failed userOp to get error details
-    const minedFailUserOpIndex = userOpsWithoutCleanup.findIndex(
+    const minedFailUserOpIndex = userOpsWithoutPaymentAndCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
-    const minedFailUserOp = userOpsWithoutCleanup[minedFailUserOpIndex]
+    const minedFailUserOp =
+      userOpsWithoutPaymentAndCleanup[minedFailUserOpIndex]
     message = `[${minedFailUserOpIndex}] ${minedFailUserOp?.executionError || "Transaction failed on-chain"}`
   } else if (statusMap.hasMiningOps) {
     status = "MINING"
-    const pendingUserOpIndex = userOpsWithoutCleanup.findIndex(
+    const pendingUserOpIndex = userOpsWithoutPaymentAndCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
     message = `[${pendingUserOpIndex}] Transaction is mining, waiting for blockchain confirmation`
   } else if (statusMap.hasPendingOps) {
     status = "PENDING"
-    const pendingUserOpIndex = userOpsWithoutCleanup.findIndex(
+    const pendingUserOpIndex = userOpsWithoutPaymentAndCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
-    const pendingUserOp = userOpsWithoutCleanup[pendingUserOpIndex]
+    const pendingUserOp = userOpsWithoutPaymentAndCleanup[pendingUserOpIndex]
     message = `[${pendingUserOpIndex}] ${pendingUserOp?.executionError || "Transaction is pending, waiting for conditions to be met"}`
   } else if (statusMap.allMinedSuccess) {
     status = "MINED_SUCCESS"
-    const minedSuccessUserOpIndex = userOpsWithoutCleanup.findIndex(
+    const minedSuccessUserOpIndex = userOpsWithoutPaymentAndCleanup.findIndex(
       (userOp) => userOp.executionStatus === status
     )
     message = `[${minedSuccessUserOpIndex}] Transaction executed successfully`
@@ -127,6 +154,7 @@ export const parseTransactionStatus = async (
     statusMap.allFinalised ||
     statusMap.hasFailedOps ||
     statusMap.hasMinedFailOps
+
   return {
     status,
     isFinalised,

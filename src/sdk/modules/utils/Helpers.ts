@@ -96,7 +96,8 @@ export const parseModule = <
 
 export const isPermitSupported = async (
   walletClient: WalletClient,
-  tokenAddress: Address
+  tokenAddress: Address,
+  isDebugMode = false
 ): Promise<boolean> => {
   try {
     const client = walletClient.extend(publicActions)
@@ -143,7 +144,21 @@ export const isPermitSupported = async (
 
     return hasPermit && hasDomainSeparator && hasNonces
   } catch (err) {
-    console.error("Error checking permit support:", err)
+    if (isDebugMode) console.error("Error checking permit support:", err)
     return false
   }
+}
+
+export const functionNameToLabel = (functionName: string): string => {
+  return (
+    functionName
+      // Convert camelCase to space: "camelCase" → "camel Case"
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      // Replace common separators (_ - :) with space
+      .replace(/[_\-:]+/g, " ")
+      // Trim whitespace
+      .trim()
+      // Capitalize each word
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  )
 }

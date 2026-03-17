@@ -1,16 +1,27 @@
 import { type Address, encodeFunctionData } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds,
+  Overrides
+} from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { TokenWithPermitAbi } from "../../../constants/abi/TokenWithPermitAbi"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  isComposableCallRequired
+  isComposableCallRequired,
+  isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -31,7 +42,11 @@ export type BuildTransferParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   recipient: Address
-}
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for the buildTransfer function
@@ -63,7 +78,7 @@ export type BuildTransferParams = BaseInstructionsParams & {
  * @example
  * ```typescript
  * const instructions = await buildTransfer(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   {
  *     chainId: 1,
  *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
@@ -77,11 +92,24 @@ export type BuildTransferParams = BaseInstructionsParams & {
 export const buildTransfer = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildTransferParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, recipient } = parameters
+  const { currentInstructions = [], accountAddress } = baseParams
+  const {
+    chainId,
+    tokenAddress,
+    amount,
+    gasLimit,
+    recipient,
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay,
+    simulationOverrides
+  } = parameters
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
   const abi = TokenWithPermitAbi
   const functionSig = "transfer"
@@ -104,6 +132,11 @@ export const buildTransfer = async (
 
   // If the composable call is detected ? The call needs to composed with runtime encoding
   if (isComposableCall) {
+    if (!composabilityParams) {
+      throw new Error(
+        "Composability params are required to build a composable call"
+      )
+    }
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
       functionName: functionSig,
@@ -114,9 +147,8 @@ export const buildTransfer = async (
     }
 
     triggerCalls = await buildComposableCall(
-      baseParams,
       composableCallParams,
-      efficientMode
+      composabilityParams
     )
   } else {
     triggerCalls = [
@@ -132,12 +164,32 @@ export const buildTransfer = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "TRANSFER",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: accountAddress,
+      toAddress: recipient,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
       calls: triggerCalls,
       chainId,
-      isComposable: isComposableCall
+      isComposable: isComposableCall,
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp,
+      executionSimulationRetryDelay,
+      simulationOverrides
     }
   ]
 }

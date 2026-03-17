@@ -1,10 +1,10 @@
 import type { MetaMaskSmartAccount } from "@metamask/delegation-toolkit"
-import { type Address, erc20Abi } from "viem"
+import { type Address, encodeFunctionData, erc20Abi, zeroAddress } from "viem"
 import type { BuildInstructionTypes } from "../../../account/decorators/build"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { batchInstructions } from "../../../account/utils/batchInstructions"
+import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
 import type { RuntimeValue } from "../../../modules"
-import { isPermitSupported } from "../../../modules/utils/Helpers"
 import {
   greaterThanOrEqualTo,
   runtimeERC20AllowanceOf
@@ -12,7 +12,6 @@ import {
 import type { BaseMeeClient } from "../../createMeeClient"
 import getMmDtkQuote, { type GetMmDtkQuoteParams } from "./getMmDtkQuote"
 import getOnChainQuote, { type GetOnChainQuotePayload } from "./getOnChainQuote"
-import { getPaymentToken } from "./getPaymentToken"
 import getPermitQuote, { type GetPermitQuotePayload } from "./getPermitQuote"
 import {
   type CleanUp,
@@ -20,16 +19,23 @@ import {
   type GetQuoteParams,
   type Instruction
 } from "./getQuote"
+import { getQuoteType } from "./getQuoteType"
+import getSafeQuote, {
+  type GetSafeQuoteParams,
+  type GetSafeQuotePayload
+} from "./getSafeQuote"
 import type { Trigger } from "./signPermitQuote"
 
 /**
  * Union type representing the possible quote payloads returned by getFusionQuote
  * @see {@link GetPermitQuotePayload} - Payload when permit is enabled
  * @see {@link GetOnChainQuotePayload} - Payload when using standard on-chain transactions
+ * @see {@link GetSafeQuotePayload} - Payload when using Safe Smart Account mode
  */
 export type GetFusionQuotePayload =
   | GetPermitQuotePayload
   | GetOnChainQuotePayload
+  | GetSafeQuotePayload
 
 /**
  * Parameters for getting a fusion quote
@@ -46,6 +52,9 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    */
   cleanUps?: CleanUp[]
 
+  /** For fusion mode, batching will be always true by default */
+  batch?: boolean
+
   feePayer?: undefined
   /**
    * Optional delegator smart account
@@ -53,6 +62,11 @@ export type GetFusionQuoteParams = GetQuoteParams & {
    * mode won't be used
    */
   delegatorSmartAccount?: MetaMaskSmartAccount
+  /**
+   * Optional Safe smart account address
+   * If provided, the Safe Smart Account fusion mode will be used
+   */
+  safeAccount?: Address
 }
 
 /**
@@ -78,7 +92,7 @@ export type GetFusionQuoteParams = GetQuoteParams & {
  *   walletProvider: "metamask",
  *   trigger: {
  *     chainId: "1",
- *     paymentToken: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
+ *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // USDC
  *   },
  *   instructions: [{
  *     to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
@@ -104,44 +118,31 @@ export const getFusionQuote = async (
     return getMmDtkQuote(client, parameters as GetMmDtkQuoteParams)
   }
 
-  // if custom call is provided, we use on-chain tx fusion mode
-  if ("call" in parameters.trigger) {
-    return getOnChainQuote(client, parameters)
+  // if safe account is provided, we use safe-sa fusion mode
+  if (parameters.safeAccount) {
+    return getSafeQuote(client, parameters as GetSafeQuoteParams)
   }
 
-  const paymentTokenInfo = await getPaymentToken(client, parameters.trigger)
-  let permitEnabled = false
+  const signatureType = await getQuoteType(client, parameters)
 
-  if (paymentTokenInfo.paymentToken) {
-    permitEnabled = paymentTokenInfo.paymentToken.permitEnabled || false
-  } else if (paymentTokenInfo.isArbitraryPaymentTokensSupported) {
-    const modularSmartAccount = client.account.deploymentOn(
-      parameters.trigger.chainId,
-      true
-    )
-
-    permitEnabled = await isPermitSupported(
-      modularSmartAccount.walletClient,
-      parameters.trigger.tokenAddress
-    )
-  } else {
-    throw new Error(
-      `Payment token (${parameters.trigger.tokenAddress}) not supported for chain ${parameters.trigger.chainId}`
-    )
+  switch (signatureType) {
+    case "permit":
+      return getPermitQuote(client, parameters)
+    case "onchain":
+      return getOnChainQuote(client, parameters)
+    default:
+      throw new Error("Invalid quote type for fusion quote")
   }
-
-  return permitEnabled
-    ? getPermitQuote(client, parameters)
-    : getOnChainQuote(client, parameters)
 }
 
 export type PrepareInstructionsParams = {
   resolvedInstructions: Instruction[]
   trigger: Trigger
-  sender: Address
+  owner: Address
+  spender: Address
   recipient: Address
-  scaAddress: Address
   account: MultichainSmartAccount
+  batch?: boolean
 }
 
 export const prepareInstructions = async (
@@ -151,26 +152,66 @@ export const prepareInstructions = async (
   const {
     resolvedInstructions,
     trigger,
-    sender,
-    scaAddress,
+    owner,
+    spender,
     recipient,
-    account
+    account,
+    batch = true
   } = parameters
+
+  const meeVersions = client.account.deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
 
   let triggerAmount = 0n
 
   if (trigger.useMaxAvailableFunds) {
     const { publicClient } = client.account.deploymentOn(trigger.chainId, true)
+    if (trigger.tokenAddress === zeroAddress) {
+      const { version } = account.deploymentOn(trigger.chainId, true)
 
-    // EOA balance maximum available balance fetch
-    const maxAvailableBalance = await publicClient.readContract({
-      address: trigger.tokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [sender]
-    })
+      const forwardCalldata = encodeFunctionData({
+        abi: ForwarderAbi,
+        functionName: "forward",
+        args: [recipient]
+      })
 
-    triggerAmount = maxAvailableBalance
+      const [balance, gasPrice, gasLimit] = await Promise.all([
+        publicClient.getBalance({ address: owner }),
+        publicClient.getGasPrice(),
+        publicClient.estimateGas({
+          account: owner,
+          to: version.ethForwarderAddress,
+          data: forwardCalldata,
+          value: 100n // Dummy amount
+        })
+      ])
+
+      // 100% gas limit buffer to avoid failures
+      const gasLimitWithBuffer = (gasLimit * 200n) / 100n
+
+      // 100% buffer for gas price fluctuations
+      const gasBuffer = 2
+
+      const baseCost = gasLimitWithBuffer * gasPrice
+      const gasReserve = BigInt(Math.ceil(Number(baseCost) * gasBuffer))
+
+      if (balance <= gasReserve) {
+        throw new Error("Not enough native token to transfer")
+      }
+
+      // native token balance maximum available balance fetch
+      triggerAmount = balance - gasReserve
+    } else {
+      // EOA balance maximum available balance fetch
+      triggerAmount = await publicClient.readContract({
+        address: trigger.tokenAddress,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [owner]
+      })
+    }
   } else {
     if (!trigger.amount) throw new Error("Trigger amount field is required")
 
@@ -186,10 +227,10 @@ export const prepareInstructions = async (
   // If max available funds ? the entire balance from EOA is added as transfer amount. But the fees will be taken from this
   // So we don't know a specific amount to be defined here before getting the quote. So we take runtimeBalance which will take
   // the remaining funds after the fee deduction.
-  if (trigger.useMaxAvailableFunds) {
+  if (trigger.useMaxAvailableFunds && trigger.tokenAddress !== zeroAddress) {
     transferFromAmount = runtimeERC20AllowanceOf({
-      owner: sender,
-      spender: scaAddress,
+      owner,
+      spender,
       tokenAddress: trigger.tokenAddress,
       constraints: [greaterThanOrEqualTo(1n)]
     })
@@ -204,6 +245,24 @@ export const prepareInstructions = async (
     ? trigger.gasLimit
     : DEFAULT_GAS_LIMIT
 
+  // If token address is zero address, we don't need to add transferFrom instruction
+  if (trigger.tokenAddress === zeroAddress) {
+    let batchedInstructions: Instruction[] = []
+
+    if (batch) {
+      batchedInstructions = await batchInstructions({
+        accountAddress: account.signer.address,
+        meeVersions,
+        instructions: resolvedInstructions
+      })
+    } else {
+      // If integrators explicitly want unbatched userOps
+      batchedInstructions = resolvedInstructions
+    }
+
+    return { triggerGasLimit, triggerAmount, batchedInstructions }
+  }
+
   const params: BuildInstructionTypes = {
     type: "transferFrom",
     data: {
@@ -211,19 +270,45 @@ export const prepareInstructions = async (
       chainId: trigger.chainId,
       amount: transferFromAmount,
       recipient,
-      sender,
+      sender: owner,
       gasLimit: triggerGasLimit
     }
   }
-
   const triggerTransfer = await (isComposable
     ? account.buildComposable(params)
     : account.build(params))
 
-  const batchedInstructions = await batchInstructions({
-    account: account,
-    instructions: [...triggerTransfer, ...resolvedInstructions]
-  })
+  let batchedInstructions: Instruction[] = []
+
+  if (batch) {
+    batchedInstructions = await batchInstructions({
+      accountAddress: account.signer.address,
+      meeVersions,
+      instructions: [...triggerTransfer, ...resolvedInstructions]
+    })
+  } else {
+    let partiallyBatchedInstructions: Instruction[] = []
+
+    if (resolvedInstructions.length > 0) {
+      // Try to batch trigger transfer and first dev instruction together.
+      const triggerAndFirstInstructionBatch = await batchInstructions({
+        accountAddress: account.signer.address,
+        meeVersions,
+        instructions: [...triggerTransfer, ...resolvedInstructions.slice(0, 1)]
+      })
+
+      // Trigger + first inx batched and keep rest of the instructions unbatched.
+      partiallyBatchedInstructions = [
+        ...triggerAndFirstInstructionBatch,
+        ...resolvedInstructions.slice(1)
+      ]
+    } else {
+      partiallyBatchedInstructions = [...triggerTransfer]
+    }
+
+    // If integrators explicitly want unbatched userOps
+    batchedInstructions = partiallyBatchedInstructions
+  }
 
   return { triggerGasLimit, triggerAmount, batchedInstructions }
 }

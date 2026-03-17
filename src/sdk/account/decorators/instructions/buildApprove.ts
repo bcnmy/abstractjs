@@ -1,15 +1,26 @@
 import { type Address, encodeFunctionData, erc20Abi } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds,
+  Overrides
+} from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  isComposableCallRequired
+  isComposableCallRequired,
+  isRuntimeComposableValue
 } from "../../../modules/utils/composabilityCalls"
 import {
   type RuntimeValue,
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
-import type { BaseInstructionsParams, TokenParams } from "../build"
+import type {
+  BaseInstructionsParams,
+  ComposabilityParams,
+  TokenParams
+} from "../build"
 import {
   type BuildComposableParameters,
   buildComposableCall
@@ -30,7 +41,11 @@ export type BuildApproveParameters = TokenParams & {
    * @example "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
    */
   spender: Address
-}
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
+  /** Custom metadata override for instruction */
+  metadata?: InstructionMetadata[]
+} & InstructionLevelTimeBounds
 
 /**
  * Parameters for the buildApprove function
@@ -55,6 +70,9 @@ export type BuildApproveParams = BaseInstructionsParams & {
  * @param parameters.chainId - Chain ID where the approval will be executed
  * @param parameters.tokenAddress - Address of the token to approve
  * @param parameters.amount - Amount to approve
+ * @param composabilityParams.forceComposableEncoding - Optional boolean whether to force use composability or not
+ * @param composabilityParams.composabilityVersion - Optional composability version to use
+ * @param composabilityParams.efficientMode - Optional boolean whether to compress the calldata input params or not
  * @param [parameters.gasLimit] - Optional gas limit for the approval
  * @param [parameters.spender] - Optional spender address
  *
@@ -63,13 +81,18 @@ export type BuildApproveParams = BaseInstructionsParams & {
  * @example
  * ```typescript
  * const instructions = await buildApprove(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   {
  *     chainId: 1,
  *     tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
  *     amount: 1000000n, // 1 USDC
  *     gasLimit: 50000n,
  *     spender: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+ *   },
+ *   {
+ *     forceComposableEncoding: false,
+ *     composabilityVersion: ComposabilityVersion.V1_0_0,
+ *     efficientMode: true
  *   }
  * );
  * ```
@@ -77,11 +100,24 @@ export type BuildApproveParams = BaseInstructionsParams & {
 export const buildApprove = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildApproveParameters,
-  forceComposableEncoding = false,
-  efficientMode = true
+  composabilityParams?: ComposabilityParams
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [] } = baseParams
-  const { chainId, tokenAddress, amount, gasLimit, spender } = parameters
+  const { currentInstructions = [], accountAddress } = baseParams
+  const {
+    chainId,
+    tokenAddress,
+    amount,
+    gasLimit,
+    spender,
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay,
+    simulationOverrides
+  } = parameters
+  const { forceComposableEncoding } = composabilityParams ?? {
+    forceComposableEncoding: false
+  }
 
   const abi = erc20Abi
   const functionSig = "approve"
@@ -100,10 +136,15 @@ export const buildApprove = async (
         args as unknown as Array<AnyData>
       )
 
-  let triggerCalls: AbstractCall[] | ComposableCall[]
+  let approvalCall: AbstractCall[] | ComposableCall[]
 
-  // If the composable call is detected ? The call needs to composed with runtime encoding
+  // If the composable call is detected, the call needs to composed with runtime encoding
   if (isComposableCall) {
+    if (!composabilityParams) {
+      throw new Error(
+        "Composability params are required to build a composable call"
+      )
+    }
     const composableCallParams: BuildComposableParameters = {
       to: tokenAddress,
       functionName: functionSig,
@@ -113,13 +154,12 @@ export const buildApprove = async (
       ...(gasLimit ? { gasLimit } : {})
     }
 
-    triggerCalls = await buildComposableCall(
-      baseParams,
+    approvalCall = await buildComposableCall(
       composableCallParams,
-      efficientMode
+      composabilityParams
     )
   } else {
-    triggerCalls = [
+    approvalCall = [
       {
         to: tokenAddress,
         data: encodeFunctionData({
@@ -132,12 +172,32 @@ export const buildApprove = async (
     ] as AbstractCall[]
   }
 
+  const defaultMetadata: InstructionMetadata[] = [
+    {
+      type: "APPROVE",
+      tokenAddress: isRuntimeComposableValue(tokenAddress)
+        ? "RUNTIME_VALUE"
+        : (tokenAddress as Address),
+      fromAddress: accountAddress,
+      toAddress: spender,
+      amount: isRuntimeComposableValue(amount)
+        ? "RUNTIME_VALUE"
+        : (amount as bigint),
+      chainId
+    }
+  ]
+
   return [
     ...currentInstructions,
     {
-      calls: triggerCalls,
+      calls: approvalCall,
       chainId,
-      isComposable: isComposableCall
+      isComposable: isComposableCall,
+      metadata: metadata || defaultMetadata,
+      lowerBoundTimestamp,
+      upperBoundTimestamp,
+      executionSimulationRetryDelay,
+      simulationOverrides
     }
   ]
 }

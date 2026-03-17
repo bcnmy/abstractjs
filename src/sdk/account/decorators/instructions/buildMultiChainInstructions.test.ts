@@ -1,10 +1,13 @@
 import { getSpendingLimitsPolicy, getSudoPolicy } from "@rhinestone/module-sdk"
 import {
+  http,
   type Address,
   type Chain,
   type Hex,
   type LocalAccount,
   type Transport,
+  type WalletClient,
+  createWalletClient,
   toFunctionSelector
 } from "viem"
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts"
@@ -20,7 +23,9 @@ import type {
   Instruction,
   InstructionLike
 } from "../../../clients/decorators/mee"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { toDefaultModule } from "../../../modules/validators/default/toDefaultModule"
 import { toOwnableModule } from "../../../modules/validators/ownable/toOwnableModule"
 import { toSmartSessionsModule } from "../../../modules/validators/smartSessions/toSmartSessionsModule"
@@ -28,6 +33,7 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../toMultiChainNexusAccount"
+import type { MeeVersionsWithChainId } from "../../utils"
 import { toInstallData } from "../../utils/toInstallData"
 import buildMultichainInstructions from "./buildMultichainInstructions"
 
@@ -44,6 +50,8 @@ describe("mee.buildMultichainInstructions", () => {
   let targetChain: Chain
   let paymentChainTransport: Transport
   let targetChainTransport: Transport
+  let meeVersions: MeeVersionsWithChainId
+  let eoaWalletClient: WalletClient
 
   beforeAll(async () => {
     network = await toNetwork("MAINNET_FROM_ENV_VARS")
@@ -55,24 +63,50 @@ describe("mee.buildMultichainInstructions", () => {
     eoaAccount = network.account!
     redeemerAccount = privateKeyToAccount(generatePrivateKey())
 
-    mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount,
-      index: 2n
+    eoaWalletClient = createWalletClient({
+      account: eoaAccount,
+      chain: paymentChain,
+      transport: http(network.rpcUrl)
     })
+
+    mcNexus = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      index: 2n,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
+    })
+
+    meeVersions = mcNexus.deployments.map(({ version, chain }) => ({
+      chainId: chain.id,
+      version
+    }))
 
     meeClient = await createMeeClient({ account: mcNexus })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
 
   it("should build multichain instructions", async () => {
-    const meeValidator = toDefaultModule({ signer: eoaAccount })
+    const meeValidator = toDefaultModule({ walletClient: eoaWalletClient })
     const instructions: Instruction[] = await buildMultichainInstructions(
-      { account: mcNexus, currentInstructions: [] },
+      {
+        accountAddress: mcNexus.signer.address,
+        currentInstructions: [],
+        meeVersions
+      },
       {
         type: "toInstallModuleCalls",
-        parameters: toInstallData(meeValidator)
+        parameters: toInstallData(meeValidator),
+        account: mcNexus
       }
     )
     expect(instructions.length).toBe(mcNexus.deployments.length)
@@ -80,7 +114,11 @@ describe("mee.buildMultichainInstructions", () => {
 
   it("should build multichain instructions with calls instead of a type", async () => {
     const instructions: Instruction[] = await buildMultichainInstructions(
-      { account: mcNexus, currentInstructions: [] },
+      {
+        accountAddress: mcNexus.signer.address,
+        currentInstructions: [],
+        meeVersions
+      },
       {
         calls: [
           {
@@ -91,14 +129,15 @@ describe("mee.buildMultichainInstructions", () => {
             to: tokenAddress,
             data: "0x"
           }
-        ]
+        ],
+        account: mcNexus
       }
     )
     expect(instructions.length).toBe(mcNexus.deployments.length)
   })
 
   it("should install ownables, meeValidator and smartSessionValidator on several chains at once, and initialise each module on each chain", async () => {
-    const meeValidator = toDefaultModule({ signer: eoaAccount })
+    const meeValidator = toDefaultModule({ walletClient: eoaWalletClient })
     const smartSessionValidator = toSmartSessionsModule({ signer: eoaAccount })
     const ownableValidator = toOwnableModule({
       signer: eoaAccount,
@@ -108,46 +147,75 @@ describe("mee.buildMultichainInstructions", () => {
 
     const instructions: InstructionLike[] = await Promise.all([
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        {
+          accountAddress: mcNexus.signer.address,
+          currentInstructions: [],
+          meeVersions
+        },
         {
           type: "toInstallModuleCalls",
-          parameters: toInstallData(meeValidator)
+          parameters: toInstallData(meeValidator),
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        {
+          accountAddress: mcNexus.signer.address,
+          currentInstructions: [],
+          meeVersions
+        },
         {
           type: "toInstallModuleCalls",
-          parameters: toInstallData(smartSessionValidator)
+          parameters: toInstallData(smartSessionValidator),
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        {
+          accountAddress: mcNexus.signer.address,
+          currentInstructions: [],
+          meeVersions
+        },
         {
           calls: [
             {
               to: tokenAddress,
               data: "0x"
             }
-          ]
+          ],
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        {
+          accountAddress: mcNexus.signer.address,
+          currentInstructions: [],
+          meeVersions
+        },
         {
           type: "toInstallModuleCalls",
-          parameters: toInstallData(ownableValidator)
+          parameters: toInstallData(ownableValidator),
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        {
+          accountAddress: mcNexus.signer.address,
+          currentInstructions: [],
+          meeVersions
+        },
         {
           type: "toSetThresholdCalls",
-          parameters: { threshold: 1 }
+          parameters: { threshold: 1 },
+          account: mcNexus
         }
       ),
       buildMultichainInstructions(
-        { account: mcNexus, currentInstructions: [] },
+        {
+          accountAddress: mcNexus.signer.address,
+          currentInstructions: [],
+          meeVersions
+        },
         {
           type: "toEnableActionPoliciesCalls",
           parameters: {
@@ -167,7 +235,8 @@ describe("mee.buildMultichainInstructions", () => {
                 ]
               }
             ]
-          }
+          },
+          account: mcNexus
         }
       )
     ])

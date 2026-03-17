@@ -1,8 +1,11 @@
 import type {
   AbstractCall,
+  CustomOverride,
   Instruction,
-  InstructionLike
+  InstructionLike,
+  TokenOverride
 } from "../../../clients/decorators/mee"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import type { AnyData, ComposableCall } from "../../../modules"
 import { resolveInstructions } from "../../utils"
 import type { BaseInstructionsParams } from "../build"
@@ -28,6 +31,8 @@ export type BuildBatchParams = BaseInstructionsParams & {
 /**
  * Builds a batch of instructions for a single userOp to be included in a supertransaction
  * UserOps must be on the same chain for the batch to be valid
+ * If a composable call is passed to this method, this call should already be built via
+ * one of the buildComposable methods.
  * @param baseParams - Base parameters for the instruction
  * @param parameters - Parameters for the batch instruction
  * @param parameters.instructions - Instructions to be executed in the batch
@@ -36,7 +41,7 @@ export type BuildBatchParams = BaseInstructionsParams & {
  * @example
  * ```typescript
  * const instructions = await buildBatch(
- *   { account: myMultichainAccount },
+ *   { accountAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
  *   { instructions: [buildApprove, buildSwap] }
  * )
  * ```
@@ -53,6 +58,60 @@ export const buildBatch = async (
   }
 
   const resolvedInstructions = await resolveInstructions(instructions)
+
+  let maxTimeWindow = 0
+  let maxExecutionSimulationRetryDelay = 0
+  let finalLowerBoundTimestamp = 0
+  let finalUpperBoundTimestamp = 0
+  const customOverrides: CustomOverride[] = []
+  const tokenOverrides: TokenOverride[] = []
+
+  for (const {
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay,
+    simulationOverrides
+  } of resolvedInstructions) {
+    if (executionSimulationRetryDelay !== undefined) {
+      // The last defined max executionSimulationRetryDelay will be considered
+      const isMax =
+        executionSimulationRetryDelay >= maxExecutionSimulationRetryDelay
+
+      if (isMax) {
+        maxExecutionSimulationRetryDelay = executionSimulationRetryDelay
+      }
+    }
+
+    if (
+      lowerBoundTimestamp !== undefined &&
+      upperBoundTimestamp !== undefined
+    ) {
+      if (upperBoundTimestamp <= lowerBoundTimestamp) {
+        throw new Error("Invalid lowerbound and upperbound timestamps.")
+      }
+
+      const timeWindow = upperBoundTimestamp - lowerBoundTimestamp
+
+      // The last defined max execution window will be considered
+      const isMax = timeWindow >= maxTimeWindow
+
+      if (isMax) {
+        maxTimeWindow = timeWindow
+        finalLowerBoundTimestamp = lowerBoundTimestamp
+        finalUpperBoundTimestamp = upperBoundTimestamp
+      }
+    }
+
+    if (simulationOverrides !== undefined) {
+      if (simulationOverrides.customOverrides !== undefined) {
+        customOverrides.push(...simulationOverrides.customOverrides)
+      }
+
+      if (simulationOverrides.tokenOverrides !== undefined) {
+        tokenOverrides.push(...simulationOverrides.tokenOverrides)
+      }
+    }
+  }
 
   if (
     resolvedInstructions.some(
@@ -79,6 +138,9 @@ export const buildBatch = async (
   const calls: AbstractCall[] | ComposableCall[] = resolvedInstructions.flatMap(
     ({ calls }) => calls as AnyData
   )
+  const metadata: InstructionMetadata[] = resolvedInstructions.flatMap(
+    ({ metadata }) => metadata || []
+  )
 
   return [
     ...currentInstructions,
@@ -87,7 +149,20 @@ export const buildBatch = async (
         ? (calls as ComposableCall[])
         : (calls as AbstractCall[]),
       chainId: resolvedInstructions[0].chainId, // Batch instructions must be on the same chain
-      isComposable
+      isComposable,
+      metadata,
+      ...(finalLowerBoundTimestamp !== 0
+        ? { lowerBoundTimestamp: finalLowerBoundTimestamp }
+        : {}),
+      ...(finalUpperBoundTimestamp !== 0
+        ? { upperBoundTimestamp: finalUpperBoundTimestamp }
+        : {}),
+      ...(maxExecutionSimulationRetryDelay !== 0
+        ? { executionSimulationRetryDelay: maxExecutionSimulationRetryDelay }
+        : {}),
+      ...(tokenOverrides.length > 0 || customOverrides.length > 0
+        ? { simulationOverrides: { tokenOverrides, customOverrides } }
+        : {})
     }
   ]
 }

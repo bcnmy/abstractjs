@@ -6,5 +6,22 @@ export * from "./validators/toValidator"
 export * from "./toComposableExecutor"
 export * from "./toComposableFallback"
 export * from "./toEmptyHook"
-export * from "./validators/legacyK1"
 export * from "./validators/meeK1"
+export * from "./validators/stxValidator"
+
+// Explicit exports for core module functions to ensure proper export chaining
+export { toSmartSessionsModule } from "./validators/smartSessions"
+export { toMeeK1Module } from "./validators/meeK1"
+export { toStxValidator } from "./validators/stxValidator"
+export { smartSessionCalls } from "./validators/smartSessions"
+export { toValidator } from "./validators/toValidator"
+export { toComposableExecutor } from "./toComposableExecutor"
+export { toComposableFallback } from "./toComposableFallback"
+export { toEmptyHook } from "./toEmptyHook"
+export { getMEEVersion } from "./validators/smartSessions"
+
+// Session management and action functions
+export {
+  meeSessionActions,
+  smartSessionActions
+} from "./validators/smartSessions/decorators"

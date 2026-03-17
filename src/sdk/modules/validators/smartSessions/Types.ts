@@ -177,6 +177,17 @@ export enum ParamCondition {
 }
 
 /**
+ * Enum representing different smart session universal policy param rules
+ */
+export interface ParamRule {
+  condition: ParamCondition
+  offset: bigint
+  isLimited: boolean
+  ref: Hex
+  usage: LimitUsage
+}
+
+/**
  * Represents a rule for action policies.
  */
 export type Rule = {

@@ -9,11 +9,12 @@ import {
   zeroAddress
 } from "viem"
 import { baseSepolia } from "viem/chains"
-import { beforeAll, describe, expect, test } from "vitest"
+import { beforeAll, describe, expect, inject, test } from "vitest"
 import {
   DEFAULT_GAS_LIMIT,
   type FeeTokenInfo,
   type Instruction,
+  type MultichainSmartAccountParams,
   type Trigger,
   executeSignedQuote,
   getFusionQuote,
@@ -26,19 +27,26 @@ import {
   getTestChainConfig,
   toNetwork
 } from "../../../../test/testSetup"
+import { testnetMcTestUSDCP } from "../../../../test/testTokens"
 import { type NetworkConfig, getBalance } from "../../../../test/testUtils"
 import { LARGE_DEFAULT_GAS_LIMIT } from "../../../account"
 import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusAccount"
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
-import { mcUSDC, testnetMcUSDC } from "../../../constants/tokens"
+import { DEFAULT_MEE_VERSION } from "../../../constants"
+import { mcUSDC } from "../../../constants/tokens"
+import { type AnyData, getMEEVersion } from "../../../modules"
 import {
   greaterThanOrEqualTo,
   runtimeERC20BalanceOf
 } from "../../../modules/utils/composabilityCalls"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import getPermitQuote from "./getPermitQuote"
+import { getMeeVersionsForQuote } from "./signQuote"
 
-describe("mee.getPermitQuote", () => {
+// @ts-ignore
+const { runLifecycleTests } = inject("settings")
+
+describe.runIf(runLifecycleTests)("mee.getPermitQuote", () => {
   let network: NetworkConfig
   let testnetNetwork: NetworkConfig
   let eoaAccount: LocalAccount
@@ -69,9 +77,19 @@ describe("mee.getPermitQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({
@@ -79,6 +97,27 @@ describe("mee.getPermitQuote", () => {
     })
     tokenAddress = mcUSDC.addressOn(paymentChain.id)
   })
+
+  const buildAccountParams = (
+    account: MultichainSmartAccount,
+    fusionQuote: {
+      quote: { paymentInfo: { sponsored: boolean }; userOps: AnyData[] }
+      trigger: { chainId: number }
+    }
+  ): MultichainSmartAccountParams => {
+    const { trigger } = fusionQuote
+    const deployment = account.deploymentOn(trigger.chainId, true)
+    const startIndex = fusionQuote.quote.paymentInfo.sponsored ? 1 : 0
+    return {
+      owner: account.signer.address,
+      spender: deployment.address,
+      walletClient: deployment.walletClient,
+      meeVersions: getMeeVersionsForQuote(
+        account,
+        fusionQuote.quote.userOps.slice(startIndex)
+      )
+    }
+  }
 
   test("should resolve instructions", async () => {
     const trigger = {
@@ -132,9 +171,14 @@ describe("mee.getPermitQuote", () => {
         mcNexus.build({
           type: "intent",
           data: {
+            depositor: mcNexus.addressOn(paymentChain.id, true),
+            recipient: mcNexus.addressOn(targetChain.id, true),
             amount: 1n,
-            mcToken: mcUSDC,
-            toChain: targetChain
+            token: {
+              mcToken: mcUSDC,
+              unifiedBalance: await mcNexus.getUnifiedERC20Balance(mcUSDC)
+            },
+            toChainId: targetChain.id
           }
         }),
         mcNexus.build({
@@ -248,9 +292,14 @@ describe("mee.getPermitQuote", () => {
 
   test("should reserve gas fees when using max available amount", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(TESTNET_RPC_URLS[baseSepolia.id])],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const meeClient = await createMeeClient({ account: mcNexus })
@@ -262,7 +311,7 @@ describe("mee.getPermitQuote", () => {
 
     const trigger: Trigger = {
       chainId: baseSepolia.id,
-      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+      tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
       useMaxAvailableFunds: true
     }
 
@@ -270,10 +319,10 @@ describe("mee.getPermitQuote", () => {
     const withdrawal = mcNexus.buildComposable({
       type: "withdrawal",
       data: {
-        tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+        tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
         amount: runtimeERC20BalanceOf({
           targetAddress: mcNexus.addressOn(baseSepolia.id, true),
-          tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id)
+          tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id)
         }),
         chainId: baseSepolia.id
       }
@@ -283,7 +332,7 @@ describe("mee.getPermitQuote", () => {
       trigger,
       instructions: [withdrawal],
       feeToken: {
-        address: testnetMcUSDC.addressOn(baseSepolia.id),
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id),
         chainId: baseSepolia.id
       }
     })
@@ -352,7 +401,18 @@ describe("mee.getPermitQuote", () => {
     // The final amount should be the total balance
     expect(fusionQuote.trigger.amount).toBe(maxAvailableBalance)
 
-    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
+      await signPermitQuote({
+        fusionQuote,
+        account: buildAccountParams(mcNexus, fusionQuote)
+      }) // Permit with 20k
+
+    if (fallbackToOnchainMode) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(fallbackToOnchainMode).toBe(false)
+      return
+    }
+
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
     const receipt = await waitForSupertransactionReceipt(meeClient, {
@@ -393,7 +453,18 @@ describe("mee.getPermitQuote", () => {
       feeToken
     })
 
-    const signedQuote = await signPermitQuote(meeClient, { fusionQuote }) // Permit with 20k
+    const { fallbackToOnchainMode, signedPermitQuotePayload: signedQuote } =
+      await signPermitQuote({
+        fusionQuote,
+        account: buildAccountParams(mcNexus, fusionQuote)
+      }) // Permit with 20k
+
+    if (fallbackToOnchainMode) {
+      // This always fails here. This is being coded like this to avoid type issues
+      expect(fallbackToOnchainMode).to.be.eq(false)
+      return
+    }
+
     const { hash } = await executeSignedQuote(meeClient, { signedQuote })
 
     const receipt = await waitForSupertransactionReceipt(meeClient, { hash })
@@ -439,9 +510,14 @@ describe("mee.getPermitQuote", () => {
 
   test("Trigger amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(testnetNetwork.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(testnetNetwork.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -455,12 +531,12 @@ describe("mee.getPermitQuote", () => {
     const balanceBefore = await getBalance(
       publicClient,
       eoaAccount.address,
-      testnetMcUSDC.addressOn(baseSepolia.id)
+      testnetMcTestUSDCP.addressOn(baseSepolia.id)
     )
 
     const trigger: Trigger = {
       chainId: baseSepolia.id,
-      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+      tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
       amount,
       recipientAddress: eoaAccount.address
     }
@@ -470,7 +546,7 @@ describe("mee.getPermitQuote", () => {
       instructions: [],
       feeToken: {
         chainId: baseSepolia.id,
-        address: testnetMcUSDC.addressOn(baseSepolia.id)
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id)
       }
     })
 
@@ -493,7 +569,7 @@ describe("mee.getPermitQuote", () => {
     const balanceAfter = await getBalance(
       publicClient,
       eoaAccount.address,
-      testnetMcUSDC.addressOn(baseSepolia.id)
+      testnetMcTestUSDCP.addressOn(baseSepolia.id)
     )
 
     expect(balanceBefore).to.eq(
@@ -503,9 +579,14 @@ describe("mee.getPermitQuote", () => {
 
   test("Trigger max available amount should be transferred to the custom recipient", async () => {
     const mcNexus = await toMultichainNexusAccount({
-      chains: [baseSepolia],
-      transports: [http(testnetNetwork.rpcUrl)],
-      signer: eoaAccount
+      signer: eoaAccount,
+      chainConfigurations: [
+        {
+          chain: baseSepolia,
+          transport: http(testnetNetwork.rpcUrl),
+          version: getMEEVersion(DEFAULT_MEE_VERSION)
+        }
+      ]
     })
 
     const { publicClient } = mcNexus.deploymentOn(baseSepolia.id, true)
@@ -517,12 +598,12 @@ describe("mee.getPermitQuote", () => {
     const balanceBefore = await getBalance(
       publicClient,
       eoaAccount.address,
-      testnetMcUSDC.addressOn(baseSepolia.id)
+      testnetMcTestUSDCP.addressOn(baseSepolia.id)
     )
 
     const trigger: Trigger = {
       chainId: baseSepolia.id,
-      tokenAddress: testnetMcUSDC.addressOn(baseSepolia.id),
+      tokenAddress: testnetMcTestUSDCP.addressOn(baseSepolia.id),
       recipientAddress: eoaAccount.address,
       useMaxAvailableFunds: true
     }
@@ -532,11 +613,12 @@ describe("mee.getPermitQuote", () => {
       instructions: [],
       feeToken: {
         chainId: baseSepolia.id,
-        address: testnetMcUSDC.addressOn(baseSepolia.id)
+        address: testnetMcTestUSDCP.addressOn(baseSepolia.id)
       }
     })
 
     expect(fusionQuote).toBeDefined()
+    expect(fusionQuote.quote.quoteType).toBe("permit")
 
     const { hash } = await meeClient.executeFusionQuote({
       fusionQuote
@@ -555,7 +637,7 @@ describe("mee.getPermitQuote", () => {
     const balanceAfter = await getBalance(
       publicClient,
       eoaAccount.address,
-      testnetMcUSDC.addressOn(baseSepolia.id)
+      testnetMcTestUSDCP.addressOn(baseSepolia.id)
     )
 
     expect(balanceBefore).to.eq(

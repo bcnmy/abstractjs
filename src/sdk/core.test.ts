@@ -16,6 +16,8 @@ import {
   type NexusClient,
   createSmartAccountClient
 } from "./clients/createBicoBundlerClient"
+import { DEFAULT_MEE_VERSION } from "./constants"
+import { getMEEVersion } from "./modules"
 import { toSmartSessionsModule } from "./modules/validators/smartSessions/toSmartSessionsModule"
 
 describe("core", async () => {
@@ -49,9 +51,12 @@ describe("core", async () => {
     })
 
     nexusAccount = await toNexusAccount({
-      chain,
       signer: eoaAccount,
-      transport: http(network.rpcUrl)
+      chainConfiguration: {
+        chain,
+        transport: http(network.rpcUrl),
+        version: getMEEVersion(DEFAULT_MEE_VERSION)
+      }
     })
 
     nexusClient = createSmartAccountClient({

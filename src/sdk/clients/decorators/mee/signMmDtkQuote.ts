@@ -1,5 +1,6 @@
-import { CHAIN_ID, DELEGATOR_CONTRACTS } from "@metamask/delegation-deployments"
 import {
+  CHAIN_ID,
+  DELEGATOR_CONTRACTS,
   type MetaMaskSmartAccount,
   createCaveatBuilder,
   createOpenDelegation

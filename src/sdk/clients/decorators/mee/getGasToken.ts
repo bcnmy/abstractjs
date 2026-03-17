@@ -1,6 +1,6 @@
 import type { Address } from "viem/accounts"
 import type { BaseMeeClient } from "../../createMeeClient"
-import type { PaymentToken } from "./getPaymentToken"
+import type { SupportedFeeToken } from "./getSupportedFeeToken"
 
 /**
  * Parameters for retrieving gas token information
@@ -30,13 +30,13 @@ export type GetGasTokenPayload = {
   chainId: string
   /**
    * List of payment tokens that can be used for gas fees on this chain
-   * @see {@link PaymentToken} for detailed token structure
+   * @see {@link SupportedFeeToken} for detailed token structure
    */
-  paymentTokens: PaymentToken[]
+  paymentTokens: SupportedFeeToken[]
   /**
    * This indicates that the network supports Arbitrary token payments as a fallback mechanism
    */
-  isArbitraryPaymentTokensSupported: boolean
+  isArbitraryFeeTokensSupported: boolean
 }
 
 /**

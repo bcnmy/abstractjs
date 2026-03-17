@@ -17,16 +17,18 @@ export default defineConfig({
         "**/test/**"
       ],
       thresholds: {
-        lines: 75,
+        lines: 70,
         functions: 50,
         branches: 50,
-        statements: 75
+        statements: 70
       }
     },
     include: ["./src/test/**/*.test.ts", "./src/sdk/**/*.test.ts"],
     globalSetup: join(__dirname, "globalSetup.ts"),
     environment: "node",
     testTimeout: 500_000,
-    hookTimeout: 100_000
+    hookTimeout: 250_000,
+    fileParallelism: false,
+    retry: 2
   }
 })

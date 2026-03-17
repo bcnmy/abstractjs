@@ -1,6 +1,5 @@
-import type { Hex } from "viem"
-import { DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION } from "../../constants"
-import type { ToNexusSmartAccountParameters } from "../toNexusAccount"
+import type { Address } from "viem"
+import type { ComposabilityVersion, MEEVersion } from "../../constants"
 
 /**
  * Retrieves the current version of the SDK from package.json
@@ -99,7 +98,7 @@ export const semverCompare = (a: string, b: string): number => {
  * versionMeetsRequirement("1.2.3", "1.2.3")
  * ```
  */
-export const versionMeetsRequirement = (
+export const versionIsAtLeast = (
   currentVersion: string,
   requiredVersion: string
 ): boolean => {
@@ -179,61 +178,50 @@ export const isVersionNewer = (
   return comparison > 0
 }
 
-export type AddressConfigsAdditions = {
-  "1.0.2": {
-    registryAddress?: Hex
-    attesters?: Hex[]
-    attesterThreshold?: number
-    k1FactoryAddress?: Hex
-    k1ValidatorAddress?: Hex
-    useK1Config?: boolean
-  }
-}
-
-export type NexusVersion = `${number}.${number}.${number}`
-
 export type NexusAccountId = `biconomy.nexus.${number}.${number}.${number}`
 
-export type BaseAddressConfig = {
+export type MeeVersionsWithChainId = {
+  version: MEEVersionConfig
+  chainId: number
+}[]
+
+export type MEEVersionConfig = {
+  /** The version of the Nexus account */
+  version: MEEVersion
+  /** The version of the Composability */
+  composabilityVersion: ComposabilityVersion
   /** The accountId for the account. Of the format biconomy.nexus.${major}.${minor}.${patch} */
   accountId: NexusAccountId
   /** The implementation address for the account */
-  implementationAddress: Hex
+  implementationAddress: Address
   /** The bootstrap address for the account */
-  bootStrapAddress: Hex
+  bootStrapAddress: Address
   /** The factory address for the account */
-  factoryAddress: Hex
-}
-
-export type AddressConfig = BaseAddressConfig &
-  AddressConfigsAdditions[keyof AddressConfigsAdditions]
-
-/**
- * Returns the appropriate configuration based on the SDK version
- * @param version - The SDK version string (e.g., "0.2.0")
- * @returns The configuration containing attester and factory addresses
- * @throws Error if the version is not supported
- */
-export function getConfigFromNexusVersion(
-  nexusVersion: Required<
-    NonNullable<ToNexusSmartAccountParameters["nexusVersion"]>
-  >
-): AddressConfig {
-  // If the version is explicitly provided in the DEFAULT_CONFIGURATIONS_BY_VERSION mapping
-  if (nexusVersion in DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION) {
-    return DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION[nexusVersion]
+  factoryAddress: Address
+  /** The validator address for the account */
+  validatorAddress: Address
+  /** The default validator address for the account */
+  defaultValidatorAddress: Address
+  /** The forwarder address for native token transfers for fusion mode */
+  ethForwarderAddress: Address
+  /** The module registry for the account */
+  moduleRegistry?: {
+    registryAddress: Address
+    attesters: Address[]
+    attesterThreshold: number
   }
-
-  // If the version is not explicitly listed, find the closest compatible version
-  // Sort the available versions in descending order
-  const allVersions = Object.keys(DEFAULT_CONFIGURATIONS_BY_NEXUS_VERSION).sort(
-    (a, b) => semverCompare(b, a)
-  )
-
-  // If no compatible version is found, throw an error
-  throw new Error(
-    `Unsupported Nexus version: ${nexusVersion}. Compatible versions are: ${allVersions.join(
-      ", "
-    )}`
-  )
+  /** The composable module address for the account */
+  composableModuleAddress?: Address
+  /** Submodules for the stx validator */
+  // see this PR description to learn about different kind of submodules
+  // https://github.com/bcnmy/stx-contracts/pull/18
+  submodules?: {
+    noStxModeVerifier?: Address // Mode Verifier for No STX Mode
+    SimpleModeSubmodule?: Address // Stx Mode Verifier for Simple fusion Mode
+    PermitSubmodule?: Address // Stx Mode Verifier for Permit fusion Mode
+    TxSubmodule?: Address // Stx Mode Verifier for On-chain Tx fusion Mode
+    SafeAccountSubmodule?: Address // Safe Account Submodule for Safe fusion Mode (Stx Mode verifier + Stateless Validator)
+    EoaStatelessValidator?: Address // secp256k1 stateless validator
+    P256StatelessValidator?: Address // pure p256 (secp256r1) stateless validator. no webauthn!
+  }
 }

@@ -17,7 +17,9 @@ import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
 } from "../../../account/toMultiChainNexusAccount"
+import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
+import { getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
@@ -36,7 +38,7 @@ describe("mee.signFusionQuote", () => {
   let recipientAccount: LocalAccount
   let tokenAddress: Address
 
-  const index = 11n // Randomly chosen index
+  const index = 12n // Randomly chosen index
 
   let paymentChain: Chain
   let targetChain: Chain
@@ -59,10 +61,20 @@ describe("mee.signFusionQuote", () => {
     }
 
     mcNexus = await toMultichainNexusAccount({
-      chains: [paymentChain, targetChain],
-      transports: [paymentChainTransport, targetChainTransport],
       signer: eoaAccount,
-      index
+      index,
+      chainConfigurations: [
+        {
+          chain: paymentChain,
+          transport: paymentChainTransport,
+          version: getMEEVersion(MEEVersion.V2_2_1)
+        },
+        {
+          chain: targetChain,
+          transport: targetChainTransport,
+          version: getMEEVersion(MEEVersion.V2_2_1)
+        }
+      ]
     })
 
     meeClient = await createMeeClient({ account: mcNexus })
@@ -100,13 +112,13 @@ describe("mee.signFusionQuote", () => {
     expect(signedFusionQuote).toBeDefined()
   })
 
-  // Tests below are skipped because they conflict with permit flows when the same nonce for the eoa is used
-  test.skip("should execute a signed fusion quote using signFusionQuote", async () => {
+  test("should execute a signed fusion quote using signFusionQuote", async () => {
     console.time("signFusionQuote:getQuote")
     console.time("signFusionQuote:getHash")
     console.time("signFusionQuote:receipt")
 
-    const triggerAmount = 1n
+    const triggerAmount = 5n
+    const amountToTransfer = triggerAmount - 1n
 
     const { publicClient } = mcNexus.deploymentOn(paymentChain.id, true)
     const usdcFromPaymentChain = mcUSDC.addressOn(paymentChain.id)
@@ -123,7 +135,9 @@ describe("mee.signFusionQuote", () => {
         mcNexus.build({
           type: "transfer",
           data: {
-            ...trigger,
+            tokenAddress,
+            amount: amountToTransfer,
+            chainId: paymentChain.id,
             recipient: recipientAccount.address
           }
         })
@@ -148,6 +162,6 @@ describe("mee.signFusionQuote", () => {
       recipientAccount.address,
       usdcFromPaymentChain
     )
-    expect(recipientBalanceAfter).toBe(triggerAmount)
+    expect(recipientBalanceAfter).toBe(amountToTransfer)
   })
 })

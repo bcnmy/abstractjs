@@ -1,12 +1,17 @@
+import type { Address } from "viem"
 import type { Instruction } from "../../clients/decorators/mee/getQuote"
 import { buildBatch } from "../decorators/instructions/buildBatch"
-import type { MultichainSmartAccount } from "../toMultiChainNexusAccount"
+import type { MeeVersionsWithChainId } from "./getVersion"
 
 type BatchInstructionsParameters = {
   /**
-   * The account to execute the instructions on.
+   * The account address to execute the instructions on.
    */
-  account: MultichainSmartAccount
+  accountAddress: Address
+  /**
+   * meeVersions - List of mee versions for different chains
+   */
+  meeVersions: MeeVersionsWithChainId
   /**
    * The remaining instructions to be executed.
    */
@@ -14,58 +19,47 @@ type BatchInstructionsParameters = {
 }
 
 /**
- * Groups consecutive instructions with the same chainId into batches.
- * Instructions can only be batched if they are consecutive and share the same chainId.
+ * Groups all the instructions with the same chainId into batches.
  *
  * @param parameters - The parameters for the batching.
- * @param parameters.account - The account to execute the instructions on.
+ * @param parameters.accountAddress - The account address to execute the instructions on.
  * @param parameters.triggerCall - The first instruction to be executed.
  * @param parameters.instructions - The remaining instructions to be executed.
  *
- * @returns An array of instructions, where consecutive same-chain instructions are batched together.
+ * @returns An array of instructions, where all the same-chain instructions are batched together.
  */
 export const batchInstructions = async (
   parameters: BatchInstructionsParameters
 ): Promise<Instruction[]> => {
-  const { account, instructions } = parameters
+  const { accountAddress, instructions, meeVersions } = parameters
 
   const result: Instruction[] = []
-  let currentBatch: Instruction[] = []
-  let currentChainId: string | null = null
+
+  const batchesByChainId = new Map<string, Instruction[]>()
+  const chainIds = new Set<string>()
 
   for (const instruction of instructions) {
     const chainId = String(instruction.chainId)
+    chainIds.add(chainId)
 
-    if (currentChainId === null || chainId === currentChainId) {
-      currentBatch.push(instruction)
-      currentChainId = chainId
-    } else {
-      // Chain ID changed, process current batch
-      if (currentBatch.length > 1) {
-        const [batchedOp] = await buildBatch(
-          { account },
-          { instructions: currentBatch }
-        )
-        result.push(batchedOp)
-      } else if (currentBatch.length === 1) {
-        result.push(currentBatch[0])
-      }
-
-      // Start new batch with current instruction
-      currentBatch = [instruction]
-      currentChainId = chainId
-    }
+    const batch = batchesByChainId.get(chainId) || []
+    batch.push(instruction)
+    batchesByChainId.set(chainId, batch)
   }
 
-  // Process the final batch
-  if (currentBatch.length > 1) {
-    const [batchedOp] = await buildBatch(
-      { account },
-      { instructions: currentBatch }
-    )
-    result.push(batchedOp)
-  } else if (currentBatch.length === 1) {
-    result.push(currentBatch[0])
+  for (const chainId of [...chainIds]) {
+    const batch = batchesByChainId.get(chainId) || []
+
+    if (batch.length > 1) {
+      const [batchedInx] = await buildBatch(
+        { accountAddress, meeVersions },
+        { instructions: batch }
+      )
+
+      result.push(batchedInx)
+    } else {
+      result.push(...batch)
+    }
   }
 
   return result

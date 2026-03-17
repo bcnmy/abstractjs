@@ -1,10 +1,18 @@
 import type { OneOf } from "viem"
-import type { AbstractCall, Instruction } from "../../../clients/decorators/mee"
+import type {
+  AbstractCall,
+  Instruction,
+  InstructionLevelTimeBounds,
+  Overrides
+} from "../../../clients/decorators/mee"
 import type { Call } from "../../utils/Types"
 import type { BaseInstructionsParams } from "../build"
 
+import type { BaseMultichainSmartAccount } from "../.."
 import { erc7579Calls } from "../../../clients/decorators/erc7579"
+import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { smartAccountCalls } from "../../../clients/decorators/smartAccount"
+import { functionNameToLabel } from "../../../modules"
 import type { AnyData, ModularSmartAccount } from "../../../modules/utils/Types"
 import { ownableCalls } from "../../../modules/validators/ownable/decorators"
 import { smartSessionCalls } from "../../../modules/validators/smartSessions"
@@ -25,22 +33,40 @@ type ArgumentTypes<F extends Function> = F extends (
   ? A
   : never
 
-export type BuildMultichainInstructionsParameters = OneOf<
+export type BuildMultichainInstructionsParameters = {
+  account: BaseMultichainSmartAccount
+} & OneOf<
   | {
       calls: Call[]
+      metadata?: InstructionMetadata[]
     }
   | {
       type: SupportedCall
       parameters: ArgumentTypes<(typeof GLOBAL_COMPOSABLE_CALLS)[SupportedCall]>
+      metadata?: InstructionMetadata[]
     }
->
+> &
+  InstructionLevelTimeBounds & {
+    /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+    simulationOverrides?: Overrides
+  }
 
 export const buildMultichainInstructions = async (
   baseParams: BaseInstructionsParams,
   parameters: BuildMultichainInstructionsParameters
 ): Promise<Instruction[]> => {
-  const { currentInstructions = [], account } = baseParams
-  const { calls: calls_, type, parameters: parametersForType } = parameters
+  const { currentInstructions = [] } = baseParams
+  const {
+    calls: calls_,
+    type,
+    parameters: parametersForType,
+    account,
+    metadata: metadataOverride,
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay,
+    simulationOverrides
+  } = parameters
 
   const instructions = await Promise.all(
     account.deployments.map(async (account) => {
@@ -49,15 +75,41 @@ export const buildMultichainInstructions = async (
       if (!chainId) {
         throw new Error("Chain ID is not set")
       }
+
+      let metadata: InstructionMetadata[] = []
+
       if (calls_) {
+        metadata = [
+          {
+            type: "CUSTOM",
+            chainId,
+            description: "Custom on-chain action"
+          }
+        ]
         callsPerChain = calls_ as AbstractCall[]
       } else if (type) {
+        metadata = [
+          {
+            type: "CUSTOM",
+            chainId,
+            description: `${functionNameToLabel(type)} on-chain action`
+          }
+        ]
         callsPerChain = (await GLOBAL_COMPOSABLE_CALLS[type](
           account,
           parametersForType as AnyData
         )) as AbstractCall[]
       }
-      return { calls: callsPerChain, chainId }
+
+      return {
+        calls: callsPerChain,
+        chainId,
+        metadata: metadataOverride || metadata,
+        lowerBoundTimestamp,
+        upperBoundTimestamp,
+        executionSimulationRetryDelay,
+        simulationOverrides
+      }
     })
   )
 

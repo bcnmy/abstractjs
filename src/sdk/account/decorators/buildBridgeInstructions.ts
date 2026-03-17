@@ -1,6 +1,10 @@
-import type { Address, Chain } from "viem"
-import type { Instruction } from "../../clients/decorators/mee/getQuote"
-import type { BaseMultichainSmartAccount } from "../toMultiChainNexusAccount"
+import type { Address } from "viem"
+import type {
+  Instruction,
+  InstructionLevelTimeBounds,
+  Overrides
+} from "../../clients/decorators/mee/getQuote"
+import type { InstructionMetadata } from "../../clients/decorators/mee/types/instruction-metadata.type"
 import { toAcrossPlugin } from "../utils/toAcrossPlugin"
 import type { UnifiedERC20Balance } from "./getUnifiedERC20Balance"
 import type { BridgeQueryResult } from "./queryBridge"
@@ -38,20 +42,28 @@ export type FeeData = {
 
 /**
  * Parameters for multichain token bridging operations
- * @property toChain - {@link Chain} Destination chain for the bridge operation
+ * @property depositor - {@link Address} The address initiating the bridge (sender)
+ * @property recipient - {@link Address} The address receiving the bridged tokens (destination)
+ * @property toChainId - The numeric chain ID of the destination chain
  * @property unifiedBalance - {@link UnifiedERC20Balance} Token balance information across all chains
- * @property amount - Amount of tokens to bridge as BigInt
+ * @property amount - Amount of tokens to bridge as bigint
  * @property bridgingPlugins - Optional array of {@link BridgingPlugin} to use for bridging
  * @property feeData - Optional {@link FeeData} for the transaction
+ * @property mode - Optional bridging mode, either "DEBIT" or "OPTIMISTIC"
  */
 export type MultichainBridgingParams = {
-  toChain: Chain
+  depositor: Address
+  recipient: Address
+  toChainId: number
   unifiedBalance: UnifiedERC20Balance
   amount: bigint
   bridgingPlugins?: BridgingPlugin[]
   feeData?: FeeData
   mode?: "DEBIT" | "OPTIMISTIC"
-}
+  /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
+  simulationOverrides?: Overrides
+  metadata?: InstructionMetadata[]
+} & InstructionLevelTimeBounds
 
 /**
  * Result of a bridging plugin operation
@@ -67,16 +79,18 @@ export type BridgingPluginResult = {
 
 /**
  * Parameters for generating a bridge user operation
- * @property fromChain - {@link Chain} Source chain for the bridge
- * @property toChain - {@link Chain} Destination chain for the bridge
- * @property account - {@link BaseMultichainSmartAccount} Smart account to execute the bridging
+ * @property depositor - {@link Address} The address initiating the bridge (sender)
+ * @property recipient - {@link Address} The address receiving the bridged tokens (destination)
+ * @property fromChainId - The numeric chain ID of the source chain
+ * @property toChainId - The numeric chain ID of the destination chain
  * @property tokenMapping - {@link MultichainAddressMapping} Token addresses across chains
  * @property bridgingAmount - Amount to bridge as BigInt
  */
 export type BridgingUserOpParams = {
-  fromChain: Chain
-  toChain: Chain
-  account: BaseMultichainSmartAccount
+  depositor: Address
+  recipient: Address
+  fromChainId: number
+  toChainId: number
   tokenMapping: MultichainAddressMapping
   bridgingAmount: bigint
 }
@@ -121,10 +135,11 @@ export type BridgingInstructions = {
  * supertransaction. Bridges funds from other chains if needed.
  *
  * @param params - {@link MultichainBridgingParams} Configuration for the bridge operation
- * @param params.account - The smart account to execute the bridging
- * @param params.amount - The amount to bridge
- * @param params.toChain - The destination chain
+ * @param params.depositor - The address initiating the bridge (sender)
+ * @param params.recipient - The address receiving the bridged tokens (destination)
+ * @param params.toChainId - The numeric chain ID of the destination chain
  * @param params.unifiedBalance - Current token balances across chains
+ * @param params.amount - The amount to bridge
  * @param params.bridgingPlugins - Optional array of bridging plugins (defaults to Across)
  * @param params.feeData - Optional fee configuration
  * @param params.mode - The mode of the bridge operation, defaults to "DEBIT". In optimistic mode, the bridging instructions are returned without preexisting balance checks.
@@ -136,9 +151,10 @@ export type BridgingInstructions = {
  *
  * @example
  * const bridgeInstructions = await buildBridgeInstructions({
- *   account: myMultichainAccount,
+ *   depositor: myAddress,
+ *   recipient: recipientAddress,
  *   amount: BigInt("1000000"), // 1 USDC
- *   toChain: optimism,
+ *   toChainId: optimism.id,
  *   unifiedBalance: myTokenBalance,
  *   bridgingPlugins: [acrossPlugin],
  *   feeData: {
@@ -148,18 +164,22 @@ export type BridgingInstructions = {
  * });
  */
 export const buildBridgeInstructions = async (
-  params: MultichainBridgingParams & {
-    account: BaseMultichainSmartAccount
-  }
+  params: MultichainBridgingParams
 ): Promise<BridgingInstructions> => {
   const {
-    account,
+    depositor,
+    recipient,
     amount: targetAmount,
-    toChain,
+    toChainId,
     unifiedBalance,
     bridgingPlugins = [toAcrossPlugin()],
     feeData,
-    mode = "DEBIT"
+    mode = "DEBIT",
+    metadata,
+    lowerBoundTimestamp,
+    upperBoundTimestamp,
+    executionSimulationRetryDelay,
+    simulationOverrides
   } = params
 
   const tokenMapping = {
@@ -176,8 +196,7 @@ export const buildBridgeInstructions = async (
 
   // Get current balance on destination chain
   const destinationBalance =
-    unifiedBalance.breakdown.find((b) => b.chainId === toChain.id)?.balance ||
-    0n
+    unifiedBalance.breakdown.find((b) => b.chainId === toChainId)?.balance || 0n
 
   // If we have enough on destination, no bridging needed
   if (destinationBalance >= targetAmount) {
@@ -195,7 +214,7 @@ export const buildBridgeInstructions = async (
 
   // Get available balances from source chains
   const sourceBalances = unifiedBalance.breakdown
-    .filter((balance) => balance.chainId !== toChain.id)
+    .filter((balance) => balance.chainId !== toChainId)
     .map((balance_) => {
       // If we are in optimistic mode, we need to retrieve instructions for the bridging action regardless of the balance
       const balancePerChain =
@@ -219,35 +238,21 @@ export const buildBridgeInstructions = async (
     })
     .filter((balance) => balance.balance > 0n)
 
-  // Get chain configurations
-  const chains = Object.fromEntries(
-    account.deployments.map((deployment) => {
-      const chain = deployment.client.chain
-      if (!chain) {
-        throw new Error(
-          `Client not configured with chain for deployment at ${deployment.address}`
-        )
-      }
-      return [chain.id, chain] as const
-    })
-  )
-
   // Query all possible routes
   const bridgeQueries = sourceBalances.flatMap((source) => {
-    const fromChain = chains[source.chainId]
-    if (!fromChain) return []
-
     return bridgingPlugins.map((plugin) =>
       queryBridge({
-        fromChain,
-        toChain,
+        depositor,
+        recipient,
+        fromChainId: source.chainId,
+        toChainId,
         plugin,
         amount: source.balance,
-        account,
         tokenMapping
       })
     )
   })
+
   const bridgeResults = (await Promise.all(bridgeQueries))
     .filter((result): result is BridgeQueryResult => result !== null)
     // Sort by received amount relative to sent amount
@@ -271,16 +276,34 @@ export const buildBridgeInstructions = async (
         const receivedFromRoute =
           (result.receivedAtDestination * amountToTake) / result.amount
 
+        // If no metadata from plugin ? Custom metadata will be added
+        const customMetadata: InstructionMetadata[] = [
+          {
+            type: "CUSTOM",
+            chainId: result.userOp.chainId,
+            description: "Custom Bridging on-chain action"
+          }
+        ]
+
+        const instruction: Instruction = {
+          ...result.userOp,
+          metadata: metadata || result.userOp.metadata || customMetadata,
+          lowerBoundTimestamp,
+          upperBoundTimestamp,
+          executionSimulationRetryDelay,
+          simulationOverrides
+        }
+
         return {
           bridgingInstructions: [
             ...acc.bridgingInstructions,
             {
-              userOp: result.userOp,
+              userOp: instruction,
               receivedAtDestination: receivedFromRoute,
               bridgingDurationExpectedMs: result.bridgingDurationExpectedMs
             }
           ],
-          instructions: [...acc.instructions, result.userOp],
+          instructions: [...acc.instructions, instruction],
           totalBridged: acc.totalBridged + receivedFromRoute,
           remainingNeeded: acc.remainingNeeded - amountToTake
         }

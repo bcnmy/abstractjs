@@ -1,16 +1,11 @@
-import type { Chain, Hex, Transport } from "viem"
+import type { Hex } from "viem"
+
 import type {
   Instruction,
   MeeAuthorization
 } from "../clients/decorators/mee/getQuote"
+import type { ComposabilityVersion, MEEVersion, PolicyData } from "../constants"
 import type { ModularSmartAccount } from "../modules/utils/Types"
-import {
-  type DelegationParams,
-  type ToNexusSmartAccountParameters,
-  toNexusAccount
-} from "./toNexusAccount"
-import type { Signer } from "./utils/toSigner"
-
 import {
   type BuildComposableInstructionTypes,
   type BuildInstructionTypes,
@@ -18,10 +13,19 @@ import {
   build as buildDecorator
 } from "./decorators/build"
 import {
+  type BuildActionPolicyParamTypes,
+  buildActionPolicy as buildActionPolicyDecorator
+} from "./decorators/buildActionPolicy"
+import {
   type BridgingInstructions,
   type MultichainBridgingParams,
   buildBridgeInstructions as buildBridgeInstructionsDecorator
 } from "./decorators/buildBridgeInstructions"
+import {
+  type BuildSessionActionTypes,
+  type SessionAction,
+  buildSessionAction as buildSessionActionDecorator
+} from "./decorators/buildSessionAction"
 import {
   type UnifiedERC20Balance,
   getUnifiedERC20Balance as getUnifiedERC20BalanceDecorator
@@ -35,6 +39,15 @@ import multichainRead, {
   type MultichainReadParameters,
   type MultiChainReadPayload
 } from "./decorators/multichainRead"
+import {
+  type OwnershipParams,
+  type OwnershipParamsWithData,
+  type OwnershipResult,
+  addOwnership as addOwnershipDecorator,
+  changeOwnership as changeOwnershipDecorator,
+  cleanOwnership as cleanOwnershipDecorator,
+  getOwnership as getOwnershipDecorator
+} from "./decorators/ownership"
 import {
   type BridgeQueryResult,
   type QueryBridgeParams,
@@ -50,20 +63,25 @@ import {
   type WaitForTransactionReceiptPayload,
   waitForTransactionReceipts as waitForTransactionReceiptsDecorator
 } from "./decorators/waitForTransactionReceipts"
+import {
+  type ChainConfiguration,
+  type DelegationParams,
+  type ToNexusSmartAccountParameters,
+  toNexusAccount
+} from "./toNexusAccount"
 import type { MultichainToken } from "./utils/Types"
+import type { Signer } from "./utils/toSigner"
 
 /**
  * Parameters required to create a multichain Nexus account
  */
 export type MultichainNexusParams = Partial<
-  Omit<ToNexusSmartAccountParameters, "signer">
+  Omit<ToNexusSmartAccountParameters, "signer" | "nexusContracts">
 > & {
-  /** Array of chains where the account will be deployed */
-  chains: Chain[]
-  /** Transport to use for the Nexus Account */
-  transports: Transport[]
   /** The signer instance used for account creation */
   signer: ToNexusSmartAccountParameters["signer"]
+  /** Array of chain configuration */
+  chainConfigurations: ChainConfiguration[]
 }
 
 /**
@@ -124,6 +142,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+
   /**
    * Function to build composable instructions
    * @param params - The parameters for the composable instruction
@@ -139,6 +158,29 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
   ) => Promise<Instruction[]>
+
+  /**
+   * Function to build action policy for smart sessions
+   * @param params - The parameters for the smart session action policies
+   * @returns Action policy
+   * @example
+   * const actionPolicy = await mcAccount.buildActionPolicy({
+   *   type: "sudo"
+   * })
+   */
+  buildActionPolicy: (params: BuildActionPolicyParamTypes) => PolicyData
+
+  /**
+   * Function to build actions for smart sessions
+   * @param params - The parameters for the smart session actions
+   * @returns Action
+   * @example
+   * const action = await mcAccount.buildSessionAction({
+   *   type: "transfer",
+   *   data: { chainIds: [1, 10], contractAddress: "0x...", policies: [{ type: "sudo" }] }
+   * })
+   */
+  buildSessionAction: (params: BuildSessionActionTypes) => SessionAction[]
 
   /**
    * Function to build instructions for bridging a token across all deployments
@@ -176,6 +218,22 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
     parameter?: IsDelegatedParameters
   ) => Promise<IsDelegatedPayload>
   /**
+   * Function to get the composability version for a specific chain
+   * @param chainId - The ID of the chain to query
+   * @returns The composability version of a given multichain account on the specified chain
+   * @example
+   * const composabilityVersion = await mcAccount.getComposabilityVersion(1)
+   */
+  getComposabilityVersion: (chainId: number) => ComposabilityVersion
+  /**
+   * Function to get the MEE version for a specific chain
+   * @param chainId - The ID of the chain to query
+   * @returns The MEE version of a given multichain account on the specified chain
+   * @example
+   * const meeVersion = await mcAccount.getMeeVersion(1)
+   */
+  getMeeVersion: (chainId: number) => MEEVersion
+  /**
    * Function to undelegate the account
    * @returns The transaction hashes of the undelegate transactions
    * @example
@@ -208,6 +266,32 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
    * const delegation = await mcAccount.toDelegation()
    */
   toDelegation: (params?: DelegationParams) => Promise<MeeAuthorization>
+  /**
+   * Creates instructions to set ownership data on the StxValidator across all chains.
+   * Use this when no ownership data exists yet for the given ownership type.
+   * @param params - Ownership type and optional ownership data override
+   * @returns Instructions calling setOwnershipData on every configured chain
+   */
+  addOwnership: (params: OwnershipParamsWithData) => Instruction[]
+  /**
+   * Creates instructions to change existing ownership data on the StxValidator across all chains.
+   * Reads current ownership data first and throws if none exists (use addOwnership instead).
+   * @param params - Ownership type and optional ownership data override
+   * @returns Instructions calling setOwnershipData on every configured chain
+   */
+  changeOwnership: (params: OwnershipParamsWithData) => Promise<Instruction[]>
+  /**
+   * Creates instructions to remove ownership data from the StxValidator across all chains.
+   * @param params - Ownership type to clean, with optional chainIds filter
+   * @returns Instructions calling cleanOwnershipData on every configured chain
+   */
+  cleanOwnership: (params: OwnershipParams) => Instruction[]
+  /**
+   * Reads ownership data from the StxValidator across all chains.
+   * @param params - Ownership type to query, with optional chainIds filter
+   * @returns Ownership data per chain
+   */
+  getOwnership: (params: OwnershipParams) => Promise<OwnershipResult[]>
 }
 
 /**
@@ -215,7 +299,7 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  *
  * @param parameters - {@link MultichainNexusParams} Configuration for multichain account creation
  * @param parameters.signer - The signer instance used for account creation
- * @param parameters.chains - Array of chains where the account will be deployed
+ * @param parameters.chainConfigurations - Array of chain configuration objects where the account will be deployed
  *
  * @returns Promise resolving to {@link MultichainSmartAccount} instance
  *
@@ -224,8 +308,18 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  * @example
  * const account = await toMultichainNexusAccount({
  *   signer: mySigner,
- *   chains: [optimism, base],
- *   transports: [http(), http()]
+ *   chainConfigurations: [
+ *     {
+ *       chain: optimism,
+ *       transport: http(),
+ *       version: getMEEVersion(MEEversion.V2_1_0)
+ *     },
+ *     {
+ *       chain: base,
+ *       transport: http(),
+ *       version: getMEEVersion(MEEversion.V2_1_0)
+ *     }
+ *   ]
  * });
  *
  * // Get deployment on specific chain
@@ -245,28 +339,20 @@ export async function toMultichainNexusAccount(
   multiChainNexusParams: MultichainNexusParams
 ): Promise<MultichainSmartAccount> {
   const {
-    chains,
     signer: unresolvedSigner,
-    transports,
+    chainConfigurations,
     ...accountParameters
   } = multiChainNexusParams
 
-  if (chains.length === 0) {
-    throw new Error("No chains provided")
-  }
-
-  if (transports && transports.length !== chains.length) {
-    throw new Error(
-      "The number of transports must match the number of chains provided"
-    )
+  if (chainConfigurations.length === 0) {
+    throw new Error("No chain configuration provided")
   }
 
   const deployments = await Promise.all(
-    chains.map((chain, i) =>
+    chainConfigurations.map((chainConfiguration) =>
       toNexusAccount({
-        chain,
         signer: unresolvedSigner,
-        transport: transports[i],
+        chainConfiguration,
         ...accountParameters
       })
     )
@@ -290,6 +376,11 @@ export async function toMultichainNexusAccount(
     return deployment?.address
   }
 
+  const meeVersions = deployments.map(({ version, chain }) => ({
+    chainId: chain.id,
+    version
+  }))
+
   const baseAccount = {
     signer: deployments[0].signer, // This signer is resolved
     deployments,
@@ -304,23 +395,62 @@ export async function toMultichainNexusAccount(
     params: BuildInstructionTypes,
     currentInstructions?: Instruction[]
   ): Promise<Instruction[]> =>
-    buildDecorator({ currentInstructions, account: baseAccount }, params)
+    buildDecorator(
+      {
+        currentInstructions,
+        accountAddress: baseAccount.signer.address,
+        meeVersions
+      },
+      params
+    )
+
+  const buildActionPolicy = (
+    params: BuildActionPolicyParamTypes
+  ): PolicyData => {
+    return buildActionPolicyDecorator(params)
+  }
+
+  const buildSessionAction = (
+    params: BuildSessionActionTypes
+  ): SessionAction[] => {
+    return buildSessionActionDecorator(params)
+  }
 
   const buildComposable = (
     params: BuildComposableInstructionTypes,
     currentInstructions?: Instruction[]
-  ): Promise<Instruction[]> =>
-    buildComposableDecorator(
-      { currentInstructions, account: baseAccount },
-      params
+  ): Promise<Instruction[]> => {
+    let composabilityVersion: ComposabilityVersion | undefined = undefined
+    let chainId: number | undefined = undefined
+
+    const type = params.type
+    if (type === "acrossIntent") {
+      chainId = params.data.originChainId
+    } else if (type !== "batch") {
+      chainId = params.data.chainId
+    }
+
+    if (chainId) {
+      composabilityVersion = getComposabilityVersion(chainId)
+    }
+
+    return buildComposableDecorator(
+      {
+        currentInstructions,
+        accountAddress: baseAccount.signer.address,
+        meeVersions
+      },
+      params,
+      composabilityVersion
     )
+  }
 
   const buildBridgeInstructions = (
     params: Omit<MultichainBridgingParams, "account">
-  ) => buildBridgeInstructionsDecorator({ ...params, account: baseAccount })
+  ) => buildBridgeInstructionsDecorator({ ...params })
 
   const queryBridge = (params: QueryBridgeParams) =>
-    queryBridgeDecorator({ ...params, account: baseAccount })
+    queryBridgeDecorator({ ...params })
 
   const isDelegated = (parameters?: IsDelegatedParameters) =>
     isDelegatedDecorator({ ...parameters, account: baseAccount })
@@ -331,26 +461,66 @@ export async function toMultichainNexusAccount(
   ) =>
     waitForTransactionReceiptsDecorator({ ...parameters, account: baseAccount })
 
+  const getComposabilityVersion = (chainId: number) => {
+    const chainConfiguration = chainConfigurations.find(
+      (chainConfiguration) => chainConfiguration.chain.id === chainId
+    )
+    if (!chainConfiguration) {
+      throw new Error(
+        `Chain configuration not found in mc account for chainId: ${chainId} that is used in the instruction params`
+      )
+    }
+    return chainConfiguration.version.composabilityVersion
+  }
+
+  const getMeeVersion = (chainId: number) => {
+    const chainConfiguration = chainConfigurations.find(
+      (chainConfiguration) => chainConfiguration.chain.id === chainId
+    )
+    if (!chainConfiguration) {
+      throw new Error(`Chain configuration not found for chainId: ${chainId}`)
+    }
+    return chainConfiguration.version.version
+  }
+
   const read = <T>(params: MultichainReadParameters) =>
-    multichainRead({ account: baseAccount }, params) as Promise<
-      MultiChainReadPayload<T>[]
-    >
+    multichainRead(baseAccount, params) as Promise<MultiChainReadPayload<T>[]>
 
   // The specific deployment doesn't matter here because chainId = 0
   const toDelegation = async () =>
     await deployments[0].toDelegation({ multiChain: true })
+
+  const addOwnership = (params: OwnershipParamsWithData) =>
+    addOwnershipDecorator(baseAccount, params)
+
+  const changeOwnership = (params: OwnershipParamsWithData) =>
+    changeOwnershipDecorator(baseAccount, params)
+
+  const cleanOwnership = (params: OwnershipParams) =>
+    cleanOwnershipDecorator(baseAccount, params)
+
+  const getOwnership = (params: OwnershipParams) =>
+    getOwnershipDecorator(baseAccount, params)
 
   return {
     ...baseAccount,
     getUnifiedERC20Balance,
     build,
     buildComposable,
+    buildActionPolicy,
+    buildSessionAction,
     buildBridgeInstructions,
     queryBridge,
     isDelegated,
+    getComposabilityVersion,
+    getMeeVersion,
     unDelegate,
     waitForTransactionReceipts,
     read,
-    toDelegation
+    toDelegation,
+    addOwnership,
+    changeOwnership,
+    cleanOwnership,
+    getOwnership
   }
 }

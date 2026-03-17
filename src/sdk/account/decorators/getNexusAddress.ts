@@ -1,6 +1,5 @@
-import { type Address, pad, parseAbi, toHex } from "viem"
+import { type Address, pad, toHex } from "viem"
 import type { PublicClient } from "viem"
-import { NEXUS_ACCOUNT_FACTORY_ADDRESS } from "../../constants"
 import { AccountFactoryAbi } from "../../constants/abi/AccountFactory"
 
 /**
@@ -38,12 +37,7 @@ export type GetUniversalAddressParams<
 export const getNexusAddress = async (
   params: GetUniversalAddressParams<PublicClient>
 ): Promise<Address> => {
-  const {
-    publicClient,
-    initData,
-    factoryAddress = NEXUS_ACCOUNT_FACTORY_ADDRESS,
-    index = 0n
-  } = params
+  const { publicClient, initData, factoryAddress, index = 0n } = params
 
   const salt = pad(toHex(index), { size: 32 })
 
@@ -65,32 +59,10 @@ export const getNexusAddress = async (
  */
 export type GetK1NexusAddressParams<ExtendedPublicClient extends PublicClient> =
   {
-    k1FactoryAddress: Address
+    factoryAddress: Address
     publicClient: ExtendedPublicClient
     ownerAddress: Address
     attesters: Address[]
     attesterThreshold: number
     index: bigint
   }
-
-export const getK1NexusAddress = async (
-  params: GetK1NexusAddressParams<PublicClient>
-): Promise<Address> => {
-  const {
-    publicClient,
-    k1FactoryAddress,
-    ownerAddress,
-    attesters,
-    attesterThreshold,
-    index = 0n
-  } = params
-
-  return await publicClient.readContract({
-    address: k1FactoryAddress,
-    abi: parseAbi([
-      "function computeAccountAddress(address owner, uint256 index, address[] attesters, uint8 threshold) public view returns (address)"
-    ]),
-    functionName: "computeAccountAddress",
-    args: [ownerAddress, index, attesters, attesterThreshold]
-  })
-}
