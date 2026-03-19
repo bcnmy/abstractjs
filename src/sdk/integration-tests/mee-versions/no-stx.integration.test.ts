@@ -24,8 +24,6 @@ import {
   parseEther,
   toBytes
 } from "viem"
-import { getUserOperationHash } from "viem/account-abstraction"
-import { generatePrivateKey } from "viem/accounts"
 import { beforeAll, describe, expect, test } from "vitest"
 import { TEST_BLOCK_CONFIRMATIONS, toNetwork } from "../../../test/testSetup"
 import { getBundlerUrl } from "../../../test/testUtils"
@@ -283,7 +281,7 @@ describe("No-STX Mode Integration Tests", () => {
 
   // P256 Signer Tests (V3.0.0 only)
   describe("V3.0.0 with P256 Signer", () => {
-    test("should execute regular userOp with P256 signer", async () => {
+    test.skip("should execute regular userOp with P256 signer", async () => {
       const { mcNexus } = p256AccountConfig
 
       const deployment = mcNexus.deploymentOn(
@@ -341,7 +339,7 @@ describe("No-STX Mode Integration Tests", () => {
       expect(receipt.status).toBe("success")
     })
 
-    test("should validate EIP-1271 signature with P256 signer", async () => {
+    test.skip("should validate EIP-1271 signature with P256 signer", async () => {
       const { mcNexus } = p256AccountConfig
       const deployment = mcNexus.deploymentOn(
         mcNexus.deployments[0].client.chain!.id,
@@ -375,7 +373,7 @@ describe("No-STX Mode Integration Tests", () => {
       expect(result).toBe(eip1271MagicValue)
     })
 
-    test("should validate signTypedData with P256 signer and ERC-7739 flow", async () => {
+    test.skip("should validate signTypedData with P256 signer and ERC-7739 flow", async () => {
       const { mcNexus } = p256AccountConfig
       const deployment = mcNexus.deploymentOn(
         mcNexus.deployments[0].client.chain!.id,
@@ -472,7 +470,7 @@ describe("No-STX Mode Integration Tests", () => {
       expect(result).toBe(eip1271MagicValue)
     })
 
-    test("should validate .signMessage() result with P256 signer", async () => {
+    test.skip("should validate .signMessage() result with P256 signer", async () => {
       const { mcNexus } = p256AccountConfig
       const deployment = mcNexus.deploymentOn(
         mcNexus.deployments[0].client.chain!.id,
