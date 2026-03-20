@@ -48,7 +48,7 @@ export type SignQuotePayload = GetQuotePayload & {
   isEIP712TrustedSponsorshipSupported: boolean
 }
 
-const DEFAULT_PREFIX = "0x177eee00"
+export const DEFAULT_PREFIX = "0x177eee00"
 
 /**
  * Prepares the payload required for signing a quote using personal message signatures.
