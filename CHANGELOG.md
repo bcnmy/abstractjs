@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.2.3
+
+### Patch Changes
+
+- Composable retries support has been added which enables constraint and nonce based retries in a sequential order
+
 ## 1.2.2
 
 ### Patch Changes
