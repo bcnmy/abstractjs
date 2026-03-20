@@ -3,6 +3,7 @@ import {
   type Address,
   type ContractFunctionArgs,
   type ContractFunctionName,
+  type Hex,
   encodeAbiParameters,
   encodeFunctionData
 } from "viem"
@@ -142,7 +143,7 @@ export const createCondition = <
   functionAbi: TAbi
   functionName: TFunctionName
   args: ContractFunctionArgs<TAbi, "pure" | "view", TFunctionName>
-  value: bigint | boolean
+  value: bigint | boolean | Hex | Address
   type: ConditionType
   description?: string
 }): ExecutionCondition<TAbi, TFunctionName> => {

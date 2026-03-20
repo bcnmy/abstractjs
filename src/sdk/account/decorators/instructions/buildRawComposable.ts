@@ -40,6 +40,11 @@ export type BuildRawComposableParameters = {
    * Optional metadata describing the instruction for display purposes
    */
   metadata?: InstructionMetadata[]
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 
 /**
@@ -87,7 +92,8 @@ export const buildRawComposable = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } = parameters
   const { composabilityVersion } = composabilityParameters
 
@@ -143,6 +149,7 @@ export const buildRawComposable = async (
       chainId,
       isComposable: true,
       metadata: metadata || defaultMetadata,
+      retry,
       lowerBoundTimestamp,
       upperBoundTimestamp,
       executionSimulationRetryDelay,

@@ -560,4 +560,47 @@ describe("utils.batchInstructions", () => {
       batchedInstructions[0].simulationOverrides?.customOverrides?.length
     ).to.be.eq(2)
   })
+
+  test("Should batching resolves the highest retry count", async () => {
+    const transferOne = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        chainId: base.id,
+        tokenAddress: mcUSDC.addressOn(base.id),
+        amount: 100n,
+        recipient: mcNexus.addressOn(base.id, true),
+        retry: 1
+      }
+    })
+
+    const transferTwo = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        chainId: base.id,
+        tokenAddress: mcUSDC.addressOn(base.id),
+        amount: 100n,
+        recipient: mcNexus.addressOn(base.id, true),
+        retry: 4
+      }
+    })
+
+    const transferThree = await mcNexus.buildComposable({
+      type: "transfer",
+      data: {
+        chainId: base.id,
+        tokenAddress: mcUSDC.addressOn(base.id),
+        amount: 100n,
+        recipient: mcNexus.addressOn(base.id, true),
+        retry: 2
+      }
+    })
+
+    const batchedInstructions = await batchInstructions({
+      accountAddress: mcNexus.signer.address,
+      meeVersions,
+      instructions: [...transferOne, ...transferTwo, ...transferThree]
+    })
+
+    expect(batchedInstructions[0].retry).to.eq(4)
+  })
 })

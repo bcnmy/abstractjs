@@ -40,12 +40,6 @@ const COMPETITORS = [
     chain: baseSepolia,
     bundlerUrl: `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${process.env.PIMLICO_API_KEY}`,
     mock: true
-  },
-  {
-    name: "Biconomy",
-    bundlerUrl: `https://bundler.biconomy.io/api/v3/${baseSepolia.id}/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44`,
-    chain: baseSepolia,
-    mock: false
   }
 ]
 

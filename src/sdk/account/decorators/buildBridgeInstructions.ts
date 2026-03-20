@@ -63,6 +63,11 @@ export type MultichainBridgingParams = {
   /** Optional: Instruction level simulation overrides which will either overrides global overrides or only configure overrides for certain instructions */
   simulationOverrides?: Overrides
   metadata?: InstructionMetadata[]
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 
 /**
@@ -179,7 +184,8 @@ export const buildBridgeInstructions = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } = params
 
   const tokenMapping = {
@@ -288,6 +294,7 @@ export const buildBridgeInstructions = async (
         const instruction: Instruction = {
           ...result.userOp,
           metadata: metadata || result.userOp.metadata || customMetadata,
+          retry: result.userOp.isComposable ? retry : 0,
           lowerBoundTimestamp,
           upperBoundTimestamp,
           executionSimulationRetryDelay,

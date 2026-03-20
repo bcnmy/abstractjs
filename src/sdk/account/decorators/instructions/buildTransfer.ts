@@ -46,6 +46,11 @@ export type BuildTransferParameters = TokenParams & {
   simulationOverrides?: Overrides
   /** Custom metadata override for instruction */
   metadata?: InstructionMetadata[]
+  /**
+   * Instruction level retries. When this is enabled, the retry instructions will be unbatched always
+   * By default: 0 retries
+   */
+  retry?: number
 } & InstructionLevelTimeBounds
 
 /**
@@ -105,7 +110,8 @@ export const buildTransfer = async (
     lowerBoundTimestamp,
     upperBoundTimestamp,
     executionSimulationRetryDelay,
-    simulationOverrides
+    simulationOverrides,
+    retry
   } = parameters
   const { forceComposableEncoding } = composabilityParams ?? {
     forceComposableEncoding: false
@@ -186,6 +192,7 @@ export const buildTransfer = async (
       chainId,
       isComposable: isComposableCall,
       metadata: metadata || defaultMetadata,
+      retry: isComposableCall ? retry : 0,
       lowerBoundTimestamp,
       upperBoundTimestamp,
       executionSimulationRetryDelay,
