@@ -147,6 +147,69 @@ export const prepareTypedDataSignableQuotePayload = (
 }
 
 /**
+ * Prepares the signable payload for EIP-712 typed data signatures for smart sessions.
+ * Used for MEE versions >= 2.2.1 when signing with a session key.
+ *
+ * Smart sessions go through validateSignatureForOwner which receives the raw
+ * userOpHash from SmartSession (no timestamp wrapping). Using the MeeUserOp[]
+ * array typehash would cause the on-chain comparison to fail because:
+ *   raw userOpHash ≠ keccak256(MEE_USER_OP_TYPEHASH || userOpHash || lower || upper)
+ *
+ * Instead we build a generic struct with plain bytes32 fields:
+ *   SuperTx(bytes32 op0, bytes32 op1, ..., bytes32 opN)
+ *
+ * This takes the `else` branch in HashLib.compareAndGetFinalHash which computes:
+ *   structHash = keccak256(abi.encodePacked(outerTypeHash, itemHashes))
+ *
+ * @param quote - The quote payload to be signed
+ * @param eip712Domain - The EIP-712 domain to be used for the signature
+ * @returns An object containing the signable payload and metadata
+ */
+export const prepareSessionTypedDataSignableQuotePayload = (
+  quote: GetQuotePayload,
+  eip712Domain: GetEip712DomainReturnType
+) => {
+  const isTrustedSponsorship =
+    quote.userOps[0].userOp.sender.toLowerCase() ===
+    DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT.toLowerCase()
+
+  const userOps = isTrustedSponsorship
+    ? quote.userOps.slice(1)
+    : quote.userOps
+
+  // Build dynamic EIP-712 type: SuperTx(bytes32 op0, bytes32 op1, ...)
+  const superTxFields = userOps.map((_, i) => ({
+    name: `op${i}`,
+    type: "bytes32" as const
+  }))
+
+  // Build message with raw userOpHashes (no timestamp wrapping)
+  const message: Record<string, Hex> = {}
+  for (let i = 0; i < userOps.length; i++) {
+    message[`op${i}`] = userOps[i].userOpHash as Hex
+  }
+
+  const signablePayload = {
+    domain: {
+      name: eip712Domain.domain.name
+    },
+
+    types: {
+      SuperTx: superTxFields
+    },
+
+    primaryType: "SuperTx" as const,
+
+    message
+  }
+
+  return {
+    signablePayload,
+    metadata: {}
+  }
+}
+
+/**
  * Formats the signed quote payload by attaching the signature to the original quote.
  * The signature is prefixed and concatenated as required by the MEE service.
  * Metadata is currently unused but reserved for future extensibility.
