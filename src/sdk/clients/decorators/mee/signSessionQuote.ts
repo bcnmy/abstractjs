@@ -58,36 +58,7 @@ export const signSessionQuote = async (
   const { quoteType, quote } = params
 
   if (quoteType === "simple") {
-    const simpleQuote = quote as GetQuotePayload
-    const account = client.account
-    const signer = account.signer
-    const isP256 = isP256Signer(signer)
-
-    const startIndex = simpleQuote.paymentInfo.sponsored ? 1 : 0
-
-    const meeVersions = getMeeVersionsForQuote(
-      account,
-      simpleQuote.userOps.slice(startIndex)
-    )
-
-    // For MEE >= 2.2.1, use personal sign on the raw hash (NoMee flow).
-    // The session key signs the quote hash directly — no SuperTx wrapping.
-    if (versionIsAtLeast(meeVersions[0].version.version, MEEVersion.V2_2_1)) {
-      const { signablePayload, metadata } =
-        preparePersonalSignableQuotePayload(simpleQuote)
-      const personalSignature = await signer.signMessage(signablePayload)
-
-      return formatSignedQuotePayload(
-        simpleQuote,
-        metadata,
-        personalSignature,
-        meeVersions,
-        isP256
-      )
-    }
-
-    // For older MEE versions, fall back to standard signing
-    return await signQuote(client, { quote: simpleQuote })
+    return await signQuote(client, { quote: quote as GetQuotePayload })
   }
 
   return await signFusionQuote(client, {
