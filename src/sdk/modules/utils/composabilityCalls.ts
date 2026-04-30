@@ -233,7 +233,9 @@ export const lessThanOrEqualToSigned = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.LTE_SIGNED, value }
 }
 
-export const orConstraint = (subConstraints: ConstraintField[]): ConstraintField => {
+export const orConstraint = (
+  subConstraints: ConstraintField[]
+): ConstraintField => {
   return { type: ConstraintType.OR, value: subConstraints }
 }
 
