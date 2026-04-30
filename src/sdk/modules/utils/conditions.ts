@@ -13,7 +13,9 @@ import {
   InputParamFetcherType,
   equalTo,
   greaterThanOrEqualTo,
+  greaterThanOrEqualToSigned,
   lessThanOrEqualTo,
+  lessThanOrEqualToSigned,
   prepareInputParam,
   validateAndProcessConstraints
 } from "./composabilityCalls"
@@ -27,7 +29,11 @@ export enum ConditionType {
   /** Less than or equal to */
   LTE = "lte",
   /** Equal to */
-  EQ = "eq"
+  EQ = "eq",
+  /** Signed greater than or equal to (int256) — accepts negative bigints */
+  GTE_SIGNED = "gteSigned",
+  /** Signed less than or equal to (int256) — accepts negative bigints */
+  LTE_SIGNED = "lteSigned"
 }
 
 /**
@@ -151,7 +157,9 @@ export const createCondition = <
   const constraintMap = {
     [ConditionType.GTE]: greaterThanOrEqualTo,
     [ConditionType.LTE]: lessThanOrEqualTo,
-    [ConditionType.EQ]: equalTo
+    [ConditionType.EQ]: equalTo,
+    [ConditionType.GTE_SIGNED]: greaterThanOrEqualToSigned,
+    [ConditionType.LTE_SIGNED]: lessThanOrEqualToSigned
   }
 
   return {

@@ -76,7 +76,10 @@ export const ConstraintType = {
   EQ: 0,
   GTE: 1,
   LTE: 2,
-  IN: 3
+  IN: 3,
+  GTE_SIGNED: 4,
+  LTE_SIGNED: 5,
+  OR: 6
 } as const
 
 export type InputParamFetcherType =
@@ -119,6 +122,25 @@ export type ConstraintField = {
   type: ConstraintType
   value: AnyData // type any is being implicitly used. The appropriate value validation happens in the runtime function
 }
+
+type ConstraintValue = bigint | boolean | Hex | Address
+
+export type ChildConstraint =
+  | { gte: ConstraintValue }
+  | { lte: ConstraintValue }
+  | { eq: ConstraintValue }
+  | { gteSigned: bigint }
+  | { lteSigned: bigint }
+
+export type RuntimeConstraint = ChildConstraint | { or: ChildConstraint[] }
+
+export const CONSTRAINT_TUPLE_ABI = {
+  type: "tuple[]",
+  components: [
+    { name: "constraintType", type: "uint8" },
+    { name: "referenceData", type: "bytes" }
+  ]
+} as const
 
 export type RuntimeParamViaCustomStaticCallParams = {
   targetContractAddress: Address
@@ -203,6 +225,81 @@ export const equalTo = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.EQ, value }
 }
 
+export const greaterThanOrEqualToSigned = (value: AnyData): ConstraintField => {
+  return { type: ConstraintType.GTE_SIGNED, value }
+}
+
+export const lessThanOrEqualToSigned = (value: AnyData): ConstraintField => {
+  return { type: ConstraintType.LTE_SIGNED, value }
+}
+
+export const orConstraint = (subConstraints: ConstraintField[]): ConstraintField => {
+  return { type: ConstraintType.OR, value: subConstraints }
+}
+
+const CHILD_CONSTRAINT_TYPES = new Set<ConstraintType>([
+  ConstraintType.EQ,
+  ConstraintType.GTE,
+  ConstraintType.LTE,
+  ConstraintType.GTE_SIGNED,
+  ConstraintType.LTE_SIGNED
+])
+
+const SIGNED_CONSTRAINT_TYPES = new Set<ConstraintType>([
+  ConstraintType.GTE_SIGNED,
+  ConstraintType.LTE_SIGNED
+])
+
+const validateAndProcessChildConstraint = (
+  constraint: ConstraintField
+): Constraint => {
+  if (constraint.type === ConstraintType.OR)
+    throw new Error("Nested OR constraints are not supported")
+
+  if (!CHILD_CONSTRAINT_TYPES.has(constraint.type))
+    throw new Error("Invalid constraint type")
+
+  if (SIGNED_CONSTRAINT_TYPES.has(constraint.type)) {
+    if (typeof constraint.value !== "bigint")
+      throw new Error(
+        "Invalid constraint value: signed constraints require bigint"
+      )
+
+    // Encode as int256 to preserve two's-complement, then wrap in bytes32
+    // The contract casts bytes32 → uint256 → int256 on both sides before comparing
+    const valueHex = encodeAbiParameters(
+      [{ type: "int256" }],
+      [constraint.value]
+    )
+    const referenceData = encodeAbiParameters(
+      [{ type: "bytes32" }],
+      [valueHex as Hex]
+    )
+    return { constraintType: constraint.type, referenceData }
+  }
+
+  // Unsigned path (EQ, GTE, LTE) — existing logic unchanged
+  if (
+    typeof constraint.value !== "bigint" &&
+    typeof constraint.value !== "boolean" &&
+    !isHex(constraint.value) &&
+    !isAddress(constraint.value)
+  ) {
+    throw new Error("Invalid constraint value")
+  }
+
+  if (typeof constraint.value === "bigint" && constraint.value < BigInt(0)) {
+    throw new Error("Invalid constraint value")
+  }
+
+  const valueHex = toBytes32(constraint.value)
+  const referenceData = encodeAbiParameters(
+    [{ type: "bytes32" }],
+    [valueHex as Hex]
+  )
+  return prepareConstraint(constraint.type, referenceData)
+}
+
 /**
  * Validates and processes constraints for runtime functions
  * @param constraints - Array of constraint fields to validate and process
@@ -211,48 +308,36 @@ export const equalTo = (value: AnyData): ConstraintField => {
 export const validateAndProcessConstraints = (
   constraints: ConstraintField[]
 ): Constraint[] => {
-  const constraintsToAdd: Constraint[] = []
+  const result: Constraint[] = []
 
-  if (constraints.length > 0) {
-    for (const constraint of constraints) {
-      // Constraint type IN is ignored for runtime functions
-      // This is mostly a number/unit/int, so it makes sense to only have EQ, GTE, LTE
-      if (
-        !Object.values(ConstraintType).slice(0, 3).includes(constraint.type)
-      ) {
-        throw new Error("Invalid constraint type")
-      }
+  for (const constraint of constraints) {
+    if (constraint.type === ConstraintType.OR) {
+      if (!Array.isArray(constraint.value) || constraint.value.length === 0)
+        throw new Error("OR constraint must have at least one sub-constraint")
 
-      // Handle value validation in a appropriate to runtime function
-      if (
-        typeof constraint.value !== "bigint" &&
-        typeof constraint.value !== "boolean" &&
-        !isHex(constraint.value) &&
-        !isAddress(constraint.value)
-      ) {
-        throw new Error("Invalid constraint value")
-      }
-
-      if (
-        typeof constraint.value === "bigint" &&
-        constraint.value < BigInt(0)
-      ) {
-        throw new Error("Invalid constraint value")
-      }
-
-      const valueHex = toBytes32(constraint.value)
-      const encodedConstraintValue = encodeAbiParameters(
-        [{ type: "bytes32" }],
-        [valueHex as Hex]
+      const processedSubs = (constraint.value as ConstraintField[]).map(
+        validateAndProcessChildConstraint
       )
 
-      constraintsToAdd.push(
-        prepareConstraint(constraint.type, encodedConstraintValue)
+      // Encode as abi.encode(Constraint[]) — matches what the contract decodes:
+      // Constraint[] memory subs = abi.decode(c.referenceData, (Constraint[]));
+      const referenceData = encodeAbiParameters(
+        [CONSTRAINT_TUPLE_ABI],
+        [
+          processedSubs.map((c) => ({
+            constraintType: c.constraintType,
+            referenceData: c.referenceData as Hex
+          }))
+        ]
       )
+
+      result.push({ constraintType: ConstraintType.OR, referenceData })
+    } else {
+      result.push(validateAndProcessChildConstraint(constraint))
     }
   }
 
-  return constraintsToAdd
+  return result
 }
 
 export const runtimeNonceOf = ({
