@@ -650,12 +650,38 @@ export const toNexusAccount = async (
   }
 
   /**
-   * Use viem helper to obtain and cache the eip712 domain for the account
+   * Use viem helper to obtain and cache the eip712 domain for the account.
+   *
+   * In EIP-7702 mode the smart-account address is the EOA itself, but `factoryAddress` +
+   * `factoryData` would deploy a Nexus account at a CREATE2 address that is by definition
+   * not the EOA. viem's deployless fallback (used when the address has no code yet) asserts
+   * that the deployed address equals the target address and reverts when they don't match —
+   * breaking `signQuote` for a 7702 EOA that hasn't been delegated yet. Read the domain from
+   * the implementation contract directly instead, and substitute chainId + verifyingContract
+   * with the values the EOA will return after delegation.
    */
   const getEip712Domain = async (): Promise<GetEip712DomainReturnType> => {
     if (!isNullOrUndefined(_eip712Domain)) return _eip712Domain
+
+    const address = await getAddress()
+
+    if (addressEquals(address, signer.address)) {
+      const implDomain = await getEip712DomainViemAction(publicClient, {
+        address: meeConfig.implementationAddress
+      })
+      _eip712Domain = {
+        ...implDomain,
+        domain: {
+          ...implDomain.domain,
+          chainId: chain.id,
+          verifyingContract: address
+        }
+      }
+      return _eip712Domain
+    }
+
     const eip712Domain = await getEip712DomainViemAction(publicClient, {
-      address: await getAddress(),
+      address,
       factory: meeConfig.factoryAddress,
       factoryData
     })
