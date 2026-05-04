@@ -1,11 +1,18 @@
 import { type Address, erc20Abi } from "viem"
 import { describe, expect, test } from "vitest"
+import { buildComposableCall } from "../../account/decorators/instructions/buildComposable"
+import { ComposabilityVersion } from "../../constants"
 import {
   ConstraintType,
   InputParamFetcherType,
   equalTo,
   greaterThanOrEqualTo,
-  lessThanOrEqualTo
+  greaterThanOrEqualToSigned,
+  lessThanOrEqualTo,
+  lessThanOrEqualToSigned,
+  orConstraint,
+  runtimeERC20BalanceOf,
+  validateAndProcessConstraints
 } from "./composabilityCalls"
 import {
   ConditionType,
@@ -87,8 +94,8 @@ describe("Conditional Execution - Unit Tests", () => {
       const conditionParams = {
         targetContract: mockContract,
         functionAbi: erc20Abi,
-        functionName: "balanceOf",
-        args: [mockContract],
+        functionName: "balanceOf" as const,
+        args: [mockContract] as [Address],
         value: 1000n
       }
 
@@ -171,6 +178,207 @@ describe("Conditional Execution - Unit Tests", () => {
       // paramData should be the same
       expect(inputParamGt.paramData).toBe(inputParamLt.paramData)
       expect(inputParamGt.paramData).toBe(inputParamEq.paramData)
+    })
+  })
+
+  describe("validateAndProcessConstraints — signed integer and OR constraints", () => {
+    test("greaterThanOrEqualToSigned encodes a positive bigint correctly", () => {
+      const result = validateAndProcessConstraints([
+        greaterThanOrEqualToSigned(100n)
+      ])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.GTE_SIGNED)
+      expect(result[0].referenceData).toBeDefined()
+    })
+
+    test("greaterThanOrEqualToSigned encodes a negative bigint correctly", () => {
+      const result = validateAndProcessConstraints([
+        greaterThanOrEqualToSigned(-42n)
+      ])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.GTE_SIGNED)
+      // negative value must be encoded in two's-complement — referenceData must be non-zero
+      expect(result[0].referenceData).not.toBe(
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+      )
+    })
+
+    test("lessThanOrEqualToSigned encodes a negative bigint correctly", () => {
+      const result = validateAndProcessConstraints([
+        lessThanOrEqualToSigned(-1n)
+      ])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.LTE_SIGNED)
+    })
+
+    test("greaterThanOrEqualToSigned throws for non-bigint value", () => {
+      expect(() =>
+        validateAndProcessConstraints([
+          greaterThanOrEqualToSigned("0x1234" as unknown as bigint)
+        ])
+      ).toThrow("signed constraints require bigint")
+    })
+
+    test("orConstraint encodes sub-constraints into referenceData", () => {
+      const result = validateAndProcessConstraints([
+        orConstraint([greaterThanOrEqualTo(10n), lessThanOrEqualTo(100n)])
+      ])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.OR)
+      expect(result[0].referenceData.length).toBeGreaterThan(2)
+    })
+
+    test("orConstraint throws for nested OR (OR inside OR)", () => {
+      expect(() =>
+        validateAndProcessConstraints([
+          orConstraint([
+            orConstraint([greaterThanOrEqualTo(1n)]) as unknown as ReturnType<
+              typeof greaterThanOrEqualTo
+            >
+          ])
+        ])
+      ).toThrow("Nested OR constraints are not supported")
+    })
+
+    test("orConstraint throws for empty sub-constraint array", () => {
+      expect(() =>
+        validateAndProcessConstraints([orConstraint([])])
+      ).toThrow("OR constraint must have at least one sub-constraint")
+    })
+
+    test("ConditionType.GTE_SIGNED maps to the signed GTE helper", () => {
+      const mockContract =
+        "0x1234567890123456789012345678901234567890" as Address
+      const cond = createCondition({
+        targetContract: mockContract,
+        functionAbi: erc20Abi,
+        functionName: "balanceOf",
+        args: [mockContract],
+        value: -5n,
+        type: ConditionType.GTE_SIGNED,
+        description: "Must be >= -5 (signed)"
+      })
+      expect(cond.constraint).toEqual({
+        type: ConstraintType.GTE_SIGNED,
+        value: -5n
+      })
+    })
+
+    test("ConditionType.LTE_SIGNED maps to the signed LTE helper", () => {
+      const mockContract =
+        "0x1234567890123456789012345678901234567890" as Address
+      const cond = createCondition({
+        targetContract: mockContract,
+        functionAbi: erc20Abi,
+        functionName: "balanceOf",
+        args: [mockContract],
+        value: 0n,
+        type: ConditionType.LTE_SIGNED
+      })
+      expect(cond.constraint).toEqual({
+        type: ConstraintType.LTE_SIGNED,
+        value: 0n
+      })
+    })
+
+    test("unsigned GTE still rejects negative bigint", () => {
+      expect(() =>
+        validateAndProcessConstraints([greaterThanOrEqualTo(-1n)])
+      ).toThrow("Invalid constraint value")
+    })
+  })
+
+  describe("buildComposableCall — version guard for OR / signed-integer constraints", () => {
+    const TOKEN = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Address
+    const SPENDER = "0x1234567890123456789012345678901234567890" as Address
+
+    const buildParams = (constraints: ReturnType<typeof greaterThanOrEqualTo>[]) => ({
+      to: TOKEN,
+      functionName: "transferFrom",
+      abi: erc20Abi,
+      chainId: 1,
+      args: [
+        SPENDER,
+        SPENDER,
+        runtimeERC20BalanceOf({ targetAddress: SPENDER, tokenAddress: TOKEN, constraints })
+      ]
+    })
+
+    test("OR constraint throws for ComposabilityVersion.V1_0_0", async () => {
+      await expect(
+        buildComposableCall(
+          buildParams([orConstraint([greaterThanOrEqualTo(1n)])]),
+          { composabilityVersion: ComposabilityVersion.V1_0_0 }
+        )
+      ).rejects.toThrow("OR constraints require Composability v1.1.1")
+    })
+
+    test("OR constraint throws for ComposabilityVersion.V1_1_0", async () => {
+      await expect(
+        buildComposableCall(
+          buildParams([orConstraint([greaterThanOrEqualTo(1n)])]),
+          { composabilityVersion: ComposabilityVersion.V1_1_0 }
+        )
+      ).rejects.toThrow("OR constraints require Composability v1.1.1")
+    })
+
+    test("OR constraint succeeds for ComposabilityVersion.V1_1_1", async () => {
+      const result = await buildComposableCall(
+        buildParams([orConstraint([greaterThanOrEqualTo(1n), lessThanOrEqualTo(100n)])]),
+        { composabilityVersion: ComposabilityVersion.V1_1_1 }
+      )
+      expect(result.length).toBeGreaterThan(0)
+    })
+
+    test("GTE_SIGNED constraint throws for ComposabilityVersion.V1_0_0", async () => {
+      await expect(
+        buildComposableCall(
+          buildParams([greaterThanOrEqualToSigned(-10n)]),
+          { composabilityVersion: ComposabilityVersion.V1_0_0 }
+        )
+      ).rejects.toThrow("signed integer")
+    })
+
+    test("GTE_SIGNED constraint throws for ComposabilityVersion.V1_1_0", async () => {
+      await expect(
+        buildComposableCall(
+          buildParams([greaterThanOrEqualToSigned(-10n)]),
+          { composabilityVersion: ComposabilityVersion.V1_1_0 }
+        )
+      ).rejects.toThrow("signed integer")
+    })
+
+    test("GTE_SIGNED constraint succeeds for ComposabilityVersion.V1_1_1", async () => {
+      const result = await buildComposableCall(
+        buildParams([greaterThanOrEqualToSigned(-10n)]),
+        { composabilityVersion: ComposabilityVersion.V1_1_1 }
+      )
+      expect(result.length).toBeGreaterThan(0)
+    })
+
+    test("LTE_SIGNED constraint throws for ComposabilityVersion.V1_1_0", async () => {
+      await expect(
+        buildComposableCall(
+          buildParams([lessThanOrEqualToSigned(0n)]),
+          { composabilityVersion: ComposabilityVersion.V1_1_0 }
+        )
+      ).rejects.toThrow("signed integer")
+    })
+
+    test("LTE_SIGNED constraint succeeds for ComposabilityVersion.V1_1_1", async () => {
+      const result = await buildComposableCall(
+        buildParams([lessThanOrEqualToSigned(0n)]),
+        { composabilityVersion: ComposabilityVersion.V1_1_1 }
+      )
+      expect(result.length).toBeGreaterThan(0)
+    })
+
+    test("plain GTE constraint (unsigned) still works for V1_1_0", async () => {
+      const result = await buildComposableCall(
+        buildParams([greaterThanOrEqualTo(1n)]),
+        { composabilityVersion: ComposabilityVersion.V1_1_0 }
+      )
+      expect(result.length).toBeGreaterThan(0)
     })
   })
 })

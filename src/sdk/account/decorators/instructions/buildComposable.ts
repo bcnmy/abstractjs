@@ -15,11 +15,13 @@ import type {
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion } from "../../../constants"
+import { versionIsAtLeast } from "../../utils/getVersion"
 import { functionNameToLabel } from "../../../modules/utils/Helpers"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
   type InputParam,
+  ConstraintType,
   InputParamFetcherType,
   InputParamType,
   prepareComposableInputCalldataParams,
@@ -145,6 +147,11 @@ export const buildComposableCall = async (
         ...conditions.map(createConditionInputParam)
       ]
     : versionAgnosticComposableInputParams
+
+  // OR and signed-integer constraints are only supported from Composability v1.1.1 onwards
+  if (!versionIsAtLeast(composabilityVersion, ComposabilityVersion.V1_1_1)) {
+    assertNoAdvancedConstraints(allInputParams, composabilityVersion)
+  }
 
   const composableCall = formatComposableCallWithVersion(
     composabilityVersion,
@@ -508,4 +515,28 @@ const prepareTargetAndValueInputParams = (
     }
   }
   return { targetInputParam, valueInputParam }
+}
+
+const assertNoAdvancedConstraints = (
+  inputParams: InputParam[],
+  composabilityVersion: ComposabilityVersion
+): void => {
+  for (const param of inputParams) {
+    for (const constraint of param.constraints) {
+      const t = constraint.constraintType
+      if (
+        t === ConstraintType.GTE_SIGNED ||
+        t === ConstraintType.LTE_SIGNED ||
+        t === ConstraintType.OR
+      ) {
+        const label =
+          t === ConstraintType.OR
+            ? "OR"
+            : "signed integer (GTE_SIGNED / LTE_SIGNED)"
+        throw new Error(
+          `${label} constraints require Composability v${ComposabilityVersion.V1_1_1} or higher. Current version: ${composabilityVersion}`
+        )
+      }
+    }
+  }
 }
