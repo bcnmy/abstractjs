@@ -241,9 +241,9 @@ describe("Conditional Execution - Unit Tests", () => {
     })
 
     test("orConstraint throws for empty sub-constraint array", () => {
-      expect(() =>
-        validateAndProcessConstraints([orConstraint([])])
-      ).toThrow("OR constraint must have at least one sub-constraint")
+      expect(() => validateAndProcessConstraints([orConstraint([])])).toThrow(
+        "OR constraint must have at least one sub-constraint"
+      )
     })
 
     test("ConditionType.GTE_SIGNED maps to the signed GTE helper", () => {
@@ -292,7 +292,9 @@ describe("Conditional Execution - Unit Tests", () => {
     const TOKEN = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Address
     const SPENDER = "0x1234567890123456789012345678901234567890" as Address
 
-    const buildParams = (constraints: ReturnType<typeof greaterThanOrEqualTo>[]) => ({
+    const buildParams = (
+      constraints: ReturnType<typeof greaterThanOrEqualTo>[]
+    ) => ({
       to: TOKEN,
       functionName: "transferFrom",
       abi: erc20Abi,
@@ -300,7 +302,11 @@ describe("Conditional Execution - Unit Tests", () => {
       args: [
         SPENDER,
         SPENDER,
-        runtimeERC20BalanceOf({ targetAddress: SPENDER, tokenAddress: TOKEN, constraints })
+        runtimeERC20BalanceOf({
+          targetAddress: SPENDER,
+          tokenAddress: TOKEN,
+          constraints
+        })
       ]
     })
 
@@ -324,7 +330,9 @@ describe("Conditional Execution - Unit Tests", () => {
 
     test("OR constraint succeeds for ComposabilityVersion.V1_1_1", async () => {
       const result = await buildComposableCall(
-        buildParams([orConstraint([greaterThanOrEqualTo(1n), lessThanOrEqualTo(100n)])]),
+        buildParams([
+          orConstraint([greaterThanOrEqualTo(1n), lessThanOrEqualTo(100n)])
+        ]),
         { composabilityVersion: ComposabilityVersion.V1_1_1 }
       )
       expect(result.length).toBeGreaterThan(0)
@@ -332,19 +340,17 @@ describe("Conditional Execution - Unit Tests", () => {
 
     test("GTE_SIGNED constraint throws for ComposabilityVersion.V1_0_0", async () => {
       await expect(
-        buildComposableCall(
-          buildParams([greaterThanOrEqualToSigned(-10n)]),
-          { composabilityVersion: ComposabilityVersion.V1_0_0 }
-        )
+        buildComposableCall(buildParams([greaterThanOrEqualToSigned(-10n)]), {
+          composabilityVersion: ComposabilityVersion.V1_0_0
+        })
       ).rejects.toThrow("signed integer")
     })
 
     test("GTE_SIGNED constraint throws for ComposabilityVersion.V1_1_0", async () => {
       await expect(
-        buildComposableCall(
-          buildParams([greaterThanOrEqualToSigned(-10n)]),
-          { composabilityVersion: ComposabilityVersion.V1_1_0 }
-        )
+        buildComposableCall(buildParams([greaterThanOrEqualToSigned(-10n)]), {
+          composabilityVersion: ComposabilityVersion.V1_1_0
+        })
       ).rejects.toThrow("signed integer")
     })
 
@@ -358,10 +364,9 @@ describe("Conditional Execution - Unit Tests", () => {
 
     test("LTE_SIGNED constraint throws for ComposabilityVersion.V1_1_0", async () => {
       await expect(
-        buildComposableCall(
-          buildParams([lessThanOrEqualToSigned(0n)]),
-          { composabilityVersion: ComposabilityVersion.V1_1_0 }
-        )
+        buildComposableCall(buildParams([lessThanOrEqualToSigned(0n)]), {
+          composabilityVersion: ComposabilityVersion.V1_1_0
+        })
       ).rejects.toThrow("signed integer")
     })
 

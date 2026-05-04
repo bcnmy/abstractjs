@@ -15,13 +15,12 @@ import type {
 } from "../../../clients/decorators/mee"
 import type { InstructionMetadata } from "../../../clients/decorators/mee/types/instruction-metadata.type"
 import { ComposabilityVersion } from "../../../constants"
-import { versionIsAtLeast } from "../../utils/getVersion"
 import { functionNameToLabel } from "../../../modules/utils/Helpers"
 import type { AnyData } from "../../../modules/utils/Types"
 import {
   type ComposableCall,
-  type InputParam,
   ConstraintType,
+  type InputParam,
   InputParamFetcherType,
   InputParamType,
   prepareComposableInputCalldataParams,
@@ -37,6 +36,7 @@ import {
   getFunctionContextFromAbi
 } from "../../../modules/utils/runtimeAbiEncoding"
 import { encodeAddress } from "../../../modules/utils/runtimeAbiEncoding"
+import { versionIsAtLeast } from "../../utils/getVersion"
 import type { BaseInstructionsParams, ComposabilityParams } from "../build"
 
 // type OverrideObjectValues<T, OverrideType> = {

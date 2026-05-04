@@ -51,8 +51,8 @@ import {
   createCondition,
   getMEEVersion,
   greaterThanOrEqualTo,
-  lessThanOrEqualTo,
   greaterThanOrEqualToSigned,
+  lessThanOrEqualTo,
   lessThanOrEqualToSigned,
   orConstraint,
   runtimeERC20BalanceOf,
@@ -1893,15 +1893,16 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const amountToTransfer = parseUnits("0.05", 6)
 
     // Static transfer: Nexus → runtimeTransferAddress (fixed amount, funded by trigger)
-    const staticTransferInstruction = await mcNexus_compos_v1_1_1.buildComposable({
-      type: "transfer",
-      data: {
-        recipient: runtimeTransferAddress as Address,
-        tokenAddress,
-        amount: amountToTransfer,
-        chainId: chain.id
-      }
-    })
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
 
     // Runtime sweep: runtimeTransferAddress → EOA, only if balance is within OR constraint range
     const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
@@ -1942,7 +1943,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log("[v1.1.1] OR constraint composable sweep test:", { explorerLinks, hash })
+    console.log("[v1.1.1] OR constraint composable sweep test:", {
+      explorerLinks,
+      hash
+    })
   })
 
   it("should execute composable sweep with GTE_SIGNED constraint on composability v1.1.1", async () => {
@@ -1950,15 +1954,16 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const amountToTransfer = parseUnits("0.05", 6)
 
     // Static transfer: Nexus → runtimeTransferAddress (funded by trigger)
-    const staticTransferInstruction = await mcNexus_compos_v1_1_1.buildComposable({
-      type: "transfer",
-      data: {
-        recipient: runtimeTransferAddress as Address,
-        tokenAddress,
-        amount: amountToTransfer,
-        chainId: chain.id
-      }
-    })
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
 
     // Runtime sweep using GTE_SIGNED: runtime balance must be >= 1 (int256 comparison)
     const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
@@ -1994,7 +1999,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log("[v1.1.1] GTE_SIGNED constraint composable sweep test:", { explorerLinks, hash })
+    console.log("[v1.1.1] GTE_SIGNED constraint composable sweep test:", {
+      explorerLinks,
+      hash
+    })
   })
 
   it("should execute composable sweep with LTE_SIGNED constraint on composability v1.1.1", async () => {
@@ -2003,15 +2011,16 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     const amountCap = parseUnits("100", 6) // cap at 100 USDC (signed)
 
     // Static transfer: Nexus → runtimeTransferAddress (funded by trigger)
-    const staticTransferInstruction = await mcNexus_compos_v1_1_1.buildComposable({
-      type: "transfer",
-      data: {
-        recipient: runtimeTransferAddress as Address,
-        tokenAddress,
-        amount: amountToTransfer,
-        chainId: chain.id
-      }
-    })
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
 
     // Runtime sweep using LTE_SIGNED: runtime balance must be <= 100 USDC (int256 comparison)
     const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
@@ -2047,7 +2056,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         confirmations: TEST_BLOCK_CONFIRMATIONS
       })
     expect(transactionStatus).to.be.eq("MINED_SUCCESS")
-    console.log("[v1.1.1] LTE_SIGNED constraint composable sweep test:", { explorerLinks, hash })
+    console.log("[v1.1.1] LTE_SIGNED constraint composable sweep test:", {
+      explorerLinks,
+      hash
+    })
   })
 
   // test the new 'runtimeParamViaCustomStaticCall' helper function and the injectable target at the same time
