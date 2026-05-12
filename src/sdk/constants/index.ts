@@ -110,12 +110,12 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   [MEEVersion.V2_2_2]: {
     version: MEEVersion.V2_2_2,
     accountId: "biconomy.nexus.1.3.2",
-    factoryAddress: "0x000000002c9A405a196f2dc766F2476B731693c3", // Nexus Account Factory Address
-    bootStrapAddress: "0x000000007BfEdA33ac982cb38eAaEf5D7bCC954c",
-    implementationAddress: "0x0000000020fe2F30453074aD916eDeB653eC7E9D", // Nexus 1.3.2
-    validatorAddress: "0x0000000002d3cC5642A748B6783F32C032616E03", // MEE K1 Validator Address
+    factoryAddress: "0x71982210D69D7e0eD0432c6D6C7311e3Ba17D54E", // Nexus Account Factory Address
+    bootStrapAddress: "0xEdb3Bdb8977c6f65908AE02FeB23e54BaDB74b82",
+    implementationAddress: "0x625ca2406B603C17BFed6ff09e65420530F66D62", // Nexus 1.3.2
+    validatorAddress: "0x820e8c11516AD08A60a45670b464A74e91C87541", // MEE K1 Validator Address
     defaultValidatorAddress: zeroAddress,
-    ethForwarderAddress: "0xF3092faD6EF53c5A9bEE01E6CBc8e976278d1D57",
+    ethForwarderAddress: "0x72453C2Ea64F0f9D6b5b8798c06ca2527CF2879C",
     composabilityVersion: ComposabilityVersion.V1_1_1
   },
   [MEEVersion.V2_2_1]: {
