@@ -48,7 +48,6 @@ import {
 const versions = [
   { version: MEEVersion.V2_0_0, label: "V2.0.0" },
   { version: MEEVersion.V2_2_1, label: "V2.2.1" },
-  { version: MEEVersion.V2_2_2, label: "V2.2.2" },
   { version: MEEVersion.V3_0_0, label: "V3.0.0" }
 ]
 
