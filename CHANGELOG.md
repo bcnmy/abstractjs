@@ -1,5 +1,14 @@
 # @biconomy/abstractjs
 
+## 1.2.4
+
+### Patch Changes
+
+- Features:
+
+  1. New MEE version 2.2.2 added with a new composability contracts
+  2. Composaibility version 1.1.1 support added which supports signed integers and OR flows
+
 ## 1.2.3
 
 ### Patch Changes
