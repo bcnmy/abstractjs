@@ -19,7 +19,13 @@ export enum MEEVersion {
    **/
   V2_3_0 = "2.3.0",
   /**
-   * Nexus 1.2.1
+   * Nexus 1.3.2
+   * - Composability 1.1.1
+   * - New composability features - signed integer and OR flow
+   **/
+  V2_2_2 = "2.2.2",
+  /**
+   * Nexus 1.3.1
    * - Composability 1.1.0
    * - 7702 accounts initialization with eoa's signature (relayers' support)
    * - EIP-712 signing support for `simple` (smart-account) mode
@@ -46,6 +52,8 @@ export enum MEEVersion {
 }
 
 export enum ComposabilityVersion {
+  /** Added signed integer and OR flow */
+  V1_1_1 = "1.1.1",
   /** Added native token runtime injection support. */
   V1_1_0 = "1.1.0",
   /** First release for the Composability contracts suite. */
@@ -98,6 +106,17 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
     composabilityVersion: ComposabilityVersion.V1_1_0
+  },
+  [MEEVersion.V2_2_2]: {
+    version: MEEVersion.V2_2_2,
+    accountId: "biconomy.nexus.1.3.2",
+    factoryAddress: "0x0000B1c0dCFd64dfe8FeC844923B653DD0dfdB05", // Nexus Account Factory Address
+    bootStrapAddress: "0x0000B1c0A80cb7DD166a15e7390b8A4Ced4500C6",
+    implementationAddress: "0x0000b1C0B95DA04652C1919667D1DCC14f46f62B", // Nexus 1.3.2
+    validatorAddress: "0x0000B1C0790E5a28293276C320d2B95D651dBaD6", // MEE K1 Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x0000B1C0Fc7015Effa85892426FAEd8211B2d62E",
+    composabilityVersion: ComposabilityVersion.V1_1_1
   },
   [MEEVersion.V2_2_1]: {
     version: MEEVersion.V2_2_1,

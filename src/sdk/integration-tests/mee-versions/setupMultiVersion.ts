@@ -119,9 +119,11 @@ export async function setupMultiVersionAccounts(
         ? "V2.0.0 (MeeK1, no 712 for simple mode)"
         : version === MEEVersion.V2_2_1
           ? "V2.2.1 (MeeK1, TypedData for simple mode)"
-          : version === MEEVersion.V3_0_0
-            ? "V3.0.0 (StxValidator)"
-            : version
+          : version === MEEVersion.V2_2_2
+            ? "V2.2.2 (MeeK1, Composability v1.1.1 — OR and signed constraints)"
+            : version === MEEVersion.V3_0_0
+              ? "V3.0.0 (StxValidator)"
+              : version
 
     accountConfigs.push({
       name: versionName,
@@ -207,9 +209,11 @@ export async function setupAccountsWithSigner(
         ? `V2.0.0 (MeeK1, no 712 for simple mode)${signerType}`
         : version === MEEVersion.V2_2_1
           ? `V2.2.1 (MeeK1, TypedData for simple mode)${signerType}`
-          : version === MEEVersion.V3_0_0
-            ? `V3.0.0 (StxValidator)${signerType}`
-            : version
+          : version === MEEVersion.V2_2_2
+            ? `V2.2.2 (MeeK1, Composability v1.1.1 — OR and signed constraints)${signerType}`
+            : version === MEEVersion.V3_0_0
+              ? `V3.0.0 (StxValidator)${signerType}`
+              : version
 
     accountConfigs.push({
       name: versionName,

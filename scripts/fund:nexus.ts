@@ -93,6 +93,10 @@ async function main() {
       version: getMEEVersion(MEEVersion.V2_2_1)
     })
     await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX_ONE,
+      version: getMEEVersion(MEEVersion.V2_2_2)
+    })
+    await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
       version: getMEEVersion(MEEVersion.V1_1_0)
     })

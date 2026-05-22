@@ -51,6 +51,10 @@ import {
   createCondition,
   getMEEVersion,
   greaterThanOrEqualTo,
+  greaterThanOrEqualToSigned,
+  lessThanOrEqualTo,
+  lessThanOrEqualToSigned,
+  orConstraint,
   runtimeERC20BalanceOf,
   runtimeNativeBalanceOf
 } from "../../../modules"
@@ -78,8 +82,10 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
 
   let mcNexus: MultichainSmartAccount
   let mcNexus_compos_v1_1_0: MultichainSmartAccount
+  let mcNexus_compos_v1_1_1: MultichainSmartAccount
   let meeClient: MeeClient
   let meeClient_compos_v1_1_0: MeeClient
+  let meeClient_compos_v1_1_1: MeeClient
   let accountConfigs: {
     name: string
     mcNexus: MultichainSmartAccount
@@ -126,12 +132,28 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       ]
     })
 
+    mcNexus_compos_v1_1_1 = await toMultichainNexusAccount({
+      signer: eoaAccount,
+      index: 1n,
+      chainConfigurations: [
+        {
+          chain: chain,
+          transport: http(network.rpcUrl),
+          version: getMEEVersion(MEEVersion.V2_2_2)
+        }
+      ]
+    })
+
     meeClient = await createMeeClient({
       account: mcNexus
     })
 
     meeClient_compos_v1_1_0 = await createMeeClient({
       account: mcNexus_compos_v1_1_0
+    })
+
+    meeClient_compos_v1_1_1 = await createMeeClient({
+      account: mcNexus_compos_v1_1_1
     })
 
     accountConfigs = [
@@ -145,6 +167,12 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         name: "Composability v1.1.0",
         mcNexus: mcNexus_compos_v1_1_0,
         meeClient: meeClient_compos_v1_1_0,
+        eoaAccount
+      },
+      {
+        name: "Composability v1.1.1",
+        mcNexus: mcNexus_compos_v1_1_1,
+        meeClient: meeClient_compos_v1_1_1,
         eoaAccount
       }
     ]
@@ -1806,6 +1834,295 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         })
       }
     })
+  })
+
+  // ========== Composability v1.1.1 — OR and signed-integer constraint tests ==========
+
+  it("should reject OR constraint when composability version < 1.1.1", async () => {
+    // mcNexus is on v1.0.0 — OR constraints must be rejected at build time
+    await expect(
+      mcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: tokenAddress,
+          abi: erc20Abi,
+          functionName: "transferFrom",
+          args: [
+            eoaAccount.address,
+            mcNexus.addressOn(chain.id, true),
+            runtimeERC20BalanceOf({
+              targetAddress: eoaAccount.address,
+              tokenAddress,
+              constraints: [
+                orConstraint([greaterThanOrEqualTo(parseUnits("0.01", 6))])
+              ]
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+    ).rejects.toThrow("OR constraints require Composability v1.1.1")
+  })
+
+  it("should reject GTE_SIGNED constraint when composability version < 1.1.1", async () => {
+    // mcNexus_compos_v1_1_0 is on v1.1.0 — signed constraints must still be rejected
+    await expect(
+      mcNexus_compos_v1_1_0.buildComposable({
+        type: "default",
+        data: {
+          to: tokenAddress,
+          abi: erc20Abi,
+          functionName: "transferFrom",
+          args: [
+            eoaAccount.address,
+            mcNexus_compos_v1_1_0.addressOn(chain.id, true),
+            runtimeERC20BalanceOf({
+              targetAddress: eoaAccount.address,
+              tokenAddress,
+              constraints: [greaterThanOrEqualToSigned(0n)]
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+    ).rejects.toThrow("signed integer")
+  })
+
+  it("should execute composable sweep with OR constraint on composability v1.1.1", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+
+    // Static transfer: Nexus → runtimeTransferAddress (fixed amount, funded by trigger)
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+    // Runtime sweep: runtimeTransferAddress → EOA, only if balance is within OR constraint range
+    const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          tokenAddress,
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [
+              orConstraint([
+                greaterThanOrEqualTo(1n),
+                lessThanOrEqualTo(parseUnits("100", 6))
+              ])
+            ]
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_1.executeFusionQuote({
+      fusionQuote: await meeClient_compos_v1_1_1.getFusionQuote({
+        trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+        instructions: [...staticTransferInstruction, ...sweepInstruction],
+        feeToken: { chainId: chain.id, address: tokenAddress }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient_compos_v1_1_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log("[v1.1.1] OR constraint composable sweep test:", {
+      explorerLinks,
+      hash
+    })
+  })
+
+  it("should execute composable sweep with GTE_SIGNED constraint on composability v1.1.1", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+
+    // Static transfer: Nexus → runtimeTransferAddress (funded by trigger)
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+    // Runtime sweep using GTE_SIGNED: runtime balance must be >= 1 (int256 comparison)
+    const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          tokenAddress,
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [greaterThanOrEqualToSigned(1n)]
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_1.executeFusionQuote({
+      fusionQuote: await meeClient_compos_v1_1_1.getFusionQuote({
+        trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+        instructions: [...staticTransferInstruction, ...sweepInstruction],
+        feeToken: { chainId: chain.id, address: tokenAddress }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient_compos_v1_1_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log("[v1.1.1] GTE_SIGNED constraint composable sweep test:", {
+      explorerLinks,
+      hash
+    })
+  })
+
+  it("should execute composable sweep with LTE_SIGNED constraint on composability v1.1.1", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+    const amountCap = parseUnits("100", 6) // cap at 100 USDC (signed)
+
+    // Static transfer: Nexus → runtimeTransferAddress (funded by trigger)
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+    // Runtime sweep using LTE_SIGNED: runtime balance must be <= 100 USDC (int256 comparison)
+    const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          tokenAddress,
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [lessThanOrEqualToSigned(amountCap)]
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_1.executeFusionQuote({
+      fusionQuote: await meeClient_compos_v1_1_1.getFusionQuote({
+        trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+        instructions: [...staticTransferInstruction, ...sweepInstruction],
+        feeToken: { chainId: chain.id, address: tokenAddress }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient_compos_v1_1_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log("[v1.1.1] LTE_SIGNED constraint composable sweep test:", {
+      explorerLinks,
+      hash
+    })
+  })
+
+  it("should execute composable sweep with OR constraint mixing signed and unsigned sub-constraints on composability v1.1.1", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+    const amountCap = parseUnits("100", 6)
+
+    // Static transfer: Nexus → runtimeTransferAddress (funded by trigger)
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+    // Runtime sweep: transfer only if balance satisfies OR(GTE_SIGNED(-1), LTE(100 USDC))
+    // This mixes a signed sub-constraint with an unsigned one inside a single OR.
+    const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          tokenAddress,
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [
+              orConstraint([
+                greaterThanOrEqualToSigned(-1n),
+                lessThanOrEqualTo(amountCap)
+              ])
+            ]
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_1.executeFusionQuote({
+      fusionQuote: await meeClient_compos_v1_1_1.getFusionQuote({
+        trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+        instructions: [...staticTransferInstruction, ...sweepInstruction],
+        feeToken: { chainId: chain.id, address: tokenAddress }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient_compos_v1_1_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log(
+      "[v1.1.1] OR constraint (signed + unsigned mix) composable sweep test:",
+      { explorerLinks, hash }
+    )
   })
 
   // test the new 'runtimeParamViaCustomStaticCall' helper function and the injectable target at the same time
