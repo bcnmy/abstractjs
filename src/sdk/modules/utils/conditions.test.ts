@@ -1,8 +1,9 @@
-import { type Address, erc20Abi } from "viem"
+import { type Address, decodeAbiParameters, erc20Abi, parseUnits } from "viem"
 import { describe, expect, test } from "vitest"
 import { buildComposableCall } from "../../account/decorators/instructions/buildComposable"
 import { ComposabilityVersion } from "../../constants"
 import {
+  CONSTRAINT_TUPLE_ABI,
   ConstraintType,
   InputParamFetcherType,
   equalTo,
@@ -246,6 +247,35 @@ describe("Conditional Execution - Unit Tests", () => {
       )
     })
 
+    test("orConstraint with signed sub-constraints encodes GTE_SIGNED and LTE_SIGNED correctly", () => {
+      const result = validateAndProcessConstraints([
+        orConstraint([
+          greaterThanOrEqualToSigned(-1n),
+          lessThanOrEqualToSigned(parseUnits("100", 6))
+        ])
+      ])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.OR)
+
+      // Decode the OR's referenceData to verify sub-constraint types and encoding
+      const [subs] = decodeAbiParameters(
+        [CONSTRAINT_TUPLE_ABI],
+        result[0].referenceData as `0x${string}`
+      )
+      expect(subs).toHaveLength(2)
+      expect(subs[0].constraintType).toBe(ConstraintType.GTE_SIGNED)
+      expect(subs[1].constraintType).toBe(ConstraintType.LTE_SIGNED)
+
+      // -1n must be two's-complement encoded (all 0xff), not zero-padded as unsigned
+      expect((subs[0].referenceData as string).toLowerCase()).toContain(
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      )
+      // 100 USDC (1e8) must be present; non-negative so it encodes as a small positive value
+      expect(subs[1].referenceData).not.toBe(
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+      )
+    })
+
     test("ConditionType.GTE_SIGNED maps to the signed GTE helper", () => {
       const mockContract =
         "0x1234567890123456789012345678901234567890" as Address
@@ -376,6 +406,33 @@ describe("Conditional Execution - Unit Tests", () => {
         { composabilityVersion: ComposabilityVersion.V1_1_1 }
       )
       expect(result.length).toBeGreaterThan(0)
+    })
+
+    test("OR with signed sub-constraints succeeds for ComposabilityVersion.V1_1_1", async () => {
+      const result = await buildComposableCall(
+        buildParams([
+          orConstraint([
+            greaterThanOrEqualToSigned(-1n),
+            lessThanOrEqualToSigned(parseUnits("100", 6))
+          ])
+        ]),
+        { composabilityVersion: ComposabilityVersion.V1_1_1 }
+      )
+      expect(result.length).toBeGreaterThan(0)
+    })
+
+    test("OR with signed sub-constraints throws for ComposabilityVersion.V1_1_0", async () => {
+      await expect(
+        buildComposableCall(
+          buildParams([
+            orConstraint([
+              greaterThanOrEqualToSigned(-1n),
+              lessThanOrEqualToSigned(parseUnits("100", 6))
+            ])
+          ]),
+          { composabilityVersion: ComposabilityVersion.V1_1_0 }
+        )
+      ).rejects.toThrow("OR constraints require Composability v1.1.1")
     })
 
     test("plain GTE constraint (unsigned) still works for V1_1_0", async () => {

@@ -2062,6 +2062,69 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
     })
   })
 
+  it("should execute composable sweep with OR constraint mixing signed and unsigned sub-constraints on composability v1.1.1", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+    const amountCap = parseUnits("100", 6)
+
+    // Static transfer: Nexus → runtimeTransferAddress (funded by trigger)
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+    // Runtime sweep: transfer only if balance satisfies OR(GTE_SIGNED(-1), LTE(100 USDC))
+    // This mixes a signed sub-constraint with an unsigned one inside a single OR.
+    const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          tokenAddress,
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [
+              orConstraint([
+                greaterThanOrEqualToSigned(-1n),
+                lessThanOrEqualTo(amountCap)
+              ])
+            ]
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_1.executeFusionQuote({
+      fusionQuote: await meeClient_compos_v1_1_1.getFusionQuote({
+        trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+        instructions: [...staticTransferInstruction, ...sweepInstruction],
+        feeToken: { chainId: chain.id, address: tokenAddress }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient_compos_v1_1_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log(
+      "[v1.1.1] OR constraint (signed + unsigned mix) composable sweep test:",
+      { explorerLinks, hash }
+    )
+  })
+
   // test the new 'runtimeParamViaCustomStaticCall' helper function and the injectable target at the same time
   it("should execute composable transaction using runtimeParamViaCustomStaticCall (for composability v1.1.0+ only)", async () => {
     const amount = 101n // 101 wei
