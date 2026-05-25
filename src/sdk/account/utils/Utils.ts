@@ -38,7 +38,8 @@ import {
   NEXUS_DOMAIN_TYPEHASH,
   NEXUS_DOMAIN_VERSION
 } from "../../account/utils/Constants"
-import { MEEVersion } from "../../constants"
+import { MEEVersion, getNexusDomainVersion } from "../../constants"
+import type { MEEVersionConfig } from "./getVersion"
 import { EIP1271Abi } from "../../constants/abi"
 import {
   type AnyData,
@@ -286,8 +287,12 @@ export function convertToFactor(percentage: number | undefined): number {
  *
  * @param accountOwner - The account owner address
  * @param modules - Array of modules with their types and configurations
- * @param domainName - Optional domain name
- * @param domainVersion - Optional domain version
+ * @param domainName - Optional domain name. Defaults to `NEXUS_DOMAIN_NAME`.
+ * @param domainVersion - Optional domain version. **Defaults to the legacy
+ *   `NEXUS_DOMAIN_VERSION` ("1.2.0"), which is wrong for any MEE ≥ V2_2_0.**
+ *   Callers should pass `getNexusDomainVersion(meeVersionOrConfig)` whenever
+ *   the MEE version is known so the install-mode signature is verifiable on
+ *   the Nexus 1.3.x line.
  * @returns Tuple of [installData, hash]
  */
 export function makeInstallDataAndHash(
@@ -382,13 +387,26 @@ export function getTypesForEIP712Domain({
 /**
  * Retrieves account metadata including name, version, and chain ID.
  *
+ * Tries `eip712Domain()` on-chain first. If the SCA is not yet deployed
+ * (counterfactual) or the call fails for any reason, falls back to the static
+ * domain name + version. When `meeVersionOrConfig` is supplied, the fallback
+ * version is derived from that config's `accountId` (e.g. MEE v2.2.2 →
+ * `"1.3.2"`); otherwise it falls back to the legacy `NEXUS_DOMAIN_VERSION`
+ * constant, which only reflects Nexus 1.2.0 and is wrong for any MEE ≥ 2.2.x.
+ * Pass `meeVersionOrConfig` whenever you know which MEE version the account
+ * is being used with.
+ *
  * @param client - The viem Client instance
  * @param accountAddress - The account address to query
+ * @param meeVersionOrConfig - Optional MEE version (or resolved config) used
+ *   to derive the correct fallback domain version. Strongly recommended when
+ *   the account may not yet be deployed.
  * @returns Promise resolving to account metadata
  */
 export const getAccountMeta = async (
   client: Client,
-  accountAddress: Address
+  accountAddress: Address,
+  meeVersionOrConfig?: MEEVersion | MEEVersionConfig
 ): Promise<AccountMetadata> => {
   try {
     const domain = await client.request({
@@ -420,7 +438,9 @@ export const getAccountMeta = async (
   } catch (error) {}
   return {
     name: NEXUS_DOMAIN_NAME,
-    version: NEXUS_DOMAIN_VERSION,
+    version: meeVersionOrConfig
+      ? getNexusDomainVersion(meeVersionOrConfig)
+      : NEXUS_DOMAIN_VERSION,
     chainId: client.chain
       ? BigInt(client.chain.id)
       : BigInt(await client.extend(publicActions).getChainId())

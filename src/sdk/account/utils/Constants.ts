@@ -107,6 +107,20 @@ export const MOCK_MULTI_MODULE_ADDRESS =
 export const MODULE_TYPE_MULTI = 0
 
 export const NEXUS_DOMAIN_NAME = "Nexus"
+
+/**
+ * Legacy fallback for the Nexus EIP-712 domain version. Only correct for MEE
+ * versions backed by Nexus 1.2.0 (e.g. V2_0_0, V2_1_0). For MEE ≥ V2_2_0 the
+ * domain version moved to the 1.3.x line and this constant produces signatures
+ * that the on-chain Nexus contract rejects.
+ *
+ * Prefer `getNexusDomainVersion(meeVersion)` from `../../constants` whenever
+ * the MEE version is known — or `getEip712Domain()` to query the deployed
+ * contract directly. This constant is kept only as a back-compat default and
+ * may be removed in a future major release.
+ *
+ * @deprecated Use `getNexusDomainVersion(meeVersionOrConfig)` instead.
+ */
 export const NEXUS_DOMAIN_VERSION = "1.2.0"
 export const NEXUS_DOMAIN_TYPEHASH =
   "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
