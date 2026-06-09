@@ -6,9 +6,9 @@ import {
   CONSTRAINT_TUPLE_ABI,
   ConstraintType,
   InputParamFetcherType,
-  equalTo,
   greaterThanOrEqualTo,
   greaterThanOrEqualToSigned,
+  inRange,
   lessThanOrEqualTo,
   lessThanOrEqualToSigned,
   orConstraint,
@@ -179,6 +179,82 @@ describe("Conditional Execution - Unit Tests", () => {
       // paramData should be the same
       expect(inputParamGt.paramData).toBe(inputParamLt.paramData)
       expect(inputParamGt.paramData).toBe(inputParamEq.paramData)
+    })
+  })
+
+  describe("validateAndProcessConstraints — IN range constraint", () => {
+    test("inRange encodes lower and upper bounds as two bytes32 values", () => {
+      const result = validateAndProcessConstraints([inRange(10n, 100n)])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.IN)
+      // referenceData must encode two bytes32 values (64 bytes = 128 hex chars + 0x prefix)
+      expect(result[0].referenceData.length).toBe(2 + 128)
+    })
+
+    test("inRange with equal lower and upper (exact value)", () => {
+      const result = validateAndProcessConstraints([inRange(42n, 42n)])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.IN)
+    })
+
+    test("inRange with zero lower bound", () => {
+      const result = validateAndProcessConstraints([inRange(0n, 1000n)])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.IN)
+    })
+
+    test("inRange referenceData decodes to correct bounds", () => {
+      const lower = 50n
+      const upper = 200n
+      const result = validateAndProcessConstraints([inRange(lower, upper)])
+      const [decodedLower, decodedUpper] = decodeAbiParameters(
+        [{ type: "bytes32" }, { type: "bytes32" }],
+        result[0].referenceData as `0x${string}`
+      )
+      expect(BigInt(decodedLower)).toBe(lower)
+      expect(BigInt(decodedUpper)).toBe(upper)
+    })
+
+    test("inRange throws for negative lower bound", () => {
+      expect(() => validateAndProcessConstraints([inRange(-1n, 100n)])).toThrow(
+        "lower must be non-negative"
+      )
+    })
+
+    test("inRange throws for negative upper bound", () => {
+      expect(() => validateAndProcessConstraints([inRange(0n, -1n)])).toThrow(
+        "upper must be non-negative"
+      )
+    })
+
+    test("inRange throws when lower > upper", () => {
+      expect(() => validateAndProcessConstraints([inRange(100n, 50n)])).toThrow(
+        "lower must be <= upper"
+      )
+    })
+
+    test("inRange throws for invalid lower bound type", () => {
+      expect(() =>
+        validateAndProcessConstraints([
+          inRange("not-hex" as unknown as bigint, 100n)
+        ])
+      ).toThrow("lower must be bigint, boolean, hex, or address")
+    })
+
+    test("inRange can be used inside OR constraint", () => {
+      const result = validateAndProcessConstraints([
+        orConstraint([inRange(1n, 50n), greaterThanOrEqualTo(100n)])
+      ])
+      expect(result).toHaveLength(1)
+      expect(result[0].constraintType).toBe(ConstraintType.OR)
+
+      const [subs] = decodeAbiParameters(
+        [CONSTRAINT_TUPLE_ABI],
+        result[0].referenceData as `0x${string}`
+      )
+      expect(subs).toHaveLength(2)
+      expect(subs[0].constraintType).toBe(ConstraintType.IN)
+      expect(subs[1].constraintType).toBe(ConstraintType.GTE)
     })
   })
 
