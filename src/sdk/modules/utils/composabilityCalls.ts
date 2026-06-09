@@ -129,6 +129,7 @@ export type ChildConstraint =
   | { gte: ConstraintValue }
   | { lte: ConstraintValue }
   | { eq: ConstraintValue }
+  | { in: { lower: ConstraintValue; upper: ConstraintValue } }
   | { gteSigned: bigint }
   | { lteSigned: bigint }
 
@@ -233,6 +234,13 @@ export const lessThanOrEqualToSigned = (value: AnyData): ConstraintField => {
   return { type: ConstraintType.LTE_SIGNED, value }
 }
 
+export const inRange = (
+  lower: ConstraintValue,
+  upper: ConstraintValue
+): ConstraintField => {
+  return { type: ConstraintType.IN, value: { lower, upper } }
+}
+
 export const orConstraint = (
   subConstraints: ConstraintField[]
 ): ConstraintField => {
@@ -243,6 +251,7 @@ const CHILD_CONSTRAINT_TYPES = new Set<ConstraintType>([
   ConstraintType.EQ,
   ConstraintType.GTE,
   ConstraintType.LTE,
+  ConstraintType.IN,
   ConstraintType.GTE_SIGNED,
   ConstraintType.LTE_SIGNED
 ])
@@ -278,6 +287,51 @@ const validateAndProcessChildConstraint = (
       [valueHex as Hex]
     )
     return { constraintType: constraint.type, referenceData }
+  }
+
+  // IN path — range check: lower <= value <= upper (unsigned bytes32 comparison)
+  if (constraint.type === ConstraintType.IN) {
+    const { lower, upper } = constraint.value as {
+      lower: ConstraintValue
+      upper: ConstraintValue
+    }
+
+    for (const [label, v] of [
+      ["lower", lower],
+      ["upper", upper]
+    ] as const) {
+      if (
+        typeof v !== "bigint" &&
+        typeof v !== "boolean" &&
+        !isHex(v) &&
+        !isAddress(v)
+      ) {
+        throw new Error(
+          `Invalid IN constraint: ${label} must be bigint, boolean, hex, or address`
+        )
+      }
+      if (typeof v === "bigint" && v < 0n) {
+        throw new Error(
+          `Invalid IN constraint: ${label} must be non-negative (use GTE_SIGNED/LTE_SIGNED for signed ranges)`
+        )
+      }
+    }
+
+    if (
+      typeof lower === "bigint" &&
+      typeof upper === "bigint" &&
+      lower > upper
+    ) {
+      throw new Error("Invalid IN constraint: lower must be <= upper")
+    }
+
+    const lowerHex = toBytes32(lower)
+    const upperHex = toBytes32(upper)
+    const referenceData = encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "bytes32" }],
+      [lowerHex as Hex, upperHex as Hex]
+    )
+    return prepareConstraint(ConstraintType.IN, referenceData)
   }
 
   // Unsigned path (EQ, GTE, LTE) — existing logic unchanged
