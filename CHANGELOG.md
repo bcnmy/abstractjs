@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 1.2.5
+
+### Patch Changes
+
+- Activated Robinhood chain support.
+
 ## 1.2.4
 
 ### Patch Changes
