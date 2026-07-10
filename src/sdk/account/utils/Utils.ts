@@ -672,7 +672,11 @@ export async function supportsCancun({
     "143": true,
     "88882": false,
     "531050204": true,
-    "5010405": true
+    "5010405": true,
+    // Robinhood Chain (Arbitrum Orbit): supports Cancun (TSTORE/MCOPY verified on-chain),
+    // but like all Orbit chains its L2 blocks carry no blob-gas fields, so the dynamic
+    // block-header fallback below misdetects it - same reason 42161/33139 are listed.
+    "4663": true
   }
 
   if (cancunSupportedChains[chain.id.toString()]) {
