@@ -19,6 +19,7 @@ export type GetNonceWithKeyParams = {
 class NonceManager {
   private static instance: NonceManager
   private isNonceKeyBeingCalculated = new Map<string, boolean>()
+  private lastIssuedKey = new Map<string, bigint>()
 
   private constructor() {}
 
@@ -33,8 +34,12 @@ class NonceManager {
     return `${accountAddress.toLowerCase()}::${chainId}`
   }
 
-  // This function always make sure to provide a unique nonce key with respect to timestamps.
-  // This is helpful to reduce nonce collusion
+  // Provides a unique, strictly-increasing nonce key per (account, chainId).
+  // Uniqueness must not depend on the wall clock advancing between calls: the
+  // previous implementation read Date.now() with a setTimeout(1) spacer, but
+  // setTimeout(1) does not guarantee Date.now() advances, so two same-chain
+  // userOps built concurrently could receive the same key and therefore the
+  // same nonce (nonce collision at quote construction).
   public async getDefaultNonceKey(
     accountAddress: Address,
     chainId: number
@@ -46,12 +51,18 @@ class NonceManager {
     }
 
     this.isNonceKeyBeingCalculated.set(storeKey, true)
-    const key = BigInt(Date.now())
-
-    await new Promise((resolve) => setTimeout(resolve, 1)) // ensure next call is in the next millisecond
-    this.isNonceKeyBeingCalculated.set(storeKey, false)
-
-    return key
+    try {
+      // Base the key on the clock but force it strictly greater than the last key
+      // issued for this (account, chainId), so concurrently-built userOps always
+      // get distinct keys regardless of timer resolution.
+      const now = BigInt(Date.now())
+      const prev = this.lastIssuedKey.get(storeKey) ?? 0n
+      const key = now > prev ? now : prev + 1n
+      this.lastIssuedKey.set(storeKey, key)
+      return key
+    } finally {
+      this.isNonceKeyBeingCalculated.set(storeKey, false)
+    }
   }
 
   public async getNonceWithKey(
