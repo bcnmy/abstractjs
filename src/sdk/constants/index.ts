@@ -19,6 +19,12 @@ export enum MEEVersion {
    **/
   V2_3_0 = "2.3.0",
   /**
+   * Nexus 1.3.3
+   * - Composability 1.1.1
+   * - Account initialization is single-use per transaction
+   **/
+  V2_2_3 = "2.2.3",
+  /**
    * Nexus 1.3.2
    * - Composability 1.1.1
    * - New composability features - signed integer and OR flow
@@ -106,6 +112,17 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
     composabilityVersion: ComposabilityVersion.V1_1_0
+  },
+  [MEEVersion.V2_2_3]: {
+    version: MEEVersion.V2_2_3,
+    accountId: "biconomy.nexus.1.3.3",
+    factoryAddress: "0x0000b1C08f1418dA76B5E99c1Bf5718486cf8c53", // Nexus Account Factory Address
+    bootStrapAddress: "0x0000B1c0A80cb7DD166a15e7390b8A4Ced4500C6",
+    implementationAddress: "0x0000B1c01cB3b5770D8806f0D214d50131a08a5B", // Nexus 1.3.3
+    validatorAddress: "0x0000B1C0790E5a28293276C320d2B95D651dBaD6", // MEE K1 Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x0000B1C0Fc7015Effa85892426FAEd8211B2d62E",
+    composabilityVersion: ComposabilityVersion.V1_1_1
   },
   [MEEVersion.V2_2_2]: {
     version: MEEVersion.V2_2_2,
