@@ -27,6 +27,7 @@ export {
   toComposableFallback,
   toEmptyHook,
   getMEEVersion,
+  getLegacyMEEVersion,
   createCondition,
   createConditionInputParam,
   ConditionType,

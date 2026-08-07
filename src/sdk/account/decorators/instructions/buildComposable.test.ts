@@ -49,6 +49,7 @@ import {
   type ExecutionCondition,
   type RuntimeValue,
   createCondition,
+  getLegacyMEEVersion,
   getMEEVersion,
   greaterThanOrEqualTo,
   greaterThanOrEqualToSigned,
@@ -127,7 +128,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         {
           chain: chain,
           transport: http(network.rpcUrl),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
@@ -139,7 +140,7 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
         {
           chain: chain,
           transport: http(network.rpcUrl),
-          version: getMEEVersion(MEEVersion.V2_2_2)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_2)
         }
       ]
     })

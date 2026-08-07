@@ -15,8 +15,16 @@ import {
 } from "../../account/utils/toP256Signer"
 import type { MeeClient } from "../../clients/createMeeClient"
 import { createMeeClient } from "../../clients/createMeeClient"
-import { MEEVersion } from "../../constants"
-import { getMEEVersion } from "../../modules"
+import { MEEVersion, SAFE_MEE_VERSIONS } from "../../constants"
+import type { SafeMEEVersion } from "../../constants"
+import { getLegacyMEEVersion, getMEEVersion } from "../../modules"
+
+// These suites deliberately exercise every MEE version, including ones no longer
+// approved for new accounts, so they resolve configs through both entry points.
+const resolveVersionConfig = (version: MEEVersion) =>
+  SAFE_MEE_VERSIONS.includes(version as SafeMEEVersion)
+    ? getMEEVersion(version as SafeMEEVersion)
+    : getLegacyMEEVersion(version as Exclude<MEEVersion, SafeMEEVersion>)
 
 // RPC URLs for testnets
 const TESTNET_RPC_URLS: Record<number, string> = {
@@ -103,7 +111,7 @@ export async function setupMultiVersionAccounts(
       chainConfigurations: chains.map((chain: Chain) => ({
         chain,
         transport: http(TESTNET_RPC_URLS[chain.id]),
-        version: getMEEVersion(version)
+        version: resolveVersionConfig(version)
       }))
     })
 
@@ -192,7 +200,7 @@ export async function setupAccountsWithSigner(
       chainConfigurations: chains.map((chain: Chain) => ({
         chain,
         transport: http(TESTNET_RPC_URLS[chain.id]),
-        version: getMEEVersion(version)
+        version: resolveVersionConfig(version)
       }))
     })
 

@@ -21,7 +21,10 @@ import type { NetworkConfig } from "../../test/testUtils"
 import { createMeeClient } from "../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
 import { mcUSDC } from "../constants/tokens"
-import { getMEEVersion } from "../modules/utils/getMeeConfig"
+import {
+  getLegacyMEEVersion,
+  getMEEVersion
+} from "../modules/utils/getMeeConfig"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -192,7 +195,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             chain: base,
             transport: http(MAINNET_RPC_URLS[base.id]),
             version: {
-              ...getMEEVersion(MEEVersion.V2_0_0),
+              ...getLegacyMEEVersion(MEEVersion.V2_0_0),
               // Forcefully override this address, so it doesn't have any byte code.
               // This indirectly tests the MEE version contract unavailability for brand new chains
               implementationAddress:
@@ -210,7 +213,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           chainConfiguration: {
             chain: notCancunChain,
             transport: http(MAINNET_RPC_URLS[notCancunChain.id]),
-            version: getMEEVersion(MEEVersion.V2_0_0)
+            version: getLegacyMEEVersion(MEEVersion.V2_0_0)
           }
         })
       ).rejects.toThrow(
@@ -224,7 +227,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           {
             chain: baseSepolia,
             transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-            version: getMEEVersion(MEEVersion.V1_0_0)
+            version: getLegacyMEEVersion(MEEVersion.V1_0_0)
           },
           {
             chain: base,
@@ -293,7 +296,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V1_0_0)
+              version: getLegacyMEEVersion(MEEVersion.V1_0_0)
             }
           ]
         })
@@ -306,7 +309,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V1_1_0)
+              version: getLegacyMEEVersion(MEEVersion.V1_1_0)
             }
           ]
         })
@@ -319,7 +322,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V2_0_0)
+              version: getLegacyMEEVersion(MEEVersion.V2_0_0)
             }
           ]
         })
@@ -333,7 +336,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V2_1_0)
+              version: getLegacyMEEVersion(MEEVersion.V2_1_0)
             }
           ]
         })
@@ -347,7 +350,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
             {
               chain: baseSepolia,
               transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-              version: getMEEVersion(MEEVersion.V2_2_1)
+              version: getLegacyMEEVersion(MEEVersion.V2_2_1)
             }
           ]
         })
@@ -364,7 +367,7 @@ describe("mee.toMultiChainNexusAccount", async () => {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
           version: {
-            ...getMEEVersion(MEEVersion.V2_0_0),
+            ...getLegacyMEEVersion(MEEVersion.V2_0_0),
             factoryAddress: "0x0000006648ED9B2B842552BE63Af870bC74af837"
           }
         }

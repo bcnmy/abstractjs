@@ -18,7 +18,7 @@ export { toValidator } from "./validators/toValidator"
 export { toComposableExecutor } from "./toComposableExecutor"
 export { toComposableFallback } from "./toComposableFallback"
 export { toEmptyHook } from "./toEmptyHook"
-export { getMEEVersion } from "./validators/smartSessions"
+export { getMEEVersion, getLegacyMEEVersion } from "./validators/smartSessions"
 
 // Session management and action functions
 export {

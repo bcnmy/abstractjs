@@ -30,7 +30,7 @@ import type { MultichainSmartAccount } from "../../../account/toMultiChainNexusA
 import { toMultichainNexusAccount } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import {
   DEFAULT_MEE_SPONSORSHIP_CHAIN_ID,
   DEFAULT_MEE_SPONSORSHIP_PAYMASTER_ACCOUNT,
@@ -218,12 +218,12 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
@@ -1319,13 +1319,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -1436,13 +1436,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -1553,13 +1553,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -1643,13 +1643,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -1737,13 +1737,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: newEoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: newEoaAccount.address
         }
       ]
@@ -1850,13 +1850,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -1923,13 +1923,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2004,13 +2004,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2083,7 +2083,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2140,13 +2140,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2202,13 +2202,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2271,13 +2271,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2382,13 +2382,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2481,13 +2481,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2572,13 +2572,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]
@@ -2653,13 +2653,13 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: randomAddressOne.address
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: randomAddressTwo.address
         }
       ]
@@ -2680,7 +2680,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
@@ -2718,7 +2718,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
@@ -2777,7 +2777,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
@@ -2839,7 +2839,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
@@ -2890,7 +2890,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
@@ -2963,7 +2963,7 @@ describe("mee.getQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })

@@ -21,7 +21,7 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import {
   type MeeClient,
   createMeeClient,
@@ -87,12 +87,12 @@ describe("mee.executeQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         },
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
@@ -156,7 +156,7 @@ describe("mee.executeQuote", () => {
         {
           chain: baseSepolia,
           transport: http(TESTNET_RPC_URLS[baseSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })
