@@ -24,7 +24,10 @@ import { type MEEVersionConfig, toNexusAccount } from "../src/sdk/account"
 import { getChain } from "../src/sdk/account/utils/getChain"
 import { MEEVersion, TokenWithPermitAbi } from "../src/sdk/constants"
 import { mcUSDC } from "../src/sdk/constants/tokens"
-import { getMEEVersion } from "../src/sdk/modules/utils/getMeeConfig"
+import {
+  getLegacyMEEVersion,
+  getMEEVersion
+} from "../src/sdk/modules/utils/getMeeConfig"
 import { testnetMcTestUSDC, testnetMcTestUSDCP } from "../src/test/testTokens"
 
 dotenv.config()
@@ -78,31 +81,39 @@ async function main() {
     // Default: Index zero will be used for most of the tests
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      version: getMEEVersion(MEEVersion.V2_0_0)
+      version: getLegacyMEEVersion(MEEVersion.V2_0_0)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX_ONE,
-      version: getMEEVersion(MEEVersion.V2_0_0)
+      version: getLegacyMEEVersion(MEEVersion.V2_0_0)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      version: getMEEVersion(MEEVersion.V2_1_0)
+      version: getLegacyMEEVersion(MEEVersion.V2_1_0)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      version: getMEEVersion(MEEVersion.V2_2_1)
+      version: getLegacyMEEVersion(MEEVersion.V2_2_1)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX_ONE,
-      version: getMEEVersion(MEEVersion.V2_2_2)
+      version: getLegacyMEEVersion(MEEVersion.V2_2_2)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      version: getMEEVersion(MEEVersion.V1_1_0)
+      version: getLegacyMEEVersion(MEEVersion.V1_1_0)
     })
     await processChain(chainId, account, {
       accountIndex: ACCOUNT_INDEX,
-      version: getMEEVersion(MEEVersion.V1_0_0)
+      version: getLegacyMEEVersion(MEEVersion.V1_0_0)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX,
+      version: getMEEVersion(MEEVersion.V2_2_3)
+    })
+    await processChain(chainId, account, {
+      accountIndex: ACCOUNT_INDEX_ONE,
+      version: getMEEVersion(MEEVersion.V2_2_3)
     })
   }
 }
