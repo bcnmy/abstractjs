@@ -65,6 +65,7 @@ import {
 } from "../../../constants"
 import {
   type AnyData,
+  getLegacyMEEVersion,
   getMEEVersion,
   meeSessionActions
 } from "../../../modules"
@@ -906,13 +907,13 @@ describe("getSessionValidatorInitData", () => {
   const redeemer = "0x1234567890abcdef1234567890abcdef12345678" as Address
 
   test("should return raw redeemer address for pre-V3 versions (K1 validator)", () => {
-    const versionConfig = getMEEVersion(MEEVersion.V2_0_0)
+    const versionConfig = getLegacyMEEVersion(MEEVersion.V2_0_0)
     const initData = getSessionValidatorInitData(versionConfig, redeemer)
     expect(initData).to.eq(redeemer)
   })
 
   test("should return encodePacked init data for V3_0_0 (STX validator)", () => {
-    const versionConfig = getMEEVersion(MEEVersion.V3_0_0)
+    const versionConfig = getLegacyMEEVersion(MEEVersion.V3_0_0)
     const initData = getSessionValidatorInitData(versionConfig, redeemer)
 
     const expected = encodePacked(

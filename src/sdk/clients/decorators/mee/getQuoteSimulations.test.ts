@@ -46,6 +46,7 @@ import {
   testnetMcUSDC
 } from "../../../constants"
 import {
+  getLegacyMEEVersion,
   getMEEVersion,
   meeSessionActions,
   runtimeNativeBalanceOf
@@ -586,7 +587,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
@@ -639,7 +640,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           // Overriden with EOA address
           accountAddress: eoaAccount.address
         }
@@ -680,7 +681,7 @@ describe("mee.getQuote({ simulations }) - Single Chain Simulation Scenarios", ()
         {
           chain: chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           accountAddress: eoaAccount.address
         }
       ]

@@ -410,8 +410,8 @@ export function getDataToPrepareSafeTransaction(
  * const mcNexus = await toMultichainNexusAccount({
  *   signer: safeSigner,
  *   chainConfigurations: [
- *     { chain: baseSepolia, transport: http(), version: getMEEVersion(MEEVersion.V2_3_0) },
- *     { chain: optimismSepolia, transport: http(), version: getMEEVersion(MEEVersion.V2_3_0) }
+ *     { chain: baseSepolia, transport: http(), version: getMEEVersion(MEEVersion.V2_2_3) },
+ *     { chain: optimismSepolia, transport: http(), version: getMEEVersion(MEEVersion.V2_2_3) }
  *   ]
  * })
  *

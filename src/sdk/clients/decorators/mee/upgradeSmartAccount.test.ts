@@ -25,7 +25,7 @@ import {
   toMultichainNexusAccount
 } from "../../../account"
 import { MEEVersion, NexusBootstrapAbi } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import { createBicoBundlerClient } from "../../createBicoBundlerClient"
 import { createMeeClient } from "../../createMeeClient"
 
@@ -97,7 +97,7 @@ describe("mee.upgradeSmartAccount", () => {
         {
           chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V1_0_0)
+          version: getLegacyMEEVersion(MEEVersion.V1_0_0)
         }
       ],
       index: accountIndex
@@ -195,7 +195,7 @@ describe("mee.upgradeSmartAccount", () => {
         {
           chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_0_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_0_0),
           // Old nexus address is overriden here
           accountAddress: mcNexus1_0_0Address
         }
@@ -244,7 +244,7 @@ describe("mee.upgradeSmartAccount", () => {
         {
           chain,
           transport: http(TESTNET_RPC_URLS[chain.id]),
-          version: getMEEVersion(MEEVersion.V2_1_0),
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0),
           // Old nexus address is overriden here
           accountAddress: mcNexus1_0_0Address
         }

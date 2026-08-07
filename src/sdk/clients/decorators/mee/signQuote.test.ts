@@ -20,7 +20,7 @@ import { SIG_TYPE_SIMPLE_P256 } from "../../../account/utils/Constants"
 import { versionIsAtLeast } from "../../../account/utils/getVersion"
 import { toP256Signer } from "../../../account/utils/toP256Signer"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { Instruction } from "./getQuote"
 import { getQuoteType } from "./getQuoteType"
@@ -60,7 +60,7 @@ describe("mee.signQuote", () => {
         {
           chain: optimismSepolia,
           transport: http(TESTNET_RPC_URLS[optimismSepolia.id]),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })
@@ -236,7 +236,7 @@ describe("mee.signQuote", () => {
     // manually compose MeeVersionsWithChainId array
     const expectedMeeVersions = [
       {
-        version: getMEEVersion(MEEVersion.V2_2_1),
+        version: getLegacyMEEVersion(MEEVersion.V2_2_1),
         chainId: optimismSepolia.id
       }
     ]
@@ -274,7 +274,7 @@ describe("mee.signQuote", () => {
           {
             chain: chain,
             transport: http(network.rpcUrl),
-            version: getMEEVersion(MEEVersion.V3_0_0)
+            version: getLegacyMEEVersion(MEEVersion.V3_0_0)
           }
         ]
       })

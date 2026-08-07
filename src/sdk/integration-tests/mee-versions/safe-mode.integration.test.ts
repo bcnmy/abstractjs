@@ -55,7 +55,7 @@ import {
   getMockSafeSigner
 } from "../../clients/decorators/mee/signSafeQuote"
 import { MEEVersion } from "../../constants"
-import { getMEEVersion } from "../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../modules"
 
 const modes = [
   {
@@ -297,16 +297,16 @@ describe("Safe Account Mode Integration Tests", () => {
         {
           chain: baseSepolia,
           transport: http(baseSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V3_0_0)
+          version: getLegacyMEEVersion(MEEVersion.V3_0_0)
         },
         {
           chain: optimismSepolia,
           transport: http(opSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V3_0_0)
+          version: getLegacyMEEVersion(MEEVersion.V3_0_0)
         }
       ],
       defaultModuleParameters: {
-        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules
+        statelessValidator: getLegacyMEEVersion(MEEVersion.V3_0_0).submodules
           ?.SafeAccountSubmodule as Address,
         ownershipData: encodePacked(["address"], [safeAddress])
       }

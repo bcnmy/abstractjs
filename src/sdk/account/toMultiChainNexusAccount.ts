@@ -312,12 +312,12 @@ export type MultichainSmartAccount = BaseMultichainSmartAccount & {
  *     {
  *       chain: optimism,
  *       transport: http(),
- *       version: getMEEVersion(MEEversion.V2_1_0)
+ *       version: getMEEVersion(MEEVersion.V2_2_3)
  *     },
  *     {
  *       chain: base,
  *       transport: http(),
- *       version: getMEEVersion(MEEversion.V2_1_0)
+ *       version: getMEEVersion(MEEVersion.V2_2_3)
  *     }
  *   ]
  * });

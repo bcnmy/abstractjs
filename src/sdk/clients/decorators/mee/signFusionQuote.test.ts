@@ -19,7 +19,7 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC } from "../../../constants/tokens"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import { executeSignedQuote } from "./executeSignedQuote"
 import getFusionQuote from "./getFusionQuote"
@@ -67,12 +67,12 @@ describe("mee.signFusionQuote", () => {
         {
           chain: paymentChain,
           transport: paymentChainTransport,
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         },
         {
           chain: targetChain,
           transport: targetChainTransport,
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })

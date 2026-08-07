@@ -19,6 +19,12 @@ export enum MEEVersion {
    **/
   V2_3_0 = "2.3.0",
   /**
+   * Nexus 1.3.3
+   * - Composability 1.1.1
+   * - Account initialization is single-use per transaction
+   **/
+  V2_2_3 = "2.2.3",
+  /**
    * Nexus 1.3.2
    * - Composability 1.1.1
    * - New composability features - signed integer and OR flow
@@ -60,12 +66,35 @@ export enum ComposabilityVersion {
   V1_0_0 = "1.0.0"
 }
 
-// NOTE: Update this description, whenever changing the new default version
-/** Default version is 2.0.0.
- * Major release, featuring Nexus 1.2.0 with ERC-7702 support and native composability.
- * MEE K1 Validator is pre-installed as a default validator module.
+/**
+ * MEE versions approved for creating new accounts.
+ *
+ * Membership is decided per implementation bytecode, not by version ordering.
+ * Version numbers do not imply membership: 2.3.0 and 3.0.0 sort above 2.2.3 but
+ * are built on Nexus 1.3.1, so they are not listed here. Add a version only after
+ * its deployed implementation has been verified on chain.
  */
-export const DEFAULT_MEE_VERSION: MEEVersion = MEEVersion.V2_0_0
+export const SAFE_MEE_VERSIONS = [MEEVersion.V2_2_3] as const
+
+/** A MEE version that may be used to create new accounts. */
+export type SafeMEEVersion = (typeof SAFE_MEE_VERSIONS)[number]
+
+/**
+ * A MEE version that may no longer be used to create new accounts.
+ *
+ * These remain reachable through {@link getLegacyMEEVersion} because deriving an
+ * existing account's address requires the version it was created with. Deploying,
+ * sweeping or upgrading an existing account all depend on that derivation.
+ */
+export type LegacyMEEVersion = Exclude<MEEVersion, SafeMEEVersion>
+
+// NOTE: Update this description, whenever changing the new default version
+/** Default version is 2.2.3.
+ * Nexus 1.3.3, Composability 1.1.1. Account initialization is single-use per transaction.
+ *
+ * Prefer selecting a version explicitly; this default exists for internal fallbacks.
+ */
+export const DEFAULT_MEE_VERSION: SafeMEEVersion = MEEVersion.V2_2_3
 
 export const ENTRY_POINT_ADDRESS: Address =
   "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
@@ -106,6 +135,17 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
     defaultValidatorAddress: zeroAddress,
     ethForwarderAddress: "0x000000C48Cdf2b46bEc062483dBD27046dfE3b8d",
     composabilityVersion: ComposabilityVersion.V1_1_0
+  },
+  [MEEVersion.V2_2_3]: {
+    version: MEEVersion.V2_2_3,
+    accountId: "biconomy.nexus.1.3.3",
+    factoryAddress: "0x0000b1C08f1418dA76B5E99c1Bf5718486cf8c53", // Nexus Account Factory Address
+    bootStrapAddress: "0x0000B1c0A80cb7DD166a15e7390b8A4Ced4500C6",
+    implementationAddress: "0x0000B1c01cB3b5770D8806f0D214d50131a08a5B", // Nexus 1.3.3
+    validatorAddress: "0x0000B1C0790E5a28293276C320d2B95D651dBaD6", // MEE K1 Validator Address
+    defaultValidatorAddress: zeroAddress,
+    ethForwarderAddress: "0x0000B1C0Fc7015Effa85892426FAEd8211B2d62E",
+    composabilityVersion: ComposabilityVersion.V1_1_1
   },
   [MEEVersion.V2_2_2]: {
     version: MEEVersion.V2_2_2,

@@ -59,7 +59,7 @@ import {
   testnetMcUSDC
 } from "../../../constants"
 import { CounterAbi } from "../../../constants/abi/CounterAbi"
-import { getMEEVersion } from "../../utils"
+import { getLegacyMEEVersion, getMEEVersion } from "../../utils"
 import type { AnyData } from "../../utils/Types"
 import type { Validator } from "../toValidator"
 import { meeSessionActions } from "./decorators/mee"
@@ -125,12 +125,12 @@ describe("mee.multichainSmartSessions (Legacy)", () => {
         {
           chain: baseSepolia,
           transport: paymentChainTransport,
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         },
         {
           chain: optimismSepolia,
           transport: targetChainTransport,
-          version: getMEEVersion(MEEVersion.V2_1_0)
+          version: getLegacyMEEVersion(MEEVersion.V2_1_0)
         }
       ]
     })

@@ -45,7 +45,7 @@ import {
 } from "../clients/createBicoBundlerClient"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../constants"
 import { TokenWithPermitAbi } from "../constants/abi/TokenWithPermitAbi"
-import { getMEEVersion } from "../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../modules"
 import { toOwnableModule } from "../modules/validators/ownable"
 import { type NexusAccount, toNexusAccount } from "./toNexusAccount"
 import {
@@ -488,7 +488,7 @@ describe("nexus.account - signing methods", async () => {
       chainConfiguration: {
         chain,
         transport: http(network.rpcUrl),
-        version: getMEEVersion(MEEVersion.V3_0_0)
+        version: getLegacyMEEVersion(MEEVersion.V3_0_0)
       },
       index: 200n
     })

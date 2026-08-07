@@ -32,7 +32,7 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
 import { mcUSDC, mcUSDT } from "../../../constants/tokens"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import { runtimeNativeBalanceOf } from "../../../modules/utils/composabilityCalls"
 import {
   type MeeClient,
@@ -597,7 +597,7 @@ describe.runIf(runLifecycleTests)("mee.signOnChainQuote - testnet", () => {
           {
             chain: network.chain,
             transport: http(network.rpcUrl),
-            version: getMEEVersion(MEEVersion.V2_2_1)
+            version: getLegacyMEEVersion(MEEVersion.V2_2_1)
           }
         ]
       })

@@ -7,7 +7,11 @@ import {
   createMeeClient
 } from "../../../clients/createMeeClient"
 import { DEFAULT_MEE_VERSION, MEEVersion } from "../../../constants"
-import { getMEEVersion, runtimeNativeBalanceOf } from "../../../modules"
+import {
+  getLegacyMEEVersion,
+  getMEEVersion,
+  runtimeNativeBalanceOf
+} from "../../../modules"
 import {
   type MultichainSmartAccount,
   toMultichainNexusAccount
@@ -131,7 +135,7 @@ describe("mee.buildNativeTokenTransfer", () => {
         {
           chain: chain,
           transport: http(network.rpcUrl),
-          version: getMEEVersion(MEEVersion.V2_2_1)
+          version: getLegacyMEEVersion(MEEVersion.V2_2_1)
         }
       ]
     })

@@ -30,7 +30,7 @@ import {
 } from "../../../account/toMultiChainNexusAccount"
 import { MEEVersion } from "../../../constants"
 import { ForwarderAbi } from "../../../constants/abi/ForwarderAbi"
-import { getMEEVersion } from "../../../modules"
+import { getLegacyMEEVersion, getMEEVersion } from "../../../modules"
 import type { BaseMeeClient } from "../../createMeeClient"
 import { type MeeClient, createMeeClient } from "../../createMeeClient"
 import type { GetQuotePayload } from "./getQuote"
@@ -626,16 +626,16 @@ describe("mee.signSafeQuote", () => {
         {
           chain: baseSepolia,
           transport: http(baseSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V3_0_0)
+          version: getLegacyMEEVersion(MEEVersion.V3_0_0)
         },
         {
           chain: optimismSepolia,
           transport: http(opSepoliaRpcUrl),
-          version: getMEEVersion(MEEVersion.V3_0_0)
+          version: getLegacyMEEVersion(MEEVersion.V3_0_0)
         }
       ],
       defaultModuleParameters: {
-        statelessValidator: getMEEVersion(MEEVersion.V3_0_0).submodules
+        statelessValidator: getLegacyMEEVersion(MEEVersion.V3_0_0).submodules
           ?.SafeAccountSubmodule as Address,
         ownershipData: encodePacked(["address"], [predictedSafeAddress])
       }
