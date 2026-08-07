@@ -1,5 +1,11 @@
 # @biconomy/abstractjs
 
+## 2.0.0
+
+### Major Changes
+
+- Restrict new account creation to MEE 2.2.3 (Nexus 1.3.3). getMEEVersion() now accepts only versions approved for new accounts, so selecting an earlier one is a compile-time error. Earlier versions remain available via getLegacyMEEVersion() for deriving, deploying and upgrading accounts that already exist. DEFAULT_MEE_VERSION moves from 2.0.0 to 2.2.3; if you relied on the default, note that an account address derives from the factory of the version that created it, so pass accountAddress to keep an existing account. See https://docs.biconomy.io/upgrade-migrate
+
 ## 1.2.5
 
 ### Patch Changes
