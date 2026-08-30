@@ -53,6 +53,7 @@ import {
   getMEEVersion,
   greaterThanOrEqualTo,
   greaterThanOrEqualToSigned,
+  inRange,
   lessThanOrEqualTo,
   lessThanOrEqualToSigned,
   orConstraint,
@@ -2124,6 +2125,128 @@ describe.runIf(runLifecycleTests)("mee.buildComposable", () => {
       "[v1.1.1] OR constraint (signed + unsigned mix) composable sweep test:",
       { explorerLinks, hash }
     )
+  })
+
+  it("should execute composable sweep with inRange constraint", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+    // Range: 1 wei .. 100 USDC — the transferred balance will always fall inside
+    const lowerBound = 1n
+    const upperBound = parseUnits("100", 6)
+
+    for (const {
+      name,
+      mcNexus: testMcNexus,
+      meeClient: testMeeClient
+    } of accountConfigs) {
+      const staticTransferInstruction = await testMcNexus.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+      const sweepInstruction = await testMcNexus.buildComposable({
+        type: "default",
+        data: {
+          to: runtimeTransferAddress,
+          abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+          functionName: "transferFunds",
+          args: [
+            tokenAddress,
+            eoaAccount.address,
+            runtimeERC20BalanceOf({
+              targetAddress: runtimeTransferAddress,
+              tokenAddress,
+              constraints: [inRange(lowerBound, upperBound)]
+            })
+          ],
+          chainId: chain.id
+        }
+      })
+
+      const { hash } = await testMeeClient.executeFusionQuote({
+        fusionQuote: await testMeeClient.getFusionQuote({
+          trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+          instructions: [...staticTransferInstruction, ...sweepInstruction],
+          feeToken: { chainId: chain.id, address: tokenAddress }
+        })
+      })
+
+      const { transactionStatus, explorerLinks } =
+        await testMeeClient.waitForSupertransactionReceipt({
+          hash,
+          confirmations: TEST_BLOCK_CONFIRMATIONS
+        })
+      expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+      console.log(`[${name}] inRange constraint sweep:`, {
+        explorerLinks,
+        hash
+      })
+    }
+  })
+
+  it("should execute composable sweep with OR containing inRange sub-constraint on composability v1.1.1", async () => {
+    const amountToSupply = parseUnits("0.1", 6)
+    const amountToTransfer = parseUnits("0.05", 6)
+
+    const staticTransferInstruction =
+      await mcNexus_compos_v1_1_1.buildComposable({
+        type: "transfer",
+        data: {
+          recipient: runtimeTransferAddress as Address,
+          tokenAddress,
+          amount: amountToTransfer,
+          chainId: chain.id
+        }
+      })
+
+    // OR(inRange(1, 0.05 USDC), GTE(0.1 USDC)) — first branch matches the transferred amount
+    const sweepInstruction = await mcNexus_compos_v1_1_1.buildComposable({
+      type: "default",
+      data: {
+        to: runtimeTransferAddress,
+        abi: COMPOSABILITY_RUNTIME_TRANSFER_ABI as Abi,
+        functionName: "transferFunds",
+        args: [
+          tokenAddress,
+          eoaAccount.address,
+          runtimeERC20BalanceOf({
+            targetAddress: runtimeTransferAddress,
+            tokenAddress,
+            constraints: [
+              orConstraint([
+                inRange(1n, parseUnits("0.05", 6)),
+                greaterThanOrEqualTo(parseUnits("0.1", 6))
+              ])
+            ]
+          })
+        ],
+        chainId: chain.id
+      }
+    })
+
+    const { hash } = await meeClient_compos_v1_1_1.executeFusionQuote({
+      fusionQuote: await meeClient_compos_v1_1_1.getFusionQuote({
+        trigger: { chainId: chain.id, tokenAddress, amount: amountToSupply },
+        instructions: [...staticTransferInstruction, ...sweepInstruction],
+        feeToken: { chainId: chain.id, address: tokenAddress }
+      })
+    })
+
+    const { transactionStatus, explorerLinks } =
+      await meeClient_compos_v1_1_1.waitForSupertransactionReceipt({
+        hash,
+        confirmations: TEST_BLOCK_CONFIRMATIONS
+      })
+    expect(transactionStatus).to.be.eq("MINED_SUCCESS")
+    console.log("[v1.1.1] OR(inRange, GTE) constraint sweep:", {
+      explorerLinks,
+      hash
+    })
   })
 
   // test the new 'runtimeParamViaCustomStaticCall' helper function and the injectable target at the same time
