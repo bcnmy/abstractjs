@@ -1,5 +1,19 @@
 # @biconomy/abstractjs
 
+## 2.0.2
+
+### Patch Changes
+
+- Fix smart-session redemption on MEE 2.2.3. Session quotes now sign the session userOp's ERC-4337 userOpHash, which SmartSessions forwards to K1MeeValidator and routes to the NoMee plain-ECDSA flow. Signing the supertx hash (as 2.0.1 did) recovers the wrong signer and fails redemption with `[0] Invalid signature`. Enabling a session already worked; this fixes redeeming it. (#214)
+
+## 2.0.1
+
+### Patch Changes
+
+- Resolve the EIP-712 domain on fresh ERC-7702 EOAs during `signQuote`. (#203)
+- Use unique default nonce keys to prevent same-chain userOp nonce collisions. (#209)
+- First pass at the smart-session redemption signing change; corrected in 2.0.2. (#201)
+
 ## 2.0.0
 
 ### Major Changes
