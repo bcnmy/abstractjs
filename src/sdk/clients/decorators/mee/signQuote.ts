@@ -170,10 +170,21 @@ export const formatSignedQuotePayload = (
   meeVersions: MeeVersionsWithChainId,
   isP256?: boolean
 ): SignQuotePayload => {
+  const isEIP712Supported = versionIsAtLeast(
+    meeVersions[0].version.version,
+    MEEVersion.V2_2_1
+  )
+  const isSessionDetailsExists = quote.userOps.some((uo) => !!uo.sessionDetails)
+
   const prefix = isP256 ? SIG_TYPE_SIMPLE_P256 : DEFAULT_PREFIX
+
   return {
     ...quote,
-    signature: concatHex([prefix, signature]),
+    // For MEE version 2.2.1 and above and smart sessions ? NoMeeMode is used and there is no prefix for it
+    signature:
+      isEIP712Supported && isSessionDetailsExists
+        ? signature
+        : concatHex([prefix, signature]),
     meeVersions: meeVersions,
     isEIP712TrustedSponsorshipSupported: true
   }
@@ -185,6 +196,19 @@ export const formatSignedQuotePayload = (
  * For MEE >= 2.2.1, uses EIP-712 typed data signatures.
  * For MEE < 2.2.1, uses personal message signatures.
  * This is for the `smart-account` mode only.
+ *
+ * For simple mode with MEE >= 2.2.1 and smart session, uses personal sign on the raw userOpHash
+ * (no MEE prefix, no SuperTx EIP-712 wrapping). This routes through
+ * NoMeeFlowLib.validateSignatureForOwner on-chain, which does plain ECDSA
+ * recovery against the raw userOpHash.
+ *
+ * We cannot use the MEE simple mode (0x177eee00 + SuperTx EIP-712) because
+ * SmartSession calls K1MeeValidator.validateSignatureWithData externally,
+ * and hashTypedDataForAccount(msg.sender, ...) would use SmartSession's
+ * address instead of the account's — SmartSession doesn't implement
+ * eip712Domain(), so it reverts.
+ *
+ * Session expiry is handled by SmartSession's own policies.
  *
  * The signatures are required for executing the quote through the MEE service.
  *
@@ -224,6 +248,25 @@ export const signQuote = async (
 
   // for MEE >= 2.2.1, use EIP-712 typed data signatures
   if (versionIsAtLeast(meeVersions[0].version.version, MEEVersion.V2_2_1)) {
+    const isSessionDetailsExists = quote.userOps.some(
+      (uo) => !!uo.sessionDetails
+    )
+
+    if (isSessionDetailsExists) {
+      // For MEE >= 2.2.1, use personal sign on the raw hash (NoMee flow).
+      // The session key signs the quote hash directly — no SuperTx wrapping.
+      const { signablePayload, metadata } =
+        preparePersonalSignableQuotePayload(quote)
+      const personalSignature = await signer.signMessage(signablePayload)
+
+      return formatSignedQuotePayload(
+        quote,
+        metadata,
+        personalSignature,
+        meeVersions,
+        isP256
+      )
+    }
     // get the eip712 domain
     // since we only use the name from the 712 domain (see prepareTypedDataSignableQuotePayload)
     // we can use the same eip712 domain for all the chains involved in the quote request
@@ -248,8 +291,8 @@ export const signQuote = async (
   }
 
   // for MEE < 2.2.1, use personal message signatures
-  const result = preparePersonalSignableQuotePayload(quote)
-  const { signablePayload, metadata } = result
+  const { signablePayload, metadata } =
+    preparePersonalSignableQuotePayload(quote)
   const personalSignature = await signer.signMessage(signablePayload)
   return formatSignedQuotePayload(
     quote,
