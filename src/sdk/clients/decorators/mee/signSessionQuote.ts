@@ -5,17 +5,9 @@ import {
   type SignFusionQuotePayload,
   signFusionQuote
 } from "."
-import { versionIsAtLeast } from "../../../account/utils/getVersion"
-import { isP256Signer } from "../../../account/utils/toP256Signer"
-import { MEEVersion } from "../../../constants"
 import type { BaseMeeClient } from "../../createMeeClient"
 import type { BaseSessionQuoteResponse } from "./getSessionQuote"
-import signQuote, {
-  type SignQuotePayload,
-  formatSignedQuotePayload,
-  getMeeVersionsForQuote,
-  preparePersonalSignableQuotePayload
-} from "./signQuote"
+import signQuote, { type SignQuotePayload } from "./signQuote"
 
 /**
  * Parameters required for signing a session quote
