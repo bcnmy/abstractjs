@@ -253,15 +253,22 @@ export const signQuote = async (
     )
 
     if (isSessionDetailsExists) {
-      // For MEE >= 2.2.1, use personal sign on the raw hash (NoMee flow).
-      // The session key signs the quote hash directly — no SuperTx wrapping.
-      const { signablePayload, metadata } =
-        preparePersonalSignableQuotePayload(quote)
-      const personalSignature = await signer.signMessage(signablePayload)
+      // NoMee session flow: the session key signs the session op's ERC-4337 userOpHash
+      // (the hash SmartSessions forwards to K1MeeValidator), not the supertx hash. A bare
+      // EIP-191 signature routes to NoMeeFlowLib.validateSignatureForOwner on-chain, which
+      // recovers over that userOpHash. Signing the supertx hash (quote.hash) recovers the
+      // wrong signer and fails with "[0] Invalid signature".
+      const sessionOp = quote.userOps.find((uo) => !!uo.sessionDetails)
+      if (!sessionOp) {
+        throw new Error("Session quote is missing a userOp with session details")
+      }
+      const personalSignature = await signer.signMessage({
+        message: { raw: sessionOp.userOpHash }
+      })
 
       return formatSignedQuotePayload(
         quote,
-        metadata,
+        {},
         personalSignature,
         meeVersions,
         isP256
