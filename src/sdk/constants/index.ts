@@ -227,6 +227,44 @@ export const DEFAULT_CONFIGURATIONS_BY_MEE_VERSION: Record<
   }
 }
 
+/**
+ * The Nexus EIP-712 domain version string for a given MEE version (or its
+ * already-resolved config).
+ *
+ * Each `MEEVersionConfig.accountId` is formatted as `biconomy.nexus.<X.Y.Z>` —
+ * the same string the on-chain Nexus contract returns from
+ * `_domainNameAndVersion()`. This helper strips the prefix and returns the
+ * version suffix, giving callers a reliable fallback when an on-chain
+ * `eip712Domain()` query is unavailable (e.g. for a counterfactual SCA whose
+ * factory hasn't been deployed yet).
+ *
+ * @example
+ * getNexusDomainVersion(MEEVersion.V2_2_2)         // → "1.3.2"
+ * getNexusDomainVersion(getMEEVersion(MEEVersion.V2_1_0)) // → "1.2.0"
+ */
+export const getNexusDomainVersion = (
+  meeVersionOrConfig: MEEVersion | MEEVersionConfig
+): string => {
+  const config =
+    typeof meeVersionOrConfig === "string"
+      ? DEFAULT_CONFIGURATIONS_BY_MEE_VERSION[meeVersionOrConfig]
+      : meeVersionOrConfig
+  if (!config) {
+    throw new Error(
+      `Unsupported MEE version: ${String(meeVersionOrConfig)}. ` +
+        `Expected one of: ${Object.keys(DEFAULT_CONFIGURATIONS_BY_MEE_VERSION).join(", ")}`
+    )
+  }
+  const prefix = "biconomy.nexus."
+  if (!config.accountId.startsWith(prefix)) {
+    throw new Error(
+      `Unexpected accountId format: "${config.accountId}". ` +
+        `Expected "${prefix}<X.Y.Z>".`
+    )
+  }
+  return config.accountId.slice(prefix.length)
+}
+
 // Rhinestone constants
 export {
   SMART_SESSIONS_ADDRESS,
