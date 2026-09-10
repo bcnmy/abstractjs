@@ -530,22 +530,17 @@ export const addPaymentPolicyForActions = (
                   getUniversalActionPolicyConditionType("lessThanOrEqual")
                 ]
 
-                let isPaymentPolicyRuleAdded = false
+                let isPaymentCapRuleAdded = false
 
                 const updatedRules = universalPolicyData.paramRules.rules.map(
                   (rule) => {
-                    if (
-                      !isPaymentPolicyRuleAdded &&
-                      rule.offset === calldataArgument(2)
-                    ) {
-                      isPaymentPolicyRuleAdded = true
-                    }
-
                     // If calldata argument is amount field + expected conditions, add payment amount
                     if (
                       rule.offset === calldataArgument(2) &&
                       conditions.includes(rule.condition)
                     ) {
+                      isPaymentCapRuleAdded = true
+
                       let updatedRule: UniversalPolicyData["paramRules"]["rules"][0] =
                         {
                           ...rule,
@@ -573,7 +568,7 @@ export const addPaymentPolicyForActions = (
                   }
                 )
 
-                if (isPaymentPolicyRuleAdded) {
+                if (isPaymentCapRuleAdded) {
                   return getUniversalActionPolicy({
                     valueLimitPerUse: universalPolicyData.valueLimitPerUse,
                     paramRules: {
