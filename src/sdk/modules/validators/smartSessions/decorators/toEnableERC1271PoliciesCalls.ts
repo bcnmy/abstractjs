@@ -5,6 +5,7 @@ import {
 import type { Hex } from "viem"
 import type { Call } from "../../../../account/utils/Types"
 import type { ModularSmartAccount } from "../../../utils/Types"
+import { assertNoErc1271SessionPolicies } from "../Helpers"
 
 /**
  * Converts permission ID and ERC1271 policies into enable policies calls
@@ -13,6 +14,10 @@ export const toEnableERC1271PoliciesCalls = async (
   _: ModularSmartAccount,
   parameters: { permissionId: Hex; erc1271Policies: ERC7739Data }
 ): Promise<Call[]> => {
+  assertNoErc1271SessionPolicies(
+    parameters.erc1271Policies,
+    "toEnableERC1271PoliciesCalls"
+  )
   const action = getEnableERC1271PoliciesAction({
     permissionId: parameters.permissionId,
     erc1271Policies: parameters.erc1271Policies

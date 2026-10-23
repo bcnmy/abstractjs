@@ -30,7 +30,7 @@ import type {
 } from "viem"
 import { AccountNotFoundError } from "../../../../account/utils/AccountNotFound"
 import type { ModularSmartAccount } from "../../../utils/Types"
-import { generateSalt } from "../Helpers"
+import { assertNoErc1271SessionPolicies, generateSalt } from "../Helpers"
 
 export type PrettifiedSession = {
   // The optional address of the validator that will be used to validate the session. Default is the ownable validator.
@@ -362,6 +362,7 @@ const prepareForGrantingPermission = async <
       chainId: bigChainId ?? BigInt(chainIdFromAccount),
       ...session_
     }
+    assertNoErc1271SessionPolicies(session.erc7739Policies, "grantPermission")
 
     const accountAndChainId: AccountAndChainId = {
       account: getAccount({
