@@ -220,3 +220,28 @@ export const abiToPoliciesInfo = ({
       functionSelector: toFunctionSelector(func),
       rules: [] // Rules should not be available here because they should be custom per method, not used in a loop
     }))
+
+/**
+ * ERC-1271 / ERC-7739 session policies are temporarily not supported with the
+ * SmartSession module this SDK targets. Sessions must be created without them.
+ */
+export const ERC1271_SESSION_POLICIES_UNSUPPORTED =
+  "ERC-1271 / ERC-7739 session policies are temporarily not supported with the current SmartSession module. Create the session without erc7739Policies."
+
+export const assertNoErc1271SessionPolicies = (
+  erc7739Policies:
+    | {
+        allowedERC7739Content?: readonly unknown[]
+        erc1271Policies?: readonly unknown[]
+      }
+    | undefined,
+  context: string
+): void => {
+  if (!erc7739Policies) return
+  if (
+    (erc7739Policies.allowedERC7739Content?.length ?? 0) > 0 ||
+    (erc7739Policies.erc1271Policies?.length ?? 0) > 0
+  ) {
+    throw new Error(`${context}: ${ERC1271_SESSION_POLICIES_UNSUPPORTED}`)
+  }
+}
