@@ -1,8 +1,9 @@
-import type { Address } from "viem"
+import type { Address, Hex } from "viem"
 import { batchInstructions, resolveInstructions } from "../../../../../account"
 import type { SessionActionLike } from "../../../../../account/decorators/buildSessionAction"
 import type { BaseMeeClient } from "../../../../../clients/createMeeClient"
 import {
+  type AbstractCall,
   type EnableSession,
   type ExecuteSignedQuotePayload,
   type FeePaymentParams,
@@ -110,8 +111,9 @@ export const prepareForPermissions = async (
       ? [...installInstructions, ...parameters.additionalInstructions]
       : installInstructions
 
-    const resolvedInstructions = await resolveInstructions(
-      unresolvedInstructions
+    const resolvedInstructions = await normalizeInstructionComposability(
+      client,
+      await resolveInstructions(unresolvedInstructions)
     )
 
     let partiallyBatchedInstructions: Instruction[] = []
@@ -185,4 +187,81 @@ export const prepareForPermissions = async (
   }
 
   return undefined
+}
+
+/**
+ * If any resolved instruction is composable (e.g. the install-smart-sessions
+ * instructions produced internally), every other instruction in the batch must
+ * also be composable — `buildBatch` enforces this. To preserve backwards
+ * compatibility for callers that pass `additionalInstructions` as raw
+ * `{ chainId, calls }` objects (the supported shape in v1.1.x), auto-wrap any
+ * non-composable instructions as composable `rawCalldata` instructions.
+ */
+const normalizeInstructionComposability = async (
+  client: BaseMeeClient,
+  resolvedInstructions: Instruction[]
+): Promise<Instruction[]> => {
+  const hasComposable = resolvedInstructions.some(
+    ({ isComposable }) => isComposable === true
+  )
+  const hasNonComposable = resolvedInstructions.some(
+    ({ isComposable }) => !isComposable
+  )
+
+  if (!hasComposable || !hasNonComposable) {
+    return resolvedInstructions
+  }
+
+  const normalized: Instruction[] = []
+  for (const inx of resolvedInstructions) {
+    if (inx.isComposable) {
+      normalized.push(inx)
+      continue
+    }
+
+    for (const call of inx.calls as AbstractCall[]) {
+      const calldata = (call.data ?? "0x") as Hex
+      // `buildRawComposable` requires a function selector (>= 4 bytes).
+      // Plain native-token transfers have no calldata and cannot be
+      // wrapped as composable; pass them through unchanged and let
+      // `buildBatch` surface a clearer error if the mix is unresolvable.
+      if (calldata.length < 10) {
+        normalized.push({
+          ...inx,
+          calls: [call] as AbstractCall[]
+        })
+        continue
+      }
+
+      const [composable] = await client.account.buildComposable({
+        type: "rawCalldata",
+        data: {
+          to: call.to,
+          calldata,
+          value: call.value,
+          chainId: inx.chainId,
+          metadata: inx.metadata,
+          ...(inx.lowerBoundTimestamp !== undefined
+            ? { lowerBoundTimestamp: inx.lowerBoundTimestamp }
+            : {}),
+          ...(inx.upperBoundTimestamp !== undefined
+            ? { upperBoundTimestamp: inx.upperBoundTimestamp }
+            : {}),
+          ...(inx.executionSimulationRetryDelay !== undefined
+            ? {
+                executionSimulationRetryDelay: inx.executionSimulationRetryDelay
+              }
+            : {}),
+          ...(inx.simulationOverrides !== undefined
+            ? { simulationOverrides: inx.simulationOverrides }
+            : {}),
+          ...(inx.retry !== undefined ? { retry: inx.retry } : {})
+        }
+      })
+
+      normalized.push(composable)
+    }
+  }
+
+  return normalized
 }
