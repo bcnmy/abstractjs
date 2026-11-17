@@ -46,6 +46,21 @@ export type SignQuotePayload = GetQuotePayload & {
   meeVersions?: MeeVersionsWithChainId
   /** This flag is being used for trusted sponsorship backwards compatibility */
   isEIP712TrustedSponsorshipSupported: boolean
+  /**
+   * Smart sessions (MEE >= 2.2.1): one session-key signature per session-signed userOp,
+   * keyed by the userOp's index in the quote. Each signature covers only its own userOp, so a
+   * supertransaction with several session userOps (e.g. a self-paid session use, where the
+   * payment userOp and the call userOp are both session-signed) needs one per op.
+   * `signature` still carries the first one for nodes that predate this field.
+   */
+  sessionSignatures?: SessionSignature[]
+}
+
+export type SessionSignature = {
+  /** Index of the userOp in the quote */
+  index: number
+  /** Bare ECDSA signature (EIP-191) over that userOp's ERC-4337 userOpHash */
+  signature: Hex
 }
 
 export const DEFAULT_PREFIX = "0x177eee00"
@@ -168,7 +183,8 @@ export const formatSignedQuotePayload = (
   _metadata: Record<string, AnyData>, // This is unused for now. But can be extended in future
   signature: Hex,
   meeVersions: MeeVersionsWithChainId,
-  isP256?: boolean
+  isP256?: boolean,
+  sessionSignatures?: SessionSignature[]
 ): SignQuotePayload => {
   const isEIP712Supported = versionIsAtLeast(
     meeVersions[0].version.version,
@@ -186,7 +202,8 @@ export const formatSignedQuotePayload = (
         ? signature
         : concatHex([prefix, signature]),
     meeVersions: meeVersions,
-    isEIP712TrustedSponsorshipSupported: true
+    isEIP712TrustedSponsorshipSupported: true,
+    ...(sessionSignatures?.length ? { sessionSignatures } : {})
   }
 }
 
@@ -253,25 +270,46 @@ export const signQuote = async (
     )
 
     if (isSessionDetailsExists) {
-      // NoMee session flow: the session key signs the session op's ERC-4337 userOpHash
+      // NoMee session flow: the session key signs each session op's ERC-4337 userOpHash
       // (the hash SmartSessions forwards to K1MeeValidator), not the supertx hash. A bare
       // EIP-191 signature routes to NoMeeFlowLib.validateSignatureForOwner on-chain, which
       // recovers over that userOpHash. Signing the supertx hash (quote.hash) recovers the
       // wrong signer and fails with "[0] Invalid signature".
-      const sessionOp = quote.userOps.find((uo) => !!uo.sessionDetails)
-      if (!sessionOp) {
-        throw new Error("Session quote is missing a userOp with session details")
+      //
+      // One signature covers one userOp, so every session-signed userOp gets its own. A
+      // self-paid session use has two: the payment userOp and the call userOp. The sponsored
+      // payment userOp (index 0) is signed by the sponsor, not the session key.
+      const sessionOps = quote.userOps
+        .map((userOp, index) => ({ userOp, index }))
+        .filter(
+          ({ userOp, index }) =>
+            !!userOp.sessionDetails &&
+            !(index === 0 && quote.paymentInfo.sponsored)
+        )
+      if (sessionOps.length === 0) {
+        throw new Error(
+          "Session quote is missing a userOp with session details"
+        )
       }
-      const personalSignature = await signer.signMessage({
-        message: { raw: sessionOp.userOpHash }
-      })
+
+      const sessionSignatures: SessionSignature[] = []
+      for (const { userOp, index } of sessionOps) {
+        sessionSignatures.push({
+          index,
+          signature: await signer.signMessage({
+            message: { raw: userOp.userOpHash }
+          })
+        })
+      }
 
       return formatSignedQuotePayload(
         quote,
         {},
-        personalSignature,
+        // Nodes that predate per-op session signatures read only this field
+        sessionSignatures[0].signature,
         meeVersions,
-        isP256
+        isP256,
+        sessionSignatures
       )
     }
     // get the eip712 domain
